@@ -4,7 +4,7 @@ import { requireFamilyAccess } from "@/domain/family/access";
 import { getPerson } from "@/domain/person/person.service";
 import { PersonForm } from "@/components/forms/person-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { updatePersonAction, type PersonFormState } from "@/actions/person.actions";
+import { updatePersonAction } from "@/actions/person.actions";
 
 export default async function EditPersonPage({
   params,
@@ -17,9 +17,6 @@ export default async function EditPersonPage({
   const person = await getPerson(personId, familyId);
   if (!person) notFound();
 
-  const boundAction = (state: PersonFormState, formData: FormData) =>
-    updatePersonAction(familyId, personId, state, formData);
-
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-6 p-6">
       <Card>
@@ -27,8 +24,10 @@ export default async function EditPersonPage({
           <CardTitle>Редактировать</CardTitle>
         </CardHeader>
         <CardContent>
+          {/* .bind() on the real "use server" action, not a closure — see
+              note in people/new/page.tsx for why this distinction matters. */}
           <PersonForm
-            action={boundAction}
+            action={updatePersonAction.bind(null, familyId, personId)}
             person={person}
             submitLabel="Сохранить"
             submitPendingLabel="Сохраняем…"
