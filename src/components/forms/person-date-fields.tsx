@@ -6,13 +6,17 @@ import type { PartialDate } from "@/domain/shared/partial-date";
  * A PartialDate input group (year/month/day + "approximate" checkbox).
  * Genealogical dates are frequently incomplete, so only the year is required
  * — month/day are progressive detail, not mandatory fields.
+ *
+ * `prefix` is just a form-field-name/id namespace (e.g. "birth" -> birthYear,
+ * birthMonth, ...) — generic enough to reuse for Person birth/death dates
+ * and Event date/endDate, not tied to any one entity.
  */
 export function PersonDateFields({
   prefix,
   legend,
   date,
 }: {
-  prefix: "birth" | "death";
+  prefix: string;
   legend: string;
   date?: PartialDate | null;
 }) {

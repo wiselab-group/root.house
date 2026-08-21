@@ -6,32 +6,11 @@ import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { createPersonSchema, createPlaceholderPersonSchema } from "@/lib/validation/person";
 import { addPerson, addPlaceholderPerson, editPerson, removePerson } from "@/domain/person/person.service";
-import type { PartialDate } from "@/domain/shared/partial-date";
+import { partialDateFromFormData } from "@/domain/shared/partial-date";
 
 export interface PersonFormState {
   error?: string;
   fieldErrors?: Record<string, string>;
-}
-
-function partialDateFromForm(formData: FormData, prefix: "birth" | "death"): PartialDate | undefined {
-  const yearRaw = formData.get(`${prefix}Year`);
-  if (!yearRaw || yearRaw === "") return undefined;
-
-  const year = Number(yearRaw);
-  const monthRaw = formData.get(`${prefix}Month`);
-  const dayRaw = formData.get(`${prefix}Day`);
-  const isApproximate = formData.get(`${prefix}Approximate`) === "on";
-
-  const month = monthRaw && monthRaw !== "" ? Number(monthRaw) : null;
-  const day = dayRaw && dayRaw !== "" ? Number(dayRaw) : null;
-
-  return {
-    year,
-    month,
-    day,
-    precision: day ? "exact" : month ? "exact" : "year_only",
-    isApproximate,
-  };
 }
 
 export async function createPersonAction(
@@ -76,8 +55,8 @@ export async function createPersonAction(
     description: parsed.data.description || undefined,
     religion: parsed.data.religion || undefined,
     nationality: parsed.data.nationality || undefined,
-    birthDate: partialDateFromForm(formData, "birth"),
-    deathDate: partialDateFromForm(formData, "death"),
+    birthDate: partialDateFromFormData(formData, "birth"),
+    deathDate: partialDateFromFormData(formData, "death"),
   });
 
   revalidatePath(`/families/${familyId}/people`);
@@ -171,8 +150,8 @@ export async function updatePersonAction(
     description: parsed.data.description || null,
     religion: parsed.data.religion || null,
     nationality: parsed.data.nationality || null,
-    birthDate: partialDateFromForm(formData, "birth") ?? null,
-    deathDate: partialDateFromForm(formData, "death") ?? null,
+    birthDate: partialDateFromFormData(formData, "birth") ?? null,
+    deathDate: partialDateFromFormData(formData, "death") ?? null,
   });
 
   if (!updated) {

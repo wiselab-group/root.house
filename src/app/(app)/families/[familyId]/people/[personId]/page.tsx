@@ -8,6 +8,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PersonFamilyPanel } from "@/components/person/person-family-panel";
+import { PersonTimeline } from "@/components/person/person-timeline";
 import { DeletePersonButton } from "@/components/person/delete-person-button";
 
 export default async function PersonProfilePage({
@@ -76,6 +77,7 @@ export default async function PersonProfilePage({
       )}
 
       <PersonFamilyPanel familyId={familyId} personId={personId} canEdit={canEdit} />
+      <PersonTimeline familyId={familyId} personId={personId} canEdit={canEdit} />
     </main>
   );
 }

@@ -103,3 +103,33 @@ export function toSortableValue(date: PartialDate | null | undefined): number {
 export function comparePartialDates(a: PartialDate | null, b: PartialDate | null): number {
   return toSortableValue(a) - toSortableValue(b);
 }
+
+/**
+ * Parses a PartialDate out of a submitted <form>'s FormData, given a field
+ * name prefix (e.g. "birth" reads birthYear/birthMonth/birthDay/birthApproximate).
+ * Shared by every Server Action that accepts a date field (person.actions.ts's
+ * birth/death dates, event.actions.ts's date/endDate) instead of each
+ * reimplementing the same parsing — precision is inferred from how much of
+ * the date was actually filled in (day present -> exact, else month present
+ * -> exact, else year-only).
+ */
+export function partialDateFromFormData(formData: FormData, prefix: string): PartialDate | undefined {
+  const yearRaw = formData.get(`${prefix}Year`);
+  if (!yearRaw || yearRaw === "") return undefined;
+
+  const year = Number(yearRaw);
+  const monthRaw = formData.get(`${prefix}Month`);
+  const dayRaw = formData.get(`${prefix}Day`);
+  const isApproximate = formData.get(`${prefix}Approximate`) === "on";
+
+  const month = monthRaw && monthRaw !== "" ? Number(monthRaw) : null;
+  const day = dayRaw && dayRaw !== "" ? Number(dayRaw) : null;
+
+  return {
+    year,
+    month,
+    day,
+    precision: day ? "exact" : month ? "exact" : "year_only",
+    isApproximate,
+  };
+}

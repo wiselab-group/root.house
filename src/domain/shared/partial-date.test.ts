@@ -3,6 +3,7 @@ import {
   comparePartialDates,
   formatPartialDate,
   fromColumns,
+  partialDateFromFormData,
   toColumns,
   toSortableValue,
   type PartialDate,
@@ -60,5 +61,60 @@ describe("column round-trip", () => {
 
   it("returns null for an all-null column group", () => {
     expect(fromColumns({ year: null, month: null, day: null, precision: null, approximate: null })).toBeNull();
+  });
+});
+
+describe("partialDateFromFormData", () => {
+  function formData(entries: Record<string, string>): FormData {
+    const fd = new FormData();
+    for (const [key, value] of Object.entries(entries)) fd.set(key, value);
+    return fd;
+  }
+
+  it("returns undefined when the year field is empty", () => {
+    expect(partialDateFromFormData(formData({}), "birth")).toBeUndefined();
+    expect(partialDateFromFormData(formData({ birthYear: "" }), "birth")).toBeUndefined();
+  });
+
+  it("parses a year-only date", () => {
+    expect(partialDateFromFormData(formData({ birthYear: "1924" }), "birth")).toEqual({
+      year: 1924,
+      month: null,
+      day: null,
+      precision: "year_only",
+      isApproximate: false,
+    });
+  });
+
+  it("parses a fully-specified exact date", () => {
+    expect(
+      partialDateFromFormData(formData({ birthYear: "1924", birthMonth: "5", birthDay: "12" }), "birth"),
+    ).toEqual({ year: 1924, month: 5, day: 12, precision: "exact", isApproximate: false });
+  });
+
+  it("treats a year+month (no day) as exact", () => {
+    expect(partialDateFromFormData(formData({ birthYear: "1924", birthMonth: "5" }), "birth")).toEqual({
+      year: 1924,
+      month: 5,
+      day: null,
+      precision: "exact",
+      isApproximate: false,
+    });
+  });
+
+  it("reads the approximate checkbox", () => {
+    expect(
+      partialDateFromFormData(formData({ birthYear: "1924", birthApproximate: "on" }), "birth"),
+    ).toMatchObject({ isApproximate: true });
+  });
+
+  it("works with an arbitrary prefix (e.g. event date/endDate)", () => {
+    expect(partialDateFromFormData(formData({ endDateYear: "1945" }), "endDate")).toEqual({
+      year: 1945,
+      month: null,
+      day: null,
+      precision: "year_only",
+      isApproximate: false,
+    });
   });
 });
