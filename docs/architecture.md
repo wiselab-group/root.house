@@ -219,6 +219,33 @@ Descendants — то же самое зеркально (обход `parent_id �
    правил (sibling / uncle-aunt / cousin / N-й кузен K-го колена).
 4. Partnership обрабатывается как "in-law"-модификатор поверх кровного пути.
 
+## Family Tree visualization
+
+Трёхслойная развязка (domain → adapter → viz-компонент), чтобы `@xyflow/react`
+не диктовал структуру БД:
+
+1. `domain/tree/tree-layout.builder.ts` — чистый TS, `buildFocusTreeLayout()`:
+   генерационный BFS от focus-person (предки вверх, потомки вниз, партнёры
+   рядом с партнёром, siblings подтягиваются отдельным шагом — BFS по
+   parent_child-рёбрам сам по себе их не находит, т.к. они не предки и не
+   потомки focus-person). Выход — библиотеко-агностичный `TreeLayoutGraph`.
+2. `components/tree/adapters/xyflow-adapter.ts` — единственный модуль,
+   которому разрешено импортировать `@xyflow/react`; конвертирует
+   `TreeLayoutGraph` → `Node`/`Edge`.
+3. `components/tree/tree-canvas.tsx` (desktop) — zoom/pan/minimap,
+   клик-навигация пишет `?focus=personId` в URL (не в client state) —
+   shareable deep link, кнопка "назад" браузера работает бесплатно.
+
+**Mobile — не уменьшенный desktop-canvas.** `components/tree/mobile-focus-view.tsx`
+рендерит карточную навигацию (центральная карточка focus-person +
+горизонтально-скроллящиеся списки родители/супруги/дети/братья-сёстры),
+читая тот же `TreeLayoutGraph`, что и desktop canvas — тот же контракт
+`?focus=`, разный рендер. Переключение desktop/mobile — намеренный dual-render
+через Tailwind `hidden md:block`/`md:hidden` в `tree/page.tsx` (оба варианта
+рендерятся на сервере, но виден только один) — принятый компромисс (два DOM
+дерева на один экран) ради UX, а не недосмотр: альтернатива (client-side
+`matchMedia`-детекция) добавила бы hydration-мерцание при первой загрузке.
+
 ## Search
 
 MVP: Postgres `pg_trgm` extension + GIN-индекс на конкатенированное имя —
