@@ -1,5 +1,6 @@
 import { getPersonById } from "@/domain/person/person.repository";
-import { isAncestorOf } from "./graph.service";
+import { getAncestorDepths, isAncestorOf } from "./graph.service";
+import { computeRelationshipPath, type RelationshipPathResult } from "./relationship-path";
 import {
   deleteParentChild,
   deletePartnership,
@@ -154,4 +155,24 @@ export async function getFamilyOf(personId: string, familyId: string): Promise<F
     getSiblingsOf(personId, familyId),
   ]);
   return { parents, children, partnerships, siblings };
+}
+
+/**
+ * "How are personA and personB related?" — not exposed in any MVP UI yet,
+ * but the domain layer supports it: fetches both people's ancestor-depth
+ * maps via the recursive CTEs in graph.service.ts, then delegates to the
+ * pure computeRelationshipPath() algorithm. Partnership (in-law) modifiers
+ * on top of the blood relationship are intentionally out of scope here —
+ * see relationship-path.ts's module doc.
+ */
+export async function computeRelationshipPathFor(
+  personAId: string,
+  personBId: string,
+  familyId: string,
+): Promise<RelationshipPathResult> {
+  const [ancestorsA, ancestorsB] = await Promise.all([
+    getAncestorDepths(personAId, familyId),
+    getAncestorDepths(personBId, familyId),
+  ]);
+  return computeRelationshipPath(personAId, personBId, ancestorsA, ancestorsB);
 }
