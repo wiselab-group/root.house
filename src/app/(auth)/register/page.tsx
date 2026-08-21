@@ -1,0 +1,25 @@
+import Link from "next/link";
+import { RegisterForm } from "@/components/forms/register-form";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+export default function RegisterPage() {
+  return (
+    <main className="flex min-h-svh items-center justify-center p-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle>Начать семейный архив</CardTitle>
+          <CardDescription>Создайте аккаунт, чтобы завести своё первое семейное дерево.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-6">
+          <RegisterForm />
+          <p className="text-center text-sm text-muted-foreground">
+            Уже есть аккаунт?{" "}
+            <Link href="/login" className="font-medium text-foreground underline underline-offset-4">
+              Войти
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
+    </main>
+  );
+}
