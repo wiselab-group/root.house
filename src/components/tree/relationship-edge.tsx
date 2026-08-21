@@ -1,0 +1,46 @@
+"use client";
+
+import { BaseEdge, getSmoothStepPath, type EdgeProps } from "@xyflow/react";
+import type { RelationshipFlowEdge } from "./adapters/xyflow-adapter";
+
+/**
+ * Renders parent_child edges as a solid line and partnership edges as
+ * dashed — the visual distinction between "descent" and "union" the plan's
+ * DESIGN.md calls for, without needing separate label text on every edge.
+ */
+export function RelationshipEdge({
+  id,
+  type,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  data,
+}: EdgeProps<RelationshipFlowEdge>) {
+  const [path] = getSmoothStepPath({
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+    borderRadius: 8,
+  });
+
+  const isPartnership = type === "partnership";
+  const isPastPartnership = isPartnership && data?.isCurrent === false;
+
+  return (
+    <BaseEdge
+      id={id}
+      path={path}
+      style={{
+        strokeWidth: isPartnership ? 1.5 : 2,
+        strokeDasharray: isPartnership ? (isPastPartnership ? "2 4" : "5 3") : undefined,
+        stroke: isPartnership ? "var(--muted-foreground)" : "var(--border)",
+      }}
+    />
+  );
+}
