@@ -8,6 +8,7 @@ import { formatPartialDate } from "@/domain/shared/partial-date";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PersonFamilyPanel } from "@/components/person/person-family-panel";
 
 export default async function PersonProfilePage({
   params,
@@ -61,6 +62,8 @@ export default async function PersonProfilePage({
           <CardContent className="text-sm whitespace-pre-wrap">{person.description}</CardContent>
         </Card>
       )}
+
+      <PersonFamilyPanel familyId={familyId} personId={personId} canEdit={canEdit} />
     </main>
   );
 }
