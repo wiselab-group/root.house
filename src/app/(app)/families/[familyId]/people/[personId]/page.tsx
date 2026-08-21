@@ -8,6 +8,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PersonFamilyPanel } from "@/components/person/person-family-panel";
+import { DeletePersonButton } from "@/components/person/delete-person-button";
 
 export default async function PersonProfilePage({
   params,
@@ -33,9 +34,21 @@ export default async function PersonProfilePage({
           </p>
         </div>
         {canEdit && (
-          <LinkButton variant="outline" href={`/families/${familyId}/people/${personId}/edit`}>
-            Редактировать
-          </LinkButton>
+          <div className="flex gap-2">
+            <LinkButton variant="outline" href={`/families/${familyId}/people/${personId}/edit`}>
+              Редактировать
+            </LinkButton>
+            {/* Deletion is restricted to owners — more destructive/
+                irreversible than regular editor-level CRUD (cascades to
+                relationships, event participation, media links). */}
+            {member.role === "owner" && (
+              <DeletePersonButton
+                familyId={familyId}
+                personId={personId}
+                personName={personDisplayName(person)}
+              />
+            )}
+          </div>
         )}
       </div>
 

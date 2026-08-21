@@ -4,6 +4,17 @@ import { listPeople } from "@/domain/person/person.service";
 import { personDisplayName } from "@/domain/person/display-name";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddRelativeForm } from "@/components/forms/add-relative-form";
+import { RemoveRelationshipButton } from "@/components/forms/remove-relationship-button";
+
+interface RelativeItem {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  nickname: string | null;
+  isPlaceholder: boolean;
+  /** The relationship row's own id, for removal. Undefined for derived relations (siblings). */
+  relationshipId?: string;
+}
 
 /**
  * Renders a Person's parents/spouses/children/siblings plus inline
@@ -27,14 +38,21 @@ export async function PersonFamilyPanel({
   const peopleById = new Map(allPeople.map((p) => [p.id, p]));
   const otherPeople = allPeople.filter((p) => p.id !== personId);
 
-  const parents = family.parents.map((r) => peopleById.get(r.parentId)).filter((p) => p != null);
-  const children = family.children.map((r) => peopleById.get(r.childId)).filter((p) => p != null);
+  const toItem = (relatedPersonId: string, relationshipId: string): RelativeItem | null => {
+    const person = peopleById.get(relatedPersonId);
+    if (!person) return null;
+    return { ...person, relationshipId };
+  };
+
+  const parents = family.parents.map((r) => toItem(r.parentId, r.id)).filter((p) => p != null);
+  const children = family.children.map((r) => toItem(r.childId, r.id)).filter((p) => p != null);
   const spouses = family.partnerships
-    .map((r) => peopleById.get(r.person1Id === personId ? r.person2Id : r.person1Id))
+    .map((r) => toItem(r.person1Id === personId ? r.person2Id : r.person1Id, r.id))
     .filter((p) => p != null);
   const siblings = family.siblings
     .map((s) => peopleById.get(s.personId))
-    .filter((p) => p != null);
+    .filter((p) => p != null)
+    .map((p): RelativeItem => ({ ...p })); // no relationshipId — siblings are derived, not removable
 
   return (
     <Card>
@@ -42,10 +60,31 @@ export async function PersonFamilyPanel({
         <CardTitle>Семья</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
-        <RelativeGroup familyId={familyId} title="Родители" people={parents} />
-        <RelativeGroup familyId={familyId} title="Супруги" people={spouses} />
-        <RelativeGroup familyId={familyId} title="Дети" people={children} />
-        <RelativeGroup familyId={familyId} title="Братья и сёстры" people={siblings} />
+        <RelativeGroup
+          familyId={familyId}
+          personId={personId}
+          title="Родители"
+          people={parents}
+          relationshipKind="parent_child"
+          canEdit={canEdit}
+        />
+        <RelativeGroup
+          familyId={familyId}
+          personId={personId}
+          title="Супруги"
+          people={spouses}
+          relationshipKind="partnership"
+          canEdit={canEdit}
+        />
+        <RelativeGroup
+          familyId={familyId}
+          personId={personId}
+          title="Дети"
+          people={children}
+          relationshipKind="parent_child"
+          canEdit={canEdit}
+        />
+        <RelativeGroup familyId={familyId} personId={personId} title="Братья и сёстры" people={siblings} />
 
         {canEdit && (
           <div className="grid gap-3 sm:grid-cols-3">
@@ -79,12 +118,18 @@ export async function PersonFamilyPanel({
 
 function RelativeGroup({
   familyId,
+  personId,
   title,
   people,
+  relationshipKind,
+  canEdit = false,
 }: {
   familyId: string;
+  personId: string;
   title: string;
-  people: Array<{ id: string; firstName: string | null; lastName: string | null; nickname: string | null; isPlaceholder: boolean }>;
+  people: RelativeItem[];
+  relationshipKind?: "parent_child" | "partnership";
+  canEdit?: boolean;
 }) {
   return (
     <div>
@@ -94,13 +139,22 @@ function RelativeGroup({
       ) : (
         <ul className="flex flex-wrap gap-2">
           {people.map((person) => (
-            <li key={person.id}>
+            <li key={person.id} className="flex items-center gap-1 rounded-full border border-border pl-3 pr-1 py-1">
               <Link
                 href={`/families/${familyId}/people/${person.id}`}
-                className="rounded-full border border-border px-3 py-1 text-sm hover:border-foreground/30"
+                className="text-sm hover:underline"
               >
                 {personDisplayName(person)}
               </Link>
+              {canEdit && relationshipKind && person.relationshipId && (
+                <RemoveRelationshipButton
+                  familyId={familyId}
+                  personId={personId}
+                  relationshipId={person.relationshipId}
+                  relationshipKind={relationshipKind}
+                  relativeName={personDisplayName(person)}
+                />
+              )}
             </li>
           ))}
         </ul>
