@@ -4,7 +4,7 @@ import { requireFamilyAccess } from "@/domain/family/access";
 import { listPeople } from "@/domain/person/person.service";
 import { personDisplayName } from "@/domain/person/display-name";
 import { formatPartialDate } from "@/domain/shared/partial-date";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export default async function PeoplePage({ params }: PageProps<"/families/[familyId]/people">) {
@@ -19,7 +19,7 @@ export default async function PeoplePage({ params }: PageProps<"/families/[famil
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">Люди</h1>
-        <Button render={<Link href={`/families/${familyId}/people/new`} />}>Добавить человека</Button>
+        <LinkButton href={`/families/${familyId}/people/new`}>Добавить человека</LinkButton>
       </div>
 
       {people.length === 0 ? (

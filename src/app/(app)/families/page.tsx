@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { listFamiliesForUser } from "@/domain/family/family.service";
 
@@ -15,7 +15,7 @@ export default async function FamiliesPage() {
           <h1 className="text-2xl font-semibold">Мои семьи</h1>
           <p className="text-muted-foreground">Выберите архив или создайте новый.</p>
         </div>
-        <Button render={<Link href="/families/new" />}>Создать семью</Button>
+        <LinkButton href="/families/new">Создать семью</LinkButton>
       </div>
 
       {families.length === 0 ? (

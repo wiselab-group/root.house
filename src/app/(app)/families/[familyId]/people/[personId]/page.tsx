@@ -1,11 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { getPerson } from "@/domain/person/person.service";
 import { personDisplayName } from "@/domain/person/display-name";
 import { formatPartialDate } from "@/domain/shared/partial-date";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PersonFamilyPanel } from "@/components/person/person-family-panel";
@@ -34,9 +33,9 @@ export default async function PersonProfilePage({
           </p>
         </div>
         {canEdit && (
-          <Button variant="outline" render={<Link href={`/families/${familyId}/people/${personId}/edit`} />}>
+          <LinkButton variant="outline" href={`/families/${familyId}/people/${personId}/edit`}>
             Редактировать
-          </Button>
+          </LinkButton>
         )}
       </div>
 
