@@ -3,25 +3,40 @@ import Credentials from "next-auth/providers/credentials";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { compare } from "bcrypt-ts";
 import { eq } from "drizzle-orm";
-import { db } from "@/db/client";
+import { db, getDb } from "@/db/client";
 import { accounts, sessions, users, verificationTokens } from "@/db/schema";
 import { credentialsSchema } from "@/lib/validation/auth";
 
 /**
- * Auth.js v5 configuration. Database sessions (not JWT) are used deliberately:
- * every family-scoped action already hits the database via
- * requireFamilyAccess(), so JWT's "skip a DB round-trip" benefit doesn't
- * apply here — and database sessions let us invalidate a session server-side
- * the moment a FamilyMember's role changes or a user is removed.
+ * Auth.js v5 configuration.
+ *
+ * Session strategy is JWT, not database — Auth.js hard-requires this for
+ * CredentialsProvider (there's no OAuth-style external round-trip to persist
+ * a database session against; `assertConfig` in @auth/core rejects
+ * Credentials + "database" outright: "Signing in with credentials only
+ * supported if JWT strategy is enabled"). This does NOT weaken family-level
+ * authorization: every server action still calls requireFamilyAccess(),
+ * which re-checks FamilyMember role against the database on every request
+ * regardless of session strategy — a role change/removal takes effect on
+ * the very next action, only the session's own claims (id/email/name)
+ * persist for the JWT's lifetime.
+ *
+ * The Drizzle adapter is still registered (not just a Credentials-only
+ * config) so the users/accounts/sessions/verificationTokens tables stay
+ * ready for adding an OAuth provider later without a schema change.
+ *
+ * DrizzleAdapter gets getDb() (the real, concrete instance), not the `db`
+ * Proxy — it type-introspects its argument via drizzle-orm's `is(db,
+ * PgDatabase)` brand check, which a Proxy wrapping a plain object fails.
  */
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: DrizzleAdapter(db, {
+  adapter: DrizzleAdapter(getDb(), {
     usersTable: users,
     accountsTable: accounts,
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
   }),
-  session: { strategy: "database" },
+  session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
   },
@@ -47,9 +62,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id;
+    // JWT strategy: carry the user id from authorize()'s return value into
+    // the token on sign-in, then from the token into the session on every
+    // subsequent request (there's no adapter-persisted `user` object to read
+    // per-request under JWT, unlike the database session strategy).
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user && token.id) {
+        session.user.id = token.id;
       }
       return session;
     },

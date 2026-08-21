@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { families, familyMembers } from "@/db/schema";
 import { ForbiddenError } from "./errors";
@@ -38,24 +38,29 @@ export interface CreateFamilyInput {
 }
 
 /**
- * Creates a Family and makes the creator its 'owner' via FamilyMember, in a
- * single transaction — a Family must never exist without at least one owner.
+ * Creates a Family and makes the creator its 'owner' via FamilyMember,
+ * atomically. A Family must never exist without at least one owner.
+ *
+ * This is a single CTE-based INSERT rather than db.transaction(...) because
+ * the neon-http driver (chosen for its serverless/edge-friendly HTTP
+ * transport — see docs/architecture.md) does not support multi-statement
+ * transactions at all ("No transactions support in neon-http driver").
+ * A single SQL statement is atomic in Postgres on its own, so this achieves
+ * the same guarantee without needing transaction support from the driver.
  */
 export async function createFamily(userId: string, input: CreateFamilyInput): Promise<{ id: string }> {
-  return db.transaction(async (tx) => {
-    const [family] = await tx
-      .insert(families)
-      .values({ name: input.name, description: input.description, createdBy: userId })
-      .returning({ id: families.id });
+  const result = await db.execute<{ id: string }>(sql`
+    WITH new_family AS (
+      INSERT INTO families (name, description, created_by)
+      VALUES (${input.name}, ${input.description ?? null}, ${userId})
+      RETURNING id
+    )
+    INSERT INTO family_members (family_id, user_id, role)
+    SELECT id, ${userId}, 'owner' FROM new_family
+    RETURNING family_id AS id
+  `);
 
-    await tx.insert(familyMembers).values({
-      familyId: family.id,
-      userId,
-      role: "owner",
-    });
-
-    return family;
-  });
+  return { id: result.rows[0].id };
 }
 
 /**

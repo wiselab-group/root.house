@@ -1,9 +1,13 @@
-import "dotenv/config";
+import { config } from "dotenv";
 import { drizzle } from "drizzle-orm/neon-http";
 import { migrate } from "drizzle-orm/neon-http/migrator";
 import { neon } from "@neondatabase/serverless";
 
 async function main() {
+  // Next.js loads .env.local automatically; this script runs standalone via
+  // tsx, so it needs to load it explicitly.
+  config({ path: ".env.local" });
+
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error("DATABASE_URL is not set. Copy .env.example to .env.local first.");

@@ -175,6 +175,18 @@ Person/Event/Media/Story.
 - SQL-миграции читаемы и ревьюабельны в PR.
 - Официальный `@auth/drizzle-adapter` для Auth.js v5.
 
+**Важное ограничение `neon-http` драйвера — НЕТ поддержки multi-statement
+транзакций** (`db.transaction(...)` бросает `"No transactions support in
+neon-http driver"` во время выполнения, не на этапе typecheck). Там, где
+нужна атомарность нескольких INSERT/UPDATE (например создание Family +
+первого FamilyMember-owner одновременно), использовать **один SQL-стейтмент
+с CTE** (`WITH ... INSERT ... RETURNING ... INSERT ... SELECT FROM ...`) —
+Postgres гарантирует атомарность в пределах одного стейтмента без явной
+транзакции. Пример — `family.service.ts::createFamily`. Если в будущем
+понадобятся более сложные multi-statement транзакции, придётся переходить на
+`drizzle-orm/neon-serverless` (WebSocket-driver, поддерживает транзакции, но
+менее edge-совместим) для конкретных операций.
+
 ## Ancestors / Descendants / Relationship Path
 
 **PostgreSQL recursive CTE, без отдельной graph DB (Neo4j не нужен)** —
