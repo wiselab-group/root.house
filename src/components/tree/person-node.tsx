@@ -2,9 +2,10 @@
 
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { personInitials } from "@/domain/person/display-name";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
+import { CompactCardBody } from "./compact-card-body";
+import { PortraitCardBody } from "./portrait-card-body";
 
 /**
  * Custom XYFlow node rendering a person card. States per DESIGN.md § Person
@@ -12,15 +13,25 @@ import type { PersonFlowNode } from "./adapters/xyflow-adapter";
  * applies to nothing yet (no "irrelevant branch" concept in the MVP focus
  * tree — every visible node is, by construction, within the requested
  * generation range) but the class hook is here for when filtering is added.
+ *
+ * Renders one of two bodies depending on data.cardStyle (a client-only
+ * viewing preference toggled from the canvas's zoom controls, see
+ * use-tree-card-style.ts) — "compact" (name+years beside a small avatar,
+ * dense enough for many generations at once) or "portrait" (photo-forward,
+ * name/years below, for browsing faces). Both share this same outer frame
+ * (border/shadow/focus ring/entrance animation) so the two styles read as
+ * one consistent tree, not two different components bolted together.
  */
 export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
   const name = personLabel(data);
   const years = yearRange(data);
+  const initials = personInitials(data);
 
   return (
     <div
       className={cn(
-        "w-55 origin-center overflow-hidden rounded-lg border bg-card shadow-sm",
+        "origin-center overflow-hidden rounded-lg border bg-card shadow-sm",
+        data.cardStyle === "portrait" ? "w-40" : "w-55",
         "animate-tree-node-enter",
         "transition-[transform,box-shadow] duration-200 ease-(--ease-tree-focus)",
         "hover:-translate-y-0.5 hover:shadow-md",
@@ -40,47 +51,29 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
         animationDelay: `${Math.min(Math.abs(data.generation), 4) * 60}ms`,
       }}
     >
-      {/* Generation color-coding (DESIGN.md): one warm hue, lightness/chroma
-          fading with distance from focus — never a rainbow per generation. */}
-      <div
-        className="h-1"
-        style={{ backgroundColor: generationColor(data.generation) }}
-      />
-      <div className="flex items-center gap-2 px-4 py-3">
-        <Handle type="target" position={Position.Top} className="bg-border!" />
-        <Avatar size="lg" className="size-11! shrink-0 text-sm">
-          {data.photoMediaId && (
-            <AvatarImage
-              src={`/api/media/${data.photoMediaId}?familyId=${data.familyId}`}
-              alt=""
-            />
-          )}
-          <AvatarFallback>{personInitials(data)}</AvatarFallback>
-        </Avatar>
-        <div className="min-w-0">
-          <p
-            title={name}
-            className={cn(
-              "truncate text-sm font-medium",
-              data.isPlaceholder && "italic text-muted-foreground",
-            )}
-          >
-            {name}
-          </p>
-          {years && <p className="text-xs text-muted-foreground">{years}</p>}
-        </div>
-        <Handle
-          type="source"
-          position={Position.Bottom}
-          className="bg-border!"
+      <Handle type="target" position={Position.Top} className="bg-border!" />
+      {data.cardStyle === "portrait" ? (
+        <PortraitCardBody
+          data={data}
+          name={name}
+          years={years}
+          initials={initials}
         />
-      </div>
+      ) : (
+        <CompactCardBody
+          data={data}
+          name={name}
+          years={years}
+          initials={initials}
+        />
+      )}
+      <Handle type="source" position={Position.Bottom} className="bg-border!" />
     </div>
   );
 }
 
 /** Maps a node's generation offset (0 = focus's own generation) to the matching --chart-N token. */
-function generationColor(generation: number): string {
+export function generationColor(generation: number): string {
   const distance = Math.min(Math.abs(generation), 4);
   return `var(--chart-${distance + 1})`;
 }

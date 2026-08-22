@@ -3,6 +3,7 @@ import type {
   TreeLayoutGraph,
   LayoutNode,
 } from "@/domain/tree/tree-layout.builder";
+import type { TreeCardStyle } from "../use-tree-card-style";
 
 /**
  * The ONLY module in the codebase allowed to import @xyflow/react types.
@@ -28,6 +29,7 @@ export interface PersonNodeData extends Record<string, unknown> {
   familyId: string;
   isFocus: boolean;
   generation: number;
+  cardStyle: TreeCardStyle;
 }
 
 export type PersonFlowNode = Node<PersonNodeData, "person">;
@@ -36,11 +38,40 @@ export type RelationshipFlowEdge = Edge<
   "parentChild" | "partnership"
 >;
 
-function toFlowNode(node: LayoutNode, familyId: string): PersonFlowNode {
+// Node dimensions per card style — must match what PersonNode actually
+// renders at (see its w-*/h-* classes). Server-side layout (tree-layout.builder.ts)
+// only ever computes the "compact" spacing (SIBLING_X_SPACING/GENERATION_Y_SPACING,
+// 244/180); the "portrait" style rescales those same x/y values proportionally
+// below rather than asking the server to lay out twice — this is purely a
+// client-side viewing preference (see use-tree-card-style.ts), not something
+// that needs its own domain-layer layout pass.
+const COMPACT_X_SPACING = 244;
+const COMPACT_Y_SPACING = 180;
+const PORTRAIT_X_SPACING = 184;
+const PORTRAIT_Y_SPACING = 260;
+
+const NODE_DIMENSIONS: Record<
+  TreeCardStyle,
+  { width: number; height: number }
+> = {
+  compact: { width: 220, height: 88 },
+  portrait: { width: 160, height: 220 },
+};
+
+function toFlowNode(
+  node: LayoutNode,
+  familyId: string,
+  cardStyle: TreeCardStyle,
+): PersonFlowNode {
+  const xScale =
+    cardStyle === "portrait" ? PORTRAIT_X_SPACING / COMPACT_X_SPACING : 1;
+  const yScale =
+    cardStyle === "portrait" ? PORTRAIT_Y_SPACING / COMPACT_Y_SPACING : 1;
+
   return {
     id: node.id,
     type: "person",
-    position: { x: node.x, y: node.y },
+    position: { x: node.x * xScale, y: node.y * yScale },
     data: {
       personId: node.person.id,
       firstName: node.person.firstName,
@@ -54,12 +85,11 @@ function toFlowNode(node: LayoutNode, familyId: string): PersonFlowNode {
       familyId,
       isFocus: node.isFocus,
       generation: node.generation,
+      cardStyle,
     },
     // XYFlow needs explicit dimensions before layout/fitView math is
-    // reliable; matches the fixed size the PersonNode component renders at
-    // (see tree-layout.builder.ts's SIBLING_X_SPACING, which depends on this).
-    width: 220,
-    height: 88,
+    // reliable; matches the fixed size PersonNode renders each style at.
+    ...NODE_DIMENSIONS[cardStyle],
   };
 }
 
@@ -78,9 +108,10 @@ function toFlowEdges(graph: TreeLayoutGraph): RelationshipFlowEdge[] {
 export function toReactFlow(
   graph: TreeLayoutGraph,
   familyId: string,
+  cardStyle: TreeCardStyle,
 ): { nodes: PersonFlowNode[]; edges: RelationshipFlowEdge[] } {
   return {
-    nodes: graph.nodes.map((node) => toFlowNode(node, familyId)),
+    nodes: graph.nodes.map((node) => toFlowNode(node, familyId, cardStyle)),
     edges: toFlowEdges(graph),
   };
 }
