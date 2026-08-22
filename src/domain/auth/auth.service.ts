@@ -33,3 +33,18 @@ export async function registerUser(input: RegisterInput): Promise<{ id: string }
 
   return created;
 }
+
+/**
+ * true if a User row with this id actually exists. Used to detect a "stale"
+ * JWT session — a valid, signed token whose subject no longer exists in the
+ * database (e.g. the DATABASE_URL was pointed at a different/reset database
+ * between when the token was issued and now, during development — or in
+ * production, a user record that was deleted). A JWT session strategy can't
+ * invalidate itself server-side the way a database session can, so every
+ * protected layout re-checks this explicitly instead of trusting the token
+ * blindly.
+ */
+export async function userExists(userId: string): Promise<boolean> {
+  const row = await db.query.users.findFirst({ where: eq(users.id, userId), columns: { id: true } });
+  return row != null;
+}

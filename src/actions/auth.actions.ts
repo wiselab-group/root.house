@@ -3,7 +3,7 @@
 import { AuthError } from "next-auth";
 import { registerSchema, credentialsSchema } from "@/lib/validation/auth";
 import { registerUser, EmailAlreadyRegisteredError } from "@/domain/auth/auth.service";
-import { signIn } from "@/lib/auth";
+import { signIn, signOut } from "@/lib/auth";
 
 export interface RegisterFormState {
   error?: string;
@@ -49,6 +49,10 @@ export async function registerAction(
   });
 
   return {};
+}
+
+export async function signOutAction(): Promise<void> {
+  await signOut({ redirectTo: "/login" });
 }
 
 export interface LoginFormState {
