@@ -32,7 +32,7 @@ export default async function FamiliesPage() {
         <ul className="flex flex-col gap-3">
           {families.map((family) => (
             <li key={family.id}>
-              <Link href={`/families/${family.id}`}>
+              <Link href={`/families/${family.slug}`}>
                 <Card className="transition-colors hover:border-foreground/30">
                   <CardHeader>
                     <CardTitle>{family.name}</CardTitle>

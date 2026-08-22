@@ -4,19 +4,21 @@ import { requireFamilyAccess } from "@/domain/family/access";
 import { searchPeople } from "@/domain/search/search.service";
 import { personDisplayName } from "@/domain/person/display-name";
 import { formatPartialDate } from "@/domain/shared/partial-date";
+import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export default async function SearchPage({
   params,
   searchParams,
-}: PageProps<"/families/[familyId]/search">) {
-  const { familyId } = await params;
+}: PageProps<"/families/[slug]/search">) {
+  const { slug } = await params;
   const { q } = await searchParams;
   const query = typeof q === "string" ? q : "";
 
   const session = await auth();
   if (!session?.user) return null;
+  const familyId = await resolveFamilyIdBySlug(slug);
   await requireFamilyAccess(familyId, session.user.id, "viewer");
 
   const results = query.trim().length > 0 ? await searchPeople(familyId, query) : [];
@@ -52,7 +54,7 @@ export default async function SearchPage({
         <ul className="flex flex-col gap-3">
           {results.map((person) => (
             <li key={person.id}>
-              <Link href={`/families/${familyId}/people/${person.id}`}>
+              <Link href={`/families/${slug}/people/${person.id}`}>
                 <Card className="transition-colors hover:border-foreground/30">
                   <CardHeader>
                     <CardTitle>{personDisplayName(person)}</CardTitle>

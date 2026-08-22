@@ -13,10 +13,12 @@ import { AddEventForm } from "@/components/forms/add-event-form";
  */
 export async function PersonTimeline({
   familyId,
+  familySlug,
   personId,
   canEdit,
 }: {
   familyId: string;
+  familySlug: string;
   personId: string;
   canEdit: boolean;
 }) {
@@ -35,7 +37,7 @@ export async function PersonTimeline({
             {timeline.map((event) => (
               <li key={event.id}>
                 <Link
-                  href={`/families/${familyId}/events/${event.id}`}
+                  href={`/families/${familySlug}/events/${event.id}`}
                   className="flex flex-col gap-0.5 hover:opacity-80"
                 >
                   <div className="flex items-center gap-2">

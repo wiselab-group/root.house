@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
  * same underlying data, different renderer, per the plan's "different UI
  * representations of the same graph" principle.
  */
-export function MobileFocusView({ graph, familyId }: { graph: TreeLayoutGraph; familyId: string }) {
+export function MobileFocusView({ graph, familySlug }: { graph: TreeLayoutGraph; familySlug: string }) {
   const focusNode = graph.nodes.find((n) => n.isFocus);
   if (!focusNode) return null;
 
@@ -53,7 +53,7 @@ export function MobileFocusView({ graph, familyId }: { graph: TreeLayoutGraph; f
         </CardHeader>
         <CardContent>
           <Link
-            href={`/families/${familyId}/people/${focusNode.personId}`}
+            href={`/families/${familySlug}/people/${focusNode.personId}`}
             className="text-sm text-muted-foreground hover:underline"
           >
             Открыть профиль

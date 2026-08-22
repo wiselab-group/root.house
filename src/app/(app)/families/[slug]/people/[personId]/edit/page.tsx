@@ -2,17 +2,19 @@ import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { getPerson } from "@/domain/person/person.service";
+import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { PersonForm } from "@/components/forms/person-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { updatePersonAction } from "@/actions/person.actions";
 
 export default async function EditPersonPage({
   params,
-}: PageProps<"/families/[familyId]/people/[personId]/edit">) {
-  const { familyId, personId } = await params;
+}: PageProps<"/families/[slug]/people/[personId]/edit">) {
+  const { slug, personId } = await params;
   const session = await auth();
   if (!session?.user) return null;
 
+  const familyId = await resolveFamilyIdBySlug(slug);
   await requireFamilyAccess(familyId, session.user.id, "editor");
   const person = await getPerson(personId, familyId);
   if (!person) notFound();

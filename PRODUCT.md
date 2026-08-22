@@ -12,13 +12,13 @@ Content Ready: no — реальные семейные данные внося�
 ## Sections Map
 - `/register`, `/login` — регистрация/вход (Auth.js v5, Credentials provider)
 - `/families` — список семей текущего пользователя + создание новой
-- `/families/[familyId]` — dashboard семьи (после MVP — редирект/ссылка на tree)
-- `/families/[familyId]/tree` — интерактивное семейное дерево (@xyflow/react)
-- `/families/[familyId]/people` — список людей + создание
-- `/families/[familyId]/people/[personId]` — Person Profile (осн. данные, семья, timeline, media, stories)
-- `/families/[familyId]/people/[personId]/edit` — редактирование
-- `/families/[familyId]/events/[eventId]` — детали события
-- `/families/[familyId]/search` — поиск по имени/фамилии/девичьей фамилии/годам
+- `/families/[slug]` — dashboard семьи (после MVP — редирект/ссылка на tree)
+- `/families/[slug]/tree` — интерактивное семейное дерево (@xyflow/react)
+- `/families/[slug]/people` — список людей + создание
+- `/families/[slug]/people/[personId]` — Person Profile (осн. данные, семья, timeline, media, stories)
+- `/families/[slug]/people/[personId]/edit` — редактирование
+- `/families/[slug]/events/[eventId]` — детали события
+- `/families/[slug]/search` — поиск по имени/фамилии/девичьей фамилии/годам
 
 ## User Flow
 Основной вертикальный срез (целевой сценарий для проверки качества MVP):

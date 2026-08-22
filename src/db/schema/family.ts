@@ -9,19 +9,27 @@ export const planTierEnum = pgEnum("plan_tier", ["free"]); // extended later (pr
  * all belong to a Family, never directly to a User — this is what makes
  * multi-user collaboration (inviting relatives) possible without a data migration.
  */
-export const families = pgTable("families", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
-  description: text("description"),
-  // Reserved for future billing — Family is the billing unit (one subscription
-  // covers the whole family), not the User. Not enforced/used anywhere yet.
-  planTier: planTierEnum("plan_tier").notNull().default("free"),
-  createdBy: uuid("created_by")
-    .notNull()
-    .references(() => users.id, { onDelete: "restrict" }),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const families = pgTable(
+  "families",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    // Human-readable, globally-unique, URL-safe handle (see domain/family/slug.ts)
+    // — lets a family be reached at /families/[slug] instead of a raw UUID.
+    // Backfilled for pre-existing rows in migration 0002.
+    slug: text("slug").notNull(),
+    description: text("description"),
+    // Reserved for future billing — Family is the billing unit (one subscription
+    // covers the whole family), not the User. Not enforced/used anywhere yet.
+    planTier: planTierEnum("plan_tier").notNull().default("free"),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [uniqueIndex("families_slug_unique").on(table.slug)],
+);
 
 /**
  * FamilyMember — join table between User and Family with a role. This is the

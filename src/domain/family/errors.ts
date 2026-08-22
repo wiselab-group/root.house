@@ -12,3 +12,12 @@ export class NotFoundError extends Error {
     this.name = "NotFoundError";
   }
 }
+
+/** Thrown by updateFamilySlug() for a malformed/reserved/already-taken slug —
+ *  a user-facing validation failure, not an authorization or not-found case. */
+export class SlugTakenError extends Error {
+  constructor(message = "This slug is not available.") {
+    super(message);
+    this.name = "SlugTakenError";
+  }
+}

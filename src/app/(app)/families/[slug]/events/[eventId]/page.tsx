@@ -5,16 +5,18 @@ import { requireFamilyAccess } from "@/domain/family/access";
 import { getEvent, getParticipantsWithNames } from "@/domain/event/event.service";
 import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 import { formatPartialDate } from "@/domain/shared/partial-date";
+import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default async function EventDetailsPage({
   params,
-}: PageProps<"/families/[familyId]/events/[eventId]">) {
-  const { familyId, eventId } = await params;
+}: PageProps<"/families/[slug]/events/[eventId]">) {
+  const { slug, eventId } = await params;
   const session = await auth();
   if (!session?.user) return null;
 
+  const familyId = await resolveFamilyIdBySlug(slug);
   await requireFamilyAccess(familyId, session.user.id, "viewer");
   const event = await getEvent(eventId, familyId);
   if (!event) notFound();
@@ -52,7 +54,7 @@ export default async function EventDetailsPage({
             <ul className="flex flex-col gap-2">
               {participants.map((p) => (
                 <li key={p.personId} className="flex items-center justify-between text-sm">
-                  <Link href={`/families/${familyId}/people/${p.personId}`} className="hover:underline">
+                  <Link href={`/families/${slug}/people/${p.personId}`} className="hover:underline">
                     {p.name}
                   </Link>
                   <span className="text-muted-foreground">{p.roleLabel}</span>

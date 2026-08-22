@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
+import { getFamilySlugById } from "@/domain/family/family.service";
 import { createEventSchema } from "@/lib/validation/event";
 import { addEvent, removeEvent } from "@/domain/event/event.service";
 import { partialDateFromFormData } from "@/domain/shared/partial-date";
@@ -54,7 +55,8 @@ export async function createEventAction(
     participants: [{ personId, role: "subject" }],
   });
 
-  revalidatePath(`/families/${familyId}/people/${personId}`);
+  const slug = await getFamilySlugById(familyId);
+  revalidatePath(`/families/${slug}/people/${personId}`);
   return {};
 }
 
@@ -64,5 +66,6 @@ export async function deleteEventAction(familyId: string, personId: string, even
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
   await removeEvent(eventId, familyId);
-  revalidatePath(`/families/${familyId}/people/${personId}`);
+  const slug = await getFamilySlugById(familyId);
+  revalidatePath(`/families/${slug}/people/${personId}`);
 }

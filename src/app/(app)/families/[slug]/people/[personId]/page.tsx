@@ -4,6 +4,7 @@ import { requireFamilyAccess } from "@/domain/family/access";
 import { getPerson } from "@/domain/person/person.service";
 import { personDisplayName } from "@/domain/person/display-name";
 import { formatPartialDate } from "@/domain/shared/partial-date";
+import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,11 +16,12 @@ import { DeletePersonButton } from "@/components/person/delete-person-button";
 
 export default async function PersonProfilePage({
   params,
-}: PageProps<"/families/[familyId]/people/[personId]">) {
-  const { familyId, personId } = await params;
+}: PageProps<"/families/[slug]/people/[personId]">) {
+  const { slug, personId } = await params;
   const session = await auth();
   if (!session?.user) return null;
 
+  const familyId = await resolveFamilyIdBySlug(slug);
   const member = await requireFamilyAccess(familyId, session.user.id, "viewer");
   const person = await getPerson(personId, familyId);
   if (!person) notFound();
@@ -38,7 +40,7 @@ export default async function PersonProfilePage({
         </div>
         {canEdit && (
           <div className="flex gap-2">
-            <LinkButton variant="outline" href={`/families/${familyId}/people/${personId}/edit`}>
+            <LinkButton variant="outline" href={`/families/${slug}/people/${personId}/edit`}>
               Редактировать
             </LinkButton>
             {/* Deletion is restricted to owners — more destructive/
@@ -78,9 +80,9 @@ export default async function PersonProfilePage({
         </Card>
       )}
 
-      <PersonFamilyPanel familyId={familyId} personId={personId} canEdit={canEdit} />
+      <PersonFamilyPanel familyId={familyId} familySlug={slug} personId={personId} canEdit={canEdit} />
       <PersonMediaGallery familyId={familyId} personId={personId} canEdit={canEdit} />
-      <PersonTimeline familyId={familyId} personId={personId} canEdit={canEdit} />
+      <PersonTimeline familyId={familyId} familySlug={slug} personId={personId} canEdit={canEdit} />
       <PersonStories familyId={familyId} personId={personId} canEdit={canEdit} />
     </main>
   );

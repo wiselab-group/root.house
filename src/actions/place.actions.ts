@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
+import { getFamilySlugById } from "@/domain/family/family.service";
 import { createPlaceSchema } from "@/lib/validation/place";
 import { addPlace, removePlace } from "@/domain/place/place.service";
 
@@ -44,7 +45,8 @@ export async function createPlaceAction(
     region: parsed.data.region || undefined,
   });
 
-  revalidatePath(`/families/${familyId}/places`);
+  const slug = await getFamilySlugById(familyId);
+  revalidatePath(`/families/${slug}/places`);
   return {};
 }
 
@@ -54,5 +56,6 @@ export async function deletePlaceAction(familyId: string, placeId: string): Prom
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
   await removePlace(placeId, familyId);
-  revalidatePath(`/families/${familyId}/places`);
+  const slug = await getFamilySlugById(familyId);
+  revalidatePath(`/families/${slug}/places`);
 }

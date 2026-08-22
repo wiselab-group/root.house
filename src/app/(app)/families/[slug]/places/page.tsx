@@ -1,15 +1,17 @@
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { listPlaces } from "@/domain/place/place.service";
+import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CreatePlaceForm } from "@/components/forms/create-place-form";
 import { DeletePlaceButton } from "@/components/forms/delete-place-button";
 
-export default async function PlacesPage({ params }: PageProps<"/families/[familyId]/places">) {
-  const { familyId } = await params;
+export default async function PlacesPage({ params }: PageProps<"/families/[slug]/places">) {
+  const { slug } = await params;
   const session = await auth();
   if (!session?.user) return null;
 
+  const familyId = await resolveFamilyIdBySlug(slug);
   const member = await requireFamilyAccess(familyId, session.user.id, "viewer");
   const canEdit = member.role === "owner" || member.role === "editor";
   const places = await listPlaces(familyId);

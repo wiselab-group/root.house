@@ -1,9 +1,11 @@
 import { PersonForm } from "@/components/forms/person-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createPersonAction } from "@/actions/person.actions";
+import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 
-export default async function NewPersonPage({ params }: PageProps<"/families/[familyId]/people/new">) {
-  const { familyId } = await params;
+export default async function NewPersonPage({ params }: PageProps<"/families/[slug]/people/new">) {
+  const { slug } = await params;
+  const familyId = await resolveFamilyIdBySlug(slug);
 
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-6 p-6">

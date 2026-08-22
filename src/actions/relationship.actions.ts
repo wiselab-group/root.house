@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
+import { getFamilySlugById } from "@/domain/family/family.service";
 import { addPerson, addPlaceholderPerson } from "@/domain/person/person.service";
 import {
   addParentChild,
@@ -80,7 +81,8 @@ export async function addRelativeAction(
     throw error;
   }
 
-  revalidatePath(`/families/${familyId}/people/${personId}`);
+  const slug = await getFamilySlugById(familyId);
+  revalidatePath(`/families/${slug}/people/${personId}`);
   return {};
 }
 
@@ -94,7 +96,8 @@ export async function removeParentChildAction(
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
   await removeParentChild(relationshipId, familyId);
-  revalidatePath(`/families/${familyId}/people/${personId}`);
+  const slug = await getFamilySlugById(familyId);
+  revalidatePath(`/families/${slug}/people/${personId}`);
 }
 
 export async function removePartnershipAction(
@@ -107,5 +110,6 @@ export async function removePartnershipAction(
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
   await removePartnership(relationshipId, familyId);
-  revalidatePath(`/families/${familyId}/people/${personId}`);
+  const slug = await getFamilySlugById(familyId);
+  revalidatePath(`/families/${slug}/people/${personId}`);
 }

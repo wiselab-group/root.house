@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { listPeople } from "@/domain/person/person.service";
 import { getFocusTreeLayout } from "@/domain/tree/tree.service";
+import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { TreeCanvas } from "@/components/tree/tree-canvas";
 import { MobileFocusView } from "@/components/tree/mobile-focus-view";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,12 +11,13 @@ import { LinkButton } from "@/components/ui/link-button";
 export default async function FamilyTreePage({
   params,
   searchParams,
-}: PageProps<"/families/[familyId]/tree">) {
-  const { familyId } = await params;
+}: PageProps<"/families/[slug]/tree">) {
+  const { slug } = await params;
   const { focus } = await searchParams;
   const session = await auth();
   if (!session?.user) return null;
 
+  const familyId = await resolveFamilyIdBySlug(slug);
   await requireFamilyAccess(familyId, session.user.id, "viewer");
   const people = await listPeople(familyId);
 
@@ -28,7 +30,7 @@ export default async function FamilyTreePage({
             <CardDescription>Добавьте хотя бы одного человека, чтобы увидеть дерево.</CardDescription>
           </CardHeader>
           <CardContent>
-            <LinkButton href={`/families/${familyId}/people/new`}>Добавить человека</LinkButton>
+            <LinkButton href={`/families/${slug}/people/new`}>Добавить человека</LinkButton>
           </CardContent>
         </Card>
       </main>
@@ -65,7 +67,7 @@ export default async function FamilyTreePage({
         <TreeCanvas graph={graph} />
       </div>
       <div className="md:hidden">
-        <MobileFocusView graph={graph} familyId={familyId} />
+        <MobileFocusView graph={graph} familySlug={slug} />
       </div>
     </main>
   );

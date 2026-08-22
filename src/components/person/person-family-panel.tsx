@@ -23,10 +23,12 @@ interface RelativeItem {
  */
 export async function PersonFamilyPanel({
   familyId,
+  familySlug,
   personId,
   canEdit,
 }: {
   familyId: string;
+  familySlug: string;
   personId: string;
   canEdit: boolean;
 }) {
@@ -62,6 +64,7 @@ export async function PersonFamilyPanel({
       <CardContent className="flex flex-col gap-6">
         <RelativeGroup
           familyId={familyId}
+          familySlug={familySlug}
           personId={personId}
           title="Родители"
           people={parents}
@@ -70,6 +73,7 @@ export async function PersonFamilyPanel({
         />
         <RelativeGroup
           familyId={familyId}
+          familySlug={familySlug}
           personId={personId}
           title="Супруги"
           people={spouses}
@@ -78,13 +82,20 @@ export async function PersonFamilyPanel({
         />
         <RelativeGroup
           familyId={familyId}
+          familySlug={familySlug}
           personId={personId}
           title="Дети"
           people={children}
           relationshipKind="parent_child"
           canEdit={canEdit}
         />
-        <RelativeGroup familyId={familyId} personId={personId} title="Братья и сёстры" people={siblings} />
+        <RelativeGroup
+          familyId={familyId}
+          familySlug={familySlug}
+          personId={personId}
+          title="Братья и сёстры"
+          people={siblings}
+        />
 
         {canEdit && (
           <div className="grid gap-3 sm:grid-cols-3">
@@ -118,6 +129,7 @@ export async function PersonFamilyPanel({
 
 function RelativeGroup({
   familyId,
+  familySlug,
   personId,
   title,
   people,
@@ -125,6 +137,7 @@ function RelativeGroup({
   canEdit = false,
 }: {
   familyId: string;
+  familySlug: string;
   personId: string;
   title: string;
   people: RelativeItem[];
@@ -141,7 +154,7 @@ function RelativeGroup({
           {people.map((person) => (
             <li key={person.id} className="flex items-center gap-1 rounded-full border border-border pl-3 pr-1 py-1">
               <Link
-                href={`/families/${familyId}/people/${person.id}`}
+                href={`/families/${familySlug}/people/${person.id}`}
                 className="text-sm hover:underline"
               >
                 {personDisplayName(person)}

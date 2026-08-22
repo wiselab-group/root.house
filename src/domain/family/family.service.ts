@@ -1,11 +1,13 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { families, familyMembers, persons } from "@/db/schema";
-import { ForbiddenError } from "./errors";
+import { ForbiddenError, SlugTakenError } from "./errors";
+import { ensureUniqueSlug, isValidSlugFormat, slugify } from "./slug";
 
 export interface FamilySummary {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
 }
 
@@ -26,6 +28,7 @@ export async function listFamiliesForUser(userId: string): Promise<FamilySummary
     .select({
       id: families.id,
       name: families.name,
+      slug: families.slug,
       description: families.description,
       personCount,
     })
@@ -43,9 +46,40 @@ export async function listFamiliesForUser(userId: string): Promise<FamilySummary
 export async function getFamilySummary(familyId: string): Promise<FamilySummary | null> {
   const row = await db.query.families.findFirst({
     where: eq(families.id, familyId),
-    columns: { id: true, name: true, description: true },
+    columns: { id: true, name: true, slug: true, description: true },
   });
   return row ?? null;
+}
+
+/**
+ * Resolves a public slug (the /families/[slug] URL segment) to a familyId —
+ * this is NOT an access check: every caller still must go through
+ * requireFamilyAccess with the resolved id before reading/writing anything.
+ * Returns null for an unknown slug rather than throwing, so callers can
+ * 404 without leaking whether the slug ever existed. See
+ * lib/resolve-family-slug.ts for the cached Server Component wrapper used
+ * by layouts/pages.
+ */
+export async function getFamilyIdBySlug(slug: string): Promise<string | null> {
+  const row = await db.query.families.findFirst({
+    where: eq(families.slug, slug),
+    columns: { id: true },
+  });
+  return row?.id ?? null;
+}
+
+/**
+ * The inverse of getFamilyIdBySlug — used by Server Actions that already
+ * hold a validated familyId (from requireFamilyAccess) and need to build a
+ * /families/[slug]/... redirect or revalidatePath target after a mutation.
+ * Not an access check either; callers must already have authorized familyId.
+ */
+export async function getFamilySlugById(familyId: string): Promise<string | null> {
+  const row = await db.query.families.findFirst({
+    where: eq(families.id, familyId),
+    columns: { slug: true },
+  });
+  return row?.slug ?? null;
 }
 
 export interface CreateFamilyInput {
@@ -64,11 +98,22 @@ export interface CreateFamilyInput {
  * A single SQL statement is atomic in Postgres on its own, so this achieves
  * the same guarantee without needing transaction support from the driver.
  */
-export async function createFamily(userId: string, input: CreateFamilyInput): Promise<{ id: string }> {
+export async function createFamily(
+  userId: string,
+  input: CreateFamilyInput,
+): Promise<{ id: string; slug: string }> {
+  const slug = await ensureUniqueSlug(slugify(input.name), async (candidate) => {
+    const existing = await db.query.families.findFirst({
+      where: eq(families.slug, candidate),
+      columns: { id: true },
+    });
+    return existing !== undefined;
+  });
+
   const result = await db.execute<{ id: string }>(sql`
     WITH new_family AS (
-      INSERT INTO families (name, description, created_by)
-      VALUES (${input.name}, ${input.description ?? null}, ${userId})
+      INSERT INTO families (name, slug, description, created_by)
+      VALUES (${input.name}, ${slug}, ${input.description ?? null}, ${userId})
       RETURNING id
     )
     INSERT INTO family_members (family_id, user_id, role)
@@ -76,7 +121,36 @@ export async function createFamily(userId: string, input: CreateFamilyInput): Pr
     RETURNING family_id AS id
   `);
 
-  return { id: result.rows[0].id };
+  return { id: result.rows[0].id, slug };
+}
+
+/**
+ * Changes a family's slug — caller must have already verified (via
+ * requireFamilyAccess with 'owner') that the actor may rename the family's
+ * public handle. Rejects malformed/reserved slugs and slugs already taken by
+ * a *different* family; renaming to the family's own current slug is a no-op
+ * success, not a conflict.
+ */
+export async function updateFamilySlug(familyId: string, newSlug: string): Promise<void> {
+  if (!isValidSlugFormat(newSlug)) {
+    throw new SlugTakenError(
+      "Ссылка может содержать только латинские буквы, цифры и дефис (2-64 символа).",
+    );
+  }
+
+  const existing = await db.query.families.findFirst({
+    where: eq(families.slug, newSlug),
+    columns: { id: true },
+  });
+
+  if (existing && existing.id !== familyId) {
+    throw new SlugTakenError("Эта ссылка уже занята другой семьёй.");
+  }
+
+  await db
+    .update(families)
+    .set({ slug: newSlug, updatedAt: new Date() })
+    .where(and(eq(families.id, familyId), ne(families.slug, newSlug)));
 }
 
 /**

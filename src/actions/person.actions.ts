@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
+import { getFamilySlugById } from "@/domain/family/family.service";
 import { createPersonSchema, createPlaceholderPersonSchema } from "@/lib/validation/person";
 import { addPerson, addPlaceholderPerson, editPerson, removePerson } from "@/domain/person/person.service";
 import { partialDateFromFormData } from "@/domain/shared/partial-date";
@@ -59,8 +60,9 @@ export async function createPersonAction(
     deathDate: partialDateFromFormData(formData, "death"),
   });
 
-  revalidatePath(`/families/${familyId}/people`);
-  redirect(`/families/${familyId}/people/${person.id}`);
+  const slug = await getFamilySlugById(familyId);
+  revalidatePath(`/families/${slug}/people`);
+  redirect(`/families/${slug}/people/${person.id}`);
 }
 
 export interface CreatePlaceholderFormState {
@@ -92,7 +94,8 @@ export async function createPlaceholderPersonAction(
 
   await addPlaceholderPerson(familyId, session.user.id, parsed.data);
 
-  revalidatePath(`/families/${familyId}/people`);
+  const slug = await getFamilySlugById(familyId);
+  revalidatePath(`/families/${slug}/people`);
   return {};
 }
 
@@ -103,8 +106,9 @@ export async function deletePersonAction(familyId: string, personId: string): Pr
   await requireFamilyAccess(familyId, session.user.id, "editor");
   await removePerson(personId, familyId);
 
-  revalidatePath(`/families/${familyId}/people`);
-  redirect(`/families/${familyId}/people`);
+  const slug = await getFamilySlugById(familyId);
+  revalidatePath(`/families/${slug}/people`);
+  redirect(`/families/${slug}/people`);
 }
 
 export async function updatePersonAction(
@@ -158,6 +162,7 @@ export async function updatePersonAction(
     return { error: "Человек не найден." };
   }
 
-  revalidatePath(`/families/${familyId}/people/${personId}`);
-  redirect(`/families/${familyId}/people/${personId}`);
+  const slug = await getFamilySlugById(familyId);
+  revalidatePath(`/families/${slug}/people/${personId}`);
+  redirect(`/families/${slug}/people/${personId}`);
 }
