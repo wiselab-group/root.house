@@ -4,6 +4,7 @@ import {
   isValidPersonSlugFormat,
   slugifyPerson,
 } from "@/domain/person/slug";
+import { reconcileLivingStatus } from "@/domain/person/reconcile-living-status";
 import {
   createPerson,
   deletePerson,
@@ -64,8 +65,10 @@ async function generateUniquePersonSlug(
 export async function addPerson(
   familyId: string,
   createdBy: string,
-  input: CreatePersonInput,
+  rawInput: CreatePersonInput,
 ): Promise<{ id: string; slug: string }> {
+  const input = reconcileLivingStatus(rawInput);
+
   const slug = await generateUniquePersonSlug(familyId, {
     firstName: input.firstName,
     nickname: input.nickname,
@@ -154,9 +157,9 @@ export async function listPeople(familyId: string): Promise<PersonRecord[]> {
 export async function editPerson(
   personId: string,
   familyId: string,
-  patch: UpdatePersonData,
+  rawPatch: UpdatePersonData,
 ): Promise<boolean> {
-  return updatePerson(personId, familyId, patch);
+  return updatePerson(personId, familyId, reconcileLivingStatus(rawPatch));
 }
 
 /**
