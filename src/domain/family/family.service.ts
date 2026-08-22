@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { families, familyMembers } from "@/db/schema";
+import { families, familyMembers, persons } from "@/db/schema";
 import { ForbiddenError } from "./errors";
 
 export interface FamilySummary {
@@ -9,10 +9,26 @@ export interface FamilySummary {
   description: string | null;
 }
 
-/** Families the given user belongs to, regardless of role, newest first. */
-export async function listFamiliesForUser(userId: string): Promise<FamilySummary[]> {
+export interface FamilySummaryWithCount extends FamilySummary {
+  personCount: number;
+}
+
+/** Families the given user belongs to, regardless of role, newest first —
+ *  each annotated with how many Person records the family already holds
+ *  (a correlated subquery, so families with zero people still come back
+ *  as 0 rather than being dropped by a join). */
+export async function listFamiliesForUser(userId: string): Promise<FamilySummaryWithCount[]> {
+  const personCount = sql<number>`(
+    select count(*)::int from ${persons} where ${persons.familyId} = ${families.id}
+  )`.as("person_count");
+
   const rows = await db
-    .select({ id: families.id, name: families.name, description: families.description })
+    .select({
+      id: families.id,
+      name: families.name,
+      description: families.description,
+      personCount,
+    })
     .from(familyMembers)
     .innerJoin(families, eq(familyMembers.familyId, families.id))
     .where(eq(familyMembers.userId, userId))

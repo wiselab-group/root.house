@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { listFamiliesForUser } from "@/domain/family/family.service";
+import { personCountLabel } from "@/domain/shared/pluralize-ru";
 
 export default async function FamiliesPage() {
   const session = await auth();
@@ -35,7 +36,10 @@ export default async function FamiliesPage() {
                 <Card className="transition-colors hover:border-foreground/30">
                   <CardHeader>
                     <CardTitle>{family.name}</CardTitle>
-                    {family.description && <CardDescription>{family.description}</CardDescription>}
+                    <CardDescription>
+                      {personCountLabel(family.personCount)}
+                      {family.description ? ` · ${family.description}` : ""}
+                    </CardDescription>
                   </CardHeader>
                 </Card>
               </Link>
