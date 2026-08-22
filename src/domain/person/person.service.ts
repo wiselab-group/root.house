@@ -1,5 +1,9 @@
 import type { PartialDate } from "@/domain/shared/partial-date";
-import { ensureUniqueSlug, isValidPersonSlugFormat, slugifyPerson } from "@/domain/person/slug";
+import {
+  ensureUniqueSlug,
+  isValidPersonSlugFormat,
+  slugifyPerson,
+} from "@/domain/person/slug";
 import {
   createPerson,
   deletePerson,
@@ -7,6 +11,7 @@ import {
   getPersonBySlug,
   isPersonSlugTaken,
   listPersonsByFamily,
+  setProfilePhoto,
   updatePerson,
   updatePersonSlug,
   type PersonRecord,
@@ -16,7 +21,9 @@ import {
 export type { PersonRecord };
 
 export class PersonSlugTakenError extends Error {
-  constructor(message = "This slug is already used by someone else in this family.") {
+  constructor(
+    message = "This slug is already used by someone else in this family.",
+  ) {
     super(message);
     this.name = "PersonSlugTakenError";
   }
@@ -48,7 +55,9 @@ async function generateUniquePersonSlug(
   source: Parameters<typeof slugifyPerson>[0],
 ): Promise<string> {
   const base = slugifyPerson(source, randomSeed());
-  return ensureUniqueSlug(base, (candidate) => isPersonSlugTaken(candidate, familyId));
+  return ensureUniqueSlug(base, (candidate) =>
+    isPersonSlugTaken(candidate, familyId),
+  );
 }
 
 /** Ordinary Person creation — used by the "Add person" flow (adding yourself, a known relative, ...). */
@@ -103,7 +112,10 @@ export async function addPlaceholderPerson(
   });
 }
 
-export async function getPerson(personId: string, familyId: string): Promise<PersonRecord | null> {
+export async function getPerson(
+  personId: string,
+  familyId: string,
+): Promise<PersonRecord | null> {
   return getPersonById(personId, familyId);
 }
 
@@ -113,7 +125,10 @@ export async function getPerson(personId: string, familyId: string): Promise<Per
  * domain/family/family.service.ts::getFamilyIdBySlug. Returns null for an
  * unknown slug so callers can 404 without leaking whether it ever existed.
  */
-export async function getPersonIdBySlug(slug: string, familyId: string): Promise<string | null> {
+export async function getPersonIdBySlug(
+  slug: string,
+  familyId: string,
+): Promise<string | null> {
   const person = await getPersonBySlug(slug, familyId);
   return person?.id ?? null;
 }
@@ -124,7 +139,10 @@ export async function getPersonIdBySlug(slug: string, familyId: string): Promise
  * and need to build a /families/[slug]/people/[slug]/... redirect or
  * revalidatePath target after a mutation. Not an access check either.
  */
-export async function getPersonSlugById(personId: string, familyId: string): Promise<string | null> {
+export async function getPersonSlugById(
+  personId: string,
+  familyId: string,
+): Promise<string | null> {
   const person = await getPersonById(personId, familyId);
   return person?.slug ?? null;
 }
@@ -149,7 +167,11 @@ export async function editPerson(
  * everyone's bookmarks to the family root). Rejects malformed slugs and
  * slugs already taken by a *different* Person in the same family.
  */
-export async function renamePersonSlug(personId: string, familyId: string, newSlug: string): Promise<void> {
+export async function renamePersonSlug(
+  personId: string,
+  familyId: string,
+  newSlug: string,
+): Promise<void> {
   if (!isValidPersonSlugFormat(newSlug)) {
     throw new PersonSlugTakenError(
       "Ссылка может содержать только латинские буквы, цифры и дефис (2-64 символа).",
@@ -158,12 +180,34 @@ export async function renamePersonSlug(personId: string, familyId: string, newSl
 
   const taken = await isPersonSlugTaken(newSlug, familyId, personId);
   if (taken) {
-    throw new PersonSlugTakenError("Эта ссылка уже занята другим человеком в этой семье.");
+    throw new PersonSlugTakenError(
+      "Эта ссылка уже занята другим человеком в этой семье.",
+    );
   }
 
   await updatePersonSlug(personId, familyId, newSlug);
 }
 
-export async function removePerson(personId: string, familyId: string): Promise<boolean> {
+export async function removePerson(
+  personId: string,
+  familyId: string,
+): Promise<boolean> {
   return deletePerson(personId, familyId);
+}
+
+/**
+ * Sets (or clears, with mediaId=null) a Person's profile photo/avatar —
+ * shown on the profile header, the /people list card, and as the tree node
+ * thumbnail. The avatar is its own Media row, uploaded separately from (and
+ * never shown in) the photo gallery — see media.service.ts::uploadPersonAvatar
+ * and components/forms/avatar-editor.tsx. Returns false if the Person or the
+ * Media doesn't exist in this family (family-scoped check happens in the
+ * repository).
+ */
+export async function setPersonAvatar(
+  personId: string,
+  familyId: string,
+  mediaId: string | null,
+): Promise<boolean> {
+  return setProfilePhoto(personId, familyId, mediaId);
 }

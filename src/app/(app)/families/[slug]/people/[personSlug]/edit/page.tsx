@@ -5,6 +5,7 @@ import { getPerson } from "@/domain/person/person.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { resolvePersonIdBySlug } from "@/lib/resolve-person-slug";
 import { PersonForm } from "@/components/forms/person-form";
+import { AvatarEditor } from "@/components/forms/avatar-editor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { updatePersonAction } from "@/actions/person.actions";
 
@@ -23,6 +24,19 @@ export default async function EditPersonPage({
 
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-6 p-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Фото профиля</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AvatarEditor
+            familyId={familyId}
+            personId={personId}
+            person={person}
+          />
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Редактировать</CardTitle>

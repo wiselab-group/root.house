@@ -12,6 +12,7 @@ function person(id: string, overrides: Partial<PersonNode> = {}): PersonNode {
     isLiving: true,
     birthYear: null,
     deathYear: null,
+    photoMediaId: null,
     ...overrides,
   };
 }
@@ -35,13 +36,22 @@ describe("buildFocusTreeLayout", () => {
       focusPersonId: "alice",
     });
     expect(result.nodes).toHaveLength(1);
-    expect(result.nodes[0]).toMatchObject({ id: "alice", generation: 0, isFocus: true });
+    expect(result.nodes[0]).toMatchObject({
+      id: "alice",
+      generation: 0,
+      isFocus: true,
+    });
     expect(result.edges).toEqual([]);
   });
 
   it("places parents at generation -1 and children at generation +1", () => {
     const result = buildFocusTreeLayout({
-      persons: [person("mother"), person("father"), person("alice"), person("child")],
+      persons: [
+        person("mother"),
+        person("father"),
+        person("alice"),
+        person("child"),
+      ],
       parentChildEdges: [
         { parentId: "mother", childId: "alice" },
         { parentId: "father", childId: "alice" },
@@ -75,7 +85,12 @@ describe("buildFocusTreeLayout", () => {
 
   it("excludes generations beyond the requested ancestorGenerations/descendantGenerations", () => {
     const result = buildFocusTreeLayout({
-      persons: [person("great-grandparent"), person("grandparent"), person("parent"), person("alice")],
+      persons: [
+        person("great-grandparent"),
+        person("grandparent"),
+        person("parent"),
+        person("alice"),
+      ],
       parentChildEdges: [
         { parentId: "great-grandparent", childId: "grandparent" },
         { parentId: "grandparent", childId: "parent" },
@@ -95,21 +110,32 @@ describe("buildFocusTreeLayout", () => {
     const result = buildFocusTreeLayout({
       persons: [person("alice"), person("spouse")],
       parentChildEdges: [],
-      partnershipEdges: [{ person1Id: "alice", person2Id: "spouse", isCurrent: true }],
+      partnershipEdges: [
+        { person1Id: "alice", person2Id: "spouse", isCurrent: true },
+      ],
       focusPersonId: "alice",
     });
 
     const byId = new Map(result.nodes.map((n) => [n.id, n]));
     expect(byId.get("spouse")?.generation).toBe(0);
     expect(result.edges).toContainEqual(
-      expect.objectContaining({ kind: "partnership", source: "alice", target: "spouse" }),
+      expect.objectContaining({
+        kind: "partnership",
+        source: "alice",
+        target: "spouse",
+      }),
     );
   });
 
   it("only emits edges where both endpoints are within the visible slice", () => {
     // grandparent -> parent -> alice -> child -> grandchild(too far, excluded with generations=1)
     const result = buildFocusTreeLayout({
-      persons: [person("parent"), person("alice"), person("child"), person("grandchild")],
+      persons: [
+        person("parent"),
+        person("alice"),
+        person("child"),
+        person("grandchild"),
+      ],
       parentChildEdges: [
         { parentId: "parent", childId: "alice" },
         { parentId: "alice", childId: "child" },

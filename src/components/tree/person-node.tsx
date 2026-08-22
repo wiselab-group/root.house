@@ -2,6 +2,8 @@
 
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { personInitials } from "@/domain/person/display-name";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
 
 /**
@@ -18,7 +20,7 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
   return (
     <div
       className={cn(
-        "w-[200px] origin-center overflow-hidden rounded-lg border bg-card shadow-sm",
+        "w-55 origin-center overflow-hidden rounded-lg border bg-card shadow-sm",
         "animate-tree-node-enter",
         "transition-[transform,box-shadow] duration-200 ease-(--ease-tree-focus)",
         "hover:-translate-y-0.5 hover:shadow-md",
@@ -40,14 +42,38 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
     >
       {/* Generation color-coding (DESIGN.md): one warm hue, lightness/chroma
           fading with distance from focus — never a rainbow per generation. */}
-      <div className="h-1" style={{ backgroundColor: generationColor(data.generation) }} />
-      <div className="px-4 py-3">
+      <div
+        className="h-1"
+        style={{ backgroundColor: generationColor(data.generation) }}
+      />
+      <div className="flex items-center gap-2 px-4 py-3">
         <Handle type="target" position={Position.Top} className="bg-border!" />
-        <p className={cn("truncate text-sm font-medium", data.isPlaceholder && "italic text-muted-foreground")}>
-          {name}
-        </p>
-        {years && <p className="text-xs text-muted-foreground">{years}</p>}
-        <Handle type="source" position={Position.Bottom} className="bg-border!" />
+        <Avatar size="lg" className="size-11! shrink-0 text-sm">
+          {data.photoMediaId && (
+            <AvatarImage
+              src={`/api/media/${data.photoMediaId}?familyId=${data.familyId}`}
+              alt=""
+            />
+          )}
+          <AvatarFallback>{personInitials(data)}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <p
+            title={name}
+            className={cn(
+              "truncate text-sm font-medium",
+              data.isPlaceholder && "italic text-muted-foreground",
+            )}
+          >
+            {name}
+          </p>
+          {years && <p className="text-xs text-muted-foreground">{years}</p>}
+        </div>
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          className="bg-border!"
+        />
       </div>
     </div>
   );

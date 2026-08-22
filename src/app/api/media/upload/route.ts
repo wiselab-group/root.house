@@ -2,10 +2,20 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { ForbiddenError } from "@/domain/family/errors";
-import { uploadPersonPhoto } from "@/domain/media/media.service";
+import {
+  uploadPersonPhoto,
+  uploadPersonAvatar,
+  removeMedia,
+} from "@/domain/media/media.service";
+import { getPerson, setPersonAvatar } from "@/domain/person/person.service";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB — generous for a phone photo, small enough to pass through our server comfortably
-const ALLOWED_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
+const ALLOWED_CONTENT_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+];
 
 /**
  * Photo upload goes through our own server (not a direct browser->Blob
@@ -26,9 +36,17 @@ export async function POST(request: Request): Promise<Response> {
   const familyId = formData.get("familyId");
   const personId = formData.get("personId");
   const file = formData.get("file");
+  const isAvatar = formData.get("isAvatar") === "true";
 
-  if (typeof familyId !== "string" || typeof personId !== "string" || !(file instanceof File)) {
-    return NextResponse.json({ error: "Missing familyId, personId, or file" }, { status: 400 });
+  if (
+    typeof familyId !== "string" ||
+    typeof personId !== "string" ||
+    !(file instanceof File)
+  ) {
+    return NextResponse.json(
+      { error: "Missing familyId, personId, or file" },
+      { status: 400 },
+    );
   }
 
   try {
@@ -41,13 +59,43 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   if (!ALLOWED_CONTENT_TYPES.includes(file.type)) {
-    return NextResponse.json({ error: `Unsupported file type: ${file.type}` }, { status: 400 });
+    return NextResponse.json(
+      { error: `Unsupported file type: ${file.type}` },
+      { status: 400 },
+    );
   }
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 400 });
+    return NextResponse.json(
+      { error: "File too large (max 10MB)" },
+      { status: 400 },
+    );
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
+
+  if (isAvatar) {
+    // Replacing an existing avatar: upload+assign the new one first, then
+    // remove the old Media row — never leave the person without any avatar
+    // between the two steps if something below fails.
+    const previousPerson = await getPerson(personId, familyId);
+    const previousAvatarMediaId = previousPerson?.photoMediaId ?? null;
+
+    const avatarMedia = await uploadPersonAvatar({
+      familyId,
+      personId,
+      uploadedBy: session.user.id,
+      file: buffer,
+      contentType: file.type,
+      originalFilename: file.name,
+    });
+    await setPersonAvatar(personId, familyId, avatarMedia.id);
+
+    if (previousAvatarMediaId) {
+      await removeMedia(previousAvatarMediaId, familyId);
+    }
+
+    return NextResponse.json({ id: avatarMedia.id }, { status: 201 });
+  }
 
   const media = await uploadPersonPhoto({
     familyId,

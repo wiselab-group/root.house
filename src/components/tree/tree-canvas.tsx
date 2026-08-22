@@ -18,7 +18,10 @@ import { PersonNode } from "./person-node";
 import { RelationshipEdge } from "./relationship-edge";
 
 const nodeTypes = { person: PersonNode };
-const edgeTypes = { parentChild: RelationshipEdge, partnership: RelationshipEdge };
+const edgeTypes = {
+  parentChild: RelationshipEdge,
+  partnership: RelationshipEdge,
+};
 
 /**
  * Interactive desktop family tree canvas. `focusPersonId` lives in the URL
@@ -26,12 +29,21 @@ const edgeTypes = { parentChild: RelationshipEdge, partnership: RelationshipEdge
  * view shareable via link and gives the browser back-button "previous
  * focus" navigation for free (per plan §6/§12).
  */
-export function TreeCanvas({ graph }: { graph: TreeLayoutGraph }) {
+export function TreeCanvas({
+  graph,
+  familyId,
+}: {
+  graph: TreeLayoutGraph;
+  familyId: string;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => toReactFlow(graph), [graph]);
+  const { nodes: initialNodes, edges: initialEdges } = useMemo(
+    () => toReactFlow(graph, familyId),
+    [graph, familyId],
+  );
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
   const [edges, , onEdgesChange] = useEdgesState(initialEdges);
 

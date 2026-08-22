@@ -14,6 +14,7 @@ import { PersonTimeline } from "@/components/person/person-timeline";
 import { PersonMediaGallery } from "@/components/person/person-media-gallery";
 import { PersonStories } from "@/components/person/person-stories";
 import { DeletePersonButton } from "@/components/person/delete-person-button";
+import { PersonAvatar } from "@/components/person/person-avatar";
 
 export default async function PersonProfilePage({
   params,
@@ -33,16 +34,28 @@ export default async function PersonProfilePage({
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-3xl font-medium">{personDisplayName(person)}</h1>
-          <p className="text-muted-foreground">
-            {formatPartialDate(person.birthDate)}
-            {!person.isLiving && ` — ${formatPartialDate(person.deathDate)}`}
-          </p>
+        <div className="flex items-center gap-4">
+          <PersonAvatar
+            person={person}
+            familyId={familyId}
+            className="size-20! text-xl"
+          />
+          <div>
+            <h1 className="font-heading text-3xl font-medium">
+              {personDisplayName(person)}
+            </h1>
+            <p className="text-muted-foreground">
+              {formatPartialDate(person.birthDate)}
+              {!person.isLiving && ` — ${formatPartialDate(person.deathDate)}`}
+            </p>
+          </div>
         </div>
         {canEdit && (
           <div className="flex gap-2">
-            <LinkButton variant="outline" href={`/families/${slug}/people/${personSlug}/edit`}>
+            <LinkButton
+              variant="outline"
+              href={`/families/${slug}/people/${personSlug}/edit`}
+            >
               Редактировать
             </LinkButton>
             {/* Deletion is restricted to owners — more destructive/
@@ -59,7 +72,9 @@ export default async function PersonProfilePage({
         )}
       </div>
 
-      {person.isPlaceholder && <Badge variant="secondary">Запись-заглушка — данные неизвестны</Badge>}
+      {person.isPlaceholder && (
+        <Badge variant="secondary">Запись-заглушка — данные неизвестны</Badge>
+      )}
 
       <Card>
         <CardHeader>
@@ -78,14 +93,34 @@ export default async function PersonProfilePage({
           <CardHeader>
             <CardTitle>Описание</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm whitespace-pre-wrap">{person.description}</CardContent>
+          <CardContent className="text-sm whitespace-pre-wrap">
+            {person.description}
+          </CardContent>
         </Card>
       )}
 
-      <PersonFamilyPanel familyId={familyId} familySlug={slug} personId={personId} canEdit={canEdit} />
-      <PersonMediaGallery familyId={familyId} personId={personId} canEdit={canEdit} />
-      <PersonTimeline familyId={familyId} familySlug={slug} personId={personId} canEdit={canEdit} />
-      <PersonStories familyId={familyId} personId={personId} canEdit={canEdit} />
+      <PersonFamilyPanel
+        familyId={familyId}
+        familySlug={slug}
+        personId={personId}
+        canEdit={canEdit}
+      />
+      <PersonMediaGallery
+        familyId={familyId}
+        personId={personId}
+        canEdit={canEdit}
+      />
+      <PersonTimeline
+        familyId={familyId}
+        familySlug={slug}
+        personId={personId}
+        canEdit={canEdit}
+      />
+      <PersonStories
+        familyId={familyId}
+        personId={personId}
+        canEdit={canEdit}
+      />
     </main>
   );
 }

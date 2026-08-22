@@ -1,5 +1,8 @@
 import { db } from "@/db/client";
-import { relationshipsParentChild, relationshipsPartnership } from "@/db/schema";
+import {
+  relationshipsParentChild,
+  relationshipsPartnership,
+} from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { listPersonsByFamily } from "@/domain/person/person.repository";
 import { buildFocusTreeLayout, type PersonNode } from "./tree-layout.builder";
@@ -37,6 +40,7 @@ export async function getFocusTreeLayout(
     isLiving: p.isLiving,
     birthYear: p.birthDate?.year ?? null,
     deathYear: p.deathDate?.year ?? null,
+    photoMediaId: p.photoMediaId,
   }));
 
   return buildFocusTreeLayout({

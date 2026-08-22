@@ -5,7 +5,13 @@ import { getFocusTreeLayout } from "@/domain/tree/tree.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { TreeCanvas } from "@/components/tree/tree-canvas";
 import { MobileFocusView } from "@/components/tree/mobile-focus-view";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/link-button";
 
 export default async function FamilyTreePage({
@@ -27,19 +33,24 @@ export default async function FamilyTreePage({
         <Card>
           <CardHeader>
             <CardTitle>Дерево пока пустое</CardTitle>
-            <CardDescription>Добавьте хотя бы одного человека, чтобы увидеть дерево.</CardDescription>
+            <CardDescription>
+              Добавьте хотя бы одного человека, чтобы увидеть дерево.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <LinkButton href={`/families/${slug}/people/new`}>Добавить человека</LinkButton>
+            <LinkButton href={`/families/${slug}/people/new`}>
+              Добавить человека
+            </LinkButton>
           </CardContent>
         </Card>
       </main>
     );
   }
 
-  const focusPersonId = typeof focus === "string" && people.some((p) => p.id === focus)
-    ? focus
-    : people[0].id;
+  const focusPersonId =
+    typeof focus === "string" && people.some((p) => p.id === focus)
+      ? focus
+      : people[0].id;
 
   const graph = await getFocusTreeLayout(familyId, focusPersonId);
 
@@ -64,10 +75,10 @@ export default async function FamilyTreePage({
         not an oversight — see docs/architecture.md.
       */}
       <div className="hidden md:block">
-        <TreeCanvas graph={graph} />
+        <TreeCanvas graph={graph} familyId={familyId} />
       </div>
       <div className="md:hidden">
-        <MobileFocusView graph={graph} familySlug={slug} />
+        <MobileFocusView graph={graph} familySlug={slug} familyId={familyId} />
       </div>
     </main>
   );

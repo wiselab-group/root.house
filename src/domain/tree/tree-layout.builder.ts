@@ -21,6 +21,7 @@ export interface PersonNode {
   isLiving: boolean;
   birthYear: number | null;
   deathYear: number | null;
+  photoMediaId: string | null;
 }
 
 export interface ParentChildEdgeInput {
@@ -76,7 +77,9 @@ export interface TreeLayoutGraph {
 }
 
 const GENERATION_Y_SPACING = 180;
-const SIBLING_X_SPACING = 220;
+// Matches PersonNode's rendered width (220px, see xyflow-adapter.ts) plus a
+// fixed 24px gutter between sibling cards.
+const SIBLING_X_SPACING = 244;
 
 const DEFAULT_ANCESTOR_GENERATIONS = 2;
 const DEFAULT_DESCENDANT_GENERATIONS = 2;
@@ -88,7 +91,9 @@ const DEFAULT_DESCENDANT_GENERATIONS = 2;
  * layout library (dagre etc. can replace this function later without
  * changing its input/output contract).
  */
-export function buildFocusTreeLayout(input: BuildTreeLayoutInput): TreeLayoutGraph {
+export function buildFocusTreeLayout(
+  input: BuildTreeLayoutInput,
+): TreeLayoutGraph {
   const {
     persons,
     parentChildEdges,
@@ -102,14 +107,34 @@ export function buildFocusTreeLayout(input: BuildTreeLayoutInput): TreeLayoutGra
     return { nodes: [], edges: [], focusPersonId };
   }
 
-  const parentsOf = groupBy(parentChildEdges, (e) => e.childId, (e) => e.parentId);
-  const childrenOf = groupBy(parentChildEdges, (e) => e.parentId, (e) => e.childId);
+  const parentsOf = groupBy(
+    parentChildEdges,
+    (e) => e.childId,
+    (e) => e.parentId,
+  );
+  const childrenOf = groupBy(
+    parentChildEdges,
+    (e) => e.parentId,
+    (e) => e.childId,
+  );
 
   // generation: personId -> integer offset from focus (0 = focus's generation)
   const generationOf = new Map<string, number>([[focusPersonId, 0]]);
 
-  collectByBfs(focusPersonId, ancestorGenerations, generationOf, (id) => parentsOf.get(id) ?? [], -1);
-  collectByBfs(focusPersonId, descendantGenerations, generationOf, (id) => childrenOf.get(id) ?? [], 1);
+  collectByBfs(
+    focusPersonId,
+    ancestorGenerations,
+    generationOf,
+    (id) => parentsOf.get(id) ?? [],
+    -1,
+  );
+  collectByBfs(
+    focusPersonId,
+    descendantGenerations,
+    generationOf,
+    (id) => childrenOf.get(id) ?? [],
+    1,
+  );
 
   // Siblings of the focus person (other children of any of their parents)
   // join at generation 0 — parent_child BFS alone never finds them, since
@@ -135,7 +160,8 @@ export function buildFocusTreeLayout(input: BuildTreeLayoutInput): TreeLayoutGra
 
   const nodesByGeneration = new Map<number, string[]>();
   for (const [id, generation] of generationOf) {
-    if (!nodesByGeneration.has(generation)) nodesByGeneration.set(generation, []);
+    if (!nodesByGeneration.has(generation))
+      nodesByGeneration.set(generation, []);
     nodesByGeneration.get(generation)!.push(id);
   }
 
@@ -185,7 +211,11 @@ export function buildFocusTreeLayout(input: BuildTreeLayoutInput): TreeLayoutGra
   return { nodes, edges, focusPersonId };
 }
 
-function groupBy<T, K, V>(items: T[], keyFn: (item: T) => K, valueFn: (item: T) => V): Map<K, V[]> {
+function groupBy<T, K, V>(
+  items: T[],
+  keyFn: (item: T) => K,
+  valueFn: (item: T) => V,
+): Map<K, V[]> {
   const map = new Map<K, V[]>();
   for (const item of items) {
     const key = keyFn(item);
@@ -223,7 +253,10 @@ function collectByBfs(
 }
 
 /** Keeps partners adjacent within a generation row instead of scattering them arbitrarily. */
-function orderByPartnership(ids: string[], partnershipEdges: PartnershipEdgeInput[]): string[] {
+function orderByPartnership(
+  ids: string[],
+  partnershipEdges: PartnershipEdgeInput[],
+): string[] {
   const partnerOf = new Map<string, string>();
   for (const { person1Id, person2Id } of partnershipEdges) {
     partnerOf.set(person1Id, person2Id);

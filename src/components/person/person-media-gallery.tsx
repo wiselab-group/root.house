@@ -17,6 +17,9 @@ const BLUR_PLACEHOLDER =
  * pattern as PersonFamilyPanel/PersonTimeline). Images are served through
  * /api/media/[id] (never a raw Blob URL) so every view re-checks family
  * membership — there is no publicly guessable photo URL.
+ *
+ * The avatar is a separate concept (see components/forms/avatar-editor.tsx)
+ * and never appears here — this is purely the "photos of this person" grid.
  */
 export async function PersonMediaGallery({
   familyId,
@@ -40,7 +43,10 @@ export async function PersonMediaGallery({
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {photos.map((photo) => (
-              <div key={photo.id} className="group relative aspect-square overflow-hidden rounded-md border border-border">
+              <div
+                key={photo.id}
+                className="group relative aspect-square overflow-hidden rounded-md border border-border"
+              >
                 <Image
                   src={`/api/media/${photo.id}?familyId=${familyId}`}
                   alt={photo.title ?? "Семейное фото"}
@@ -52,8 +58,12 @@ export async function PersonMediaGallery({
                   unoptimized
                 />
                 {canEdit && (
-                  <div className="absolute right-1 top-1 opacity-0 transition-opacity group-hover:opacity-100">
-                    <DeleteMediaButton familyId={familyId} personId={personId} mediaId={photo.id} />
+                  <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <DeleteMediaButton
+                      familyId={familyId}
+                      personId={personId}
+                      mediaId={photo.id}
+                    />
                   </div>
                 )}
               </div>
