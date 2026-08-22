@@ -44,7 +44,7 @@ export default async function FamilyTreePage({
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-4 p-6">
       <div>
-        <h1 className="text-2xl font-semibold">Семейное дерево</h1>
+        <h1 className="font-heading text-2xl font-medium">Семейное дерево</h1>
         <p className="hidden text-muted-foreground md:block">
           Кликните на человека, чтобы сделать его центром дерева.
         </p>

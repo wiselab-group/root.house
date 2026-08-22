@@ -1,4 +1,4 @@
-# Family Archive (root.house)
+# Root house
 
 Семейный архив: родословная как граф людей и связей, интерактивное семейное
 дерево, профили людей, события, медиа (фото/видео/аудио/документы) и семейные
@@ -76,13 +76,21 @@ pnpm build   # требует настоящий DATABASE_URL — Next.js исп
 
 ## Тесты
 
-`pnpm test` (Vitest). Приоритет — доменная логика и безопасность, не coverage:
+`pnpm test` (Vitest, 71 тестов). Приоритет — доменная логика и безопасность,
+не coverage:
 - `src/domain/family/access.test.ts` — авторизация (`requireFamilyAccess`, роли owner/editor/viewer)
-- `src/domain/shared/partial-date.test.ts` — форматирование/сравнение неполных дат
+- `src/domain/shared/partial-date.test.ts` — форматирование/сравнение неполных дат, парсинг form-данных
+- `src/domain/relationship/relationship.service.test.ts` — валидация связей (self-reference, циклы)
+- `src/domain/relationship/sibling-derivation.test.ts` — вычисление sibling-связей (полнородные/неполнородные)
+- `src/domain/relationship/relationship-path.test.ts` — вычисление родства между двумя людьми
+- `src/domain/tree/tree-layout.builder.ts` — построение layout семейного дерева
+- `src/domain/media/storage.service.test.ts` — контракт `StorageService` (upload/delete/getSignedUrl)
+- `src/domain/search/query-classifier.test.ts` — классификация поискового запроса (имя vs год)
 
-По мере реализации следующих этапов (Relationship, ancestors/descendants,
-relationship path, family isolation/IDOR) тесты добавляются рядом с
-соответствующим `*.service.ts`/`*.repository.ts` — см. roadmap в PRODUCT.md.
+Каждый функциональный этап дополнительно проверялся вживую на реальной БД
+(Neon) и реальном Vercel Blob через сценарии end-to-end (регистрация →
+семья → люди → связи → дерево → медиа → поиск), не только unit-тестами —
+см. историю коммитов для деталей каждой проверки.
 
 ## Структура проекта
 

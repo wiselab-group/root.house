@@ -70,7 +70,7 @@ export function TreeCanvas({ graph }: { graph: TreeLayoutGraph }) {
       >
         <Background gap={24} />
         <Controls showInteractive={false} />
-        <MiniMap pannable zoomable className="!bg-card" />
+        <MiniMap pannable zoomable className="bg-card!" />
       </ReactFlow>
     </div>
   );

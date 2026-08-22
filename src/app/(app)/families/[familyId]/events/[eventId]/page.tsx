@@ -25,7 +25,7 @@ export default async function EventDetailsPage({
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
       <div>
         <Badge variant="secondary">{EVENT_TYPE_LABELS[event.type]}</Badge>
-        <h1 className="mt-2 text-3xl font-semibold">{event.title}</h1>
+        <h1 className="font-heading mt-2 text-3xl font-medium">{event.title}</h1>
         <p className="text-muted-foreground">
           {formatPartialDate(event.date)}
           {event.endDate && ` — ${formatPartialDate(event.endDate)}`}

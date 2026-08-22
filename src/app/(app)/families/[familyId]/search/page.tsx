@@ -24,7 +24,7 @@ export default async function SearchPage({
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold">Поиск</h1>
+        <h1 className="font-heading text-2xl font-medium">Поиск</h1>
         <p className="text-muted-foreground">По имени, фамилии, девичьей фамилии или году (например, 1920 или 1900-1950).</p>
       </div>
 

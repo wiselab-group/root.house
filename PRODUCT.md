@@ -1,7 +1,7 @@
 # Product Requirements
 
 ## Core Scope
-Type: Family Archive SaaS (семейная родословная + архив) — root.house.
+Type: Root house SaaS (семейная родословная + архив) — root.house.
 Target: пользователь может собрать, визуализировать и сохранить историю своей
 семьи, а затем передать её следующим поколениям. Первые версии деплоятся на
 дефолтном Vercel-домене (`*.vercel.app`); кастомный домен root.house
@@ -68,16 +68,17 @@ system, реальный GEDCOM import/export (структура полей э�
 - Без неоптимизированных изображений
 
 ## Roadmap (краткая ссылка — детали в docs/architecture.md)
+Все этапы 0-12 завершены — MVP полностью реализован и проверен вживую.
 0. Bootstrap + документация (готово)
-1. Auth
-2. Family + FamilyMember + authorization
-3. Person CRUD + placeholder-person
-4. Relationship (parent_child + partnership)
-5. Ancestors/Descendants + Relationship Path (domain-only)
-6. Family Tree visualization (desktop)
-7. Mobile tree navigation
-8. Person Profile (полный) + Event + timeline
-9. Media (photo upload)
-10. Search
-11. Story + Place (минимально)
-12. Полировка design/motion (premium visual pass — см. DESIGN.md)
+1. Auth (готово)
+2. Family + FamilyMember + authorization (готово)
+3. Person CRUD + placeholder-person (готово)
+4. Relationship (parent_child + partnership) (готово)
+5. Ancestors/Descendants + Relationship Path (domain-only) (готово)
+6. Family Tree visualization (desktop) (готово)
+7. Mobile tree navigation (готово)
+8. Person Profile (полный) + Event + timeline (готово)
+9. Media (photo upload) (готово)
+10. Search (готово)
+11. Story + Place (минимально) (готово)
+12. Полировка design/motion (premium visual pass — см. DESIGN.md) (готово)

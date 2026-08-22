@@ -1,45 +1,57 @@
 # Design & Motion System
 
-> Текущее состояние: рабочая нейтральная заготовка от shadcn/ui
-> (`src/app/globals.css`, style `base-nova`, baseColor `neutral`). Разделы ниже
-> описывают ЦЕЛЕВУЮ premium/«семейную» дизайн-систему — она применяется отдельным
-> визуальным проходом (roadmap этап 12 в PRODUCT.md), не блокируя функциональные
-> этапы 0-11. Структура токенов (`--color-*`, `--space-*`, easing-переменные)
-> уже используется в компонентах через Tailwind `@theme inline` — при
-> визуальной полировке меняются ЗНАЧЕНИЯ токенов в `:root`/`.dark`, а не их имена
-> и не сами компоненты.
+> Статус: тёплая «семейная» палитра и типографика реализованы (этап 12,
+> `src/app/globals.css` / `src/app/layout.tsx`). Значения ниже — то, что
+> сейчас в коде, не план на будущее. Структура токенов (`--color-*`, именованные
+> easing-переменные) не менялась при полировке — менялись только их значения в
+> `:root`/`.dark`, как и предполагалось изначально.
 
 ## Typography
-Целевое направление: тёплый, читаемый гуманистический sans (Inter или Geist Sans
-уже используется как системный шрифт проекта) для body/UI, с более выразительным
-serif или высококонтрастным sans для заголовков Person Profile/Story
-(кандидат: DM Serif Display или Fraunces — придаёт «архивный», не корпоративный
-характер). Точный выбор — предмет этапа 12.
+- **Body/UI**: Geist Sans (`--font-geist-sans`, subsets `latin`+`cyrillic` —
+  весь интерфейс на русском, это обязательно), через Tailwind `font-sans`.
+- **Заголовки** (Person Profile, Story, карточные `CardTitle`, страничные
+  `<h1>`): Lora (`--font-lora`) через утилиту `.font-heading` — тёплый,
+  «архивный» serif. DESIGN.md изначально называл Fraunces/DM Serif Display —
+  оба **не поддерживают кириллицу** (проверено через `next/font/google`'s
+  font-data), поэтому заменены на Lora, которая поддерживает и держит тот же
+  тёплый некорпоративный характер.
+- **Mono**: Geist Mono (`--font-geist-mono`) — для технических значений.
 
-Display: [font TBD], clamp(1.75rem, 3vw, 2.5rem), tracking -0.01em
-Heading: [font TBD], clamp(1.25rem, 2vw, 1.75rem)
-Body: Inter/Geist Sans, 400, 1rem, line-height 1.6
-Mono: Geist Mono (уже подключён) — для технических значений (даты-диапазоны, id в dev-режиме)
+`.font-heading` — сознательно utility-класс, а не дефолтный шрифт всех
+заголовков (через `@layer base h1,h2 {...}`): формы/дашборды остаются на
+гуманистическом sans, serif — акцент на «архивных» экранах (профиль, история,
+карточные заголовки), не на каждом UI-элементе.
 
 ## Color Tokens
-Текущие переменные (см. `src/app/globals.css`) — нейтральная grayscale-палитра
-shadcn/ui по умолчанию (`--background`, `--foreground`, `--primary`, `--card`,
-`--muted`, `--accent`, `--destructive`, `--border`, `--ring`, ...), уже прокинутая
-через `@theme inline` в Tailwind-утилиты (`bg-background`, `text-foreground` и т.д.).
+Один тёплый акцент — терракота (`hue 45` в OKLCH) — используется всюду:
+`--primary`, generation color-coding в дереве, фокус-кольца. Никакого
+стартаперского сине-фиолетового градиента. Все пары фон/текст ниже проверены
+на WCAG AA (≥4.5:1 для обычного текста, посчитано напрямую через OKLCH→sRGB→
+relative luminance перед фиксацией значений — не подобраны на глаз):
 
-Целевая premium-палитра (этап 12, значения индикативны и уточняются визуальным проходом):
 ```
 :root {
-  --background: [тёплый белый/кремовый, напр. oklch(0.98 0.01 80)];
-  --foreground: [тёплый графитовый, напр. oklch(0.22 0.02 60)];
-  --primary: [тёплый акцент — терракота/охра/янтарь];
-  --muted: [приглушённый тёплый нейтральный];
-  --border: [мягкий тёплый серый];
+  --background: oklch(0.985 0.008 60);   /* тёплый кремовый */
+  --foreground: oklch(0.28 0.02 50);     /* тёплый графитово-коричневый */
+  --primary: oklch(0.55 0.14 45);        /* терракота */
+  --muted-foreground: oklch(0.48 0.015 55);
+  --border: oklch(0.89 0.012 55);
+}
+.dark {
+  --background: oklch(0.2 0.014 50);     /* тёплый графит, не чистый чёрный */
+  --foreground: oklch(0.94 0.01 60);
+  --primary: oklch(0.72 0.15 45);        /* терракота ярче для тёмного фона */
 }
 ```
-Generation color-coding в family tree: один hue (напр. акцентный), разная
-lightness/opacity по удалённости поколения от focus-person — не разноцветная
-радуга по поколениям.
+
+**Generation color-coding в family tree** (`components/tree/person-node.tsx`):
+один и тот же hue 45°, lightness растёт и chroma падает с ростом `|generation|`
+(удалённости от focus-person) — `--chart-1`…`--chart-5`, не радуга по
+поколениям:
+```
+|gen|=0: oklch(0.55 0.14 45)   |gen|=2: oklch(0.75 0.08 45)
+|gen|=1: oklch(0.65 0.11 45)   |gen|=3+: oklch(0.85 0.05 45) / oklch(0.9 0.03 45)
+```
 
 ## Spacing System (8px base grid)
 --space-1:   8px
@@ -55,24 +67,38 @@ lightness/opacity по удалённости поколения от focus-pers
 
 ## Motion Principles
 
-### Универсальные правила (применимы уже сейчас, не ждут этапа 12)
+### Универсальные правила
 - Page/section transitions: укладываться в 600-800ms максимум
-- Именованные easing-алиасы (использовать эти имена в комментариях к коду):
-  - `--ease-reveal`: cubic-bezier(0.16, 1, 0.3, 1) — спокойное, «уверенное» появление
+- Именованные easing-алиасы — реализованы как CSS custom properties в
+  `:root` (`src/app/globals.css`), использовать по имени, не как magic-числа:
+  - `--ease-reveal`: cubic-bezier(0.16, 1, 0.3, 1) — спокойное появление
+    (используется в `.animate-tree-node-enter`)
   - `--ease-transition`: cubic-bezier(0.76, 0, 0.24, 1) — переходы между экранами
-  - `--ease-tree-focus`: cubic-bezier(0.25, 0.1, 0.25, 1.0) — смена focus-person в дереве
+  - `--ease-tree-focus`: cubic-bezier(0.25, 0.1, 0.25, 1) — hover/переходы
+    внутри дерева (используется в `person-node.tsx` через Tailwind
+    `ease-(--ease-tree-focus)`)
 - Hardware acceleration: `will-change: transform, opacity` — только на активно
   анимирующихся узлах
 - НИКОГДА default CSS `ease`/`linear`
 - НИКОГДА не анимировать: top, left, width, height — layout shift и jank
 
 ### Family Tree specific
-- Смена focus-person: остальные узлы переходят через transform (translate/scale)
-  с stagger, пропорциональным расстоянию от нового focus-узла — не мгновенный
-  re-layout всех nodes одновременно
-- Person Node states: `default` / `hover` (лёгкий scale + тень) / `selected`
-  (акцентная обводка) / `focus-center` (увеличенный, в центре) / `dimmed`
-  (пониженная opacity для узлов, не относящихся к текущему фокусу)
+- **Смена focus-person — entrance stagger, не FLIP-переход между позициями.**
+  Фокус-переход — это полная навигация страницы (`?focus=` в URL, сервер
+  пересчитывает layout) — старый и новый набор nodes не имеют общего React
+  identity между рендерами, поэтому "проехать" узел от старой позиции к новой
+  физически нечем. Честная реализация spec'а: каждый `PersonNode` появляется
+  через `.animate-tree-node-enter` (`opacity`+`scale`, `--ease-reveal`) с
+  `animation-delay`, пропорциональным `|generation|` (расстоянию от нового
+  focus) — узлы дальних поколений появляются позже, создавая ощущение волны
+  от центра, а не мгновенный релейаут всех nodes одновременно.
+- Generation color-coding: тонкая цветная полоса сверху карточки
+  (`h-1`, `background: var(--chart-N)`), не заливка всей карточки —
+  раскраска не должна мешать читаемости имени/дат.
+- Person Node states: `default` / `hover` (подъём `-translate-y-0.5` + тень,
+  `--ease-tree-focus`) / `selected` (кольцо `ring-ring`) / `focus` (акцентная
+  рамка + `ring-primary/30`) / placeholder (пунктирная рамка, `opacity-70`,
+  курсив на имени).
 
 ## Component States
 Buttons:
