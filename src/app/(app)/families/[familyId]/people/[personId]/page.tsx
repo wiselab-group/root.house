@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { PersonFamilyPanel } from "@/components/person/person-family-panel";
 import { PersonTimeline } from "@/components/person/person-timeline";
 import { PersonMediaGallery } from "@/components/person/person-media-gallery";
+import { PersonStories } from "@/components/person/person-stories";
 import { DeletePersonButton } from "@/components/person/delete-person-button";
 
 export default async function PersonProfilePage({
@@ -80,6 +81,7 @@ export default async function PersonProfilePage({
       <PersonFamilyPanel familyId={familyId} personId={personId} canEdit={canEdit} />
       <PersonMediaGallery familyId={familyId} personId={personId} canEdit={canEdit} />
       <PersonTimeline familyId={familyId} personId={personId} canEdit={canEdit} />
+      <PersonStories familyId={familyId} personId={personId} canEdit={canEdit} />
     </main>
   );
 }
