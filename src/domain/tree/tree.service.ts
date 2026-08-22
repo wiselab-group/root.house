@@ -29,6 +29,7 @@ export async function getFocusTreeLayout(
 
   const personNodes: PersonNode[] = persons.map((p) => ({
     id: p.id,
+    slug: p.slug,
     firstName: p.firstName,
     lastName: p.lastName,
     nickname: p.nickname,

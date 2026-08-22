@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, smallint, boolean, index, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, smallint, boolean, index, uniqueIndex, pgEnum } from "drizzle-orm/pg-core";
 import { families } from "./family";
 import { places } from "./place";
 import { users } from "./auth";
@@ -33,6 +33,12 @@ export const persons = pgTable(
     familyId: uuid("family_id")
       .notNull()
       .references(() => families.id, { onDelete: "cascade" }),
+
+    // Human-readable handle, unique per family (NOT globally — unlike
+    // families.slug), lets a Person be reached at
+    // /families/[familySlug]/people/[slug] instead of a raw UUID. See
+    // domain/person/slug.ts. Backfilled for pre-existing rows in migration 0003.
+    slug: text("slug").notNull(),
 
     firstName: text("first_name"),
     lastName: text("last_name"),
@@ -76,6 +82,10 @@ export const persons = pgTable(
   (table) => [
     index("persons_family_idx").on(table.familyId),
     index("persons_family_name_idx").on(table.familyId, table.lastName, table.firstName),
+    // Composite, not a bare unique(slug) — the same slug ("alexander") is
+    // expected to recur across different families; only collisions within
+    // one family matter (see domain/person/slug.ts::ensureUniquePersonSlug).
+    uniqueIndex("persons_family_slug_unique").on(table.familyId, table.slug),
   ],
 );
 

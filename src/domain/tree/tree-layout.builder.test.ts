@@ -4,6 +4,7 @@ import { buildFocusTreeLayout, type PersonNode } from "./tree-layout.builder";
 function person(id: string, overrides: Partial<PersonNode> = {}): PersonNode {
   return {
     id,
+    slug: id,
     firstName: id,
     lastName: null,
     nickname: null,

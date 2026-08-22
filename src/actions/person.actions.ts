@@ -6,7 +6,13 @@ import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { getFamilySlugById } from "@/domain/family/family.service";
 import { createPersonSchema, createPlaceholderPersonSchema } from "@/lib/validation/person";
-import { addPerson, addPlaceholderPerson, editPerson, removePerson } from "@/domain/person/person.service";
+import {
+  addPerson,
+  addPlaceholderPerson,
+  editPerson,
+  getPersonSlugById,
+  removePerson,
+} from "@/domain/person/person.service";
 import { partialDateFromFormData } from "@/domain/shared/partial-date";
 
 export interface PersonFormState {
@@ -60,9 +66,9 @@ export async function createPersonAction(
     deathDate: partialDateFromFormData(formData, "death"),
   });
 
-  const slug = await getFamilySlugById(familyId);
-  revalidatePath(`/families/${slug}/people`);
-  redirect(`/families/${slug}/people/${person.id}`);
+  const familySlug = await getFamilySlugById(familyId);
+  revalidatePath(`/families/${familySlug}/people`);
+  redirect(`/families/${familySlug}/people/${person.slug}`);
 }
 
 export interface CreatePlaceholderFormState {
@@ -162,7 +168,8 @@ export async function updatePersonAction(
     return { error: "Человек не найден." };
   }
 
-  const slug = await getFamilySlugById(familyId);
-  revalidatePath(`/families/${slug}/people/${personId}`);
-  redirect(`/families/${slug}/people/${personId}`);
+  const familySlug = await getFamilySlugById(familyId);
+  const personSlug = await getPersonSlugById(personId, familyId);
+  revalidatePath(`/families/${familySlug}/people/${personSlug}`);
+  redirect(`/families/${familySlug}/people/${personSlug}`);
 }

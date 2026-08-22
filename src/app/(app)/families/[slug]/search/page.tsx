@@ -54,7 +54,7 @@ export default async function SearchPage({
         <ul className="flex flex-col gap-3">
           {results.map((person) => (
             <li key={person.id}>
-              <Link href={`/families/${slug}/people/${person.id}`}>
+              <Link href={`/families/${slug}/people/${person.slug}`}>
                 <Card className="transition-colors hover:border-foreground/30">
                   <CardHeader>
                     <CardTitle>{personDisplayName(person)}</CardTitle>

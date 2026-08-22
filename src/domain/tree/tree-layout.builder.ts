@@ -13,6 +13,7 @@
 
 export interface PersonNode {
   id: string;
+  slug: string;
   firstName: string | null;
   lastName: string | null;
   nickname: string | null;

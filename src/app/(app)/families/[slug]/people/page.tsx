@@ -35,7 +35,7 @@ export default async function PeoplePage({ params }: PageProps<"/families/[slug]
         <ul className="flex flex-col gap-3">
           {people.map((person) => (
             <li key={person.id}>
-              <Link href={`/families/${slug}/people/${person.id}`}>
+              <Link href={`/families/${slug}/people/${person.slug}`}>
                 <Card className="transition-colors hover:border-foreground/30">
                   <CardHeader>
                     <CardTitle>{personDisplayName(person)}</CardTitle>

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { getFamilySlugById } from "@/domain/family/family.service";
+import { getPersonSlugById } from "@/domain/person/person.service";
 import { createStorySchema } from "@/lib/validation/story";
 import { addStory, removeStory } from "@/domain/story/story.service";
 
@@ -50,8 +51,9 @@ export async function createStoryAction(
     personIds: [personId],
   });
 
-  const slug = await getFamilySlugById(familyId);
-  revalidatePath(`/families/${slug}/people/${personId}`);
+  const familySlug = await getFamilySlugById(familyId);
+  const personSlug = await getPersonSlugById(personId, familyId);
+  revalidatePath(`/families/${familySlug}/people/${personSlug}`);
   return {};
 }
 
@@ -61,6 +63,7 @@ export async function deleteStoryAction(familyId: string, personId: string, stor
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
   await removeStory(storyId, familyId);
-  const slug = await getFamilySlugById(familyId);
-  revalidatePath(`/families/${slug}/people/${personId}`);
+  const familySlug = await getFamilySlugById(familyId);
+  const personSlug = await getPersonSlugById(personId, familyId);
+  revalidatePath(`/families/${familySlug}/people/${personSlug}`);
 }

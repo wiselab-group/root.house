@@ -6,6 +6,7 @@ import { fromColumns, toColumns, type PartialDate } from "@/domain/shared/partia
 export interface PersonRecord {
   id: string;
   familyId: string;
+  slug: string;
   firstName: string | null;
   lastName: string | null;
   middleName: string | null;
@@ -30,6 +31,7 @@ function toRecord(row: typeof persons.$inferSelect): PersonRecord {
   return {
     id: row.id,
     familyId: row.familyId,
+    slug: row.slug,
     firstName: row.firstName,
     lastName: row.lastName,
     middleName: row.middleName,
@@ -76,6 +78,34 @@ export async function getPersonById(personId: string, familyId: string): Promise
   return row ? toRecord(row) : null;
 }
 
+/**
+ * Same IDOR-safe pattern as getPersonById — `WHERE slug = :slug AND
+ * family_id = :familyId` in one query — but keyed by the URL-facing slug
+ * instead of the primary key. A person's slug is unique only within its
+ * family (see db/schema/person.ts), so familyId must always accompany it.
+ */
+export async function getPersonBySlug(slug: string, familyId: string): Promise<PersonRecord | null> {
+  const row = await db.query.persons.findFirst({
+    where: and(eq(persons.slug, slug), eq(persons.familyId, familyId)),
+  });
+  return row ? toRecord(row) : null;
+}
+
+/** Whether `slug` is already used by another Person in the same family —
+ *  used by ensureUniqueSlug during creation, and by the slug-rename action. */
+export async function isPersonSlugTaken(
+  slug: string,
+  familyId: string,
+  excludePersonId?: string,
+): Promise<boolean> {
+  const row = await db.query.persons.findFirst({
+    where: and(eq(persons.slug, slug), eq(persons.familyId, familyId)),
+    columns: { id: true },
+  });
+  if (!row) return false;
+  return row.id !== excludePersonId;
+}
+
 export async function listPersonsByFamily(familyId: string): Promise<PersonRecord[]> {
   const rows = await db.query.persons.findMany({
     where: eq(persons.familyId, familyId),
@@ -87,6 +117,7 @@ export async function listPersonsByFamily(familyId: string): Promise<PersonRecor
 export interface CreatePersonData {
   familyId: string;
   createdBy: string;
+  slug: string;
   firstName?: string | null;
   lastName?: string | null;
   middleName?: string | null;
@@ -111,6 +142,7 @@ export async function createPerson(data: CreatePersonData): Promise<{ id: string
     .values({
       familyId: data.familyId,
       createdBy: data.createdBy,
+      slug: data.slug,
       firstName: data.firstName ?? null,
       lastName: data.lastName ?? null,
       middleName: data.middleName ?? null,
@@ -186,6 +218,17 @@ export async function updatePerson(
     .where(and(eq(persons.id, personId), eq(persons.familyId, familyId)))
     .returning({ id: persons.id });
 
+  return result.length > 0;
+}
+
+/** Changes a Person's slug — caller (person.service.ts) must have already
+ *  verified the new slug is valid and free within the family. */
+export async function updatePersonSlug(personId: string, familyId: string, slug: string): Promise<boolean> {
+  const result = await db
+    .update(persons)
+    .set({ slug, updatedAt: new Date() })
+    .where(and(eq(persons.id, personId), eq(persons.familyId, familyId)))
+    .returning({ id: persons.id });
   return result.length > 0;
 }
 

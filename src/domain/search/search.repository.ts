@@ -4,6 +4,7 @@ import { fromColumns, type PartialDate } from "@/domain/shared/partial-date";
 
 export interface PersonSearchResult {
   id: string;
+  slug: string;
   firstName: string | null;
   lastName: string | null;
   maidenName: string | null;
@@ -34,6 +35,7 @@ export async function searchPersonsByName(
 
   const result = await db.execute<{
     id: string;
+    slug: string;
     first_name: string | null;
     last_name: string | null;
     maiden_name: string | null;
@@ -52,7 +54,7 @@ export async function searchPersonsByName(
     similarity: number;
   }>(sql`
     SELECT
-      id, first_name, last_name, maiden_name, nickname, is_placeholder,
+      id, slug, first_name, last_name, maiden_name, nickname, is_placeholder,
       birth_date_year, birth_date_month, birth_date_day, birth_date_precision, birth_date_approximate,
       death_date_year, death_date_month, death_date_day, death_date_precision, death_date_approximate,
       similarity(coalesce(first_name, '') || ' ' || coalesce(last_name, '') || ' ' || coalesce(maiden_name, ''), ${trimmed}) AS similarity
@@ -67,6 +69,7 @@ export async function searchPersonsByName(
     .filter((row) => row.similarity >= MIN_SIMILARITY)
     .map((row) => ({
       id: row.id,
+      slug: row.slug,
       firstName: row.first_name,
       lastName: row.last_name,
       maidenName: row.maiden_name,
@@ -99,6 +102,7 @@ export async function searchPersonsByYear(
 ): Promise<PersonSearchResult[]> {
   const result = await db.execute<{
     id: string;
+    slug: string;
     first_name: string | null;
     last_name: string | null;
     maiden_name: string | null;
@@ -116,7 +120,7 @@ export async function searchPersonsByYear(
     death_date_approximate: boolean | null;
   }>(sql`
     SELECT
-      id, first_name, last_name, maiden_name, nickname, is_placeholder,
+      id, slug, first_name, last_name, maiden_name, nickname, is_placeholder,
       birth_date_year, birth_date_month, birth_date_day, birth_date_precision, birth_date_approximate,
       death_date_year, death_date_month, death_date_day, death_date_precision, death_date_approximate
     FROM persons
@@ -131,6 +135,7 @@ export async function searchPersonsByYear(
 
   return result.rows.map((row) => ({
     id: row.id,
+    slug: row.slug,
     firstName: row.first_name,
     lastName: row.last_name,
     maidenName: row.maiden_name,

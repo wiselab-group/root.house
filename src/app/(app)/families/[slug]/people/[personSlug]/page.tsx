@@ -5,6 +5,7 @@ import { getPerson } from "@/domain/person/person.service";
 import { personDisplayName } from "@/domain/person/display-name";
 import { formatPartialDate } from "@/domain/shared/partial-date";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
+import { resolvePersonIdBySlug } from "@/lib/resolve-person-slug";
 import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,13 +17,14 @@ import { DeletePersonButton } from "@/components/person/delete-person-button";
 
 export default async function PersonProfilePage({
   params,
-}: PageProps<"/families/[slug]/people/[personId]">) {
-  const { slug, personId } = await params;
+}: PageProps<"/families/[slug]/people/[personSlug]">) {
+  const { slug, personSlug } = await params;
   const session = await auth();
   if (!session?.user) return null;
 
   const familyId = await resolveFamilyIdBySlug(slug);
   const member = await requireFamilyAccess(familyId, session.user.id, "viewer");
+  const personId = await resolvePersonIdBySlug(personSlug, familyId);
   const person = await getPerson(personId, familyId);
   if (!person) notFound();
 
@@ -40,7 +42,7 @@ export default async function PersonProfilePage({
         </div>
         {canEdit && (
           <div className="flex gap-2">
-            <LinkButton variant="outline" href={`/families/${slug}/people/${personId}/edit`}>
+            <LinkButton variant="outline" href={`/families/${slug}/people/${personSlug}/edit`}>
               Редактировать
             </LinkButton>
             {/* Deletion is restricted to owners — more destructive/

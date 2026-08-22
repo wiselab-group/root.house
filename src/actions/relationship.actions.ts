@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { getFamilySlugById } from "@/domain/family/family.service";
-import { addPerson, addPlaceholderPerson } from "@/domain/person/person.service";
+import { addPerson, addPlaceholderPerson, getPersonSlugById } from "@/domain/person/person.service";
 import {
   addParentChild,
   addPartnership,
@@ -81,8 +81,9 @@ export async function addRelativeAction(
     throw error;
   }
 
-  const slug = await getFamilySlugById(familyId);
-  revalidatePath(`/families/${slug}/people/${personId}`);
+  const familySlug = await getFamilySlugById(familyId);
+  const personSlug = await getPersonSlugById(personId, familyId);
+  revalidatePath(`/families/${familySlug}/people/${personSlug}`);
   return {};
 }
 
@@ -96,8 +97,9 @@ export async function removeParentChildAction(
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
   await removeParentChild(relationshipId, familyId);
-  const slug = await getFamilySlugById(familyId);
-  revalidatePath(`/families/${slug}/people/${personId}`);
+  const familySlug = await getFamilySlugById(familyId);
+  const personSlug = await getPersonSlugById(personId, familyId);
+  revalidatePath(`/families/${familySlug}/people/${personSlug}`);
 }
 
 export async function removePartnershipAction(
@@ -110,6 +112,7 @@ export async function removePartnershipAction(
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
   await removePartnership(relationshipId, familyId);
-  const slug = await getFamilySlugById(familyId);
-  revalidatePath(`/families/${slug}/people/${personId}`);
+  const familySlug = await getFamilySlugById(familyId);
+  const personSlug = await getPersonSlugById(personId, familyId);
+  revalidatePath(`/families/${familySlug}/people/${personSlug}`);
 }

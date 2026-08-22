@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { getFamilySlugById } from "@/domain/family/family.service";
+import { getPersonSlugById } from "@/domain/person/person.service";
 import { removeMedia } from "@/domain/media/media.service";
 
 /**
@@ -17,6 +18,7 @@ export async function deleteMediaAction(familyId: string, personId: string, medi
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
   await removeMedia(mediaId, familyId);
-  const slug = await getFamilySlugById(familyId);
-  revalidatePath(`/families/${slug}/people/${personId}`);
+  const familySlug = await getFamilySlugById(familyId);
+  const personSlug = await getPersonSlugById(personId, familyId);
+  revalidatePath(`/families/${familySlug}/people/${personSlug}`);
 }

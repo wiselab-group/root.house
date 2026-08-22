@@ -15,8 +15,8 @@ Content Ready: no — реальные семейные данные внося�
 - `/families/[slug]` — dashboard семьи (после MVP — редирект/ссылка на tree)
 - `/families/[slug]/tree` — интерактивное семейное дерево (@xyflow/react)
 - `/families/[slug]/people` — список людей + создание
-- `/families/[slug]/people/[personId]` — Person Profile (осн. данные, семья, timeline, media, stories)
-- `/families/[slug]/people/[personId]/edit` — редактирование
+- `/families/[slug]/people/[personSlug]` — Person Profile (осн. данные, семья, timeline, media, stories)
+- `/families/[slug]/people/[personSlug]/edit` — редактирование
 - `/families/[slug]/events/[eventId]` — детали события
 - `/families/[slug]/search` — поиск по имени/фамилии/девичьей фамилии/годам
 

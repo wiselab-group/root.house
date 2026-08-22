@@ -53,7 +53,7 @@ export function MobileFocusView({ graph, familySlug }: { graph: TreeLayoutGraph;
         </CardHeader>
         <CardContent>
           <Link
-            href={`/families/${familySlug}/people/${focusNode.personId}`}
+            href={`/families/${familySlug}/people/${focusNode.person.slug}`}
             className="text-sm text-muted-foreground hover:underline"
           >
             Открыть профиль
