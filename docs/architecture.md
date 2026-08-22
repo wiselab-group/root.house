@@ -272,11 +272,33 @@ interface StorageService {
   getSignedUrl(storageKey: string, opts?: { expiresInSeconds?: number }): Promise<string>;
 }
 ```
-Провайдер MVP — **Vercel Blob** (нулевая инфраструктурная конфигурация,
-встроенный direct-upload flow с server-issued token). `Media.storage_provider`
-колонка допускает будущую миграцию на Cloudflare R2 (дешевле для видео/большого
-объёма) без переписывания domain-кода — постепенно, старые записи держат
-`'vercel_blob'`, новые — `'r2'`.
+Провайдер MVP — **Vercel Blob** (нулевая инфраструктурная конфигурация).
+`Media.storage_provider` колонка допускает будущую миграцию на Cloudflare R2
+(дешевле для видео/большого объёма) без переписывания domain-кода —
+постепенно, старые записи держат `'vercel_blob'`, новые — `'r2'`.
+
+**Загрузка идёт через собственный сервер, не через прямой browser→Blob
+client-token upload**, вопреки первоначальному предположению плана — важная
+находка при реализации: Vercel Blob SDK's client-token flow
+(`generateClientTokenFromReadWriteToken`/`handleUpload`) не поддерживает
+`access: 'private'` — `GenerateClientTokenOptions` не имеет поля `access`,
+т.е. любой файл, загруженный этим путём, становится публичным. Это
+конфликтует с жёстким требованием "private/family по умолчанию, никогда
+public без явного действия" — особенно для фото. Поэтому:
+- `POST /api/media/upload` (Route Handler, не Server Action — у Server
+  Actions маленький дефолтный лимит тела запроса, непригодный для файлов) —
+  принимает multipart FormData, проверяет `requireFamilyAccess`, вызывает
+  `storage.upload(..., access: 'private')`.
+- `GET /api/media/[mediaId]?familyId=...` — стримит приватный blob обратно,
+  тоже после `requireFamilyAccess`. Ссылки на фото в UI всегда указывают
+  сюда, никогда на прямой Blob URL — угадываемого публичного URL на фото не
+  существует в принципе.
+- `StorageService.getSignedUrl()` у Vercel Blob implementation намеренно не
+  реализован (throws) — private-доступ Blob не выдаёт presigned URL в
+  привычном S3-смысле; авторизация происходит на каждый запрос через
+  `/api/media/[id]`, а не через одноразовую подписанную ссылку. Метод
+  оставлен в интерфейсе для будущего провайдера (напр. R2 с реальными
+  presigned URLs), который сможет реализовать его осмысленно.
 
 ## Auth/authorization
 
