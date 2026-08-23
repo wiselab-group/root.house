@@ -55,6 +55,10 @@ export async function signOutAction(): Promise<void> {
   await signOut({ redirectTo: "/login" });
 }
 
+export async function signInWithGoogleAction(): Promise<void> {
+  await signIn("google", { redirectTo: "/families" });
+}
+
 export interface LoginFormState {
   error?: string;
 }

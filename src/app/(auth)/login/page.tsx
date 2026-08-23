@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { LoginForm } from "@/components/forms/login-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const { error } = await searchParams;
@@ -18,7 +20,16 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
               Ваша сессия устарела — войдите заново.
             </p>
           )}
+          <GoogleSignInButton />
+
+          <div className="flex items-center gap-3">
+            <Separator className="flex-1" />
+            <span className="text-xs text-muted-foreground">или</span>
+            <Separator className="flex-1" />
+          </div>
+
           <LoginForm />
+
           <p className="text-center text-sm text-muted-foreground">
             Ещё нет аккаунта?{" "}
             <Link href="/register" className="font-medium text-foreground underline underline-offset-4">

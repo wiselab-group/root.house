@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { compare } from "bcrypt-ts";
 import { eq } from "drizzle-orm";
@@ -22,8 +23,10 @@ import { credentialsSchema } from "@/lib/validation/auth";
  * persist for the JWT's lifetime.
  *
  * The Drizzle adapter is still registered (not just a Credentials-only
- * config) so the users/accounts/sessions/verificationTokens tables stay
- * ready for adding an OAuth provider later without a schema change.
+ * config) so the users/accounts/sessions/verificationTokens tables also
+ * back the Google provider below — the adapter is what links a Google
+ * sign-in to the `users` row and records it in `accounts`, giving one
+ * person two ways to log in to the same account.
  *
  * DrizzleAdapter gets getDb() (the real, concrete instance), not the `db`
  * Proxy — it type-introspects its argument via drizzle-orm's `is(db,
@@ -41,6 +44,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
   },
   providers: [
+    Google({
+      // Explicit, rather than relying on Auth.js's auto-detected env names
+      // (AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET) — this project's .env uses the
+      // GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET names Google's own console
+      // instructions use, so auto-detection silently misses them.
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      // The email Google gives us is already verified by Google, so it's
+      // safe to attach this OAuth identity to an existing Credentials
+      // account with the same email instead of erroring out — this is what
+      // lets one person sign in with either email/password or Google.
+      // Without this flag @auth/core refuses the link by default (it can't
+      // tell a legitimate "same person, second method" case from an
+      // attacker who registered your email first).
+      allowDangerousEmailAccountLinking: true,
+    }),
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
