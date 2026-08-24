@@ -65,9 +65,13 @@ export default async function FamilyTreePage({
   const graph = await getFocusTreeLayout(familyId, focusPersonId);
 
   return (
-    <main className="mx-auto flex max-w-5xl flex-col gap-4 p-6">
+    // No side padding / heading below md — the canvas needs the full
+    // viewport to be comfortably pinch-zoomable/pannable on a touchscreen
+    // (see TreeCanvas, which matches with a near-full-height, edge-to-edge
+    // canvas there too). Desktop keeps the framed, padded page.
+    <main className="mx-auto flex max-w-5xl flex-col gap-4 md:p-6">
       <SetBreadcrumbs items={breadcrumbItems} />
-      <div>
+      <div className="hidden md:block">
         <h1 className="font-heading text-2xl font-medium">Семейное дерево</h1>
         <p className="text-muted-foreground">
           Кликните на человека, чтобы сделать его центром дерева.

@@ -19,6 +19,7 @@ import { toReactFlow, type PersonFlowNode } from "./adapters/xyflow-adapter";
 import { PersonNode } from "./person-node";
 import { RelationshipEdge } from "./relationship-edge";
 import { useTreeCardStyle } from "./use-tree-card-style";
+import { useCoarsePointer } from "./use-coarse-pointer";
 
 const nodeTypes = { person: PersonNode };
 const edgeTypes = {
@@ -43,6 +44,7 @@ export function TreeCanvas({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [cardStyle, setCardStyle] = useTreeCardStyle();
+  const isCoarsePointer = useCoarsePointer();
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
     () => toReactFlow(graph, familyId, cardStyle),
@@ -77,7 +79,11 @@ export function TreeCanvas({
   );
 
   return (
-    <div className="h-[70vh] w-full overflow-hidden rounded-lg border border-border">
+    // Full-bleed and near-full-height on touch devices — a bordered,
+    // inset canvas leaves too little room to comfortably pinch-zoom/pan
+    // with fingers (see FamilyTreePage, which drops its own padding/heading
+    // to match below md). Desktop keeps the original framed, 70vh block.
+    <div className="h-[calc(100svh-4.5rem)] w-full overflow-hidden md:h-[70vh] md:rounded-lg md:border md:border-border">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -97,9 +103,12 @@ export function TreeCanvas({
             Bumped up on coarse/touch pointers only (phones, tablets),
             matching the pointer-fine gate the minimap uses below — width
             alone isn't a reliable "mobile" signal (a landscape phone can
-            exceed md). */}
+            exceed md). Zoom in/out buttons are dropped entirely there too —
+            pinch-to-zoom covers that on a touchscreen, and two more 44px
+            targets is clutter fit-view/lock don't need. */}
         <Controls
           showInteractive={false}
+          showZoom={!isCoarsePointer}
           className="pointer-coarse:[&_.react-flow\_\_controls-button]:size-11! pointer-coarse:[&_.react-flow\_\_controls-button_svg]:max-h-5! pointer-coarse:[&_.react-flow\_\_controls-button_svg]:max-w-5!"
         >
           <ControlButton
