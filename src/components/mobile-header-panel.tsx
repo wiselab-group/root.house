@@ -32,7 +32,7 @@ export function MobileHeaderToggle({
       aria-label={open ? "Закрыть меню" : "Открыть меню"}
       onClick={() => onOpenChange(!open)}
     >
-      {open ? <XIcon /> : <MenuIcon />}
+      {open ? <XIcon className="size-6" /> : <MenuIcon className="size-6" />}
     </Button>
   );
 }

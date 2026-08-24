@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { BrandMark } from "@/components/brand-mark";
@@ -18,13 +18,32 @@ import { useBreadcrumbs } from "@/components/breadcrumbs-context";
 export function AppHeader({ userEmail }: { userEmail: string | null | undefined }) {
   const breadcrumbs = useBreadcrumbs();
   const [menuOpen, setMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+
+  // Close the mobile panel on any interaction outside the header — the
+  // panel itself has no overlay to catch this (see MobileHeaderPanel), so
+  // it's listened for here instead. Only attached while open, and only
+  // matters below md where the toggle/panel are visible at all.
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handlePointerDown(e: PointerEvent) {
+      if (headerRef.current && !headerRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [menuOpen]);
 
   return (
-    <header className="border-b border-border px-6 py-3">
+    <header ref={headerRef} className="border-b border-border px-6 py-3">
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <Link href="/families" className="shrink-0">
-            <BrandMark />
+            <BrandMark
+              glyphClassName="max-md:size-11"
+              iconClassName="max-md:size-6"
+            />
           </Link>
           {breadcrumbs.length > 0 && (
             <>
