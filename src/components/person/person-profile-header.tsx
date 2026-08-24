@@ -43,7 +43,11 @@ export function PersonProfileHeader({
       </div>
       {canEdit && (
         <div className="flex gap-2">
-          <LinkButton variant="outline" href={`/families/${familySlug}/people/${personSlug}/edit`}>
+          <LinkButton
+            variant="outline"
+            size="sm"
+            href={`/families/${familySlug}/people/${personSlug}/edit`}
+          >
             Редактировать
           </LinkButton>
           {/* Deletion is restricted to owners — more destructive/

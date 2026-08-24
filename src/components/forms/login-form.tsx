@@ -126,7 +126,7 @@ export function LoginForm() {
                 setStep("email");
                 setDismissServerError(true);
               }}
-              className="flex shrink-0 items-center gap-1 text-muted-foreground hover:text-foreground"
+              className="flex shrink-0 cursor-pointer items-center gap-1 text-muted-foreground hover:text-foreground"
             >
               <PencilIcon className="size-3.5" />
               Изменить

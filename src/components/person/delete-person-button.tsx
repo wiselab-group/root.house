@@ -39,7 +39,7 @@ export function DeletePersonButton({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="destructive" />}>Удалить</DialogTrigger>
+      <DialogTrigger render={<Button variant="destructive" size="sm" />}>Удалить</DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Удалить {personName}?</DialogTitle>
