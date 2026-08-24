@@ -4,7 +4,6 @@ import { listPeople } from "@/domain/person/person.service";
 import { getFocusTreeLayout } from "@/domain/tree/tree.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { TreeCanvas } from "@/components/tree/tree-canvas";
-import { MobileFocusView } from "@/components/tree/mobile-focus-view";
 import {
   Card,
   CardContent,
@@ -70,28 +69,12 @@ export default async function FamilyTreePage({
       <SetBreadcrumbs items={breadcrumbItems} />
       <div>
         <h1 className="font-heading text-2xl font-medium">Семейное дерево</h1>
-        <p className="hidden text-muted-foreground md:block">
+        <p className="text-muted-foreground">
           Кликните на человека, чтобы сделать его центром дерева.
-        </p>
-        <p className="text-muted-foreground md:hidden">
-          Коснитесь родственника, чтобы сделать его центром.
         </p>
       </div>
 
-      {/*
-        Desktop gets the full pan/zoom canvas; mobile gets a card-based
-        focus navigator instead of a shrunk-down graph (large canvases are
-        awkward to use on small screens — plan §6/§13). Both read the same
-        TreeLayoutGraph and share the ?focus= URL contract, so this dual
-        render is a deliberate trade-off (two DOM trees for one screen),
-        not an oversight — see docs/architecture.md.
-      */}
-      <div className="hidden md:block">
-        <TreeCanvas graph={graph} familyId={familyId} />
-      </div>
-      <div className="md:hidden">
-        <MobileFocusView graph={graph} familySlug={slug} familyId={familyId} />
-      </div>
+      <TreeCanvas graph={graph} familyId={familyId} />
     </main>
   );
 }

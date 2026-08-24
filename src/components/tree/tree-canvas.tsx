@@ -121,7 +121,9 @@ export function TreeCanvas({
             )}
           </ControlButton>
         </Controls>
-        <MiniMap pannable zoomable className="bg-card!" />
+        {/* Minimap needs room to read as a map, not a smudge — skip it below
+            md where the canvas itself is already cramped (plan §6/§13). */}
+        <MiniMap pannable zoomable className="hidden bg-card! md:block" />
       </ReactFlow>
     </div>
   );

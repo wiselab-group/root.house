@@ -329,19 +329,11 @@ Descendants — то же самое зеркально (обход `parent_id �
 2. `components/tree/adapters/xyflow-adapter.ts` — единственный модуль,
    которому разрешено импортировать `@xyflow/react`; конвертирует
    `TreeLayoutGraph` → `Node`/`Edge`.
-3. `components/tree/tree-canvas.tsx` (desktop) — zoom/pan/minimap,
-   клик-навигация пишет `?focus=personId` в URL (не в client state) —
-   shareable deep link, кнопка "назад" браузера работает бесплатно.
-
-**Mobile — не уменьшенный desktop-canvas.** `components/tree/mobile-focus-view.tsx`
-рендерит карточную навигацию (центральная карточка focus-person +
-горизонтально-скроллящиеся списки родители/супруги/дети/братья-сёстры),
-читая тот же `TreeLayoutGraph`, что и desktop canvas — тот же контракт
-`?focus=`, разный рендер. Переключение desktop/mobile — намеренный dual-render
-через Tailwind `hidden md:block`/`md:hidden` в `tree/page.tsx` (оба варианта
-рендерятся на сервере, но виден только один) — принятый компромисс (два DOM
-дерева на один экран) ради UX, а не недосмотр: альтернатива (client-side
-`matchMedia`-детекция) добавила бы hydration-мерцание при первой загрузке.
+3. `components/tree/tree-canvas.tsx` — zoom/pan/minimap, тот же на mobile и
+   desktop (touch pan/pinch-zoom из коробки от `@xyflow/react`), клик/тап-
+   навигация пишет `?focus=personId` в URL (не в client state) — shareable
+   deep link, кнопка "назад" браузера работает бесплатно. Одна реализация,
+   один DOM-дерево на экран — никакого отдельного mobile-рендера.
 
 ## Search
 
