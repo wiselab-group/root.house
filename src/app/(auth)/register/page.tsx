@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { AuthBrand } from "@/components/auth/auth-brand";
 import { RegisterForm } from "@/components/forms/register-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 export default function RegisterPage() {
   return (
-    <main className="flex min-h-svh items-center justify-center p-4">
+    <main className="flex min-h-svh flex-col items-center justify-center p-4">
+      <AuthBrand />
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>Начать семейный архив</CardTitle>

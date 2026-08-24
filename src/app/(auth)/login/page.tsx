@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
+import { AuthBrand } from "@/components/auth/auth-brand";
 import { LoginForm } from "@/components/forms/login-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -8,7 +9,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const { error } = await searchParams;
 
   return (
-    <main className="flex min-h-svh items-center justify-center p-4">
+    <main className="flex min-h-svh flex-col items-center justify-center p-4">
+      <AuthBrand />
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>С возвращением</CardTitle>
