@@ -6,6 +6,9 @@ import { ImageResponse } from "next/og";
 // just show as blank/black on the home screen). Mirrors BrandMark's glyph
 // (the same accent-tinted house badge shown on the login screen) scaled up
 // to fill the tile, so the home-screen icon reads as the same brand mark.
+// The glyph is sized to leave only a thin margin — iOS/Android already
+// inset and round the tile themselves (share-sheet, home screen, Settings),
+// so extra padding here just reads as a small icon floating in a big box.
 //
 // Hex, not var(--color-name): satori (next/og's renderer) doesn't parse
 // oklch(). #f6e8e0 is --primary at 10% opacity flattened onto --background
@@ -28,7 +31,7 @@ export default function AppleIcon() {
           background: "#f6e8e0",
         }}
       >
-        <svg width="104" height="104" viewBox="0 0 24 24" fill="none">
+        <svg width="150" height="150" viewBox="0 0 24 24" fill="none">
           <path
             d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"
             stroke="#b2511e"
