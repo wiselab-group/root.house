@@ -100,7 +100,7 @@ export function TreeCanvas({
             exceed md). */}
         <Controls
           showInteractive={false}
-          className="pointer-coarse:[&_.react-flow__controls-button]:size-11 pointer-coarse:[&_.react-flow__controls-button_svg]:max-h-5! pointer-coarse:[&_.react-flow__controls-button_svg]:max-w-5!"
+          className="pointer-coarse:[&_.react-flow\_\_controls-button]:size-11! pointer-coarse:[&_.react-flow\_\_controls-button_svg]:max-h-5! pointer-coarse:[&_.react-flow\_\_controls-button_svg]:max-w-5!"
         >
           <ControlButton
             onClick={() =>
