@@ -92,7 +92,16 @@ export function TreeCanvas({
         maxZoom={1.5}
       >
         <Background gap={24} />
-        <Controls showInteractive={false}>
+        {/* Default xyflow control buttons are 26px/12px-icon — a fine
+            pointer target on desktop but too small to comfortably tap.
+            Bumped up on coarse/touch pointers only (phones, tablets),
+            matching the pointer-fine gate the minimap uses below — width
+            alone isn't a reliable "mobile" signal (a landscape phone can
+            exceed md). */}
+        <Controls
+          showInteractive={false}
+          className="pointer-coarse:[&_.react-flow__controls-button]:size-11 pointer-coarse:[&_.react-flow__controls-button_svg]:max-h-5! pointer-coarse:[&_.react-flow__controls-button_svg]:max-w-5!"
+        >
           <ControlButton
             onClick={() =>
               setCardStyle(cardStyle === "compact" ? "portrait" : "compact")
@@ -122,8 +131,13 @@ export function TreeCanvas({
           </ControlButton>
         </Controls>
         {/* Minimap needs room to read as a map, not a smudge — skip it below
-            md where the canvas itself is already cramped (plan §6/§13). */}
-        <MiniMap pannable zoomable className="hidden bg-card! md:block" />
+            md where the canvas itself is already cramped (plan §6/§13), and
+            skip it on any touch/coarse-pointer device regardless of width:
+            a landscape phone can exceed the md breakpoint but is still a
+            phone, and a tiny floating minimap there is more clutter than a
+            map. pointer-fine (mouse/trackpad) is the actual "desktop"
+            signal, not viewport width alone. */}
+        <MiniMap pannable zoomable className="hidden bg-card! md:pointer-fine:block" />
       </ReactFlow>
     </div>
   );
