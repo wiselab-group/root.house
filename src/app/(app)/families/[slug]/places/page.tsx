@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { CreatePlaceForm } from "@/components/forms/create-place-form";
 import { DeletePlaceButton } from "@/components/forms/delete-place-button";
 import { CollapsibleForm } from "@/components/forms/collapsible-form";
+import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
+import { getFamilySummary } from "@/domain/family/family.service";
 
 export default async function PlacesPage({ params }: PageProps<"/families/[slug]/places">) {
   const { slug } = await params;
@@ -15,10 +17,20 @@ export default async function PlacesPage({ params }: PageProps<"/families/[slug]
   const familyId = await resolveFamilyIdBySlug(slug);
   const member = await requireFamilyAccess(familyId, session.user.id, "viewer");
   const canEdit = member.role === "owner" || member.role === "editor";
-  const places = await listPlaces(familyId);
+  const [places, family] = await Promise.all([
+    listPlaces(familyId),
+    getFamilySummary(familyId),
+  ]);
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
+      <SetBreadcrumbs
+        items={[
+          { label: "Мои семьи", href: "/families" },
+          { label: family?.name ?? slug, href: `/families/${slug}` },
+          { label: "Места" },
+        ]}
+      />
       <div>
         <h1 className="font-heading text-2xl font-medium">Места</h1>
         <p className="text-muted-foreground">

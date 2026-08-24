@@ -4,18 +4,18 @@ import { requireFamilyAccess } from "@/domain/family/access";
 import { getPerson } from "@/domain/person/person.service";
 import { getPlace } from "@/domain/place/place.service";
 import { personDisplayName } from "@/domain/person/display-name";
-import { formatPartialDate } from "@/domain/shared/partial-date";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { resolvePersonIdBySlug } from "@/lib/resolve-person-slug";
-import { LinkButton } from "@/components/ui/link-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PersonFamilyPanel } from "@/components/person/person-family-panel";
 import { PersonTimeline } from "@/components/person/person-timeline";
 import { PersonMediaGallery } from "@/components/person/person-media-gallery";
 import { PersonStories } from "@/components/person/person-stories";
-import { DeletePersonButton } from "@/components/person/delete-person-button";
-import { PersonAvatar } from "@/components/person/person-avatar";
+import { PersonProfileHeader } from "@/components/person/person-profile-header";
+import { InfoRow } from "@/components/person/person-info-row";
+import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
+import { getFamilySummary } from "@/domain/family/family.service";
 
 export default async function PersonProfilePage({
   params,
@@ -32,53 +32,31 @@ export default async function PersonProfilePage({
 
   const canEdit = member.role === "owner" || member.role === "editor";
 
-  const [birthPlace, deathPlace] = await Promise.all([
+  const [birthPlace, deathPlace, family] = await Promise.all([
     person.birthPlaceId ? getPlace(person.birthPlaceId, familyId) : null,
     person.deathPlaceId ? getPlace(person.deathPlaceId, familyId) : null,
+    getFamilySummary(familyId),
   ]);
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <PersonAvatar
-            person={person}
-            familyId={familyId}
-            className="size-20! text-xl"
-          />
-          <div>
-            <h1 className="font-heading text-3xl font-medium">
-              {personDisplayName(person)}
-            </h1>
-            <p className="text-muted-foreground">
-              {formatPartialDate(person.birthDate)}
-              {birthPlace && `, ${birthPlace.name}`}
-              {!person.isLiving &&
-                ` — ${formatPartialDate(person.deathDate)}${deathPlace ? `, ${deathPlace.name}` : ""}`}
-            </p>
-          </div>
-        </div>
-        {canEdit && (
-          <div className="flex gap-2">
-            <LinkButton
-              variant="outline"
-              href={`/families/${slug}/people/${personSlug}/edit`}
-            >
-              Редактировать
-            </LinkButton>
-            {/* Deletion is restricted to owners — more destructive/
-                irreversible than regular editor-level CRUD (cascades to
-                relationships, event participation, media links). */}
-            {member.role === "owner" && (
-              <DeletePersonButton
-                familyId={familyId}
-                personId={personId}
-                personName={personDisplayName(person)}
-              />
-            )}
-          </div>
-        )}
-      </div>
+      <SetBreadcrumbs
+        items={[
+          { label: "Мои семьи", href: "/families" },
+          { label: family?.name ?? slug, href: `/families/${slug}` },
+          { label: "Люди", href: `/families/${slug}/people` },
+          { label: personDisplayName(person) },
+        ]}
+      />
+      <PersonProfileHeader
+        person={person}
+        personSlug={personSlug}
+        familyId={familyId}
+        familySlug={slug}
+        role={member.role}
+        birthPlace={birthPlace}
+        deathPlace={deathPlace}
+      />
 
       {person.isPlaceholder && (
         <Badge variant="secondary">Запись-заглушка — данные неизвестны</Badge>
@@ -132,15 +110,5 @@ export default async function PersonProfilePage({
         canEdit={canEdit}
       />
     </main>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string | null }) {
-  if (!value) return null;
-  return (
-    <div>
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd>{value}</dd>
-    </div>
   );
 }

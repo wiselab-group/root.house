@@ -16,11 +16,13 @@ export type { EventRecord };
 
 export interface EventParticipantWithName {
   personId: string;
+  /** null when the participant Person row no longer resolves (e.g. deleted) — no profile link to build. */
+  slug: string | null;
   name: string;
   roleLabel: string;
 }
 
-/** Participants of an Event, joined with each Person's display name — the shape event details pages need. */
+/** Participants of an Event, joined with each Person's display name/slug — the shape event details pages need. */
 export async function getParticipantsWithNames(
   eventId: string,
   familyId: string,
@@ -31,6 +33,7 @@ export async function getParticipantsWithNames(
       const person = await getPersonById(p.personId, familyId);
       return {
         personId: p.personId,
+        slug: person?.slug ?? null,
         name: person ? personDisplayName(person) : "Неизвестно",
         roleLabel: EVENT_ROLE_LABELS[p.role] ?? p.role,
       };

@@ -7,6 +7,8 @@ import { formatPartialDate } from "@/domain/shared/partial-date";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
+import { getFamilySummary } from "@/domain/family/family.service";
 
 export default async function SearchPage({
   params,
@@ -21,10 +23,20 @@ export default async function SearchPage({
   const familyId = await resolveFamilyIdBySlug(slug);
   await requireFamilyAccess(familyId, session.user.id, "viewer");
 
-  const results = query.trim().length > 0 ? await searchPeople(familyId, query) : [];
+  const [results, family] = await Promise.all([
+    query.trim().length > 0 ? searchPeople(familyId, query) : Promise.resolve([]),
+    getFamilySummary(familyId),
+  ]);
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
+      <SetBreadcrumbs
+        items={[
+          { label: "Мои семьи", href: "/families" },
+          { label: family?.name ?? slug, href: `/families/${slug}` },
+          { label: "Поиск" },
+        ]}
+      />
       <div>
         <h1 className="font-heading text-2xl font-medium">Поиск</h1>
         <p className="text-muted-foreground">По имени, фамилии, девичьей фамилии или году (например, 1920 или 1900-1950).</p>

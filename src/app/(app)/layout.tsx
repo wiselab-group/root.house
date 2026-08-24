@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { userExists } from "@/domain/auth/auth.service";
 import { AppHeader } from "@/components/app-header";
+import { BreadcrumbsProvider } from "@/components/breadcrumbs-context";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -31,9 +32,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-svh">
-      <AppHeader userEmail={session.user.email} />
-      {children}
-    </div>
+    <BreadcrumbsProvider>
+      <div className="min-h-svh">
+        <AppHeader userEmail={session.user.email} />
+        {children}
+      </div>
+    </BreadcrumbsProvider>
   );
 }

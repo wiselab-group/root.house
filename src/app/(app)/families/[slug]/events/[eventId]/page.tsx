@@ -9,6 +9,8 @@ import { formatPartialDate } from "@/domain/shared/partial-date";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
+import { getFamilySummary } from "@/domain/family/family.service";
 
 export default async function EventDetailsPage({
   params,
@@ -22,13 +24,28 @@ export default async function EventDetailsPage({
   const event = await getEvent(eventId, familyId);
   if (!event) notFound();
 
-  const [participants, place] = await Promise.all([
+  const [participants, place, family] = await Promise.all([
     getParticipantsWithNames(eventId, familyId),
     event.placeId ? getPlace(event.placeId, familyId) : null,
+    getFamilySummary(familyId),
   ]);
+
+  // Prefer a trail back through the event's primary subject (usually the
+  // Person whose timeline this was opened from) over the bare "Люди" list —
+  // more useful than a fallback that drops the context entirely.
+  const subject = participants[0];
+  const breadcrumbItems = [
+    { label: "Мои семьи", href: "/families" },
+    { label: family?.name ?? slug, href: `/families/${slug}` },
+    ...(subject?.slug
+      ? [{ label: subject.name, href: `/families/${slug}/people/${subject.slug}` }]
+      : [{ label: "Люди", href: `/families/${slug}/people` }]),
+    { label: event.title },
+  ];
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
+      <SetBreadcrumbs items={breadcrumbItems} />
       <div>
         <Badge variant="secondary">{EVENT_TYPE_LABELS[event.type]}</Badge>
         <h1 className="font-heading mt-2 text-3xl font-medium">{event.title}</h1>
@@ -59,9 +76,13 @@ export default async function EventDetailsPage({
             <ul className="flex flex-col gap-2">
               {participants.map((p) => (
                 <li key={p.personId} className="flex items-center justify-between text-sm">
-                  <Link href={`/families/${slug}/people/${p.personId}`} className="hover:underline">
-                    {p.name}
-                  </Link>
+                  {p.slug ? (
+                    <Link href={`/families/${slug}/people/${p.slug}`} className="hover:underline">
+                      {p.name}
+                    </Link>
+                  ) : (
+                    <span>{p.name}</span>
+                  )}
                   <span className="text-muted-foreground">{p.roleLabel}</span>
                 </li>
               ))}

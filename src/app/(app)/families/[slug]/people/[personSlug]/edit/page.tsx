@@ -9,6 +9,9 @@ import { AvatarEditor } from "@/components/forms/avatar-editor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { updatePersonAction } from "@/actions/person.actions";
 import { listPlaces } from "@/domain/place/place.service";
+import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
+import { getFamilySummary } from "@/domain/family/family.service";
+import { personDisplayName } from "@/domain/person/display-name";
 
 export default async function EditPersonPage({
   params,
@@ -22,10 +25,22 @@ export default async function EditPersonPage({
   const personId = await resolvePersonIdBySlug(personSlug, familyId);
   const person = await getPerson(personId, familyId);
   if (!person) notFound();
-  const places = await listPlaces(familyId);
+  const [places, family] = await Promise.all([
+    listPlaces(familyId),
+    getFamilySummary(familyId),
+  ]);
 
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-6 p-6">
+      <SetBreadcrumbs
+        items={[
+          { label: "Мои семьи", href: "/families" },
+          { label: family?.name ?? slug, href: `/families/${slug}` },
+          { label: "Люди", href: `/families/${slug}/people` },
+          { label: personDisplayName(person), href: `/families/${slug}/people/${personSlug}` },
+          { label: "Редактировать" },
+        ]}
+      />
       <Card>
         <CardHeader>
           <CardTitle>Фото профиля</CardTitle>

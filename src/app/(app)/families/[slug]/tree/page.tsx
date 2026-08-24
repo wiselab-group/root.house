@@ -13,6 +13,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/link-button";
+import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
+import { getFamilySummary } from "@/domain/family/family.service";
 
 export default async function FamilyTreePage({
   params,
@@ -25,11 +27,20 @@ export default async function FamilyTreePage({
 
   const familyId = await resolveFamilyIdBySlug(slug);
   await requireFamilyAccess(familyId, session.user.id, "viewer");
-  const people = await listPeople(familyId);
+  const [people, family] = await Promise.all([
+    listPeople(familyId),
+    getFamilySummary(familyId),
+  ]);
+  const breadcrumbItems = [
+    { label: "Мои семьи", href: "/families" },
+    { label: family?.name ?? slug, href: `/families/${slug}` },
+    { label: "Семейное дерево" },
+  ];
 
   if (people.length === 0) {
     return (
       <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
+        <SetBreadcrumbs items={breadcrumbItems} />
         <Card>
           <CardHeader>
             <CardTitle>Дерево пока пустое</CardTitle>
@@ -56,6 +67,7 @@ export default async function FamilyTreePage({
 
   return (
     <main className="mx-auto flex max-w-5xl flex-col gap-4 p-6">
+      <SetBreadcrumbs items={breadcrumbItems} />
       <div>
         <h1 className="font-heading text-2xl font-medium">Семейное дерево</h1>
         <p className="hidden text-muted-foreground md:block">
