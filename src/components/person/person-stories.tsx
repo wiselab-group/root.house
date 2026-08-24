@@ -2,6 +2,7 @@ import { getPersonStories } from "@/domain/story/story.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddStoryForm } from "@/components/forms/add-story-form";
 import { DeleteStoryButton } from "@/components/forms/delete-story-button";
+import { CollapsibleForm } from "@/components/forms/collapsible-form";
 
 /**
  * A Person's family stories/memories — server component, same pattern as
@@ -42,7 +43,11 @@ export async function PersonStories({
           </ul>
         )}
 
-        {canEdit && <AddStoryForm familyId={familyId} personId={personId} />}
+        {canEdit && (
+          <CollapsibleForm triggerLabel="Добавить историю">
+            <AddStoryForm familyId={familyId} personId={personId} />
+          </CollapsibleForm>
+        )}
       </CardContent>
     </Card>
   );

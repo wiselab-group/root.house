@@ -5,6 +5,7 @@ import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { CreatePlaceForm } from "@/components/forms/create-place-form";
 import { DeletePlaceButton } from "@/components/forms/delete-place-button";
+import { CollapsibleForm } from "@/components/forms/collapsible-form";
 
 export default async function PlacesPage({ params }: PageProps<"/families/[slug]/places">) {
   const { slug } = await params;
@@ -55,7 +56,11 @@ export default async function PlacesPage({ params }: PageProps<"/families/[slug]
         </ul>
       )}
 
-      {canEdit && <CreatePlaceForm familyId={familyId} />}
+      {canEdit && (
+        <CollapsibleForm triggerLabel="Добавить место">
+          <CreatePlaceForm familyId={familyId} />
+        </CollapsibleForm>
+      )}
     </main>
   );
 }

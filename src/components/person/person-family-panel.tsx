@@ -5,6 +5,7 @@ import { personDisplayName } from "@/domain/person/display-name";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddRelativeForm } from "@/components/forms/add-relative-form";
 import { RemoveRelationshipButton } from "@/components/forms/remove-relationship-button";
+import { CollapsibleForm } from "@/components/forms/collapsible-form";
 
 interface RelativeItem {
   id: string;
@@ -100,27 +101,33 @@ export async function PersonFamilyPanel({
 
         {canEdit && (
           <div className="grid gap-3 sm:grid-cols-3">
-            <AddRelativeForm
-              familyId={familyId}
-              personId={personId}
-              kind="parent"
-              candidates={otherPeople}
-              label="Добавить родителя"
-            />
-            <AddRelativeForm
-              familyId={familyId}
-              personId={personId}
-              kind="spouse"
-              candidates={otherPeople}
-              label="Добавить супруга"
-            />
-            <AddRelativeForm
-              familyId={familyId}
-              personId={personId}
-              kind="child"
-              candidates={otherPeople}
-              label="Добавить ребёнка"
-            />
+            <CollapsibleForm triggerLabel="Добавить родителя">
+              <AddRelativeForm
+                familyId={familyId}
+                personId={personId}
+                kind="parent"
+                candidates={otherPeople}
+                label="Добавить родителя"
+              />
+            </CollapsibleForm>
+            <CollapsibleForm triggerLabel="Добавить супруга">
+              <AddRelativeForm
+                familyId={familyId}
+                personId={personId}
+                kind="spouse"
+                candidates={otherPeople}
+                label="Добавить супруга"
+              />
+            </CollapsibleForm>
+            <CollapsibleForm triggerLabel="Добавить ребёнка">
+              <AddRelativeForm
+                familyId={familyId}
+                personId={personId}
+                kind="child"
+                candidates={otherPeople}
+                label="Добавить ребёнка"
+              />
+            </CollapsibleForm>
           </div>
         )}
       </CardContent>

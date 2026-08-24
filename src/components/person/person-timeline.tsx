@@ -6,6 +6,7 @@ import { formatPartialDate } from "@/domain/shared/partial-date";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AddEventForm } from "@/components/forms/add-event-form";
+import { CollapsibleForm } from "@/components/forms/collapsible-form";
 
 /**
  * A Person's chronological timeline of events — server component, fetches
@@ -61,7 +62,11 @@ export async function PersonTimeline({
           </ol>
         )}
 
-        {canEdit && <AddEventForm familyId={familyId} personId={personId} places={places} />}
+        {canEdit && (
+          <CollapsibleForm triggerLabel="Добавить событие">
+            <AddEventForm familyId={familyId} personId={personId} places={places} />
+          </CollapsibleForm>
+        )}
       </CardContent>
     </Card>
   );
