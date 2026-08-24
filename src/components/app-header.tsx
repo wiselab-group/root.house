@@ -60,7 +60,12 @@ export function AppHeader({ userEmail }: { userEmail: string | null | undefined 
         </div>
         <MobileHeaderToggle open={menuOpen} onOpenChange={setMenuOpen} />
       </div>
-      <MobileHeaderPanel open={menuOpen} breadcrumbs={breadcrumbs} userEmail={userEmail} />
+      <MobileHeaderPanel
+        open={menuOpen}
+        breadcrumbs={breadcrumbs}
+        userEmail={userEmail}
+        onNavigate={() => setMenuOpen(false)}
+      />
     </header>
   );
 }

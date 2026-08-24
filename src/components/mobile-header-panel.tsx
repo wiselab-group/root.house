@@ -49,10 +49,14 @@ export function MobileHeaderPanel({
   open,
   breadcrumbs,
   userEmail,
+  onNavigate,
 }: {
   open: boolean;
   breadcrumbs: BreadcrumbItem[];
   userEmail: string | null | undefined;
+  /** Called when a breadcrumb link inside the panel is clicked, so the
+   *  panel doesn't stay open behind the page it just navigated away from. */
+  onNavigate: () => void;
 }) {
   return (
     <div
@@ -69,7 +73,12 @@ export function MobileHeaderPanel({
         >
           {breadcrumbs.length > 0 && (
             <>
-              <Breadcrumbs items={breadcrumbs} />
+              {/* Click delegation instead of threading onNavigate through
+                  Breadcrumbs itself — that component is shared with the
+                  desktop header, which has no panel to close. */}
+              <div onClick={(e) => (e.target as HTMLElement).closest("a") && onNavigate()}>
+                <Breadcrumbs items={breadcrumbs} />
+              </div>
               <span aria-hidden className="h-px w-full bg-border" />
             </>
           )}
