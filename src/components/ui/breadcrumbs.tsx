@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRightIcon, HomeIcon } from "lucide-react";
+import { ChevronRightIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface BreadcrumbItem {
@@ -22,24 +22,18 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
       <ol className="flex min-w-0 flex-wrap items-center gap-1">
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
-          const isFirst = index === 0;
           return (
             <li key={`${item.label}-${index}`} className="flex items-center gap-1">
               {index > 0 && <ChevronRightIcon className="size-3.5 shrink-0" />}
               {item.href && !isLast ? (
-                <Link
-                  href={item.href}
-                  className="flex items-center gap-1 truncate hover:text-foreground hover:underline"
-                >
-                  {isFirst && <HomeIcon className="size-3.5 shrink-0" />}
+                <Link href={item.href} className="truncate hover:text-foreground hover:underline">
                   {item.label}
                 </Link>
               ) : (
                 <span
-                  className={cn("flex items-center gap-1 truncate", isLast && "text-foreground")}
+                  className={cn("truncate", isLast && "text-foreground")}
                   aria-current={isLast ? "page" : undefined}
                 >
-                  {isFirst && <HomeIcon className="size-3.5 shrink-0" />}
                   {item.label}
                 </span>
               )}
