@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { getEvent, getParticipantsWithNames } from "@/domain/event/event.service";
+import { getPlace } from "@/domain/place/place.service";
 import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 import { formatPartialDate } from "@/domain/shared/partial-date";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
@@ -21,7 +22,10 @@ export default async function EventDetailsPage({
   const event = await getEvent(eventId, familyId);
   if (!event) notFound();
 
-  const participants = await getParticipantsWithNames(eventId, familyId);
+  const [participants, place] = await Promise.all([
+    getParticipantsWithNames(eventId, familyId),
+    event.placeId ? getPlace(event.placeId, familyId) : null,
+  ]);
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
@@ -31,6 +35,7 @@ export default async function EventDetailsPage({
         <p className="text-muted-foreground">
           {formatPartialDate(event.date)}
           {event.endDate && ` — ${formatPartialDate(event.endDate)}`}
+          {place && ` · ${place.name}`}
         </p>
       </div>
 

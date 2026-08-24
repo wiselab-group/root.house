@@ -32,6 +32,8 @@ export const createPersonSchema = z.object({
   nationality: z.string().trim().max(120).optional().or(z.literal("")),
   birthDate: partialDateInputSchema,
   deathDate: partialDateInputSchema,
+  birthPlaceId: z.string().uuid().optional().or(z.literal("")),
+  deathPlaceId: z.string().uuid().optional().or(z.literal("")),
 });
 
 export type CreatePersonInput = z.infer<typeof createPersonSchema>;

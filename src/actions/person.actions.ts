@@ -41,6 +41,8 @@ export async function createPersonAction(
     description: formData.get("description"),
     religion: formData.get("religion"),
     nationality: formData.get("nationality"),
+    birthPlaceId: formData.get("birthPlaceId"),
+    deathPlaceId: formData.get("deathPlaceId"),
   });
 
   if (!parsed.success) {
@@ -64,6 +66,8 @@ export async function createPersonAction(
     nationality: parsed.data.nationality || undefined,
     birthDate: partialDateFromFormData(formData, "birth"),
     deathDate: partialDateFromFormData(formData, "death"),
+    birthPlaceId: parsed.data.birthPlaceId || undefined,
+    deathPlaceId: parsed.data.deathPlaceId || undefined,
   });
 
   const familySlug = await getFamilySlugById(familyId);
@@ -139,6 +143,8 @@ export async function updatePersonAction(
     description: formData.get("description"),
     religion: formData.get("religion"),
     nationality: formData.get("nationality"),
+    birthPlaceId: formData.get("birthPlaceId"),
+    deathPlaceId: formData.get("deathPlaceId"),
   });
 
   if (!parsed.success) {
@@ -162,6 +168,8 @@ export async function updatePersonAction(
     nationality: parsed.data.nationality || null,
     birthDate: partialDateFromFormData(formData, "birth") ?? null,
     deathDate: partialDateFromFormData(formData, "death") ?? null,
+    birthPlaceId: parsed.data.birthPlaceId || null,
+    deathPlaceId: parsed.data.deathPlaceId || null,
   });
 
   if (!updated) {

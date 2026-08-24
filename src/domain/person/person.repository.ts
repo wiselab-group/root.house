@@ -131,6 +131,8 @@ export interface CreatePersonData {
   nationality?: string | null;
   birthDate?: PartialDate | null;
   deathDate?: PartialDate | null;
+  birthPlaceId?: string | null;
+  deathPlaceId?: string | null;
 }
 
 export async function createPerson(data: CreatePersonData): Promise<{ id: string }> {
@@ -164,6 +166,8 @@ export async function createPerson(data: CreatePersonData): Promise<{ id: string
       deathDateDay: deathCols.day,
       deathDatePrecision: deathCols.precision,
       deathDateApproximate: deathCols.approximate,
+      birthPlaceId: data.birthPlaceId ?? null,
+      deathPlaceId: data.deathPlaceId ?? null,
     })
     .returning({ id: persons.id });
 
@@ -201,6 +205,9 @@ export async function updatePerson(
     patch.birthDatePrecision = cols.precision;
     patch.birthDateApproximate = cols.approximate;
   }
+  if (data.birthPlaceId !== undefined) patch.birthPlaceId = data.birthPlaceId;
+  if (data.deathPlaceId !== undefined) patch.deathPlaceId = data.deathPlaceId;
+
   if (data.deathDate !== undefined) {
     const cols = toColumns(data.deathDate);
     patch.deathDateYear = cols.year;

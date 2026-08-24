@@ -7,16 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PersonNameFields } from "./person-name-fields";
 import { PersonDateFields } from "./person-date-fields";
+import { PersonGenderLivingFields } from "./person-gender-living-fields";
+import { PlaceSelect } from "./place-select";
 import type { PersonFormState } from "@/actions/person.actions";
 import type { PersonRecord } from "@/domain/person/person.service";
-
-const GENDER_OPTIONS: Array<{ value: PersonRecord["gender"]; label: string }> =
-  [
-    { value: "unknown", label: "Не указан" },
-    { value: "male", label: "Мужской" },
-    { value: "female", label: "Женский" },
-    { value: "other", label: "Другой" },
-  ];
+import type { PlaceRecord } from "@/domain/place/place.service";
 
 function SubmitButton({
   label,
@@ -36,6 +31,7 @@ function SubmitButton({
 export function PersonForm({
   action,
   person,
+  places = [],
   submitLabel,
   submitPendingLabel,
 }: {
@@ -44,6 +40,7 @@ export function PersonForm({
     formData: FormData,
   ) => Promise<PersonFormState>;
   person?: PersonRecord | null;
+  places?: PlaceRecord[];
   submitLabel: string;
   submitPendingLabel: string;
 }) {
@@ -61,53 +58,43 @@ export function PersonForm({
     <form action={formAction} className="flex flex-col gap-6" noValidate>
       <PersonNameFields person={person} />
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="gender">Пол</Label>
-          <select
-            id="gender"
-            name="gender"
-            defaultValue={person?.gender ?? "unknown"}
-            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
-          >
-            {GENDER_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <label
-          htmlFor="isLiving"
-          className="flex items-center gap-2 pt-6 text-sm"
-        >
-          <input
-            id="isLiving"
-            name="isLiving"
-            type="checkbox"
-            checked={isLiving}
-            onChange={(e) => setIsLiving(e.target.checked)}
-            className="size-4"
-          />
-          Жив(а)
-        </label>
-      </div>
+      <PersonGenderLivingFields
+        gender={person?.gender}
+        isLiving={isLiving}
+        onIsLivingChange={setIsLiving}
+      />
 
       <PersonDateFields
         prefix="birth"
         legend="Дата рождения"
         date={person?.birthDate}
       />
+      <PlaceSelect
+        id="birthPlaceId"
+        name="birthPlaceId"
+        label="Место рождения"
+        places={places}
+        defaultValue={person?.birthPlaceId}
+      />
       {/* Hidden (not just visually — unmounted) while isLiving is checked: a
           death date has no meaning for someone marked alive, and keeping the
           fields out of the form entirely means submitting can't accidentally
           carry over a stale deathYear value from before the checkbox changed. */}
       {!isLiving && (
-        <PersonDateFields
-          prefix="death"
-          legend="Дата смерти"
-          date={person?.deathDate}
-        />
+        <>
+          <PersonDateFields
+            prefix="death"
+            legend="Дата смерти"
+            date={person?.deathDate}
+          />
+          <PlaceSelect
+            id="deathPlaceId"
+            name="deathPlaceId"
+            label="Место смерти"
+            places={places}
+            defaultValue={person?.deathPlaceId}
+          />
+        </>
       )}
 
       <div className="grid grid-cols-2 gap-4">

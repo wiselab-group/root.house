@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getPersonTimeline } from "@/domain/event/event.service";
+import { listPlaces } from "@/domain/place/place.service";
 import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 import { formatPartialDate } from "@/domain/shared/partial-date";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +23,11 @@ export async function PersonTimeline({
   personId: string;
   canEdit: boolean;
 }) {
-  const timeline = await getPersonTimeline(personId, familyId);
+  const [timeline, places] = await Promise.all([
+    getPersonTimeline(personId, familyId),
+    listPlaces(familyId),
+  ]);
+  const placeNameById = new Map(places.map((place) => [place.id, place.name]));
 
   return (
     <Card>
@@ -45,13 +50,18 @@ export async function PersonTimeline({
                     <span className="text-xs text-muted-foreground">{formatPartialDate(event.date)}</span>
                   </div>
                   <span className="text-sm font-medium">{event.title}</span>
+                  {event.placeId && placeNameById.has(event.placeId) && (
+                    <span className="text-xs text-muted-foreground">
+                      {placeNameById.get(event.placeId)}
+                    </span>
+                  )}
                 </Link>
               </li>
             ))}
           </ol>
         )}
 
-        {canEdit && <AddEventForm familyId={familyId} personId={personId} />}
+        {canEdit && <AddEventForm familyId={familyId} personId={personId} places={places} />}
       </CardContent>
     </Card>
   );

@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PersonDateFields } from "./person-date-fields";
+import { PlaceSelect } from "./place-select";
 import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
+import type { PlaceRecord } from "@/domain/place/place.service";
 
 const initialState: EventFormState = {};
 
@@ -20,7 +22,15 @@ function SubmitButton() {
   );
 }
 
-export function AddEventForm({ familyId, personId }: { familyId: string; personId: string }) {
+export function AddEventForm({
+  familyId,
+  personId,
+  places = [],
+}: {
+  familyId: string;
+  personId: string;
+  places?: PlaceRecord[];
+}) {
   const boundAction = createEventAction.bind(null, familyId, personId);
   const [state, formAction] = useActionState(boundAction, initialState);
   const [showRange, setShowRange] = useState(false);
@@ -67,6 +77,8 @@ export function AddEventForm({ familyId, personId }: { familyId: string; personI
         Есть дата окончания (например, военная служба)
       </label>
       {showRange && <PersonDateFields prefix="endDate" legend="Дата окончания" />}
+
+      <PlaceSelect id="placeId" name="placeId" label="Место" places={places} />
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="description" className="text-xs text-muted-foreground">

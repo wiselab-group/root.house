@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { getPerson } from "@/domain/person/person.service";
+import { getPlace } from "@/domain/place/place.service";
 import { personDisplayName } from "@/domain/person/display-name";
 import { formatPartialDate } from "@/domain/shared/partial-date";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
@@ -31,6 +32,11 @@ export default async function PersonProfilePage({
 
   const canEdit = member.role === "owner" || member.role === "editor";
 
+  const [birthPlace, deathPlace] = await Promise.all([
+    person.birthPlaceId ? getPlace(person.birthPlaceId, familyId) : null,
+    person.deathPlaceId ? getPlace(person.deathPlaceId, familyId) : null,
+  ]);
+
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
       <div className="flex items-start justify-between gap-4">
@@ -46,7 +52,9 @@ export default async function PersonProfilePage({
             </h1>
             <p className="text-muted-foreground">
               {formatPartialDate(person.birthDate)}
-              {!person.isLiving && ` — ${formatPartialDate(person.deathDate)}`}
+              {birthPlace && `, ${birthPlace.name}`}
+              {!person.isLiving &&
+                ` — ${formatPartialDate(person.deathDate)}${deathPlace ? `, ${deathPlace.name}` : ""}`}
             </p>
           </div>
         </div>
@@ -85,6 +93,8 @@ export default async function PersonProfilePage({
           <InfoRow label="Прозвище" value={person.nickname} />
           <InfoRow label="Религия" value={person.religion} />
           <InfoRow label="Национальность" value={person.nationality} />
+          <InfoRow label="Место рождения" value={birthPlace?.name ?? null} />
+          <InfoRow label="Место смерти" value={deathPlace?.name ?? null} />
         </CardContent>
       </Card>
 

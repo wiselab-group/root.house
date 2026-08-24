@@ -8,6 +8,7 @@ import { PersonForm } from "@/components/forms/person-form";
 import { AvatarEditor } from "@/components/forms/avatar-editor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { updatePersonAction } from "@/actions/person.actions";
+import { listPlaces } from "@/domain/place/place.service";
 
 export default async function EditPersonPage({
   params,
@@ -21,6 +22,7 @@ export default async function EditPersonPage({
   const personId = await resolvePersonIdBySlug(personSlug, familyId);
   const person = await getPerson(personId, familyId);
   if (!person) notFound();
+  const places = await listPlaces(familyId);
 
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-6 p-6">
@@ -47,6 +49,7 @@ export default async function EditPersonPage({
           <PersonForm
             action={updatePersonAction.bind(null, familyId, personId)}
             person={person}
+            places={places}
             submitLabel="Сохранить"
             submitPendingLabel="Сохраняем…"
           />

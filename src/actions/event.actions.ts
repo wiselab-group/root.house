@@ -35,6 +35,7 @@ export async function createEventAction(
     type: formData.get("type"),
     title: formData.get("title"),
     description: formData.get("description"),
+    placeId: formData.get("placeId"),
   });
 
   if (!parsed.success) {
@@ -53,6 +54,7 @@ export async function createEventAction(
     description: parsed.data.description || undefined,
     date: partialDateFromFormData(formData, "date"),
     endDate: partialDateFromFormData(formData, "endDate"),
+    placeId: parsed.data.placeId || undefined,
     participants: [{ personId, role: "subject" }],
   });
 
