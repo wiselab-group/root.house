@@ -153,6 +153,27 @@ export async function updateFamilySlug(familyId: string, newSlug: string): Promi
     .where(and(eq(families.id, familyId), ne(families.slug, newSlug)));
 }
 
+export interface UpdateFamilyDetailsInput {
+  name: string;
+  description?: string;
+}
+
+/**
+ * Updates a family's display name/description — caller must have already
+ * verified (via requireFamilyAccess) that the actor may edit the family.
+ * Unlike the slug, these are cosmetic fields that don't back any URL or
+ * external link, so any editor (not just the owner) may change them.
+ */
+export async function updateFamilyDetails(
+  familyId: string,
+  input: UpdateFamilyDetailsInput,
+): Promise<void> {
+  await db
+    .update(families)
+    .set({ name: input.name, description: input.description ?? null, updatedAt: new Date() })
+    .where(eq(families.id, familyId));
+}
+
 /**
  * Removes a FamilyMember, refusing to remove the last remaining owner — a
  * Family without an owner would have no one able to manage membership/roles.

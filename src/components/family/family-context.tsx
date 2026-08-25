@@ -6,6 +6,7 @@ import type { FamilyRole } from "@/domain/family/roles";
 export interface FamilyContextValue {
   familyId: string;
   familyName: string;
+  familyDescription: string;
   familySlug: string;
   role: FamilyRole;
 }

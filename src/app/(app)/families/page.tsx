@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { LinkButton } from "@/components/ui/link-button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { listFamiliesForUser } from "@/domain/family/family.service";
 import { personCountLabel } from "@/domain/shared/pluralize-ru";
 
@@ -36,10 +37,12 @@ export default async function FamiliesPage() {
                 <Card className="transition-colors hover:border-foreground/30">
                   <CardHeader>
                     <CardTitle>{family.name}</CardTitle>
-                    <CardDescription>
-                      {personCountLabel(family.personCount)}
-                      {family.description ? ` · ${family.description}` : ""}
-                    </CardDescription>
+                    {family.description && (
+                      <CardDescription>{family.description}</CardDescription>
+                    )}
+                    <CardAction>
+                      <Badge variant="outline">{personCountLabel(family.personCount)}</Badge>
+                    </CardAction>
                   </CardHeader>
                 </Card>
               </Link>

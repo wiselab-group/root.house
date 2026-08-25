@@ -41,7 +41,13 @@ export default async function FamilyLayout({
 
   return (
     <FamilyProvider
-      value={{ familyId, familyName: family.name, familySlug: family.slug, role: member.role }}
+      value={{
+        familyId,
+        familyName: family.name,
+        familyDescription: family.description ?? "",
+        familySlug: family.slug,
+        role: member.role,
+      }}
     >
       {children}
     </FamilyProvider>

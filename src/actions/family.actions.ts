@@ -4,8 +4,17 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
-import { createFamilySchema, updateFamilySlugSchema } from "@/lib/validation/family";
-import { createFamily, updateFamilySlug } from "@/domain/family/family.service";
+import {
+  createFamilySchema,
+  updateFamilyDetailsSchema,
+  updateFamilySlugSchema,
+} from "@/lib/validation/family";
+import {
+  createFamily,
+  getFamilySlugById,
+  updateFamilyDetails,
+  updateFamilySlug,
+} from "@/domain/family/family.service";
 import { SlugTakenError } from "@/domain/family/errors";
 
 export interface CreateFamilyFormState {
@@ -44,6 +53,52 @@ export async function createFamilyAction(
   });
 
   redirect(`/families/${family.slug}`);
+}
+
+export interface UpdateFamilyDetailsFormState {
+  success?: boolean;
+  error?: string;
+  fieldErrors?: Partial<Record<"name" | "description", string>>;
+}
+
+export async function updateFamilyDetailsAction(
+  familyId: string,
+  _prevState: UpdateFamilyDetailsFormState,
+  formData: FormData,
+): Promise<UpdateFamilyDetailsFormState> {
+  const session = await auth();
+  if (!session?.user) {
+    return { error: "Сессия истекла — войдите заново." };
+  }
+
+  // Cosmetic fields (not the public slug/URL) — any editor may change them.
+  await requireFamilyAccess(familyId, session.user.id, "editor");
+
+  const parsed = updateFamilyDetailsSchema.safeParse({
+    name: formData.get("name"),
+    description: formData.get("description"),
+  });
+
+  if (!parsed.success) {
+    const fieldErrors: UpdateFamilyDetailsFormState["fieldErrors"] = {};
+    for (const issue of parsed.error.issues) {
+      const key = issue.path[0];
+      if (key === "name" || key === "description") {
+        fieldErrors[key] = issue.message;
+      }
+    }
+    return { fieldErrors };
+  }
+
+  await updateFamilyDetails(familyId, {
+    name: parsed.data.name,
+    description: parsed.data.description || undefined,
+  });
+
+  const slug = await getFamilySlugById(familyId);
+  if (slug) revalidatePath(`/families/${slug}`);
+
+  return { success: true };
 }
 
 export interface UpdateFamilySlugFormState {

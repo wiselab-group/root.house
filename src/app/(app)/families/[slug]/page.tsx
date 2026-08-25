@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/link-button";
+import { FamilyDashboardDetailsRow } from "@/components/family/family-dashboard-details-row";
 import { FamilyDashboardSlugRow } from "@/components/family/family-dashboard-slug-row";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
@@ -24,6 +25,7 @@ export default async function FamilyDashboardPage({ params }: PageProps<"/famili
           <CardDescription>Начните с семейного дерева или списка людей.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
+          <FamilyDashboardDetailsRow />
           <FamilyDashboardSlugRow />
           <div className="flex flex-wrap gap-3">
             <LinkButton href={`/families/${slug}/tree`}>Семейное дерево</LinkButton>
