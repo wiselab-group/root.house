@@ -1,12 +1,9 @@
-"use client";
-
-import { useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
 import { generationColor } from "./person-node";
 
-/** Photo-forward tree card: a large portrait photo (or an initials tile when none is set, or when the photo fails to load) with name/years below — for browsing faces rather than scanning structure. */
+/** Photo-forward tree card: a large portrait photo (or an initials tile when none is set) with name/years below — for browsing faces rather than scanning structure. */
 export function PortraitCardBody({
   data,
   name,
@@ -18,12 +15,10 @@ export function PortraitCardBody({
   years: string | null;
   initials: string;
 }) {
-  const [photoFailed, setPhotoFailed] = useState(false);
-
   return (
     <>
       <div className="relative aspect-square w-full bg-muted">
-        {data.photoMediaId && !photoFailed ? (
+        {data.photoMediaId ? (
           <Image
             src={`/api/media/${data.photoMediaId}?familyId=${data.familyId}`}
             alt=""
@@ -31,7 +26,6 @@ export function PortraitCardBody({
             sizes="160px"
             className="object-cover"
             unoptimized
-            onError={() => setPhotoFailed(true)}
           />
         ) : (
           <div

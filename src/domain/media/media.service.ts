@@ -122,9 +122,8 @@ export async function getMedia(
 export async function getMediaStream(mediaId: string, familyId: string) {
   const record = await getMediaById(mediaId, familyId);
   if (!record) return null;
-  const result = await storage.getStream(record.storageKey);
-  if (!result) return null;
-  return { stream: result.stream, contentType: result.contentType ?? record.mimeType };
+  const { stream, contentType } = await storage.getStream(record.storageKey);
+  return { stream, contentType: contentType ?? record.mimeType };
 }
 
 export async function removeMedia(
@@ -134,11 +133,7 @@ export async function removeMedia(
   const record = await getMediaById(mediaId, familyId);
   if (!record) return false;
 
-  // Best-effort: the blob may already be gone (e.g. a dev-vs-prod store
-  // mismatch, see docs/architecture.md) — that's not a reason to fail the
-  // whole operation and leave the Media row (and, when called while
-  // replacing an avatar, the newly-uploaded photo) orphaned.
-  await storage.delete(record.storageKey).catch(() => {});
+  await storage.delete(record.storageKey);
   return deleteMediaRow(mediaId, familyId);
 }
 
