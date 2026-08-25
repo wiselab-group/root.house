@@ -9,7 +9,7 @@ export interface ParentChildRecord {
   familyId: string;
   parentId: string;
   childId: string;
-  parentRole: "biological" | "adoptive" | "step" | "unknown";
+  parentRole: "biological" | "adoptive" | "step" | "foster" | "unknown";
 }
 
 export interface PartnershipRecord {
@@ -39,14 +39,8 @@ export async function getChildrenOf(personId: string, familyId: string): Promise
   return rows;
 }
 
-export async function getPartnershipsOf(personId: string, familyId: string): Promise<PartnershipRecord[]> {
-  const rows = await db.query.relationshipsPartnership.findMany({
-    where: and(
-      eq(relationshipsPartnership.familyId, familyId),
-      or(eq(relationshipsPartnership.person1Id, personId), eq(relationshipsPartnership.person2Id, personId)),
-    ),
-  });
-  return rows.map((row) => ({
+function toPartnershipRecord(row: typeof relationshipsPartnership.$inferSelect): PartnershipRecord {
+  return {
     id: row.id,
     familyId: row.familyId,
     person1Id: row.person1Id,
@@ -67,7 +61,17 @@ export async function getPartnershipsOf(personId: string, familyId: string): Pro
       precision: row.endDatePrecision,
       approximate: row.endDateApproximate,
     }),
-  }));
+  };
+}
+
+export async function getPartnershipsOf(personId: string, familyId: string): Promise<PartnershipRecord[]> {
+  const rows = await db.query.relationshipsPartnership.findMany({
+    where: and(
+      eq(relationshipsPartnership.familyId, familyId),
+      or(eq(relationshipsPartnership.person1Id, personId), eq(relationshipsPartnership.person2Id, personId)),
+    ),
+  });
+  return rows.map(toPartnershipRecord);
 }
 
 /**
@@ -87,11 +91,31 @@ export async function getSiblingsOf(
   return deriveSiblings(personId, allEdges);
 }
 
+/**
+ * Every parent_child row in a family — used to build a whole-family
+ * GenealogyGraph (genealogy-graph.ts) for traversal-heavy operations like
+ * findRelationshipPath, where per-person queries would mean one CTE per hop.
+ */
+export async function getAllParentChildEdges(familyId: string): Promise<ParentChildRecord[]> {
+  const rows = await db.query.relationshipsParentChild.findMany({
+    where: eq(relationshipsParentChild.familyId, familyId),
+  });
+  return rows;
+}
+
+/** Every partnership row in a family — see getAllParentChildEdges's doc for why. */
+export async function getAllPartnershipEdges(familyId: string): Promise<PartnershipRecord[]> {
+  const rows = await db.query.relationshipsPartnership.findMany({
+    where: eq(relationshipsPartnership.familyId, familyId),
+  });
+  return rows.map(toPartnershipRecord);
+}
+
 export async function insertParentChild(input: {
   familyId: string;
   parentId: string;
   childId: string;
-  parentRole?: "biological" | "adoptive" | "step" | "unknown";
+  parentRole?: "biological" | "adoptive" | "step" | "foster" | "unknown";
 }): Promise<{ id: string }> {
   const [row] = await db
     .insert(relationshipsParentChild)

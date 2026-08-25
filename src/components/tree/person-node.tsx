@@ -9,10 +9,16 @@ import { PortraitCardBody } from "./portrait-card-body";
 
 /**
  * Custom XYFlow node rendering a person card. States per DESIGN.md § Person
- * Node states: default / hover / selected / focus-center / dimmed. Dimmed
- * applies to nothing yet (no "irrelevant branch" concept in the MVP focus
- * tree — every visible node is, by construction, within the requested
- * generation range) but the class hook is here for when filtering is added.
+ * Node states: default / hover / selected / focus-center / dimmed.
+ *
+ * Dimmed applies in two cases, both driven by data computed upstream in the
+ * domain layer (tree-filter.ts / tree-trace.ts) and passed down through
+ * xyflow-adapter.ts — PersonNode itself does no filtering/tracing logic, it
+ * only renders the already-decided isFilterMatch/isOnTracePath flags:
+ * - a filter is active (isFilterMatch !== undefined) and this person doesn't match it;
+ * - a relationship trace is active (isOnTracePath !== undefined) and this person isn't on the traced path.
+ * Structure is never destroyed by either — every node stays in the DOM, just
+ * at reduced opacity (transform/opacity only, per the animation rules).
  *
  * Renders one of two bodies depending on data.cardStyle (a client-only
  * viewing preference toggled from the canvas's zoom controls, see
@@ -27,19 +33,23 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
   const years = yearRange(data);
   const initials = personInitials(data);
 
+  const isDimmed = data.isFilterMatch === false || data.isOnTracePath === false;
+  const isTraceHighlighted = data.isOnTracePath === true;
+
   return (
     <div
       className={cn(
         "origin-center overflow-hidden rounded-lg border bg-card shadow-sm",
         data.cardStyle === "portrait" ? "w-40" : "w-55",
         "animate-tree-node-enter",
-        "transition-[transform,box-shadow] duration-200 ease-(--ease-tree-focus)",
+        "transition-[transform,box-shadow,opacity] duration-200 ease-(--ease-tree-focus)",
         "hover:-translate-y-0.5 hover:shadow-md",
-        data.isFocus
+        data.isFocus || isTraceHighlighted
           ? "border-primary ring-2 ring-primary/30"
           : "border-border",
         selected && "ring-2 ring-ring",
         data.isPlaceholder && "border-dashed opacity-70",
+        isDimmed && "opacity-35 hover:opacity-70",
       )}
       style={{
         // Entrance stagger, per DESIGN.md's "смена focus-person — stagger

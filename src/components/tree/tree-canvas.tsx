@@ -15,7 +15,7 @@ import {
 import { RectangleHorizontalIcon, RectangleVerticalIcon } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 import type { TreeLayoutGraph } from "@/domain/tree/tree-layout.builder";
-import { toReactFlow, type PersonFlowNode } from "./adapters/xyflow-adapter";
+import { toReactFlow, type PersonFlowNode, type TreeHighlightState } from "./adapters/xyflow-adapter";
 import { PersonNode } from "./person-node";
 import { RelationshipEdge } from "./relationship-edge";
 import { useTreeCardStyle } from "./use-tree-card-style";
@@ -36,9 +36,12 @@ const edgeTypes = {
 export function TreeCanvas({
   graph,
   familyId,
+  highlight,
 }: {
   graph: TreeLayoutGraph;
   familyId: string;
+  /** Filter/Focus (tree-filter.ts) + Relationship Trace (tree-trace.ts) state to render — see xyflow-adapter.ts's TreeHighlightState. Omit when neither is active. */
+  highlight?: TreeHighlightState;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -47,8 +50,8 @@ export function TreeCanvas({
   const isCoarsePointer = useCoarsePointer();
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
-    () => toReactFlow(graph, familyId, cardStyle),
-    [graph, familyId, cardStyle],
+    () => toReactFlow(graph, familyId, cardStyle, highlight),
+    [graph, familyId, cardStyle, highlight],
   );
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, , onEdgesChange] = useEdgesState(initialEdges);

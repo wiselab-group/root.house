@@ -1,9 +1,13 @@
-import { getPersonById } from "@/domain/person/person.repository";
+import { getPersonById, listPersonsByFamily } from "@/domain/person/person.repository";
 import { getAncestorDepths, isAncestorOf } from "./graph.service";
 import { computeRelationshipPath, type RelationshipPathResult } from "./relationship-path";
+import { buildGenealogyGraph } from "./genealogy-graph";
+import { findRelationshipPath, type RelationshipPathOutcome } from "./genealogy-algorithms";
 import {
   deleteParentChild,
   deletePartnership,
+  getAllParentChildEdges,
+  getAllPartnershipEdges,
   getChildrenOf,
   getParentsOf,
   getPartnershipsOf,
@@ -22,7 +26,7 @@ export class RelationshipValidationError extends Error {
   }
 }
 
-export type ParentRole = "biological" | "adoptive" | "step" | "unknown";
+export type ParentRole = "biological" | "adoptive" | "step" | "foster" | "unknown";
 
 /** Minimal shape of a Person lookup this service needs — injectable so
  *  validateParentChild is unit-testable without a live database. */
@@ -175,4 +179,26 @@ export async function computeRelationshipPathFor(
     getAncestorDepths(personBId, familyId),
   ]);
   return computeRelationshipPath(personAId, personBId, ancestorsA, ancestorsB);
+}
+
+/**
+ * DB-backed wrapper around genealogy-algorithms.ts's findRelationshipPath —
+ * the Relationship Trace UI's data source (plan §17). Unlike
+ * computeRelationshipPathFor (which only needs ancestor-depth maps),
+ * materializing the actual path requires the whole family's Person +
+ * Relationship graph, so this builds a GenealogyGraph the same way
+ * tree.service.ts does for layout.
+ */
+export async function findRelationshipPathFor(
+  personAId: string,
+  personBId: string,
+  familyId: string,
+): Promise<RelationshipPathOutcome> {
+  const [persons, parentChildEdges, partnershipEdges] = await Promise.all([
+    listPersonsByFamily(familyId),
+    getAllParentChildEdges(familyId),
+    getAllPartnershipEdges(familyId),
+  ]);
+  const graph = buildGenealogyGraph(persons, parentChildEdges, partnershipEdges);
+  return findRelationshipPath(graph, personAId, personBId);
 }

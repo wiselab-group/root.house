@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const parentRoleSchema = z.enum(["biological", "adoptive", "step", "unknown"]);
+export const parentRoleSchema = z.enum(["biological", "adoptive", "step", "foster", "unknown"]);
 export const partnershipStatusSchema = z.enum(["married", "divorced", "widowed", "partnered", "separated"]);
 
 /** "Add existing person as parent/child/spouse" — picks an existing Person by id. */

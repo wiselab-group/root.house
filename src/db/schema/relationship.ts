@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { families } from "./family";
 import { persons } from "./person";
 
-export const parentRoleEnum = pgEnum("parent_role", ["biological", "adoptive", "step", "unknown"]);
+export const parentRoleEnum = pgEnum("parent_role", ["biological", "adoptive", "step", "foster", "unknown"]);
 export const partnershipStatusEnum = pgEnum("partnership_status", [
   "married",
   "divorced",

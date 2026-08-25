@@ -13,6 +13,9 @@ function person(id: string, overrides: Partial<PersonNode> = {}): PersonNode {
     birthYear: null,
     deathYear: null,
     photoMediaId: null,
+    gender: "unknown",
+    religion: null,
+    nationality: null,
     ...overrides,
   };
 }

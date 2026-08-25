@@ -2,8 +2,13 @@ import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { listPeople } from "@/domain/person/person.service";
 import { getFocusTreeLayout } from "@/domain/tree/tree.service";
+import { applyRelationshipTrace } from "@/domain/tree/tree-trace";
+import { findRelationshipPathFor } from "@/domain/relationship/relationship.service";
+import { personDisplayName } from "@/domain/person/display-name";
+import { isEmptyFilter, type PersonFilter } from "@/domain/tree/tree-filter";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { TreeCanvas } from "@/components/tree/tree-canvas";
+import { TreeToolbar } from "@/components/tree/tree-toolbar";
 import {
   Card,
   CardContent,
@@ -15,12 +20,23 @@ import { LinkButton } from "@/components/ui/link-button";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 
+/** Parses the toolbar's `?filter=<json>` param — malformed/absent input is treated as "no filter", never an error. */
+function parseFilterParam(raw: string | undefined): PersonFilter {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "object" && parsed !== null ? (parsed as PersonFilter) : {};
+  } catch {
+    return {};
+  }
+}
+
 export default async function FamilyTreePage({
   params,
   searchParams,
 }: PageProps<"/families/[slug]/tree">) {
   const { slug } = await params;
-  const { focus } = await searchParams;
+  const { focus, traceA, traceB, filter: filterParam } = await searchParams;
   const session = await auth();
   if (!session?.user) return null;
 
@@ -62,7 +78,19 @@ export default async function FamilyTreePage({
       ? focus
       : people[0].id;
 
-  const graph = await getFocusTreeLayout(familyId, focusPersonId);
+  const filter = parseFilterParam(typeof filterParam === "string" ? filterParam : undefined);
+  const traceAId = typeof traceA === "string" && people.some((p) => p.id === traceA) ? traceA : null;
+  const traceBId = typeof traceB === "string" && people.some((p) => p.id === traceB) ? traceB : null;
+
+  const [layoutGraph, traceOutcome] = await Promise.all([
+    getFocusTreeLayout(familyId, focusPersonId, {
+      filter: isEmptyFilter(filter) ? undefined : filter,
+    }),
+    traceAId && traceBId ? findRelationshipPathFor(traceAId, traceBId, familyId) : Promise.resolve(null),
+  ]);
+
+  const tracedGraph = applyRelationshipTrace(layoutGraph, traceOutcome);
+  const peopleById = new Map(people.map((p) => [p.id, p]));
 
   return (
     // No side padding / heading below md — the canvas needs the full
@@ -78,7 +106,30 @@ export default async function FamilyTreePage({
         </p>
       </div>
 
-      <TreeCanvas graph={graph} familyId={familyId} />
+      <div className="px-4 md:px-0">
+        <TreeToolbar
+          familyId={familyId}
+          traceA={traceAId ? { id: traceAId, name: personDisplayName(peopleById.get(traceAId)!) } : null}
+          traceB={traceBId ? { id: traceBId, name: personDisplayName(peopleById.get(traceBId)!) } : null}
+          traceOutcome={traceOutcome}
+          filter={filter}
+        />
+      </div>
+
+      <TreeCanvas
+        graph={tracedGraph}
+        familyId={familyId}
+        highlight={{
+          filterMatchedIds: "matchedIds" in layoutGraph ? layoutGraph.matchedIds : undefined,
+          // Only pass trace sets when a trace is actually active (both A and B
+          // picked) — an always-present-but-empty Set would make every node
+          // read as "trace active, just not on it" and dim the whole tree by
+          // default. See xyflow-adapter.ts's toFlowNode: isOnTracePath is only
+          // computed when highlight.tracePersonIds is present at all.
+          tracePersonIds: traceOutcome ? tracedGraph.tracePersonIds : undefined,
+          traceEdgeIds: traceOutcome ? tracedGraph.traceEdgeIds : undefined,
+        }}
+      />
     </main>
   );
 }

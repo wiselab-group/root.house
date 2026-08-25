@@ -30,13 +30,35 @@ export interface PersonNodeData extends Record<string, unknown> {
   isFocus: boolean;
   generation: number;
   cardStyle: TreeCardStyle;
+  /** Filter/Focus layer (tree-filter.ts) — true once a filter is active and this person matches it. Undefined when no filter is active at all. */
+  isFilterMatch?: boolean;
+  /** Relationship Trace (tree-trace.ts) — true while this person is on the currently traced A-to-B path. */
+  isOnTracePath?: boolean;
+}
+
+export interface RelationshipEdgeData extends Record<string, unknown> {
+  isCurrent: boolean;
+  /** Relationship Trace (tree-trace.ts) — true while this edge is a hop on the currently traced A-to-B path. */
+  isOnTracePath?: boolean;
 }
 
 export type PersonFlowNode = Node<PersonNodeData, "person">;
-export type RelationshipFlowEdge = Edge<
-  Record<string, unknown>,
-  "parentChild" | "partnership"
->;
+export type RelationshipFlowEdge = Edge<RelationshipEdgeData, "parentChild" | "partnership">;
+
+/**
+ * Optional per-node/edge highlight state, computed by the Filter/Focus
+ * (tree-filter.ts) and Relationship Trace (tree-trace.ts) layers. Passed
+ * separately from `graph` (rather than requiring FilteredTreeLayoutGraph /
+ * TracedTreeLayoutGraph as the input type) so toReactFlow keeps accepting a
+ * plain TreeLayoutGraph — every existing caller with no filter/trace active
+ * is unaffected.
+ */
+export interface TreeHighlightState {
+  /** Present (even if empty) once a filter is active; absent means "no filter" (isFilterMatch stays undefined on every node). */
+  filterMatchedIds?: Set<string>;
+  tracePersonIds?: Set<string>;
+  traceEdgeIds?: Set<string>;
+}
 
 // Node dimensions per card style — must match what PersonNode actually
 // renders at (see its w-*/h-* classes). Server-side layout (tree-layout.builder.ts)
@@ -62,6 +84,7 @@ function toFlowNode(
   node: LayoutNode,
   familyId: string,
   cardStyle: TreeCardStyle,
+  highlight: TreeHighlightState,
 ): PersonFlowNode {
   const xScale =
     cardStyle === "portrait" ? PORTRAIT_X_SPACING / COMPACT_X_SPACING : 1;
@@ -86,6 +109,8 @@ function toFlowNode(
       isFocus: node.isFocus,
       generation: node.generation,
       cardStyle,
+      isFilterMatch: highlight.filterMatchedIds ? highlight.filterMatchedIds.has(node.id) : undefined,
+      isOnTracePath: highlight.tracePersonIds ? highlight.tracePersonIds.has(node.id) : undefined,
     },
     // XYFlow needs explicit dimensions before layout/fitView math is
     // reliable; matches the fixed size PersonNode renders each style at.
@@ -93,7 +118,7 @@ function toFlowNode(
   };
 }
 
-function toFlowEdges(graph: TreeLayoutGraph): RelationshipFlowEdge[] {
+function toFlowEdges(graph: TreeLayoutGraph, highlight: TreeHighlightState): RelationshipFlowEdge[] {
   return graph.edges.map((edge) => ({
     id: edge.id,
     type: edge.kind === "partnership" ? "partnership" : "parentChild",
@@ -101,7 +126,10 @@ function toFlowEdges(graph: TreeLayoutGraph): RelationshipFlowEdge[] {
     target: edge.target,
     // Partnership edges (spouse) are visually distinct (dashed) from
     // parent_child edges (solid) — see tree-canvas.tsx edge styling.
-    data: { isCurrent: edge.isCurrent ?? true },
+    data: {
+      isCurrent: edge.isCurrent ?? true,
+      isOnTracePath: highlight.traceEdgeIds ? highlight.traceEdgeIds.has(edge.id) : undefined,
+    },
   }));
 }
 
@@ -109,9 +137,10 @@ export function toReactFlow(
   graph: TreeLayoutGraph,
   familyId: string,
   cardStyle: TreeCardStyle,
+  highlight: TreeHighlightState = {},
 ): { nodes: PersonFlowNode[]; edges: RelationshipFlowEdge[] } {
   return {
-    nodes: graph.nodes.map((node) => toFlowNode(node, familyId, cardStyle)),
-    edges: toFlowEdges(graph),
+    nodes: graph.nodes.map((node) => toFlowNode(node, familyId, cardStyle, highlight)),
+    edges: toFlowEdges(graph, highlight),
   };
 }
