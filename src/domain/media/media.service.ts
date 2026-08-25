@@ -134,7 +134,11 @@ export async function removeMedia(
   const record = await getMediaById(mediaId, familyId);
   if (!record) return false;
 
-  await storage.delete(record.storageKey);
+  // Best-effort: the blob may already be gone (e.g. a dev-vs-prod store
+  // mismatch, see docs/architecture.md) — that's not a reason to fail the
+  // whole operation and leave the Media row (and, when called while
+  // replacing an avatar, the newly-uploaded photo) orphaned.
+  await storage.delete(record.storageKey).catch(() => {});
   return deleteMediaRow(mediaId, familyId);
 }
 
