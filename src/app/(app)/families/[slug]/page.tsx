@@ -32,9 +32,6 @@ export default async function FamilyDashboardPage({ params }: PageProps<"/famili
             <LinkButton variant="outline" href={`/families/${slug}/people`}>
               Люди
             </LinkButton>
-            <LinkButton variant="outline" href={`/families/${slug}/search`}>
-              Поиск
-            </LinkButton>
             <LinkButton variant="outline" href={`/families/${slug}/places`}>
               Места
             </LinkButton>
