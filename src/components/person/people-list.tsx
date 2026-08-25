@@ -85,7 +85,16 @@ export function PeopleList({
                       className="size-14! text-base"
                     />
                     <div>
-                      <CardTitle>{personDisplayName(person)}</CardTitle>
+                      <CardTitle>
+                        {personDisplayName(person)}
+                        {person.maidenName && person.maidenName !== person.lastName && (
+                          // Same "differs from lastName" guard as the tree's
+                          // person combobox — a placeholder person or someone
+                          // whose maiden name IS their current last name
+                          // shouldn't show a redundant "(Smith) Smith".
+                          <span className="font-normal text-muted-foreground"> ({person.maidenName})</span>
+                        )}
+                      </CardTitle>
                       <CardDescription>
                         {formatPartialDate(person.birthDate)}
                         {person.isLiving ? "" : ` — ${formatPartialDate(person.deathDate)}`}
