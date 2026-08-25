@@ -58,6 +58,16 @@ export function UnionChildEdge({
   const centerYA = parentA.internals.positionAbsolute.y + heightA / 2;
   const centerYB = parentB.internals.positionAbsolute.y + heightB / 2;
   const sourceY = (centerYA + centerYB) / 2;
+  // The trunk's own vertical run must clear both cards' bottom edges before
+  // it's visible as a line — starting it at sourceY (center height) would
+  // cut straight through the lower half of both parent cards. The
+  // partnership line itself still runs at center height (unchanged), so this
+  // is a short extra hop straight down from sourceY to the lower of the two
+  // bottom edges, then the usual "down, across, down" trunk continues from there.
+  const clearY = Math.max(
+    parentA.internals.positionAbsolute.y + heightA,
+    parentB.internals.positionAbsolute.y + heightB,
+  );
 
   // If the trace path reaches this child through only one parent, extend
   // the path's start all the way back to that parent's own card edge (the
@@ -75,9 +85,10 @@ export function UnionChildEdge({
         ? { x: aIsLeft ? xB : xB + widthB, y: centerYB }
         : null;
 
-  const midY = (sourceY + targetY) / 2;
+  const midY = (clearY + targetY) / 2;
   const trunkPoints = [
     { x: sourceX, y: sourceY },
+    { x: sourceX, y: clearY },
     { x: sourceX, y: midY },
     { x: targetX, y: midY },
     { x: targetX, y: targetY },
