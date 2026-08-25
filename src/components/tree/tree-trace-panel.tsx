@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowRightIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,19 +47,24 @@ export function TreeTracePanel({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Сравнить родство</DialogTitle>
           <DialogDescription>Выберите двух людей, чтобы увидеть, как они связаны, и подсветить путь на дереве.</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <PersonCombobox
             familyId={familyId}
             label="Человек A"
             value={traceA}
             onChange={(person) => onSelectSlot("traceA", person)}
             excludeId={traceB?.id}
+            className="sm:flex-1"
+          />
+          <ArrowRightIcon
+            aria-hidden
+            className="hidden size-4 shrink-0 self-end text-muted-foreground sm:block sm:mb-2.5"
           />
           <PersonCombobox
             familyId={familyId}
@@ -66,6 +72,7 @@ export function TreeTracePanel({
             value={traceB}
             onChange={(person) => onSelectSlot("traceB", person)}
             excludeId={traceA?.id}
+            className="sm:flex-1"
           />
         </div>
 

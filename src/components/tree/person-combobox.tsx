@@ -35,12 +35,14 @@ export function PersonCombobox({
   value,
   onChange,
   excludeId,
+  className,
 }: {
   familyId: string;
   label: string;
   value: { id: string; name: string } | null;
   onChange: (person: { id: string; name: string } | null) => void;
   excludeId?: string;
+  className?: string;
 }) {
   const inputId = useId();
   const [results, setResults] = useState<PersonSearchResult[]>([]);
@@ -129,7 +131,7 @@ export function PersonCombobox({
         runSearch(nextValue);
       }}
     >
-      <div className="flex flex-col gap-1.5">
+      <div className={cn("flex flex-col gap-1.5", className)}>
         <label htmlFor={inputId} className="text-sm font-medium">
           {label}
         </label>
