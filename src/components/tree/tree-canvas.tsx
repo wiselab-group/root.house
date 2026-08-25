@@ -80,11 +80,14 @@ export function TreeCanvas({
   );
 
   return (
-    // Full-bleed and near-full-height on touch devices — a bordered,
-    // inset canvas leaves too little room to comfortably pinch-zoom/pan
-    // with fingers (see FamilyTreePage, which drops its own padding/heading
-    // to match below md). Desktop keeps the original framed, 70vh block.
-    <div className="h-[calc(100svh-4.5rem)] w-full overflow-hidden md:h-[70vh] md:rounded-lg md:border md:border-border">
+    // Full-bleed, near-full-height on every viewport — a bordered, inset
+    // canvas at a fixed 70vh left most of a real family's tree lost in a
+    // sea of empty background (a small tree at "70vh inside a max-w-5xl
+    // column" reads as adrift, not "here's my family"). Matches the
+    // full-bleed treatment mobile already had; the page (FamilyTreePage)
+    // drops its own max-width/padding around this element so nothing
+    // constrains it from the outside either.
+    <div className="h-[calc(100svh-4.5rem)] w-full overflow-hidden">
       <ReactFlow
         nodes={nodes}
         edges={edges}

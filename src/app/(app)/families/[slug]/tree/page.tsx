@@ -92,44 +92,34 @@ export default async function FamilyTreePage({
   const peopleById = new Map(people.map((p) => [p.id, p]));
 
   return (
-    // No side padding / heading below md — the canvas needs the full
-    // viewport to be comfortably pinch-zoomable/pannable on a touchscreen
-    // (see TreeCanvas, which matches with a near-full-height, edge-to-edge
-    // canvas there too). Desktop keeps the framed, padded page.
-    <main className="mx-auto flex max-w-5xl flex-col gap-4 md:p-6">
+    // The canvas is the only thing on this page, full-bleed on every
+    // viewport — no heading/subtitle above it. TreeCanvas sizes itself off
+    // a single constant (the app header's height, see its own h-[calc(...)]),
+    // so any extra in-flow element here would silently push the canvas
+    // past the bottom of the viewport (that heading used to do exactly
+    // this before it was removed). AppHeader's breadcrumb trail (set via
+    // SetBreadcrumbs, which itself renders nothing) already reads "Семейное
+    // дерево" — a second, redundant h1 wasn't earning back that risk.
+    <main className="relative">
       <SetBreadcrumbs items={breadcrumbItems} />
-      <div className="hidden md:block">
-        <h1 className="font-heading text-2xl font-medium">Семейное дерево</h1>
-        <p className="text-muted-foreground">
-          Кликните на человека, чтобы сделать его центром дерева.
-        </p>
-      </div>
-
-      {/* relative: TreeToolbar's floating filter button + trace badge
-          (and TreeCanvas's own top-left trace control cluster) position
-          themselves against this wrapper, overlaying the canvas instead of
-          taking their own row — the canvas is deliberately full-bleed on
-          mobile (see TreeCanvas), so nothing here may add a fixed-height row. */}
-      <div className="relative">
-        <TreeToolbar
-          familyId={familyId}
-          graph={tracedGraph}
-          highlight={{
-            filterMatchedIds: "matchedIds" in layoutGraph ? layoutGraph.matchedIds : undefined,
-            // Only pass trace sets when a trace is actually active (both A and B
-            // picked) — an always-present-but-empty Set would make every node
-            // read as "trace active, just not on it" and dim the whole tree by
-            // default. See xyflow-adapter.ts's toFlowNode: isOnTracePath is only
-            // computed when highlight.tracePersonIds is present at all.
-            tracePersonIds: traceOutcome ? tracedGraph.tracePersonIds : undefined,
-            traceEdgeIds: traceOutcome ? tracedGraph.traceEdgeIds : undefined,
-          }}
-          traceA={traceAId ? { id: traceAId, name: personDisplayName(peopleById.get(traceAId)!) } : null}
-          traceB={traceBId ? { id: traceBId, name: personDisplayName(peopleById.get(traceBId)!) } : null}
-          traceOutcome={traceOutcome}
-          filter={filter}
-        />
-      </div>
+      <TreeToolbar
+        familyId={familyId}
+        graph={tracedGraph}
+        highlight={{
+          filterMatchedIds: "matchedIds" in layoutGraph ? layoutGraph.matchedIds : undefined,
+          // Only pass trace sets when a trace is actually active (both A and B
+          // picked) — an always-present-but-empty Set would make every node
+          // read as "trace active, just not on it" and dim the whole tree by
+          // default. See xyflow-adapter.ts's toFlowNode: isOnTracePath is only
+          // computed when highlight.tracePersonIds is present at all.
+          tracePersonIds: traceOutcome ? tracedGraph.tracePersonIds : undefined,
+          traceEdgeIds: traceOutcome ? tracedGraph.traceEdgeIds : undefined,
+        }}
+        traceA={traceAId ? { id: traceAId, name: personDisplayName(peopleById.get(traceAId)!) } : null}
+        traceB={traceBId ? { id: traceBId, name: personDisplayName(peopleById.get(traceBId)!) } : null}
+        traceOutcome={traceOutcome}
+        filter={filter}
+      />
     </main>
   );
 }
