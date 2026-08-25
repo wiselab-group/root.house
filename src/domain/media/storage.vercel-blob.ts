@@ -45,11 +45,25 @@ class VercelBlobStorageService implements StorageService {
     );
   }
 
-  /** Used by the media route handler to stream a private blob's bytes back to an authorized request. */
-  async getStream(storageKey: string): Promise<{ stream: ReadableStream<Uint8Array>; contentType: string | null }> {
-    const result = await get(storageKey, { access: "private" });
+  /**
+   * Used by the media route handler to stream a private blob's bytes back to
+   * an authorized request. Returns null (not a throw) when the blob is
+   * simply missing from this environment's store — e.g. the Media row was
+   * created against a different Blob store (a common dev-vs-prod mismatch,
+   * see docs/architecture.md) — so callers can surface a clean 404 instead
+   * of a 500. Any other failure (network, auth) still propagates.
+   */
+  async getStream(
+    storageKey: string,
+  ): Promise<{ stream: ReadableStream<Uint8Array>; contentType: string | null } | null> {
+    const result = await get(storageKey, { access: "private" }).catch((error: unknown) => {
+      if (error instanceof Error && /not found/i.test(error.message)) {
+        return null;
+      }
+      throw error;
+    });
     if (!result || !result.stream) {
-      throw new Error(`Blob not found: ${storageKey}`);
+      return null;
     }
     return { stream: result.stream, contentType: result.blob.contentType };
   }

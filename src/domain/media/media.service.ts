@@ -122,8 +122,9 @@ export async function getMedia(
 export async function getMediaStream(mediaId: string, familyId: string) {
   const record = await getMediaById(mediaId, familyId);
   if (!record) return null;
-  const { stream, contentType } = await storage.getStream(record.storageKey);
-  return { stream, contentType: contentType ?? record.mimeType };
+  const result = await storage.getStream(record.storageKey);
+  if (!result) return null;
+  return { stream: result.stream, contentType: result.contentType ?? record.mimeType };
 }
 
 export async function removeMedia(
