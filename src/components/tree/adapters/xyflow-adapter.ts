@@ -42,8 +42,23 @@ export interface RelationshipEdgeData extends Record<string, unknown> {
   isOnTracePath?: boolean;
 }
 
+/**
+ * A union-child edge has no real "source" node — its start point is the
+ * midpoint of the couple's partnership line, computed live by
+ * UnionChildEdge from the two parents' *current* positions (see
+ * union-child-edge.tsx) so it stays glued to that line if either card is
+ * dragged. parentAId/parentBId name which two person nodes to read.
+ */
+export interface UnionChildEdgeData extends Record<string, unknown> {
+  parentAId: string;
+  parentBId: string;
+  isOnTracePath?: boolean;
+}
+
 export type PersonFlowNode = Node<PersonNodeData, "person">;
 export type RelationshipFlowEdge = Edge<RelationshipEdgeData, "parentChild" | "partnership">;
+export type UnionChildFlowEdge = Edge<UnionChildEdgeData, "unionChild">;
+export type TreeFlowEdge = RelationshipFlowEdge | UnionChildFlowEdge;
 
 /**
  * Optional per-node/edge highlight state, computed by the Filter/Focus
@@ -118,40 +133,122 @@ function toFlowNode(
   };
 }
 
-function toFlowEdges(graph: TreeLayoutGraph, highlight: TreeHighlightState): RelationshipFlowEdge[] {
-  const nodesById = new Map(graph.nodes.map((node) => [node.id, node]));
+/**
+ * A child whose two parents are visible AND partnered gets its trunk line
+ * dropped from the midpoint of their partnership line, instead of two
+ * separate lines each growing from one parent down to the same child — see
+ * union-child-edge.tsx for why (and why that midpoint is computed live from
+ * the parents' current positions rather than baked in here).
+ *
+ * Only fires for exactly-two-parent, mutually-partnered cases: a child with
+ * one visible parent, or two parents who aren't partners of each other
+ * (e.g. re-marriage), still gets a direct per-parent line — there's no
+ * single "couple" to hang a shared trunk from.
+ */
+function findUnionParentPairs(
+  graph: TreeLayoutGraph,
+): Map<string, { parentIds: [string, string]; partnershipEdgeId: string }> {
+  const partnerPairKey = (a: string, b: string) => [a, b].sort().join("::");
+  const partnershipEdgeByPair = new Map<string, string>();
+  for (const edge of graph.edges) {
+    if (edge.kind === "partnership") {
+      partnershipEdgeByPair.set(partnerPairKey(edge.source, edge.target), edge.id);
+    }
+  }
 
-  return graph.edges.map((edge) => {
+  const parentsByChild = new Map<string, string[]>();
+  for (const edge of graph.edges) {
+    if (edge.kind !== "parent_child") continue;
+    if (!parentsByChild.has(edge.target)) parentsByChild.set(edge.target, []);
+    parentsByChild.get(edge.target)!.push(edge.source);
+  }
+
+  const unionByChild = new Map<
+    string,
+    { parentIds: [string, string]; partnershipEdgeId: string }
+  >();
+  for (const [childId, parentIds] of parentsByChild) {
+    if (parentIds.length !== 2) continue;
+    const [a, b] = parentIds;
+    const partnershipEdgeId = partnershipEdgeByPair.get(partnerPairKey(a, b));
+    if (!partnershipEdgeId) continue;
+    unionByChild.set(childId, { parentIds: [a, b], partnershipEdgeId });
+  }
+  return unionByChild;
+}
+
+function toFlowEdges(
+  graph: TreeLayoutGraph,
+  highlight: TreeHighlightState,
+): (RelationshipFlowEdge | UnionChildFlowEdge)[] {
+  const unionByChild = findUnionParentPairs(graph);
+  const edges: (RelationshipFlowEdge | UnionChildFlowEdge)[] = [];
+
+  for (const edge of graph.edges) {
     const isPartnership = edge.kind === "partnership";
+
+    if (!isPartnership) {
+      const union = unionByChild.get(edge.target);
+      // This parent's parent_child edge is superseded by a single
+      // UnionChildEdge trunk line off the couple's partnership line — see
+      // findUnionParentPairs. Only emitted once (off the partnership edge
+      // below), not once per parent, so it isn't duplicated here.
+      if (union && union.parentIds.includes(edge.source)) continue;
+
+      edges.push({
+        id: edge.id,
+        type: "parentChild",
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: "bottom",
+        targetHandle: "top",
+        data: {
+          isCurrent: true,
+          isOnTracePath: highlight.traceEdgeIds ? highlight.traceEdgeIds.has(edge.id) : undefined,
+        },
+      });
+      continue;
+    }
+
     // Partnership edges connect sideways (spouses sit next to each other at
     // the same generation, see tree-layout.builder.ts's orderByPartnership).
     // source/target on the edge itself reflect person1Id/person2Id ordering,
-    // not left/right screen position, so pick the handle from the nodes'
-    // actual laid-out x — otherwise the line could still detour through the
-    // top/bottom handles meant for parent_child edges.
-    const sourceIsLeft = isPartnership
-      ? (nodesById.get(edge.source)?.x ?? 0) <= (nodesById.get(edge.target)?.x ?? 0)
-      : true;
-
-    return {
+    // not left/right screen position — RelationshipEdge/UnionChildEdge both
+    // resolve actual left/right (and the trunk midpoint) from live node
+    // positions at render time, not from this ordering.
+    edges.push({
       id: edge.id,
-      type: isPartnership ? "partnership" : "parentChild",
+      type: "partnership",
       source: edge.source,
       target: edge.target,
-      // Explicit handle ids on both branches — PersonNode now has more than
-      // one handle per type (top/bottom for descent, left/right for
-      // partnership), so leaving these undefined is no longer safe: XYFlow
-      // needs the id to resolve which handle an edge actually anchors to.
-      sourceHandle: isPartnership ? (sourceIsLeft ? "right" : "left") : "bottom",
-      targetHandle: isPartnership ? (sourceIsLeft ? "left" : "right") : "top",
-      // Partnership edges (spouse) are visually distinct (dashed) from
-      // parent_child edges (solid) — see tree-canvas.tsx edge styling.
       data: {
         isCurrent: edge.isCurrent ?? true,
         isOnTracePath: highlight.traceEdgeIds ? highlight.traceEdgeIds.has(edge.id) : undefined,
       },
-    };
-  });
+    });
+
+    // Emit this couple's children's trunk edges right alongside their
+    // partnership edge.
+    for (const [childId, union] of unionByChild) {
+      if (union.partnershipEdgeId !== edge.id) continue;
+      edges.push({
+        id: `union-${edge.id}-${childId}`,
+        type: "unionChild",
+        source: union.parentIds[0],
+        target: childId,
+        data: {
+          parentAId: union.parentIds[0],
+          parentBId: union.parentIds[1],
+          isOnTracePath: highlight.traceEdgeIds
+            ? highlight.traceEdgeIds.has(`pc-${union.parentIds[0]}-${childId}`) ||
+              highlight.traceEdgeIds.has(`pc-${union.parentIds[1]}-${childId}`)
+            : undefined,
+        },
+      });
+    }
+  }
+
+  return edges;
 }
 
 export function toReactFlow(
@@ -159,7 +256,7 @@ export function toReactFlow(
   familyId: string,
   cardStyle: TreeCardStyle,
   highlight: TreeHighlightState = {},
-): { nodes: PersonFlowNode[]; edges: RelationshipFlowEdge[] } {
+): { nodes: PersonFlowNode[]; edges: TreeFlowEdge[] } {
   return {
     nodes: graph.nodes.map((node) => toFlowNode(node, familyId, cardStyle, highlight)),
     edges: toFlowEdges(graph, highlight),

@@ -15,6 +15,7 @@ import type { TreeLayoutGraph } from "@/domain/tree/tree-layout.builder";
 import { toReactFlow, type PersonFlowNode, type TreeHighlightState } from "./adapters/xyflow-adapter";
 import { PersonNode } from "./person-node";
 import { RelationshipEdge } from "./relationship-edge";
+import { UnionChildEdge } from "./union-child-edge";
 import { useTreeCardStyle } from "./use-tree-card-style";
 import { useCoarsePointer } from "./use-coarse-pointer";
 import { TreeCardStyleControl } from "./tree-card-style-control";
@@ -23,6 +24,7 @@ const nodeTypes = { person: PersonNode };
 const edgeTypes = {
   parentChild: RelationshipEdge,
   partnership: RelationshipEdge,
+  unionChild: UnionChildEdge,
 };
 
 /**
