@@ -1,6 +1,11 @@
 "use client";
 
-import { BaseEdge, getSmoothStepPath, type EdgeProps } from "@xyflow/react";
+import {
+  BaseEdge,
+  getSmoothStepPath,
+  getStraightPath,
+  type EdgeProps,
+} from "@xyflow/react";
 import type { RelationshipFlowEdge } from "./adapters/xyflow-adapter";
 
 /**
@@ -24,17 +29,24 @@ export function RelationshipEdge({
   targetPosition,
   data,
 }: EdgeProps<RelationshipFlowEdge>) {
-  const [path] = getSmoothStepPath({
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sourcePosition,
-    targetPosition,
-    borderRadius: 8,
-  });
-
   const isPartnership = type === "partnership";
+
+  // Partnership edges use the person-node's left/right handles (see
+  // xyflow-adapter.ts) and are laid out on the same generation row, so a
+  // straight line reads as "these two are side by side" — routing them
+  // through getSmoothStepPath's orthogonal corners (built for the vertical
+  // parent_child handles) is what produced the detour around the cards.
+  const [path] = isPartnership
+    ? getStraightPath({ sourceX, sourceY, targetX, targetY })
+    : getSmoothStepPath({
+        sourceX,
+        sourceY,
+        targetX,
+        targetY,
+        sourcePosition,
+        targetPosition,
+        borderRadius: 8,
+      });
   const isPastPartnership = isPartnership && data?.isCurrent === false;
   const isOnTracePath = data?.isOnTracePath === true;
 

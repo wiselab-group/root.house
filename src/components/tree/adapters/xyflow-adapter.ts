@@ -119,18 +119,39 @@ function toFlowNode(
 }
 
 function toFlowEdges(graph: TreeLayoutGraph, highlight: TreeHighlightState): RelationshipFlowEdge[] {
-  return graph.edges.map((edge) => ({
-    id: edge.id,
-    type: edge.kind === "partnership" ? "partnership" : "parentChild",
-    source: edge.source,
-    target: edge.target,
-    // Partnership edges (spouse) are visually distinct (dashed) from
-    // parent_child edges (solid) — see tree-canvas.tsx edge styling.
-    data: {
-      isCurrent: edge.isCurrent ?? true,
-      isOnTracePath: highlight.traceEdgeIds ? highlight.traceEdgeIds.has(edge.id) : undefined,
-    },
-  }));
+  const nodesById = new Map(graph.nodes.map((node) => [node.id, node]));
+
+  return graph.edges.map((edge) => {
+    const isPartnership = edge.kind === "partnership";
+    // Partnership edges connect sideways (spouses sit next to each other at
+    // the same generation, see tree-layout.builder.ts's orderByPartnership).
+    // source/target on the edge itself reflect person1Id/person2Id ordering,
+    // not left/right screen position, so pick the handle from the nodes'
+    // actual laid-out x — otherwise the line could still detour through the
+    // top/bottom handles meant for parent_child edges.
+    const sourceIsLeft = isPartnership
+      ? (nodesById.get(edge.source)?.x ?? 0) <= (nodesById.get(edge.target)?.x ?? 0)
+      : true;
+
+    return {
+      id: edge.id,
+      type: isPartnership ? "partnership" : "parentChild",
+      source: edge.source,
+      target: edge.target,
+      // Explicit handle ids on both branches — PersonNode now has more than
+      // one handle per type (top/bottom for descent, left/right for
+      // partnership), so leaving these undefined is no longer safe: XYFlow
+      // needs the id to resolve which handle an edge actually anchors to.
+      sourceHandle: isPartnership ? (sourceIsLeft ? "right" : "left") : "bottom",
+      targetHandle: isPartnership ? (sourceIsLeft ? "left" : "right") : "top",
+      // Partnership edges (spouse) are visually distinct (dashed) from
+      // parent_child edges (solid) — see tree-canvas.tsx edge styling.
+      data: {
+        isCurrent: edge.isCurrent ?? true,
+        isOnTracePath: highlight.traceEdgeIds ? highlight.traceEdgeIds.has(edge.id) : undefined,
+      },
+    };
+  });
 }
 
 export function toReactFlow(

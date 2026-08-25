@@ -61,7 +61,43 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
         animationDelay: `${Math.min(Math.abs(data.generation), 4) * 60}ms`,
       }}
     >
-      <Handle type="target" position={Position.Top} className="bg-border!" />
+      <Handle
+        type="target"
+        id="top"
+        position={Position.Top}
+        className="bg-border!"
+      />
+      {/* Partnership edges connect sideways (spouses sit side-by-side at the
+       *  same generation, see tree-layout.builder.ts's orderByPartnership) —
+       *  separate left/right handles so RelationshipEdge can route a
+       *  straight horizontal line instead of detouring through the
+       *  top/bottom handles meant for parent_child edges. Both sides carry
+       *  both handle types since either person in the pair can end up on
+       *  either side after layout. */}
+      <Handle
+        type="source"
+        id="left"
+        position={Position.Left}
+        className="bg-border!"
+      />
+      <Handle
+        type="target"
+        id="left"
+        position={Position.Left}
+        className="bg-border!"
+      />
+      <Handle
+        type="source"
+        id="right"
+        position={Position.Right}
+        className="bg-border!"
+      />
+      <Handle
+        type="target"
+        id="right"
+        position={Position.Right}
+        className="bg-border!"
+      />
       {data.cardStyle === "portrait" ? (
         <PortraitCardBody
           data={data}
@@ -77,7 +113,12 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
           initials={initials}
         />
       )}
-      <Handle type="source" position={Position.Bottom} className="bg-border!" />
+      <Handle
+        type="source"
+        id="bottom"
+        position={Position.Bottom}
+        className="bg-border!"
+      />
     </div>
   );
 }
