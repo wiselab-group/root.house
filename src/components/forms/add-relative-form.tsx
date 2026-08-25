@@ -75,6 +75,7 @@ export function AddRelativeForm({
           {candidates.map((candidate) => (
             <option key={candidate.id} value={candidate.id}>
               {personDisplayName(candidate)}
+              {candidate.birthDate?.year ? ` (${candidate.birthDate.year})` : ""}
             </option>
           ))}
         </select>

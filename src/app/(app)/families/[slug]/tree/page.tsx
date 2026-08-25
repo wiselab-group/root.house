@@ -83,6 +83,12 @@ export default async function FamilyTreePage({
 
   const [layoutGraph, traceOutcome] = await Promise.all([
     getFocusTreeLayout(familyId, focusPersonId, {
+      // Show the whole connected family, not just a 2-generation window
+      // around the focus person — this app's family archives are small
+      // enough that there's no reason to make the user click through
+      // generation-by-generation to see everyone.
+      ancestorGenerations: Infinity,
+      descendantGenerations: Infinity,
       filter: isEmptyFilter(filter) ? undefined : filter,
     }),
     traceAId && traceBId ? findRelationshipPathFor(traceAId, traceBId, familyId) : Promise.resolve(null),
