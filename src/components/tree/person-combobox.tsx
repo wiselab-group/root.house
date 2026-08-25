@@ -178,7 +178,15 @@ export function PersonCombobox({
                     value={person}
                     className="flex cursor-default flex-col items-start gap-0.5 rounded-md px-2 py-2 text-left text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
                   >
-                    <span className="font-medium">{personDisplayName(person)}</span>
+                    <span className="font-medium">
+                      {personDisplayName(person)}
+                      {person.maidenName && person.maidenName !== person.lastName && (
+                        // Search matches on maidenName too (see searchPersonsByNameSubstring) —
+                        // without this, a hit found only via the maiden name looks like an
+                        // unexplained/wrong result since personDisplayName never shows it.
+                        <span className="font-normal text-muted-foreground"> ({person.maidenName})</span>
+                      )}
+                    </span>
                     {(person.birthDate || person.deathDate) && (
                       <span className="text-xs text-muted-foreground">
                         {formatPartialDate(person.birthDate)}
