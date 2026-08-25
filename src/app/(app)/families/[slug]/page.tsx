@@ -1,7 +1,5 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LinkButton } from "@/components/ui/link-button";
-import { FamilyDashboardDetailsRow } from "@/components/family/family-dashboard-details-row";
-import { FamilyDashboardSlugRow } from "@/components/family/family-dashboard-slug-row";
+import { Network, Users, MapPin, Settings } from "lucide-react";
+import { FamilyNavCard } from "@/components/family/family-nav-card";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
@@ -19,25 +17,39 @@ export default async function FamilyDashboardPage({ params }: PageProps<"/famili
           { label: family?.name ?? slug },
         ]}
       />
-      <Card>
-        <CardHeader>
-          <CardTitle>Добро пожаловать в архив</CardTitle>
-          <CardDescription>Начните с семейного дерева или списка людей.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <FamilyDashboardDetailsRow />
-          <FamilyDashboardSlugRow />
-          <div className="flex flex-wrap gap-3">
-            <LinkButton href={`/families/${slug}/tree`}>Семейное дерево</LinkButton>
-            <LinkButton variant="outline" href={`/families/${slug}/people`}>
-              Люди
-            </LinkButton>
-            <LinkButton variant="outline" href={`/families/${slug}/places`}>
-              Места
-            </LinkButton>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col gap-1">
+        <h1 className="font-heading text-2xl font-medium">{family?.name ?? slug}</h1>
+        {family?.description && (
+          <p className="text-muted-foreground">{family.description}</p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <FamilyNavCard
+          href={`/families/${slug}/tree`}
+          icon={Network}
+          label="Семейное дерево"
+          description="Интерактивная схема родственных связей"
+        />
+        <FamilyNavCard
+          href={`/families/${slug}/people`}
+          icon={Users}
+          label="Люди"
+          description="Профили, поиск по имени и году"
+        />
+        <FamilyNavCard
+          href={`/families/${slug}/places`}
+          icon={MapPin}
+          label="Места"
+          description="Места рождения, проживания и событий"
+        />
+        <FamilyNavCard
+          href={`/families/${slug}/settings`}
+          icon={Settings}
+          label="Настройки"
+          description="Название, ссылка и описание архива"
+        />
+      </div>
     </main>
   );
 }
