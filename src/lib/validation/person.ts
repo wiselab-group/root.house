@@ -35,9 +35,10 @@ export const createPersonSchema = z.object({
   // .nullable() alongside .optional(): formData.get() returns null (not
   // undefined) for a field that isn't in the FormData at all — the case
   // whenever isLiving is checked and PersonForm doesn't render the death
-  // fields, so deathPlaceId is simply absent from what's submitted.
+  // fields, so deathPlaceId/deathCause is simply absent from what's submitted.
   birthPlaceId: z.string().uuid().optional().nullable().or(z.literal("")),
   deathPlaceId: z.string().uuid().optional().nullable().or(z.literal("")),
+  deathCause: z.string().trim().max(500).optional().or(z.literal("")),
 });
 
 export type CreatePersonInput = z.infer<typeof createPersonSchema>;

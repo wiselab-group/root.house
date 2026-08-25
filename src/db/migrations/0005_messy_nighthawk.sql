@@ -1,0 +1,1 @@
+ALTER TABLE "persons" ADD COLUMN "death_cause" text;

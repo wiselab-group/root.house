@@ -26,6 +26,7 @@ function person(id: string, overrides: Partial<PersonRecord> = {}): PersonRecord
     deathDate: null,
     birthPlaceId: null,
     deathPlaceId: null,
+    deathCause: null,
     description: null,
     religion: null,
     nationality: null,

@@ -65,6 +65,8 @@ export const persons = pgTable(
     birthPlaceId: uuid("birth_place_id").references(() => places.id, { onDelete: "set null" }),
     deathPlaceId: uuid("death_place_id").references(() => places.id, { onDelete: "set null" }),
 
+    deathCause: text("death_cause"),
+
     description: text("description"),
     religion: text("religion"),
     nationality: text("nationality"),

@@ -19,6 +19,7 @@ export interface PersonRecord {
   deathDate: PartialDate | null;
   birthPlaceId: string | null;
   deathPlaceId: string | null;
+  deathCause: string | null;
   description: string | null;
   religion: string | null;
   nationality: string | null;
@@ -56,6 +57,7 @@ function toRecord(row: typeof persons.$inferSelect): PersonRecord {
     }),
     birthPlaceId: row.birthPlaceId,
     deathPlaceId: row.deathPlaceId,
+    deathCause: row.deathCause,
     description: row.description,
     religion: row.religion,
     nationality: row.nationality,
@@ -133,6 +135,7 @@ export interface CreatePersonData {
   deathDate?: PartialDate | null;
   birthPlaceId?: string | null;
   deathPlaceId?: string | null;
+  deathCause?: string | null;
 }
 
 export async function createPerson(data: CreatePersonData): Promise<{ id: string }> {
@@ -168,6 +171,7 @@ export async function createPerson(data: CreatePersonData): Promise<{ id: string
       deathDateApproximate: deathCols.approximate,
       birthPlaceId: data.birthPlaceId ?? null,
       deathPlaceId: data.deathPlaceId ?? null,
+      deathCause: data.deathCause ?? null,
     })
     .returning({ id: persons.id });
 
@@ -207,6 +211,7 @@ export async function updatePerson(
   }
   if (data.birthPlaceId !== undefined) patch.birthPlaceId = data.birthPlaceId;
   if (data.deathPlaceId !== undefined) patch.deathPlaceId = data.deathPlaceId;
+  if (data.deathCause !== undefined) patch.deathCause = data.deathCause;
 
   if (data.deathDate !== undefined) {
     const cols = toColumns(data.deathDate);

@@ -45,6 +45,7 @@ export interface CreatePersonInput {
   deathDate?: PartialDate;
   birthPlaceId?: string;
   deathPlaceId?: string;
+  deathCause?: string;
 }
 
 /** Placeholder id used only to seed a fallback slug before the real row (and

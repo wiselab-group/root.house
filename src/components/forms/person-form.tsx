@@ -94,6 +94,15 @@ export function PersonForm({
             places={places}
             defaultValue={person?.deathPlaceId}
           />
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="deathCause">Причина смерти</Label>
+            <Input
+              id="deathCause"
+              name="deathCause"
+              defaultValue={person?.deathCause ?? ""}
+              placeholder="Например, болезнь"
+            />
+          </div>
         </>
       )}
 

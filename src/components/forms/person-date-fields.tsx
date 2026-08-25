@@ -25,16 +25,16 @@ export function PersonDateFields({
       <legend className="text-sm font-medium mb-1">{legend}</legend>
       <div className="grid grid-cols-4 gap-2 items-end">
         <div className="flex flex-col gap-1">
-          <Label htmlFor={`${prefix}Year`} className="text-xs text-muted-foreground">
-            Год
+          <Label htmlFor={`${prefix}Day`} className="text-xs text-muted-foreground">
+            День
           </Label>
           <Input
-            id={`${prefix}Year`}
-            name={`${prefix}Year`}
+            id={`${prefix}Day`}
+            name={`${prefix}Day`}
             type="number"
             min={1}
-            max={2100}
-            defaultValue={date?.year ?? ""}
+            max={31}
+            defaultValue={date?.day ?? ""}
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -51,16 +51,16 @@ export function PersonDateFields({
           />
         </div>
         <div className="flex flex-col gap-1">
-          <Label htmlFor={`${prefix}Day`} className="text-xs text-muted-foreground">
-            День
+          <Label htmlFor={`${prefix}Year`} className="text-xs text-muted-foreground">
+            Год
           </Label>
           <Input
-            id={`${prefix}Day`}
-            name={`${prefix}Day`}
+            id={`${prefix}Year`}
+            name={`${prefix}Year`}
             type="number"
             min={1}
-            max={31}
-            defaultValue={date?.day ?? ""}
+            max={2100}
+            defaultValue={date?.year ?? ""}
           />
         </div>
         <label htmlFor={`${prefix}Approximate`} className="flex items-center gap-1.5 pb-2 text-xs text-muted-foreground">

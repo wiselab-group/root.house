@@ -73,6 +73,7 @@ export default async function PersonProfilePage({
           <InfoRow label="Национальность" value={person.nationality} />
           <InfoRow label="Место рождения" value={birthPlace?.name ?? null} />
           <InfoRow label="Место смерти" value={deathPlace?.name ?? null} />
+          <InfoRow label="Причина смерти" value={person.deathCause} />
         </CardContent>
       </Card>
 
