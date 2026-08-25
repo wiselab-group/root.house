@@ -25,13 +25,14 @@ export type BloodRelationLabel =
   | "unrelated";
 
 /**
- * BloodRelationLabel plus "spouse" — findRelationshipPath (genealogy-algorithms.ts)
- * falls back to reporting a direct partnership edge when computeRelationshipPath
- * finds no shared ancestor, since two people can be family (married) without
- * being blood-related. computeRelationshipPath itself stays blood-only — see
- * this file's module doc — "spouse" is only ever attached by that fallback.
+ * BloodRelationLabel plus "spouse" and "in_law" — findRelationshipPath
+ * (genealogy-algorithms.ts) falls back to these when computeRelationshipPath
+ * finds no shared ancestor, since two people can be family (married, or
+ * related through someone else's marriage) without being blood-related.
+ * computeRelationshipPath itself stays blood-only — see this file's module
+ * doc — "spouse"/"in_law" are only ever attached by that fallback.
  */
-export type RelationshipLabel = BloodRelationLabel | "spouse";
+export type RelationshipLabel = BloodRelationLabel | "spouse" | "in_law";
 
 export interface RelationshipPathResult {
   label: RelationshipLabel;
@@ -39,8 +40,16 @@ export interface RelationshipPathResult {
   cousinDegree?: number;
   /** For cousins: how many generations removed. 0 = same generation. Undefined otherwise. */
   removed?: number;
-  /** Person id of the lowest common ancestor, or null if none was found (unrelated); also null for "spouse". */
+  /** Person id of the lowest common ancestor, or null if none was found (unrelated); also null for "spouse"/"in_law". */
   commonAncestorId: string | null;
+  /**
+   * "in_law" only: the blood relationship label between the two people once
+   * one side is swapped for their spouse (e.g. A's spouse is B's child =>
+   * inLawBlood is "child", so the UI renders "родитель/ребёнок супруга(и)").
+   * Reuses BloodRelationLabel's vocabulary rather than inventing a parallel
+   * "in-law" enum for every blood relation.
+   */
+  inLawBlood?: BloodRelationLabel;
 }
 
 /**

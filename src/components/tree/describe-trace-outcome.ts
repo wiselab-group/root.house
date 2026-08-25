@@ -12,6 +12,10 @@ export function describeTraceOutcome(outcome: RelationshipPathOutcome | null): s
     return outcome.status === "insufficient_data" ? "Недостаточно данных" : "Родство не найдено";
   }
   if (outcome.relationship.label === "same person") return "Один и тот же человек";
+  if (outcome.relationship.label === "in_law") {
+    const bloodLabel = outcome.relationship.inLawBlood ? IN_LAW_BLOOD_LABELS[outcome.relationship.inLawBlood] : null;
+    return bloodLabel ? `${bloodLabel} супруга/супруги` : "Родство через брак";
+  }
   return RELATIONSHIP_LABELS[outcome.relationship.label] ?? outcome.relationship.label;
 }
 
@@ -26,4 +30,16 @@ const RELATIONSHIP_LABELS: Record<string, string> = {
   cousin: "Кузен/кузина",
   spouse: "Супруг/супруга",
   unrelated: "Родство не найдено",
+};
+
+/** Blood-relation label, reworded for the "in-law of my spouse's <label>" phrasing. */
+const IN_LAW_BLOOD_LABELS: Record<string, string> = {
+  parent: "Родитель",
+  child: "Ребёнок",
+  sibling: "Брат/сестра",
+  grandparent: "Дедушка/бабушка",
+  grandchild: "Внук/внучка",
+  aunt_or_uncle: "Тётя/дядя",
+  niece_or_nephew: "Племянник/племянница",
+  cousin: "Кузен/кузина",
 };

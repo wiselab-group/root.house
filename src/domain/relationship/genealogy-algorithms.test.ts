@@ -328,6 +328,29 @@ describe("findRelationshipPath", () => {
     expect(result.relationship.label).toBe("spouse");
   });
 
+  it("finds an in-law relationship through a partnership hop (wife <-> husband's mother)", () => {
+    // mother-in-law -> son ; son -- wife (married)
+    const persons = [person("mother-in-law"), person("son"), person("wife")];
+    const edges = [pc("mother-in-law", "son")];
+    const partnerships = [partner("son", "wife")];
+    const graph = buildGenealogyGraph(persons, edges, partnerships);
+
+    const result = findRelationshipPath(graph, "mother-in-law", "wife");
+    expect(result.status).toBe("found");
+    if (result.status !== "found") throw new Error("expected found");
+    expect(result.personIds).toEqual(["mother-in-law", "son", "wife"]);
+    expect(result.relationship.label).toBe("in_law");
+    // Swapping wife for son (her partner) makes mother-in-law <-> son a "parent" relation.
+    expect(result.relationship.inLawBlood).toBe("parent");
+
+    // Symmetric: from wife's perspective it should reverse to "child".
+    const reverse = findRelationshipPath(graph, "wife", "mother-in-law");
+    expect(reverse.status).toBe("found");
+    if (reverse.status !== "found") throw new Error("expected found");
+    expect(reverse.relationship.label).toBe("in_law");
+    expect(reverse.relationship.inLawBlood).toBe("child");
+  });
+
   it("handles the same-person case", () => {
     const graph = buildGenealogyGraph([person("a")], [], []);
     const result = findRelationshipPath(graph, "a", "a");

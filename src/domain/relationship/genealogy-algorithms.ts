@@ -4,6 +4,7 @@ import { deriveSiblings } from "./sibling-derivation";
 import {
   computeRelationshipPath,
   type BloodRelationLabel,
+  type RelationshipLabel,
   type RelationshipPathResult,
 } from "./relationship-path";
 import type { ParentChildRecord, PartnershipRecord } from "./relationship.repository";
@@ -285,12 +286,17 @@ export type RelationshipPathOutcome = RelationshipPathFound | RelationshipPathNo
  * outcome per the plan's §6 validation philosophy, not an error to throw.
  *
  * computeRelationshipPath only ever looks at shared ancestors (it's
- * intentionally blood-only — see relationship-path.ts's module doc), so a
- * married couple with no common ancestor would otherwise come back
- * "unrelated" even though they ARE related — just not by blood. Before
- * giving up, this checks for a direct partnership edge between A and B and
- * reports that as "found" with a "spouse" label and a single partnership
- * step, instead of leaving the (very common) spouse case unresolved.
+ * intentionally blood-only — see relationship-path.ts's module doc), so two
+ * people related only "by marriage" — spouses themselves, or in-laws like "my
+ * wife" <-> "my mother" (no shared ancestor, but connected via my own
+ * parent_child + partnership edges) — would otherwise come back "unrelated"
+ * even though they ARE family. Before giving up, this tries the pure-blood
+ * path first (unchanged, so every existing blood-relation label/removal/
+ * cousin-degree stays exact); only when that finds no shared ancestor does it
+ * fall back to a BFS over the *mixed* graph (parent_child edges in both
+ * directions + partnership edges) to find the shortest family path at all,
+ * then classifies it as "spouse" (a single partnership hop) or "in_law" (any
+ * other path that uses at least one partnership hop).
  */
 export function findRelationshipPath(
   graph: GenealogyGraph,
@@ -311,52 +317,201 @@ export function findRelationshipPath(
     return { status: "found", personAId, personBId, personIds: [personAId], steps: [], commonAncestorId: personAId, relationship };
   }
 
-  if (relationship.commonAncestorId === null) {
-    const directPartnership = (graph.partnershipEdgesOf.get(personAId) ?? []).find(
-      (edge) => edge.person1Id === personBId || edge.person2Id === personBId,
-    );
-    if (directPartnership) {
-      return {
-        status: "found",
-        personAId,
-        personBId,
-        personIds: [personAId, personBId],
-        steps: [{ fromId: personAId, toId: personBId, edgeKind: "partnership" }],
-        commonAncestorId: null,
-        relationship: { label: "spouse", commonAncestorId: null },
-      };
+  if (relationship.commonAncestorId !== null) {
+    const commonAncestorId = relationship.commonAncestorId;
+    const upFromA = ancestorChain(graph, personAId, commonAncestorId);
+    const upFromB = ancestorChain(graph, personBId, commonAncestorId);
+
+    // A -> ... -> commonAncestor -> ... -> B: upFromA walks up from A (inclusive
+    // of A, exclusive of the ancestor's own further-up ancestors), upFromB does
+    // the same from B; reversing upFromB (minus the shared ancestor, already the
+    // last element of upFromA) and appending gives the full A-to-B chain.
+    const personIds = [...upFromA, ...upFromB.slice(0, -1).reverse()];
+
+    const steps: RelationshipPathStep[] = [];
+    for (let i = 0; i < personIds.length - 1; i++) {
+      const fromId = personIds[i];
+      const toId = personIds[i + 1];
+      const goingUp = i < upFromA.length - 1;
+      // Going up: toId is fromId's parent, so the stored edge is (parent=toId, child=fromId).
+      // Going down: fromId is toId's parent, so the stored edge is (parent=fromId, child=toId).
+      const edge = goingUp ? findParentEdge(graph, toId, fromId) : findParentEdge(graph, fromId, toId);
+      steps.push({
+        fromId,
+        toId,
+        edgeKind: "parent_child",
+        direction: goingUp ? "up" : "down",
+        parentRole: edge?.parentRole,
+      });
     }
+
+    return { status: "found", personAId, personBId, personIds, steps, commonAncestorId, relationship };
+  }
+
+  // No shared ancestor: fall back to the mixed-graph BFS for spouse / in-law paths.
+  const mixedPath = shortestMixedPath(graph, personAId, personBId);
+  if (!mixedPath) {
     return { status: "unrelated", personAId, personBId };
   }
 
-  const commonAncestorId = relationship.commonAncestorId;
-  const upFromA = ancestorChain(graph, personAId, commonAncestorId);
-  const upFromB = ancestorChain(graph, personBId, commonAncestorId);
+  const steps = mixedPathSteps(graph, mixedPath);
+  const partnershipHops = steps.filter((s) => s.edgeKind === "partnership").length;
 
-  // A -> ... -> commonAncestor -> ... -> B: upFromA walks up from A (inclusive
-  // of A, exclusive of the ancestor's own further-up ancestors), upFromB does
-  // the same from B; reversing upFromB (minus the shared ancestor, already the
-  // last element of upFromA) and appending gives the full A-to-B chain.
-  const personIds = [...upFromA, ...upFromB.slice(0, -1).reverse()];
+  if (mixedPath.length === 2 && partnershipHops === 1) {
+    return {
+      status: "found",
+      personAId,
+      personBId,
+      personIds: mixedPath,
+      steps,
+      commonAncestorId: null,
+      relationship: { label: "spouse", commonAncestorId: null },
+    };
+  }
 
+  // in_law: describe the blood relationship on the far side of the marriage,
+  // i.e. swap whichever endpoint is directly across a partnership hop for
+  // their partner and re-run the pure-blood classifier from there — e.g.
+  // "my wife" <-> "my mother": swap wife for me, then me<->mother is "child",
+  // so the UI can render "мать супруга(и)" from inLawBlood: "child".
+  const inLawBlood = classifyInLaw(graph, personAId, personBId, mixedPath, ancestorsA, ancestorsB, maxGenerations);
+
+  return {
+    status: "found",
+    personAId,
+    personBId,
+    personIds: mixedPath,
+    steps,
+    commonAncestorId: null,
+    relationship: { label: "in_law", commonAncestorId: null, inLawBlood },
+  };
+}
+
+/**
+ * BFS over parent_child (either direction) + partnership edges — the
+ * shortest path connecting A and B through *any* family relationship, not
+ * just blood. Used only as a fallback once the pure-blood path
+ * (findRelationshipPath's common-ancestor branch) has already come back
+ * empty, so it doesn't need to special-case "shorter blood path exists" —
+ * there isn't one by the time this runs.
+ */
+function shortestMixedPath(graph: GenealogyGraph, fromId: string, toId: string): string[] | null {
+  if (fromId === toId) return [fromId];
+
+  const visited = new Set([fromId]);
+  const cameFrom = new Map<string, string>();
+  let frontier = [fromId];
+
+  while (frontier.length > 0) {
+    const next: string[] = [];
+    for (const id of frontier) {
+      const neighbors = [
+        ...(graph.parentEdgesOf.get(id) ?? []).map((e) => e.parentId),
+        ...(graph.childEdgesOf.get(id) ?? []).map((e) => e.childId),
+        ...(graph.partnershipEdgesOf.get(id) ?? []).map((e) => (e.person1Id === id ? e.person2Id : e.person1Id)),
+      ];
+      for (const neighborId of neighbors) {
+        if (visited.has(neighborId)) continue;
+        visited.add(neighborId);
+        cameFrom.set(neighborId, id);
+        if (neighborId === toId) {
+          // Reconstruct and return immediately — BFS guarantees this is shortest.
+          const path = [toId];
+          let cur = toId;
+          while (cur !== fromId) {
+            cur = cameFrom.get(cur)!;
+            path.push(cur);
+          }
+          return path.reverse();
+        }
+        next.push(neighborId);
+      }
+    }
+    frontier = next;
+  }
+  return null;
+}
+
+/** Converts a mixed BFS path (person ids) into typed steps, tagging each hop's edge kind/direction. */
+function mixedPathSteps(graph: GenealogyGraph, personIds: string[]): RelationshipPathStep[] {
   const steps: RelationshipPathStep[] = [];
   for (let i = 0; i < personIds.length - 1; i++) {
     const fromId = personIds[i];
     const toId = personIds[i + 1];
-    const goingUp = i < upFromA.length - 1;
-    // Going up: toId is fromId's parent, so the stored edge is (parent=toId, child=fromId).
-    // Going down: fromId is toId's parent, so the stored edge is (parent=fromId, child=toId).
-    const edge = goingUp ? findParentEdge(graph, toId, fromId) : findParentEdge(graph, fromId, toId);
-    steps.push({
-      fromId,
-      toId,
-      edgeKind: "parent_child",
-      direction: goingUp ? "up" : "down",
-      parentRole: edge?.parentRole,
-    });
+    const asParentEdge = findParentEdge(graph, toId, fromId); // toId is fromId's parent
+    if (asParentEdge) {
+      steps.push({ fromId, toId, edgeKind: "parent_child", direction: "up", parentRole: asParentEdge.parentRole });
+      continue;
+    }
+    const asChildEdge = findParentEdge(graph, fromId, toId); // fromId is toId's parent
+    if (asChildEdge) {
+      steps.push({ fromId, toId, edgeKind: "parent_child", direction: "down", parentRole: asChildEdge.parentRole });
+      continue;
+    }
+    steps.push({ fromId, toId, edgeKind: "partnership" });
+  }
+  return steps;
+}
+
+/**
+ * For an in-law path (>= 1 partnership hop, not the direct-spouse case),
+ * finds the blood relationship "on the other side" of the marriage: pick
+ * whichever endpoint (A or B) sits immediately across a partnership hop from
+ * the rest of the path, swap it for that partner, and classify the
+ * (now pure-blood) pair. Falls back to undefined if the path shape is
+ * unexpected (e.g. multiple partnership hops) — the UI still shows a generic
+ * "in_law" label in that case rather than a wrong specific one.
+ */
+function classifyInLaw(
+  graph: GenealogyGraph,
+  personAId: string,
+  personBId: string,
+  mixedPath: string[],
+  ancestorsA: Map<string, number>,
+  ancestorsB: Map<string, number>,
+  maxGenerations: number,
+): BloodRelationLabel | undefined {
+  const partnershipIndex = mixedPath.findIndex((id, i) => {
+    if (i === mixedPath.length - 1) return false;
+    const next = mixedPath[i + 1];
+    return (graph.partnershipEdgesOf.get(id) ?? []).some(
+      (e) => (e.person1Id === id && e.person2Id === next) || (e.person2Id === id && e.person1Id === next),
+    );
+  });
+  if (partnershipIndex === -1) return undefined;
+
+  // A's endpoint of the partnership hop is at mixedPath[partnershipIndex],
+  // B's is at mixedPath[partnershipIndex + 1] (BFS path is already A -> ... -> B).
+  const isAtStart = partnershipIndex === 0;
+  const isAtEnd = partnershipIndex === mixedPath.length - 2;
+  if (!isAtStart && !isAtEnd) return undefined; // more than one partnership hop — ambiguous, skip
+
+  if (isAtStart) {
+    // Swap A for their partner at mixedPath[1], classify partner<->B directly.
+    const swappedId = mixedPath[1];
+    const swappedAncestors = ancestorDepths(graph, swappedId, maxGenerations);
+    return asInLawBlood(computeRelationshipPath(swappedId, personBId, swappedAncestors, ancestorsB).label);
   }
 
-  return { status: "found", personAId, personBId, personIds, steps, commonAncestorId, relationship };
+  // Swap B for their partner at the second-to-last position, classify A<->partner.
+  const swappedId = mixedPath[mixedPath.length - 2];
+  const swappedAncestors = ancestorDepths(graph, swappedId, maxGenerations);
+  return asInLawBlood(computeRelationshipPath(personAId, swappedId, ancestorsA, swappedAncestors).label);
+}
+
+/**
+ * computeRelationshipPath's return type is widened to the full
+ * RelationshipLabel (it shares RelationshipPathResult with the "spouse"/
+ * "in_law" fallback cases in findRelationshipPath), but the function itself
+ * only ever actually returns a BloodRelationLabel — this narrows that back
+ * down, treating "same person"/"unrelated" (not real blood-relation shapes
+ * an in-law phrasing can use) the same as "no swap found".
+ */
+function asInLawBlood(label: RelationshipLabel): BloodRelationLabel | undefined {
+  if (label === "unrelated" || label === "same person" || label === "spouse" || label === "in_law") {
+    return undefined;
+  }
+  return label;
 }
 
 /** Direct parent_child edge from `parentId` to `childId`, if one exists. */
