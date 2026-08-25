@@ -2,6 +2,7 @@
 
 import { BaseEdge, useInternalNode, type EdgeProps } from "@xyflow/react";
 import type { RelationshipFlowEdge } from "./adapters/xyflow-adapter";
+import { roundedOrthogonalPath } from "./orthogonal-path";
 
 /**
  * Relationship Trace's line color — deliberately --chart-2, not --primary:
@@ -39,14 +40,20 @@ export function RelationshipEdge({
   const isOnTracePath = data?.isOnTracePath === true;
 
   // parent_child edges (including union-child trunk lines, see
-  // union-child-edge.tsx) are built as an explicit right-angle polyline
-  // instead of XYFlow's getSmoothStepPath: that helper computes rounded
-  // corners from the *distance* between its bend points, which comes out
-  // visibly curved for short/near-zero segments — a hand-built
-  // "down, across, down" path has no such edge case.
+  // union-child-edge.tsx) are built as an explicit "down, across, down"
+  // polyline with hand-rounded corners (orthogonal-path.ts) instead of
+  // XYFlow's getSmoothStepPath: that helper computes rounded corners from
+  // the *distance* between its bend points, which comes out visibly curved
+  // (not just rounded) for short/near-zero segments — a union trunk's start
+  // point routinely produces exactly that case.
   if (!isPartnership) {
     const midY = (sourceY + targetY) / 2;
-    const path = `M${sourceX},${sourceY} L${sourceX},${midY} L${targetX},${midY} L${targetX},${targetY}`;
+    const path = roundedOrthogonalPath([
+      { x: sourceX, y: sourceY },
+      { x: sourceX, y: midY },
+      { x: targetX, y: midY },
+      { x: targetX, y: targetY },
+    ]);
     return (
       <BaseEdge
         id={id}

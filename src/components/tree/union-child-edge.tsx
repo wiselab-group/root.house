@@ -3,6 +3,7 @@
 import { BaseEdge, useInternalNode, type EdgeProps } from "@xyflow/react";
 import type { UnionChildFlowEdge } from "./adapters/xyflow-adapter";
 import { TRACE_COLOR } from "./relationship-edge";
+import { roundedOrthogonalPath } from "./orthogonal-path";
 
 /**
  * The trunk line from a couple's partnership line down to one of their
@@ -62,11 +63,11 @@ export function UnionChildEdge({
   // the path's start all the way back to that parent's own card edge (the
   // same point PartnershipEdgeLine's dashed line would start from) — one
   // continuous <path> from parent through the partnership midpoint down to
-  // the child gets a clean SVG miter join at every bend, instead of this
-  // trunk meeting a separately-drawn accent segment of the partnership
+  // the child gets one smoothly rounded corner at every bend, instead of
+  // this trunk meeting a separately-drawn accent segment of the partnership
   // line (two independently stroke-capped <path>s bumping into each other,
   // see relationship-edge.tsx's PartnershipEdgeLine) at the midpoint with a
-  // visibly rounded/bumped corner.
+  // visibly bumped corner that no per-path rounding could smooth over.
   const tracedStart =
     data?.tracedParentId === data?.parentAId
       ? { x: aIsLeft ? xA + widthA : xA, y: centerYA }
@@ -75,9 +76,13 @@ export function UnionChildEdge({
         : null;
 
   const midY = (sourceY + targetY) / 2;
-  const path = tracedStart
-    ? `M${tracedStart.x},${tracedStart.y} L${sourceX},${sourceY} L${sourceX},${midY} L${targetX},${midY} L${targetX},${targetY}`
-    : `M${sourceX},${sourceY} L${sourceX},${midY} L${targetX},${midY} L${targetX},${targetY}`;
+  const trunkPoints = [
+    { x: sourceX, y: sourceY },
+    { x: sourceX, y: midY },
+    { x: targetX, y: midY },
+    { x: targetX, y: targetY },
+  ];
+  const path = roundedOrthogonalPath(tracedStart ? [tracedStart, ...trunkPoints] : trunkPoints);
 
   return (
     <BaseEdge
