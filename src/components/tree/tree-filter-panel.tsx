@@ -10,7 +10,6 @@ import type { PersonFilter } from "@/domain/tree/tree-filter";
 const GENDER_OPTIONS: Array<{ value: NonNullable<PersonFilter["gender"]>[number]; label: string }> = [
   { value: "male", label: "Мужской" },
   { value: "female", label: "Женский" },
-  { value: "other", label: "Другой" },
   { value: "unknown", label: "Неизвестен" },
 ];
 

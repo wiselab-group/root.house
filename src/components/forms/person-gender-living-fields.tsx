@@ -6,7 +6,6 @@ const GENDER_OPTIONS: Array<{ value: PersonRecord["gender"]; label: string }> =
     { value: "unknown", label: "Не указан" },
     { value: "male", label: "Мужской" },
     { value: "female", label: "Женский" },
-    { value: "other", label: "Другой" },
   ];
 
 export function PersonGenderLivingFields({

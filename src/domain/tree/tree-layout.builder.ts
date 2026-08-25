@@ -23,7 +23,7 @@ export interface PersonNode {
   deathYear: number | null;
   photoMediaId: string | null;
   /** Present so tree-filter.ts can match on them without a second Person lookup — not used by layout positioning itself. */
-  gender: "male" | "female" | "unknown" | "other";
+  gender: "male" | "female" | "unknown";
   religion: string | null;
   nationality: string | null;
 }

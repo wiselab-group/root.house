@@ -17,7 +17,7 @@ export const partialDateInputSchema = z
   })
   .optional();
 
-export const genderSchema = z.enum(["male", "female", "unknown", "other"]);
+export const genderSchema = z.enum(["male", "female", "unknown"]);
 
 export const createPersonSchema = z.object({
   firstName: z.string().trim().max(120).optional().or(z.literal("")),
@@ -38,7 +38,7 @@ export const createPersonSchema = z.object({
   // fields, so deathPlaceId/deathCause is simply absent from what's submitted.
   birthPlaceId: z.string().uuid().optional().nullable().or(z.literal("")),
   deathPlaceId: z.string().uuid().optional().nullable().or(z.literal("")),
-  deathCause: z.string().trim().max(500).optional().or(z.literal("")),
+  deathCause: z.string().trim().max(500).optional().nullable().or(z.literal("")),
 });
 
 export type CreatePersonInput = z.infer<typeof createPersonSchema>;

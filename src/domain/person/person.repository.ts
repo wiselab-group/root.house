@@ -12,7 +12,7 @@ export interface PersonRecord {
   middleName: string | null;
   maidenName: string | null;
   nickname: string | null;
-  gender: "male" | "female" | "unknown" | "other";
+  gender: "male" | "female" | "unknown";
   isPlaceholder: boolean;
   isLiving: boolean;
   birthDate: PartialDate | null;
@@ -125,7 +125,7 @@ export interface CreatePersonData {
   middleName?: string | null;
   maidenName?: string | null;
   nickname?: string | null;
-  gender?: "male" | "female" | "unknown" | "other";
+  gender?: "male" | "female" | "unknown";
   isPlaceholder?: boolean;
   isLiving?: boolean;
   description?: string | null;

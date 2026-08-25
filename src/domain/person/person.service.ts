@@ -36,7 +36,7 @@ export interface CreatePersonInput {
   middleName?: string;
   maidenName?: string;
   nickname?: string;
-  gender?: "male" | "female" | "unknown" | "other";
+  gender?: "male" | "female" | "unknown";
   isLiving?: boolean;
   description?: string;
   religion?: string;
@@ -99,7 +99,7 @@ export async function addPerson(
 export async function addPlaceholderPerson(
   familyId: string,
   createdBy: string,
-  input: { label?: string; gender?: "male" | "female" | "unknown" | "other" },
+  input: { label?: string; gender?: "male" | "female" | "unknown" },
 ): Promise<{ id: string }> {
   const slug = await generateUniquePersonSlug(familyId, {
     firstName: input.label,

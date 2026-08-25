@@ -4,7 +4,7 @@ import { places } from "./place";
 import { users } from "./auth";
 import { privacyLevelEnum } from "./privacy";
 
-export const genderEnum = pgEnum("gender", ["male", "female", "unknown", "other"]);
+export const genderEnum = pgEnum("gender", ["male", "female", "unknown"]);
 
 /**
  * Person — belongs to a Family, never directly to a User (so inviting an
