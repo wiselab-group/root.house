@@ -2,12 +2,12 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { FilterIcon, Users2Icon, XIcon } from "lucide-react";
+import { FilterIcon, Users2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { TreeCanvas } from "./tree-canvas";
 import { PersonPickerDialog } from "./person-picker-dialog";
 import { TreeFilterPanel } from "./tree-filter-panel";
+import { TreeTracePanel } from "./tree-trace-panel";
 import { isEmptyFilter, type PersonFilter } from "@/domain/tree/tree-filter";
 import { describeTraceOutcome } from "./describe-trace-outcome";
 import type { RelationshipPathOutcome } from "@/domain/relationship/genealogy-algorithms";
@@ -23,6 +23,12 @@ type Picker = "traceA" | "traceB" | null;
  * matched pair of app-level tools, not one native-canvas control (zoom,
  * card style) and one bolted-on app control. Neither eats into the canvas's
  * vertical space, matching how the canvas is full-bleed on mobile.
+ *
+ * The trace button opens TreeTracePanel, which shows both Person A and
+ * Person B slots at once (each independently pickable/clearable) rather
+ * than silently jumping straight to whichever slot happens to be empty —
+ * picking a slot briefly hands off to PersonPickerDialog, then returns to
+ * the panel so both slots stay visible for review/adjustment.
  *
  * Writes URL params (?traceA=, ?traceB=, ?filter=) and reads back
  * already-computed data passed in as props from the Server Component page —
@@ -50,6 +56,7 @@ export function TreeToolbar({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [tracePanelOpen, setTracePanelOpen] = useState(false);
   const [openPicker, setOpenPicker] = useState<Picker>(null);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
 
@@ -82,32 +89,10 @@ export function TreeToolbar({
         size="icon"
         aria-label="Сравнить родство двух людей"
         className="absolute top-3 left-3 z-10 rounded-full shadow-md"
-        onClick={() => {
-          // Both already picked: clicking the trigger again restarts the
-          // comparison from Person A rather than doing nothing, since
-          // there's no third slot to fill.
-          setOpenPicker(traceA && !traceB ? "traceB" : "traceA");
-        }}
+        onClick={() => setTracePanelOpen(true)}
       >
         <Users2Icon />
       </Button>
-
-      {traceLabel && (
-        <button
-          type="button"
-          onClick={() => {
-            setParam("traceA", null);
-            setParam("traceB", null);
-          }}
-          className="absolute top-15 left-3 z-10"
-          aria-label="Сбросить сравнение родства"
-        >
-          <Badge variant="secondary" className="shadow-sm">
-            {traceLabel}
-            <XIcon />
-          </Badge>
-        </button>
-      )}
 
       <Button
         variant={isEmptyFilter(filter) ? "outline" : "default"}
@@ -119,12 +104,31 @@ export function TreeToolbar({
         <FilterIcon />
       </Button>
 
+      <TreeTracePanel
+        open={tracePanelOpen}
+        onOpenChange={setTracePanelOpen}
+        traceA={traceA}
+        traceB={traceB}
+        traceLabel={traceLabel}
+        onOpenPicker={(slot) => {
+          setTracePanelOpen(false);
+          setOpenPicker(slot);
+        }}
+        onClearSlot={(slot) => setParam(slot, null)}
+      />
+
       <PersonPickerDialog
         open={openPicker !== null}
-        onOpenChange={(isOpen) => setOpenPicker(isOpen ? openPicker : null)}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) setTracePanelOpen(true);
+          setOpenPicker(isOpen ? openPicker : null);
+        }}
         familyId={familyId}
         title={openPicker === "traceA" ? "Выберите человека A" : "Выберите человека B"}
-        onSelect={(personId) => setParam(openPicker === "traceA" ? "traceA" : "traceB", personId)}
+        onSelect={(personId) => {
+          setParam(openPicker === "traceA" ? "traceA" : "traceB", personId);
+          setTracePanelOpen(true);
+        }}
       />
 
       <TreeFilterPanel
