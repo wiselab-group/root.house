@@ -5,14 +5,11 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   ReactFlow,
   Background,
-  Controls,
-  ControlButton,
   MiniMap,
   useNodesState,
   useEdgesState,
   type NodeMouseHandler,
 } from "@xyflow/react";
-import { RectangleHorizontalIcon, RectangleVerticalIcon } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 import type { TreeLayoutGraph } from "@/domain/tree/tree-layout.builder";
 import { toReactFlow, type PersonFlowNode, type TreeHighlightState } from "./adapters/xyflow-adapter";
@@ -20,6 +17,7 @@ import { PersonNode } from "./person-node";
 import { RelationshipEdge } from "./relationship-edge";
 import { useTreeCardStyle } from "./use-tree-card-style";
 import { useCoarsePointer } from "./use-coarse-pointer";
+import { TreeCardStyleControl } from "./tree-card-style-control";
 
 const nodeTypes = { person: PersonNode };
 const edgeTypes = {
@@ -101,47 +99,7 @@ export function TreeCanvas({
         maxZoom={1.5}
       >
         <Background gap={24} />
-        {/* Default xyflow control buttons are 26px/12px-icon — a fine
-            pointer target on desktop but too small to comfortably tap.
-            Bumped up on coarse/touch pointers only (phones, tablets),
-            matching the pointer-fine gate the minimap uses below — width
-            alone isn't a reliable "mobile" signal (a landscape phone can
-            exceed md). Zoom in/out buttons are dropped entirely there too —
-            pinch-to-zoom covers that on a touchscreen, and two more 44px
-            targets is clutter fit-view/lock don't need. */}
-        <Controls
-          showInteractive={false}
-          showZoom={!isCoarsePointer}
-          className="pointer-coarse:[&_.react-flow\_\_controls-button]:size-11! pointer-coarse:[&_.react-flow\_\_controls-button_svg]:max-h-5! pointer-coarse:[&_.react-flow\_\_controls-button_svg]:max-w-5!"
-        >
-          <ControlButton
-            onClick={() =>
-              setCardStyle(cardStyle === "compact" ? "portrait" : "compact")
-            }
-            title={
-              cardStyle === "compact"
-                ? "Показывать карточки с крупным фото"
-                : "Показывать компактные карточки"
-            }
-            aria-pressed={cardStyle === "portrait"}
-          >
-            {/* Icon shows the shape of the card you'll SWITCH TO, not the
-                current one — same convention as a play/pause toggle. A
-                horizontal rectangle reads as "wide compact row", a vertical
-                one as "tall portrait photo card". fill-none is required: the
-                zoom/fitview buttons' own icons are solid shapes styled via
-                XYFlow's `.react-flow__controls-button svg { fill: currentColor }`
-                rule, which — since a CSS fill declaration beats an SVG
-                presentation attribute — would otherwise turn these lucide
-                icons into solid blobs instead of the thin-line outline every
-                other icon button in this app uses. */}
-            {cardStyle === "compact" ? (
-              <RectangleVerticalIcon className="fill-none!" />
-            ) : (
-              <RectangleHorizontalIcon className="fill-none!" />
-            )}
-          </ControlButton>
-        </Controls>
+        <TreeCardStyleControl cardStyle={cardStyle} setCardStyle={setCardStyle} showZoom={!isCoarsePointer} />
         {/* Minimap needs room to read as a map, not a smudge — skip it below
             md where the canvas itself is already cramped (plan §6/§13), and
             skip it on any touch/coarse-pointer device regardless of width:

@@ -7,7 +7,6 @@ import { findRelationshipPathFor } from "@/domain/relationship/relationship.serv
 import { personDisplayName } from "@/domain/person/display-name";
 import { isEmptyFilter, type PersonFilter } from "@/domain/tree/tree-filter";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
-import { TreeCanvas } from "@/components/tree/tree-canvas";
 import { TreeToolbar } from "@/components/tree/tree-toolbar";
 import {
   Card,
@@ -106,30 +105,31 @@ export default async function FamilyTreePage({
         </p>
       </div>
 
-      <div className="px-4 md:px-0">
+      {/* relative: TreeToolbar's floating filter button + trace badge
+          (and TreeCanvas's own top-left trace control cluster) position
+          themselves against this wrapper, overlaying the canvas instead of
+          taking their own row — the canvas is deliberately full-bleed on
+          mobile (see TreeCanvas), so nothing here may add a fixed-height row. */}
+      <div className="relative">
         <TreeToolbar
           familyId={familyId}
+          graph={tracedGraph}
+          highlight={{
+            filterMatchedIds: "matchedIds" in layoutGraph ? layoutGraph.matchedIds : undefined,
+            // Only pass trace sets when a trace is actually active (both A and B
+            // picked) — an always-present-but-empty Set would make every node
+            // read as "trace active, just not on it" and dim the whole tree by
+            // default. See xyflow-adapter.ts's toFlowNode: isOnTracePath is only
+            // computed when highlight.tracePersonIds is present at all.
+            tracePersonIds: traceOutcome ? tracedGraph.tracePersonIds : undefined,
+            traceEdgeIds: traceOutcome ? tracedGraph.traceEdgeIds : undefined,
+          }}
           traceA={traceAId ? { id: traceAId, name: personDisplayName(peopleById.get(traceAId)!) } : null}
           traceB={traceBId ? { id: traceBId, name: personDisplayName(peopleById.get(traceBId)!) } : null}
           traceOutcome={traceOutcome}
           filter={filter}
         />
       </div>
-
-      <TreeCanvas
-        graph={tracedGraph}
-        familyId={familyId}
-        highlight={{
-          filterMatchedIds: "matchedIds" in layoutGraph ? layoutGraph.matchedIds : undefined,
-          // Only pass trace sets when a trace is actually active (both A and B
-          // picked) — an always-present-but-empty Set would make every node
-          // read as "trace active, just not on it" and dim the whole tree by
-          // default. See xyflow-adapter.ts's toFlowNode: isOnTracePath is only
-          // computed when highlight.tracePersonIds is present at all.
-          tracePersonIds: traceOutcome ? tracedGraph.tracePersonIds : undefined,
-          traceEdgeIds: traceOutcome ? tracedGraph.traceEdgeIds : undefined,
-        }}
-      />
     </main>
   );
 }

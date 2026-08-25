@@ -2,32 +2,46 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { FilterIcon, SearchIcon, XIcon } from "lucide-react";
+import { FilterIcon, Users2Icon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TreeCanvas } from "./tree-canvas";
 import { PersonPickerDialog } from "./person-picker-dialog";
 import { TreeFilterPanel } from "./tree-filter-panel";
 import { isEmptyFilter, type PersonFilter } from "@/domain/tree/tree-filter";
+import { describeTraceOutcome } from "./describe-trace-outcome";
 import type { RelationshipPathOutcome } from "@/domain/relationship/genealogy-algorithms";
+import type { TreeLayoutGraph } from "@/domain/tree/tree-layout.builder";
+import type { TreeHighlightState } from "./adapters/xyflow-adapter";
 
 type Picker = "traceA" | "traceB" | null;
 
 /**
- * Toolbar sitting above/beside the Tree Canvas — Search + Relationship Trace
- * + Filter (plan §16-17). Deliberately outside tree-canvas.tsx: this
- * component only writes URL params (?traceA=, ?traceB=, ?filter=) and reads
- * back already-computed data passed in as props from the Server Component
- * page — it contains no genealogy logic itself, matching the plan's "search
- * logic must not live inside Tree Canvas".
+ * Wraps TreeCanvas with Relationship Trace + Filter (plan §16-17): both are
+ * floating round buttons overlaying the canvas — Trace top-left, Filter
+ * top-right — sharing the exact same Button styling so the two read as one
+ * matched pair of app-level tools, not one native-canvas control (zoom,
+ * card style) and one bolted-on app control. Neither eats into the canvas's
+ * vertical space, matching how the canvas is full-bleed on mobile.
+ *
+ * Writes URL params (?traceA=, ?traceB=, ?filter=) and reads back
+ * already-computed data passed in as props from the Server Component page —
+ * contains no genealogy logic itself, matching the plan's "search logic
+ * must not live inside Tree Canvas" (the logic lives in domain/tree/*; this
+ * is just the UI that triggers it).
  */
 export function TreeToolbar({
   familyId,
+  graph,
+  highlight,
   traceA,
   traceB,
   traceOutcome,
   filter,
 }: {
   familyId: string;
+  graph: TreeLayoutGraph;
+  highlight?: TreeHighlightState;
   traceA: { id: string; name: string } | null;
   traceB: { id: string; name: string } | null;
   traceOutcome: RelationshipPathOutcome | null;
@@ -57,43 +71,52 @@ export function TreeToolbar({
   );
 
   const traceLabel = useMemo(() => describeTraceOutcome(traceOutcome), [traceOutcome]);
+  const isTraceActive = Boolean(traceA || traceB);
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button variant="outline" size="sm" onClick={() => setOpenPicker("traceA")}>
-        <SearchIcon />
-        {traceA ? traceA.name : "Человек A"}
-      </Button>
-      <span className="text-sm text-muted-foreground">→</span>
-      <Button variant="outline" size="sm" onClick={() => setOpenPicker("traceB")}>
-        <SearchIcon />
-        {traceB ? traceB.name : "Человек B"}
+    <>
+      <TreeCanvas graph={graph} familyId={familyId} highlight={highlight} />
+
+      <Button
+        variant={isTraceActive ? "default" : "outline"}
+        size="icon"
+        aria-label="Сравнить родство двух людей"
+        className="absolute top-3 left-3 z-10 rounded-full shadow-md"
+        onClick={() => {
+          // Both already picked: clicking the trigger again restarts the
+          // comparison from Person A rather than doing nothing, since
+          // there's no third slot to fill.
+          setOpenPicker(traceA && !traceB ? "traceB" : "traceA");
+        }}
+      >
+        <Users2Icon />
       </Button>
 
-      {(traceA || traceB) && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Сбросить сравнение родства"
+      {traceLabel && (
+        <button
+          type="button"
           onClick={() => {
             setParam("traceA", null);
             setParam("traceB", null);
           }}
+          className="absolute top-15 left-3 z-10"
+          aria-label="Сбросить сравнение родства"
         >
-          <XIcon />
-        </Button>
+          <Badge variant="secondary" className="shadow-sm">
+            {traceLabel}
+            <XIcon />
+          </Badge>
+        </button>
       )}
-
-      {traceLabel && <Badge variant="secondary">{traceLabel}</Badge>}
 
       <Button
         variant={isEmptyFilter(filter) ? "outline" : "default"}
-        size="sm"
-        className="ml-auto"
+        size="icon"
+        aria-label="Фильтр"
+        className="absolute top-3 right-3 z-10 rounded-full shadow-md"
         onClick={() => setFilterPanelOpen(true)}
       >
         <FilterIcon />
-        Фильтр
       </Button>
 
       <PersonPickerDialog
@@ -110,27 +133,6 @@ export function TreeToolbar({
         filter={filter}
         onApply={applyFilterToUrl}
       />
-    </div>
+    </>
   );
 }
-
-function describeTraceOutcome(outcome: RelationshipPathOutcome | null): string | null {
-  if (!outcome) return null;
-  if (outcome.status !== "found") {
-    return outcome.status === "insufficient_data" ? "Недостаточно данных" : "Родство не найдено";
-  }
-  if (outcome.relationship.label === "same person") return "Один и тот же человек";
-  return RELATIONSHIP_LABELS[outcome.relationship.label] ?? outcome.relationship.label;
-}
-
-const RELATIONSHIP_LABELS: Record<string, string> = {
-  parent: "Родитель",
-  child: "Ребёнок",
-  sibling: "Брат/сестра",
-  grandparent: "Дедушка/бабушка",
-  grandchild: "Внук/внучка",
-  aunt_or_uncle: "Тётя/дядя",
-  niece_or_nephew: "Племянник/племянница",
-  cousin: "Кузен/кузина",
-  unrelated: "Родство не найдено",
-};
