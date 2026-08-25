@@ -1,4 +1,4 @@
-import { put, del, get } from "@vercel/blob";
+import { put, del, get, BlobNotFoundError } from "@vercel/blob";
 import type { StorageService, UploadInput, UploadResult } from "./storage.service";
 
 /**
@@ -57,7 +57,7 @@ class VercelBlobStorageService implements StorageService {
     storageKey: string,
   ): Promise<{ stream: ReadableStream<Uint8Array>; contentType: string | null } | null> {
     const result = await get(storageKey, { access: "private" }).catch((error: unknown) => {
-      if (error instanceof Error && /not found/i.test(error.message)) {
+      if (error instanceof BlobNotFoundError) {
         return null;
       }
       throw error;
