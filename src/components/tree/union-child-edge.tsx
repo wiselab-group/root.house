@@ -2,6 +2,7 @@
 
 import { BaseEdge, useInternalNode, type EdgeProps } from "@xyflow/react";
 import type { UnionChildFlowEdge } from "./adapters/xyflow-adapter";
+import { TRACE_COLOR } from "./relationship-edge";
 
 /**
  * The trunk line from a couple's partnership line down to one of their
@@ -57,8 +58,26 @@ export function UnionChildEdge({
   const centerYB = parentB.internals.positionAbsolute.y + heightB / 2;
   const sourceY = (centerYA + centerYB) / 2;
 
+  // If the trace path reaches this child through only one parent, extend
+  // the path's start all the way back to that parent's own card edge (the
+  // same point PartnershipEdgeLine's dashed line would start from) — one
+  // continuous <path> from parent through the partnership midpoint down to
+  // the child gets a clean SVG miter join at every bend, instead of this
+  // trunk meeting a separately-drawn accent segment of the partnership
+  // line (two independently stroke-capped <path>s bumping into each other,
+  // see relationship-edge.tsx's PartnershipEdgeLine) at the midpoint with a
+  // visibly rounded/bumped corner.
+  const tracedStart =
+    data?.tracedParentId === data?.parentAId
+      ? { x: aIsLeft ? xA + widthA : xA, y: centerYA }
+      : data?.tracedParentId === data?.parentBId
+        ? { x: aIsLeft ? xB : xB + widthB, y: centerYB }
+        : null;
+
   const midY = (sourceY + targetY) / 2;
-  const path = `M${sourceX},${sourceY} L${sourceX},${midY} L${targetX},${midY} L${targetX},${targetY}`;
+  const path = tracedStart
+    ? `M${tracedStart.x},${tracedStart.y} L${sourceX},${sourceY} L${sourceX},${midY} L${targetX},${midY} L${targetX},${targetY}`
+    : `M${sourceX},${sourceY} L${sourceX},${midY} L${targetX},${midY} L${targetX},${targetY}`;
 
   return (
     <BaseEdge
@@ -66,7 +85,7 @@ export function UnionChildEdge({
       path={path}
       style={{
         strokeWidth: isOnTracePath ? 3 : 2,
-        stroke: isOnTracePath ? "var(--primary)" : "var(--border)",
+        stroke: isOnTracePath ? TRACE_COLOR : "var(--border)",
       }}
     />
   );

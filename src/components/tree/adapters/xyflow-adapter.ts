@@ -40,6 +40,17 @@ export interface RelationshipEdgeData extends Record<string, unknown> {
   isCurrent: boolean;
   /** Relationship Trace (tree-trace.ts) — true while this edge is a hop on the currently traced A-to-B path. */
   isOnTracePath?: boolean;
+  /**
+   * Set on a partnership edge when exactly one partner (not the couple's
+   * relationship to each other) is on the traced A-to-B path — e.g. Виктор
+   * is on the path to a shared child but Галина isn't, because the path
+   * actually runs Виктор → [union trunk] → child, not through the
+   * partnership itself (see union-child-edge.tsx). Names that partner's id
+   * so PartnershipEdgeLine can color only their half of the dashed line,
+   * instead of leaving the whole line looking disconnected from the
+   * accent-colored trunk it feeds.
+   */
+  tracedPartnerId?: string;
 }
 
 /**
@@ -53,6 +64,18 @@ export interface UnionChildEdgeData extends Record<string, unknown> {
   parentAId: string;
   parentBId: string;
   isOnTracePath?: boolean;
+  /**
+   * When the trace path reaches this child through only one parent (see
+   * RelationshipEdgeData.tracedPartnerId — same idea, same source), naming
+   * that parent here lets UnionChildEdge extend its own path all the way
+   * back to that parent's own card instead of stopping at the partnership
+   * line's midpoint. Drawing it as one continuous <path> (rather than this
+   * edge meeting a separately-drawn accent segment of the partnership line
+   * at the midpoint) is what gives the corner a clean SVG miter join
+   * instead of two independently stroke-capped segments bumping into each
+   * other.
+   */
+  tracedParentId?: string;
 }
 
 export type PersonFlowNode = Node<PersonNodeData, "person">;
@@ -210,6 +233,19 @@ function toFlowEdges(
       continue;
     }
 
+    // A trace path that reaches this couple's shared child runs through
+    // one of them (parent → union trunk → child, see union-child-edge.tsx),
+    // not through the partnership relationship itself — so isOnTracePath
+    // (which only means "this exact edge is a hop on the path") stays
+    // false/undefined here, but PartnershipEdgeLine still needs to know
+    // which single partner to color half the dashed line for, so that half
+    // doesn't look disconnected from the accent-colored trunk it feeds.
+    const partneredUnion = [...unionByChild.values()].find((u) => u.partnershipEdgeId === edge.id);
+    const tracedPartnerId =
+      partneredUnion && highlight.tracePersonIds
+        ? partneredUnion.parentIds.find((id) => highlight.tracePersonIds!.has(id))
+        : undefined;
+
     // Partnership edges connect sideways (spouses sit next to each other at
     // the same generation, see tree-layout.builder.ts's orderByPartnership).
     // source/target on the edge itself reflect person1Id/person2Id ordering,
@@ -224,6 +260,7 @@ function toFlowEdges(
       data: {
         isCurrent: edge.isCurrent ?? true,
         isOnTracePath: highlight.traceEdgeIds ? highlight.traceEdgeIds.has(edge.id) : undefined,
+        tracedPartnerId,
       },
     });
 
@@ -231,6 +268,10 @@ function toFlowEdges(
     // partnership edge.
     for (const [childId, union] of unionByChild) {
       if (union.partnershipEdgeId !== edge.id) continue;
+      const childIsOnTracePath = highlight.traceEdgeIds
+        ? highlight.traceEdgeIds.has(`pc-${union.parentIds[0]}-${childId}`) ||
+          highlight.traceEdgeIds.has(`pc-${union.parentIds[1]}-${childId}`)
+        : undefined;
       edges.push({
         id: `union-${edge.id}-${childId}`,
         type: "unionChild",
@@ -239,10 +280,11 @@ function toFlowEdges(
         data: {
           parentAId: union.parentIds[0],
           parentBId: union.parentIds[1],
-          isOnTracePath: highlight.traceEdgeIds
-            ? highlight.traceEdgeIds.has(`pc-${union.parentIds[0]}-${childId}`) ||
-              highlight.traceEdgeIds.has(`pc-${union.parentIds[1]}-${childId}`)
-            : undefined,
+          isOnTracePath: childIsOnTracePath,
+          // Only this child's own trunk line extends back to the traced
+          // parent — a sibling of theirs (same couple, not on the path)
+          // keeps a plain trunk starting at the partnership midpoint.
+          tracedParentId: childIsOnTracePath ? tracedPartnerId : undefined,
         },
       });
     }
@@ -257,8 +299,27 @@ export function toReactFlow(
   cardStyle: TreeCardStyle,
   highlight: TreeHighlightState = {},
 ): { nodes: PersonFlowNode[]; edges: TreeFlowEdge[] } {
+  const edges = toFlowEdges(graph, highlight);
+  // Array order does NOT control paint order here — XYFlow's default
+  // zIndexMode ('basic') assigns every edge the same CSS z-index (its own
+  // edge.zIndex, default 0, plus a node-elevation term that's also 0 for
+  // plain unselected nodes) regardless of where it sits in this array, so a
+  // traced edge crossing a plain sibling edge (e.g. Виктор's parent_child
+  // line crossing his partnership line to Галина) could still end up
+  // underneath it. Giving traced edges an explicit higher zIndex is what
+  // 'basic' mode actually reads to decide stacking.
+  const elevatedEdges = edges.map((edge) => {
+    const isFullyTraced = edge.data?.isOnTracePath === true;
+    // A partnership edge half-colored via tracedPartnerId (see toFlowEdges)
+    // needs the same elevation — it's still an accent-colored stroke that
+    // can otherwise end up under a plain crossing line.
+    const isPartiallyTraced =
+      edge.type === "partnership" && "tracedPartnerId" in (edge.data ?? {}) && edge.data?.tracedPartnerId != null;
+    return isFullyTraced || isPartiallyTraced ? { ...edge, zIndex: 1 } : edge;
+  });
+
   return {
     nodes: graph.nodes.map((node) => toFlowNode(node, familyId, cardStyle, highlight)),
-    edges: toFlowEdges(graph, highlight),
+    edges: elevatedEdges,
   };
 }

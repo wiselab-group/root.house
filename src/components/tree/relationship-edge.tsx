@@ -4,6 +4,16 @@ import { BaseEdge, useInternalNode, type EdgeProps } from "@xyflow/react";
 import type { RelationshipFlowEdge } from "./adapters/xyflow-adapter";
 
 /**
+ * Relationship Trace's line color — deliberately --chart-2, not --primary:
+ * --primary is only as muted as --chart-2 for the focus person's own card
+ * (generation distance 0); every other card's top stripe fades further
+ * (--chart-3, --chart-4...), so a full-strength --primary line reads as
+ * louder than any card it's actually connecting. --chart-2 sits one step
+ * back from full strength, matching the traced cards' own accent weight.
+ */
+export const TRACE_COLOR = "var(--chart-2)";
+
+/**
  * Renders parent_child edges as a solid line and partnership edges as
  * dashed — the visual distinction between "descent" and "union" the plan's
  * DESIGN.md calls for, without needing separate label text on every edge.
@@ -41,7 +51,7 @@ export function RelationshipEdge({
       <BaseEdge
         id={id}
         path={path}
-        style={{ strokeWidth: isOnTracePath ? 3 : 2, stroke: isOnTracePath ? "var(--primary)" : "var(--border)" }}
+        style={{ strokeWidth: isOnTracePath ? 3 : 2, stroke: isOnTracePath ? TRACE_COLOR : "var(--border)" }}
       />
     );
   }
@@ -53,6 +63,7 @@ export function RelationshipEdge({
       target={target}
       isPastPartnership={isPastPartnership}
       isOnTracePath={isOnTracePath}
+      tracedPartnerId={data?.tracedPartnerId}
     />
   );
 }
@@ -72,12 +83,14 @@ function PartnershipEdgeLine({
   target,
   isPastPartnership,
   isOnTracePath,
+  tracedPartnerId,
 }: {
   id: string;
   source: string;
   target: string;
   isPastPartnership: boolean;
   isOnTracePath: boolean;
+  tracedPartnerId?: string;
 }) {
   const sourceNode = useInternalNode(source);
   const targetNode = useInternalNode(target);
@@ -97,14 +110,48 @@ function PartnershipEdgeLine({
   // two just in case a future layout ever mixes sizes within a row.
   const yTarget = targetNode.internals.positionAbsolute.y + targetHeight / 2;
 
+  const dashStyle = {
+    strokeDasharray: isPastPartnership ? "2 4" : "5 3",
+  };
+
+  // A trace path can reach this couple's shared child through only ONE of
+  // them (parent → union trunk → child, see union-child-edge.tsx and
+  // xyflow-adapter.ts's tracedPartnerId) — the partnership relationship
+  // itself isn't a hop on the path, so the line as a whole isn't
+  // "isOnTracePath". The traced partner's own half is drawn by
+  // UnionChildEdge instead (its path extends back through this exact
+  // segment to the traced parent's card, see its tracedParentId handling)
+  // — one continuous <path> there gets a clean miter join at the
+  // partnership midpoint, which two independently-drawn <BaseEdge>s meeting
+  // at that point can't (each one's stroke-linecap end reads as a visible
+  // bump instead of a sharp corner). This component only draws the OTHER
+  // half — the untraced partner's plain dashed segment.
+  if (!isOnTracePath && tracedPartnerId) {
+    const midX = (x1 + x2) / 2;
+    const midY = (y + yTarget) / 2;
+    // (x1,y) belongs to whichever side is geometrically left, not
+    // necessarily `source` — pick the untraced partner's own coordinates by
+    // whether they're on that left side or not.
+    const tracedIsLeft = (tracedPartnerId === source) === sourceIsLeft;
+    const [plainX, plainY] = tracedIsLeft ? [x2, yTarget] : [x1, y];
+
+    return (
+      <BaseEdge
+        id={id}
+        path={`M${midX},${midY} L${plainX},${plainY}`}
+        style={{ strokeWidth: 1.5, stroke: "var(--muted-foreground)", ...dashStyle }}
+      />
+    );
+  }
+
   return (
     <BaseEdge
       id={id}
       path={`M${x1},${y} L${x2},${yTarget}`}
       style={{
         strokeWidth: isOnTracePath ? 3 : 1.5,
-        strokeDasharray: isPastPartnership ? "2 4" : "5 3",
-        stroke: isOnTracePath ? "var(--primary)" : "var(--muted-foreground)",
+        stroke: isOnTracePath ? TRACE_COLOR : "var(--muted-foreground)",
+        ...dashStyle,
       }}
     />
   );

@@ -54,14 +54,24 @@ export function TreeCanvas({
     [graph, familyId, cardStyle, highlight],
   );
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // toReactFlow's output only feeds useNodesState's initial value — swapping
-  // cardStyle after mount needs an explicit sync, same reason any derived-
-  // from-props state does under React's "state initializers only run once" rule.
+  // toReactFlow's output only feeds useNodesState/useEdgesState's initial
+  // value — any prop change after mount (cardStyle, but also `highlight`
+  // when a filter or Relationship Trace selection changes) needs an
+  // explicit sync, same reason any derived-from-props state does under
+  // React's "state initializers only run once" rule. Missing this on the
+  // edges side is why trace highlighting used to update card borders (via
+  // this same effect on nodes) but never the connecting lines: initialEdges
+  // recomputed on every highlight change, but the edges state itself never
+  // picked it back up.
   useEffect(() => {
     setNodes(initialNodes);
   }, [initialNodes, setNodes]);
+
+  useEffect(() => {
+    setEdges(initialEdges);
+  }, [initialEdges, setEdges]);
 
   const setFocus = useCallback(
     (personId: string) => {
