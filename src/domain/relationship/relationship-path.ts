@@ -24,13 +24,22 @@ export type BloodRelationLabel =
   | "cousin"
   | "unrelated";
 
+/**
+ * BloodRelationLabel plus "spouse" — findRelationshipPath (genealogy-algorithms.ts)
+ * falls back to reporting a direct partnership edge when computeRelationshipPath
+ * finds no shared ancestor, since two people can be family (married) without
+ * being blood-related. computeRelationshipPath itself stays blood-only — see
+ * this file's module doc — "spouse" is only ever attached by that fallback.
+ */
+export type RelationshipLabel = BloodRelationLabel | "spouse";
+
 export interface RelationshipPathResult {
-  label: BloodRelationLabel;
+  label: RelationshipLabel;
   /** For cousins: 1 = first cousin, 2 = second cousin, etc. Undefined otherwise. */
   cousinDegree?: number;
   /** For cousins: how many generations removed. 0 = same generation. Undefined otherwise. */
   removed?: number;
-  /** Person id of the lowest common ancestor, or null if none was found (unrelated). */
+  /** Person id of the lowest common ancestor, or null if none was found (unrelated); also null for "spouse". */
   commonAncestorId: string | null;
 }
 

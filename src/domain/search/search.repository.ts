@@ -93,6 +93,81 @@ export async function searchPersonsByName(
     }));
 }
 
+/**
+ * Substring match on name (ILIKE `%query%`, or the full family list when
+ * `query` is blank) — backs the Relationship Trace person picker, which
+ * needs "browse everyone, then narrow as you type" rather than the global
+ * search page's typo-tolerant pg_trgm ranking. A single "А" or "Ал" should
+ * surface every person whose name *contains* that letter/syllable anywhere,
+ * which trigram similarity does not reliably do for such short queries.
+ */
+export async function searchPersonsByNameSubstring(
+  familyId: string,
+  query: string,
+  limit = 50,
+): Promise<PersonSearchResult[]> {
+  const trimmed = query.trim();
+
+  const result = await db.execute<{
+    id: string;
+    slug: string;
+    first_name: string | null;
+    last_name: string | null;
+    maiden_name: string | null;
+    nickname: string | null;
+    is_placeholder: boolean;
+    birth_date_year: number | null;
+    birth_date_month: number | null;
+    birth_date_day: number | null;
+    birth_date_precision: string | null;
+    birth_date_approximate: boolean | null;
+    death_date_year: number | null;
+    death_date_month: number | null;
+    death_date_day: number | null;
+    death_date_precision: string | null;
+    death_date_approximate: boolean | null;
+  }>(sql`
+    SELECT
+      id, slug, first_name, last_name, maiden_name, nickname, is_placeholder,
+      birth_date_year, birth_date_month, birth_date_day, birth_date_precision, birth_date_approximate,
+      death_date_year, death_date_month, death_date_day, death_date_precision, death_date_approximate
+    FROM persons
+    WHERE family_id = ${familyId}
+      AND (
+        ${trimmed} = ''
+        OR (coalesce(first_name, '') || ' ' || coalesce(last_name, '') || ' ' || coalesce(maiden_name, '') || ' ' || coalesce(nickname, ''))
+           ILIKE ${'%' + trimmed + '%'}
+      )
+    ORDER BY last_name NULLS LAST, first_name NULLS LAST
+    LIMIT ${limit}
+  `);
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    maidenName: row.maiden_name,
+    nickname: row.nickname,
+    isPlaceholder: row.is_placeholder,
+    birthDate: fromColumns({
+      year: row.birth_date_year,
+      month: row.birth_date_month,
+      day: row.birth_date_day,
+      precision: row.birth_date_precision,
+      approximate: row.birth_date_approximate,
+    }),
+    deathDate: fromColumns({
+      year: row.death_date_year,
+      month: row.death_date_month,
+      day: row.death_date_day,
+      precision: row.death_date_precision,
+      approximate: row.death_date_approximate,
+    }),
+    similarity: 1,
+  }));
+}
+
 /** Exact/range match on birth or death year — no trigram index needed, persons_family_idx covers family_id filtering. */
 export async function searchPersonsByYear(
   familyId: string,

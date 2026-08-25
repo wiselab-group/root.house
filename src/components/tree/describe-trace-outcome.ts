@@ -24,5 +24,6 @@ const RELATIONSHIP_LABELS: Record<string, string> = {
   aunt_or_uncle: "Тётя/дядя",
   niece_or_nephew: "Племянник/племянница",
   cousin: "Кузен/кузина",
+  spouse: "Супруг/супруга",
   unrelated: "Родство не найдено",
 };

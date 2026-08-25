@@ -283,6 +283,14 @@ export type RelationshipPathOutcome = RelationshipPathFound | RelationshipPathNo
  * Returns "insufficient_data" (never a guessed answer) when either person
  * isn't present in the graph at all — ambiguous/missing data is a valid
  * outcome per the plan's §6 validation philosophy, not an error to throw.
+ *
+ * computeRelationshipPath only ever looks at shared ancestors (it's
+ * intentionally blood-only — see relationship-path.ts's module doc), so a
+ * married couple with no common ancestor would otherwise come back
+ * "unrelated" even though they ARE related — just not by blood. Before
+ * giving up, this checks for a direct partnership edge between A and B and
+ * reports that as "found" with a "spouse" label and a single partnership
+ * step, instead of leaving the (very common) spouse case unresolved.
  */
 export function findRelationshipPath(
   graph: GenealogyGraph,
@@ -304,6 +312,20 @@ export function findRelationshipPath(
   }
 
   if (relationship.commonAncestorId === null) {
+    const directPartnership = (graph.partnershipEdgesOf.get(personAId) ?? []).find(
+      (edge) => edge.person1Id === personBId || edge.person2Id === personBId,
+    );
+    if (directPartnership) {
+      return {
+        status: "found",
+        personAId,
+        personBId,
+        personIds: [personAId, personBId],
+        steps: [{ fromId: personAId, toId: personBId, edgeKind: "partnership" }],
+        commonAncestorId: null,
+        relationship: { label: "spouse", commonAncestorId: null },
+      };
+    }
     return { status: "unrelated", personAId, personBId };
   }
 

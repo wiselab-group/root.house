@@ -1,5 +1,10 @@
 import { classifySearchQuery } from "./query-classifier";
-import { searchPersonsByName, searchPersonsByYear, type PersonSearchResult } from "./search.repository";
+import {
+  searchPersonsByName,
+  searchPersonsByNameSubstring,
+  searchPersonsByYear,
+  type PersonSearchResult,
+} from "./search.repository";
 
 export type { PersonSearchResult };
 
@@ -23,4 +28,16 @@ export async function searchPeople(familyId: string, query: string): Promise<Per
 
   if (classified.text.length === 0) return [];
   return searchPersonsByName(familyId, classified.text);
+}
+
+/**
+ * "Browse everyone, then narrow" lookup for person pickers (Relationship
+ * Trace's Person A/B combobox): blank query returns the whole family so the
+ * list is populated the moment the field is focused, and any non-blank
+ * query does a plain substring match rather than searchPeople's
+ * typo-tolerant pg_trgm ranking — a single letter should surface every name
+ * containing it, which similarity scoring does not do for short queries.
+ */
+export async function searchPeopleForPicker(familyId: string, query: string): Promise<PersonSearchResult[]> {
+  return searchPersonsByNameSubstring(familyId, query);
 }

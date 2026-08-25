@@ -318,6 +318,16 @@ describe("findRelationshipPath", () => {
     expect(findRelationshipPath(graph, "a", "b")).toEqual({ status: "unrelated", personAId: "a", personBId: "b" });
   });
 
+  it("finds a spouse via a direct partnership edge when there's no shared ancestor", () => {
+    const graph = buildGenealogyGraph([person("husband"), person("wife")], [], [partner("husband", "wife")]);
+    const result = findRelationshipPath(graph, "husband", "wife");
+    expect(result.status).toBe("found");
+    if (result.status !== "found") throw new Error("expected found");
+    expect(result.personIds).toEqual(["husband", "wife"]);
+    expect(result.steps).toEqual([{ fromId: "husband", toId: "wife", edgeKind: "partnership" }]);
+    expect(result.relationship.label).toBe("spouse");
+  });
+
   it("handles the same-person case", () => {
     const graph = buildGenealogyGraph([person("a")], [], []);
     const result = findRelationshipPath(graph, "a", "a");
