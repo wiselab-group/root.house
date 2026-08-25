@@ -46,7 +46,7 @@ export function PersonCombobox({
 }) {
   const inputId = useId();
   const [results, setResults] = useState<PersonSearchResult[]>([]);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(value?.name ?? "");
   const [localValue, setLocalValue] = useState(value);
   const [isPending, startTransition] = useTransition();
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -58,11 +58,13 @@ export function PersonCombobox({
   // when the incoming prop no longer matches it, the prop has moved (URL
   // navigation completed, or the value changed from outside this component,
   // e.g. the other slot's excludeId making this one stale) and localValue
-  // resets to match it.
+  // (plus the input's displayed text, `query` — see the `inputValue` prop
+  // below) resets to match it.
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
     setPrevValue(value);
     setLocalValue(value);
+    setQuery(value?.name ?? "");
   }
 
   // The selected person may fall out of the latest search results (query
@@ -118,15 +120,42 @@ export function PersonCombobox({
     <Combobox.Root<PersonSearchResult>
       items={items}
       filter={null}
-      value={localValue ? items.find((person) => person.id === localValue.id) ?? null : null}
+      // Deliberately NOT just `localValue` — base-ui re-fills the input with
+      // itemToStringLabel(value) any time the *selected value it's given*
+      // changes (its internal setSelectedValue -> shouldFillInput path).
+      // While the user is actively editing (query has diverged from the
+      // selected person's name, e.g. one character into a backspace), the
+      // value passed here must already read as "nothing selected" — otherwise
+      // localValue only turns null on the *next* selection/clear (see
+      // onValueChange/Combobox.Clear below), and in the gap base-ui's own
+      // resync fires a second time and wipes the whole field back to empty
+      // instead of leaving the one-character-shorter edit in place.
+      value={localValue && query === localValue.name ? (items.find((person) => person.id === localValue.id) ?? null) : null}
+      // Controlled explicitly (rather than left to base-ui's own inputValue
+      // state) so the displayed text is driven only by `query`, never by
+      // base-ui's own selected-value resync.
+      inputValue={query}
       itemToStringLabel={(person) => personDisplayName(person)}
       onValueChange={(person) => {
         const next = person ? { id: person.id, name: personDisplayName(person) } : null;
         setLocalValue(next);
         onChange(next);
+        setQuery(next ? next.name : "");
+        // Picking an item fires onValueChange but NOT onInputValueChange (see
+        // the "item-press" guard below) — without this, `results` stays
+        // whatever the last real search returned (often the full family list
+        // from the initial blank-query fetch), so the popup would keep
+        // showing everyone underneath the now-filled input instead of just
+        // the person that was picked.
+        setResults(person ? [person] : []);
       }}
       onInputValueChange={(nextValue, { reason }) => {
         if (reason === "item-press") return;
+        // Only `query` (the displayed text) changes here — localValue/onChange
+        // are deliberately left alone on every keystroke; the `value` prop
+        // above already stops reporting a selection once query diverges, and
+        // eagerly nulling localValue here is what caused base-ui's resync
+        // effect to wipe the field (see that prop's comment).
         setQuery(nextValue);
         runSearch(nextValue);
       }}
