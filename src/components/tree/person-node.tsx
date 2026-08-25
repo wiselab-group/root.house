@@ -61,42 +61,44 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
         animationDelay: `${Math.min(Math.abs(data.generation), 4) * 60}ms`,
       }}
     >
+      {/* Handles are invisible (opacity-0) — RelationshipEdge/UnionChildEdge
+       *  compute every edge's actual geometry themselves from live node
+       *  positions (see relationship-edge.tsx, union-child-edge.tsx), not
+       *  from where a handle's own CSS anchor sits, so XYFlow's default
+       *  visible dot no longer means anything to point at. top/bottom still
+       *  need to exist and keep their ids — plain parent_child edges (no
+       *  shared union trunk) still anchor to them via sourceHandle/
+       *  targetHandle in xyflow-adapter.ts. left/right have no remaining
+       *  consumer but stay for layout symmetry / a future direct anchor. */}
       <Handle
         type="target"
         id="top"
         position={Position.Top}
-        className="bg-border!"
+        className="opacity-0!"
       />
-      {/* Partnership edges connect sideways (spouses sit side-by-side at the
-       *  same generation, see tree-layout.builder.ts's orderByPartnership) —
-       *  separate left/right handles so RelationshipEdge can route a
-       *  straight horizontal line instead of detouring through the
-       *  top/bottom handles meant for parent_child edges. Both sides carry
-       *  both handle types since either person in the pair can end up on
-       *  either side after layout. */}
       <Handle
         type="source"
         id="left"
         position={Position.Left}
-        className="bg-border!"
+        className="opacity-0!"
       />
       <Handle
         type="target"
         id="left"
         position={Position.Left}
-        className="bg-border!"
+        className="opacity-0!"
       />
       <Handle
         type="source"
         id="right"
         position={Position.Right}
-        className="bg-border!"
+        className="opacity-0!"
       />
       <Handle
         type="target"
         id="right"
         position={Position.Right}
-        className="bg-border!"
+        className="opacity-0!"
       />
       {data.cardStyle === "portrait" ? (
         <PortraitCardBody
@@ -117,7 +119,7 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
         type="source"
         id="bottom"
         position={Position.Bottom}
-        className="bg-border!"
+        className="opacity-0!"
       />
     </div>
   );
