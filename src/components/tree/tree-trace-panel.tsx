@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRightIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowRightIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,6 +62,7 @@ export function TreeTracePanel({
             excludeId={traceB?.id}
             className="sm:flex-1"
           />
+          <ArrowDownIcon aria-hidden className="size-4 shrink-0 self-center text-muted-foreground sm:hidden" />
           <ArrowRightIcon
             aria-hidden
             className="hidden size-4 shrink-0 self-end text-muted-foreground sm:block sm:mb-2.5"
