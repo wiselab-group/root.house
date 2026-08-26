@@ -110,7 +110,15 @@ export function TreeCanvas({
         edgeTypes={edgeTypes}
         fitView
         proOptions={{ hideAttribution: true }}
-        minZoom={0.2}
+        // fitView clamps its computed zoom to [minZoom, maxZoom] (see
+        // @xyflow/system's fitViewport) — with the whole connected family
+        // now laid out at once (page.tsx passes ancestorGenerations/
+        // descendantGenerations: Infinity), a large family can genuinely
+        // need to zoom out well past what a 2-generation window ever did.
+        // 0.2 used to be plenty; capped there now, fitView silently stops
+        // zooming out and crops off however many nodes/edges don't fit —
+        // they're still in `nodes`/`edges`, just outside the clamped view.
+        minZoom={0.02}
         maxZoom={1.5}
       >
         <Background gap={24} />

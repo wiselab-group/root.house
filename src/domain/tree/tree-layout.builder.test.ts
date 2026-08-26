@@ -182,4 +182,120 @@ describe("buildFocusTreeLayout", () => {
     expect(result.nodes.filter((n) => n.isFocus)).toHaveLength(1);
     expect(result.nodes.find((n) => n.isFocus)?.id).toBe("alice");
   });
+
+  it("includes an ancestor's siblings (great-aunt/uncle), not just the focus person's own siblings", () => {
+    // greatGrandparent -> {grandparent, grandparentsSibling}; grandparent -> parent -> alice.
+    // From alice's perspective, grandparentsSibling is a side-branch off an
+    // ANCESTOR (grandparent), not off alice directly — the old single-pass
+    // sibling logic (keyed only to focusPersonId) never found this.
+    const result = buildFocusTreeLayout({
+      persons: [
+        person("greatGrandparent"),
+        person("grandparent"),
+        person("grandparentsSibling"),
+        person("parent"),
+        person("alice"),
+      ],
+      parentChildEdges: [
+        { parentId: "greatGrandparent", childId: "grandparent" },
+        { parentId: "greatGrandparent", childId: "grandparentsSibling" },
+        { parentId: "grandparent", childId: "parent" },
+        { parentId: "parent", childId: "alice" },
+      ],
+      partnershipEdges: [],
+      focusPersonId: "alice",
+      ancestorGenerations: Infinity,
+      descendantGenerations: Infinity,
+    });
+
+    const ids = result.nodes.map((n) => n.id);
+    expect(ids).toContain("grandparentsSibling");
+    expect(result.nodes.find((n) => n.id === "grandparentsSibling")?.generation).toBe(-2);
+  });
+
+  it("shows the same connected family whether focus is an ancestor or a descendant", () => {
+    // viktor -- galina (partners), their child alexander, alexander's sibling eleonora,
+    // and viktor's own sibling viktorsSibling (a side-branch off viktor, not off alexander).
+    const persons = [
+      person("viktor"),
+      person("galina"),
+      person("viktorsSibling"),
+      person("alexander"),
+      person("eleonora"),
+    ];
+    const parentChildEdges = [
+      { parentId: "viktor", childId: "alexander" },
+      { parentId: "galina", childId: "alexander" },
+      { parentId: "viktor", childId: "eleonora" },
+      { parentId: "galina", childId: "eleonora" },
+    ];
+    const partnershipEdges = [{ person1Id: "viktor", person2Id: "galina", isCurrent: true }];
+    // viktorsSibling shares a parent with viktor — give both a common parent
+    // so deriveSiblings-style logic (here: the parentsOf/childrenOf sibling
+    // expansion) finds them.
+    const withGrandparent = {
+      persons: [...persons, person("greatGrandparent")],
+      parentChildEdges: [
+        ...parentChildEdges,
+        { parentId: "greatGrandparent", childId: "viktor" },
+        { parentId: "greatGrandparent", childId: "viktorsSibling" },
+      ],
+      partnershipEdges,
+    };
+
+    const fromViktor = buildFocusTreeLayout({
+      ...withGrandparent,
+      focusPersonId: "viktor",
+      ancestorGenerations: Infinity,
+      descendantGenerations: Infinity,
+    });
+    const fromAlexander = buildFocusTreeLayout({
+      ...withGrandparent,
+      focusPersonId: "alexander",
+      ancestorGenerations: Infinity,
+      descendantGenerations: Infinity,
+    });
+
+    const idsFromViktor = new Set(fromViktor.nodes.map((n) => n.id));
+    const idsFromAlexander = new Set(fromAlexander.nodes.map((n) => n.id));
+    expect(idsFromViktor).toEqual(idsFromAlexander);
+    expect(idsFromAlexander.has("viktorsSibling")).toBe(true);
+  });
+
+  it("includes a partner's own ancestors, not just the partner card itself", () => {
+    // alice's own line: parent -> alice. alice's partner (bob) has his own
+    // parents (bobsMother, bobsFather) who are never anywhere in alice's
+    // ancestor chain — they only connect to the visible graph THROUGH bob,
+    // who himself was only ever added by the partnership-join pass, not by
+    // the ancestor/descendant BFS. The old code ran that BFS exactly once,
+    // from focusPersonId, before partners were even known about — so bob's
+    // own parents could never be discovered no matter how many sibling/
+    // partner passes ran afterward. This reproduces the reported screenshot
+    // bug: a partner card (e.g. Марфа Купчик) rendered with no parents at all.
+    const result = buildFocusTreeLayout({
+      persons: [
+        person("parent"),
+        person("alice"),
+        person("bob"),
+        person("bobsMother"),
+        person("bobsFather"),
+      ],
+      parentChildEdges: [
+        { parentId: "parent", childId: "alice" },
+        { parentId: "bobsMother", childId: "bob" },
+        { parentId: "bobsFather", childId: "bob" },
+      ],
+      partnershipEdges: [
+        { person1Id: "alice", person2Id: "bob", isCurrent: true },
+      ],
+      focusPersonId: "alice",
+      ancestorGenerations: Infinity,
+      descendantGenerations: Infinity,
+    });
+
+    const ids = result.nodes.map((n) => n.id);
+    expect(ids).toContain("bobsMother");
+    expect(ids).toContain("bobsFather");
+    expect(result.nodes.find((n) => n.id === "bobsMother")?.generation).toBe(-1);
+  });
 });

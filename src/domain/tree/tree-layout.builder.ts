@@ -124,39 +124,110 @@ export function buildFocusTreeLayout(
 
   // generation: personId -> integer offset from focus (0 = focus's generation)
   const generationOf = new Map<string, number>([[focusPersonId, 0]]);
+  // How many ancestor/descendant "hops" a person is from the nearest node
+  // whose own BFS actually reached them (focusPersonId starts at 0 for
+  // both). A sibling or partner added mid-pass inherits their anchor's own
+  // remaining budget — they did not themselves cost a hop, they're a
+  // lateral join at the same generation — so their ancestors/descendants
+  // must still expand the full ancestorGenerations/descendantGenerations
+  // from THAT anchor's own depth-so-far, not from a stunted budget.
+  const ancestorDepthOf = new Map<string, number>([[focusPersonId, 0]]);
+  const descendantDepthOf = new Map<string, number>([[focusPersonId, 0]]);
 
-  collectByBfs(
-    focusPersonId,
-    ancestorGenerations,
-    generationOf,
-    (id) => parentsOf.get(id) ?? [],
-    -1,
-  );
-  collectByBfs(
-    focusPersonId,
-    descendantGenerations,
-    generationOf,
-    (id) => childrenOf.get(id) ?? [],
-    1,
-  );
+  // Multi-source BFS: every person discovered (via ancestor/descendant
+  // traversal, sibling expansion, or partnership) is itself a source for
+  // further ancestor/descendant traversal, sibling expansion, and
+  // partnership joins — run all three to a fixed point together.
+  //
+  // The earlier version ran collectByBfs ONCE from focusPersonId, then
+  // expanded siblings/partners as a separate pass — so a partner or
+  // sibling pulled in by that second pass was a dead end: their OWN
+  // parents/children/ancestors/descendants were never traversed. That is
+  // why a partner's card would show with no family behind them at all
+  // (e.g. Марфа Купчик rendered with no parents), and why which "side
+  // branches" appeared depended on which person happened to be focus.
+  let addedAny = true;
+  while (addedAny) {
+    addedAny = false;
 
-  // Siblings of the focus person (other children of any of their parents)
-  // join at generation 0 — parent_child BFS alone never finds them, since
-  // they aren't an ancestor or descendant of the focus person.
-  for (const parentId of parentsOf.get(focusPersonId) ?? []) {
-    for (const siblingId of childrenOf.get(parentId) ?? []) {
-      if (!generationOf.has(siblingId)) {
-        generationOf.set(siblingId, 0);
+    // Ancestors: from every node whose ancestor-budget isn't exhausted yet.
+    for (const [personId, depth] of [...ancestorDepthOf]) {
+      if (depth >= ancestorGenerations) continue;
+      const generation = generationOf.get(personId)!;
+      for (const parentId of parentsOf.get(personId) ?? []) {
+        const isNew = !generationOf.has(parentId);
+        if (isNew) {
+          generationOf.set(parentId, generation - 1);
+          addedAny = true;
+        }
+        if (!ancestorDepthOf.has(parentId) || ancestorDepthOf.get(parentId)! > depth + 1) {
+          ancestorDepthOf.set(parentId, depth + 1);
+          addedAny = true;
+        }
       }
     }
-  }
 
-  // Partners of anyone already in the visible set join at the same generation.
-  for (const { person1Id, person2Id } of input.partnershipEdges) {
-    if (generationOf.has(person1Id) && !generationOf.has(person2Id)) {
-      generationOf.set(person2Id, generationOf.get(person1Id)!);
-    } else if (generationOf.has(person2Id) && !generationOf.has(person1Id)) {
-      generationOf.set(person1Id, generationOf.get(person2Id)!);
+    // Descendants: from every node whose descendant-budget isn't exhausted yet.
+    for (const [personId, depth] of [...descendantDepthOf]) {
+      if (depth >= descendantGenerations) continue;
+      const generation = generationOf.get(personId)!;
+      for (const childId of childrenOf.get(personId) ?? []) {
+        const isNew = !generationOf.has(childId);
+        if (isNew) {
+          generationOf.set(childId, generation + 1);
+          addedAny = true;
+        }
+        if (!descendantDepthOf.has(childId) || descendantDepthOf.get(childId)! > depth + 1) {
+          descendantDepthOf.set(childId, depth + 1);
+          addedAny = true;
+        }
+      }
+    }
+
+    // Siblings of any already-visible person join at that person's own
+    // generation, inheriting their shared parent's remaining budgets so
+    // the sibling's own ancestors/descendants keep expanding too.
+    for (const [personId, generation] of [...generationOf]) {
+      for (const parentId of parentsOf.get(personId) ?? []) {
+        const parentAncestorDepth = ancestorDepthOf.get(parentId);
+        for (const siblingId of childrenOf.get(parentId) ?? []) {
+          if (!generationOf.has(siblingId)) {
+            generationOf.set(siblingId, generation);
+            addedAny = true;
+          }
+          if (parentAncestorDepth !== undefined) {
+            const siblingBudget = parentAncestorDepth + 1;
+            if (!ancestorDepthOf.has(siblingId) || ancestorDepthOf.get(siblingId)! > siblingBudget) {
+              ancestorDepthOf.set(siblingId, siblingBudget);
+              addedAny = true;
+            }
+          }
+          if (!descendantDepthOf.has(siblingId)) {
+            descendantDepthOf.set(siblingId, 0);
+            addedAny = true;
+          }
+        }
+      }
+    }
+
+    // Partners of any already-visible person join at that person's own
+    // generation, inheriting their partner's remaining budgets so the
+    // partner's own ancestors/descendants keep expanding too.
+    for (const { person1Id, person2Id } of input.partnershipEdges) {
+      const generation1 = generationOf.get(person1Id);
+      const generation2 = generationOf.get(person2Id);
+      if (generation1 !== undefined && generation2 === undefined) {
+        generationOf.set(person2Id, generation1);
+        addedAny = true;
+      } else if (generation2 !== undefined && generation1 === undefined) {
+        generationOf.set(person1Id, generation2);
+        addedAny = true;
+      }
+
+      if (generationOf.has(person1Id) && generationOf.has(person2Id)) {
+        if (mergeBudget(ancestorDepthOf, person1Id, person2Id)) addedAny = true;
+        if (mergeBudget(descendantDepthOf, person1Id, person2Id)) addedAny = true;
+      }
     }
   }
 
@@ -230,30 +301,31 @@ function groupBy<T, K, V>(
 }
 
 /**
- * BFS outward from `startId` up to `maxGenerations` steps, recording each
- * visited id's generation offset (multiplied by `direction`: -1 for
- * ancestors going up, +1 for descendants going down) into `generationOf`.
+ * Two people joined as partners/siblings should share one "remaining
+ * traversal budget" going forward — whichever of the pair has already used
+ * less of their budget (i.e. has more depth left, or wasn't budgeted yet)
+ * wins for both, since real family membership doesn't reset at a marriage.
+ * Returns true if either side's budget changed (i.e. more BFS work to do).
  */
-function collectByBfs(
-  startId: string,
-  maxGenerations: number,
-  generationOf: Map<string, number>,
-  neighborsOf: (id: string) => string[],
-  direction: -1 | 1,
-): void {
-  let frontier = [startId];
-  for (let depth = 1; depth <= maxGenerations; depth++) {
-    const nextFrontier: string[] = [];
-    for (const id of frontier) {
-      for (const neighborId of neighborsOf(id)) {
-        if (generationOf.has(neighborId)) continue;
-        generationOf.set(neighborId, depth * direction);
-        nextFrontier.push(neighborId);
-      }
-    }
-    if (nextFrontier.length === 0) break;
-    frontier = nextFrontier;
+function mergeBudget(
+  depthOf: Map<string, number>,
+  id1: string,
+  id2: string,
+): boolean {
+  const depth1 = depthOf.get(id1);
+  const depth2 = depthOf.get(id2);
+  if (depth1 === undefined && depth2 === undefined) return false;
+  const merged = Math.min(depth1 ?? Infinity, depth2 ?? Infinity);
+  let changed = false;
+  if (depth1 === undefined || depth1 > merged) {
+    depthOf.set(id1, merged);
+    changed = true;
   }
+  if (depth2 === undefined || depth2 > merged) {
+    depthOf.set(id2, merged);
+    changed = true;
+  }
+  return changed;
 }
 
 /** Keeps partners adjacent within a generation row instead of scattering them arbitrarily. */
