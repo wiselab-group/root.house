@@ -6,12 +6,15 @@ import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import {
   createFamilySchema,
+  deleteFamilySchema,
   updateFamilyDetailsSchema,
   updateFamilySlugSchema,
 } from "@/lib/validation/family";
 import {
   createFamily,
+  deleteFamily,
   getFamilySlugById,
+  getFamilySummary,
   updateFamilyDetails,
   updateFamilySlug,
   updateDefaultFocusPerson,
@@ -123,7 +126,9 @@ export async function updateFamilySlugAction(
   // people/events, hence 'owner' rather than the usual 'editor' minimum.
   await requireFamilyAccess(familyId, session.user.id, "owner");
 
-  const parsed = updateFamilySlugSchema.safeParse({ slug: formData.get("slug") });
+  const parsed = updateFamilySlugSchema.safeParse({
+    slug: formData.get("slug"),
+  });
 
   if (!parsed.success) {
     const fieldErrors: UpdateFamilySlugFormState["fieldErrors"] = {};
@@ -149,6 +154,60 @@ export async function updateFamilySlugAction(
   redirect(`/families/${parsed.data.slug}`);
 }
 
+export interface DeleteFamilyFormState {
+  error?: string;
+  fieldErrors?: Partial<Record<"confirmName", string>>;
+}
+
+/**
+ * Permanently deletes the family and everything in it (people, relationships,
+ * events, media, stories, places — see family.service.ts::deleteFamily).
+ * Irreversible, so this is deliberately owner-only and requires the caller
+ * to retype the family's exact current name as confirmation, on top of the
+ * confirmation dialog already required client-side (see
+ * FamilyDeleteSettings) — belt-and-suspenders against a misclick nuking a
+ * whole archive.
+ */
+export async function deleteFamilyAction(
+  familyId: string,
+  _prevState: DeleteFamilyFormState,
+  formData: FormData,
+): Promise<DeleteFamilyFormState> {
+  const session = await auth();
+  if (!session?.user) {
+    return { error: "Сессия истекла — войдите заново." };
+  }
+
+  await requireFamilyAccess(familyId, session.user.id, "owner");
+
+  const parsed = deleteFamilySchema.safeParse({
+    confirmName: formData.get("confirmName"),
+  });
+
+  if (!parsed.success) {
+    return { fieldErrors: { confirmName: parsed.error.issues[0]?.message } };
+  }
+
+  const family = await getFamilySummary(familyId);
+  if (!family) {
+    // Already gone (e.g. deleted from another tab) — nothing left to do.
+    redirect("/families");
+  }
+
+  if (parsed.data.confirmName !== family.name) {
+    return {
+      fieldErrors: {
+        confirmName: "Название не совпадает — введите его точно как показано.",
+      },
+    };
+  }
+
+  await deleteFamily(familyId);
+
+  revalidatePath("/families", "layout");
+  redirect("/families");
+}
+
 /**
  * Sets (personId) or clears (null) the CALLER's own default focus person —
  * a per-user tree-viewing preference (see family.service.ts), not a
@@ -169,7 +228,11 @@ export async function updateDefaultFocusPersonAction(
 
   await requireFamilyAccess(familyId, session.user.id, "viewer");
 
-  const result = await updateDefaultFocusPerson(familyId, session.user.id, personId);
+  const result = await updateDefaultFocusPerson(
+    familyId,
+    session.user.id,
+    personId,
+  );
   if (!result.ok) return result;
 
   revalidatePath(`/families`, "layout");

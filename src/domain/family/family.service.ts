@@ -21,7 +21,9 @@ export interface FamilySummaryWithCount extends FamilySummary {
  *  each annotated with how many Person records the family already holds
  *  (a correlated subquery, so families with zero people still come back
  *  as 0 rather than being dropped by a join). */
-export async function listFamiliesForUser(userId: string): Promise<FamilySummaryWithCount[]> {
+export async function listFamiliesForUser(
+  userId: string,
+): Promise<FamilySummaryWithCount[]> {
   const personCount = sql<number>`(
     select count(*)::int from ${persons} where ${persons.familyId} = ${families.id}
   )`.as("person_count");
@@ -45,7 +47,9 @@ export async function listFamiliesForUser(userId: string): Promise<FamilySummary
 /** Fetches a family's own summary fields — NOT scoped by user, callers must
  *  already hold a validated FamilyMember row (e.g. via requireFamilyAccess)
  *  before calling this to render family name/description. */
-export async function getFamilySummary(familyId: string): Promise<FamilySummary | null> {
+export async function getFamilySummary(
+  familyId: string,
+): Promise<FamilySummary | null> {
   const row = await db.query.families.findFirst({
     where: eq(families.id, familyId),
     columns: { id: true, name: true, slug: true, description: true },
@@ -76,7 +80,9 @@ export async function getFamilyIdBySlug(slug: string): Promise<string | null> {
  * /families/[slug]/... redirect or revalidatePath target after a mutation.
  * Not an access check either; callers must already have authorized familyId.
  */
-export async function getFamilySlugById(familyId: string): Promise<string | null> {
+export async function getFamilySlugById(
+  familyId: string,
+): Promise<string | null> {
   const row = await db.query.families.findFirst({
     where: eq(families.id, familyId),
     columns: { slug: true },
@@ -104,13 +110,16 @@ export async function createFamily(
   userId: string,
   input: CreateFamilyInput,
 ): Promise<{ id: string; slug: string }> {
-  const slug = await ensureUniqueSlug(slugify(input.name), async (candidate) => {
-    const existing = await db.query.families.findFirst({
-      where: eq(families.slug, candidate),
-      columns: { id: true },
-    });
-    return existing !== undefined;
-  });
+  const slug = await ensureUniqueSlug(
+    slugify(input.name),
+    async (candidate) => {
+      const existing = await db.query.families.findFirst({
+        where: eq(families.slug, candidate),
+        columns: { id: true },
+      });
+      return existing !== undefined;
+    },
+  );
 
   const result = await db.execute<{ id: string }>(sql`
     WITH new_family AS (
@@ -133,7 +142,10 @@ export async function createFamily(
  * a *different* family; renaming to the family's own current slug is a no-op
  * success, not a conflict.
  */
-export async function updateFamilySlug(familyId: string, newSlug: string): Promise<void> {
+export async function updateFamilySlug(
+  familyId: string,
+  newSlug: string,
+): Promise<void> {
   if (!isValidSlugFormat(newSlug)) {
     throw new SlugTakenError(
       "Ссылка может содержать только латинские буквы, цифры и дефис (2-64 символа).",
@@ -172,7 +184,11 @@ export async function updateFamilyDetails(
 ): Promise<void> {
   await db
     .update(families)
-    .set({ name: input.name, description: input.description ?? null, updatedAt: new Date() })
+    .set({
+      name: input.name,
+      description: input.description ?? null,
+      updatedAt: new Date(),
+    })
     .where(eq(families.id, familyId));
 }
 
@@ -206,12 +222,29 @@ export async function updateDefaultFocusPerson(
 }
 
 /**
+ * Permanently deletes a Family and everything under it — every Person,
+ * Relationship, Event, Media, Story, Place and FamilyMember row cascades
+ * from `families.id` at the schema level (see db/schema/*.ts), so a single
+ * DELETE on this row is enough; there is no soft-delete/undo. Caller must
+ * have already verified (via requireFamilyAccess with 'owner') that the
+ * actor may do this, and must have already confirmed intent (the action
+ * requires retyping the family's exact name) — this function performs no
+ * further confirmation of its own.
+ */
+export async function deleteFamily(familyId: string): Promise<void> {
+  await db.delete(families).where(eq(families.id, familyId));
+}
+
+/**
  * Removes a FamilyMember, refusing to remove the last remaining owner — a
  * Family without an owner would have no one able to manage membership/roles.
  * Caller must have already verified (via requireFamilyAccess) that the actor
  * is allowed to manage membership.
  */
-export async function removeFamilyMember(familyId: string, memberUserId: string): Promise<void> {
+export async function removeFamilyMember(
+  familyId: string,
+  memberUserId: string,
+): Promise<void> {
   const members = await db.query.familyMembers.findMany({
     where: eq(familyMembers.familyId, familyId),
   });
@@ -219,7 +252,9 @@ export async function removeFamilyMember(familyId: string, memberUserId: string)
   const target = members.find((m) => m.userId === memberUserId);
   if (!target) return; // already not a member — nothing to do
 
-  const remainingOwners = members.filter((m) => m.role === "owner" && m.userId !== memberUserId);
+  const remainingOwners = members.filter(
+    (m) => m.role === "owner" && m.userId !== memberUserId,
+  );
 
   if (target.role === "owner" && remainingOwners.length === 0) {
     throw new ForbiddenError("A family must always have at least one owner.");
@@ -227,5 +262,10 @@ export async function removeFamilyMember(familyId: string, memberUserId: string)
 
   await db
     .delete(familyMembers)
-    .where(and(eq(familyMembers.familyId, familyId), eq(familyMembers.userId, memberUserId)));
+    .where(
+      and(
+        eq(familyMembers.familyId, familyId),
+        eq(familyMembers.userId, memberUserId),
+      ),
+    );
 }

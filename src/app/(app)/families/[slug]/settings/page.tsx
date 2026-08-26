@@ -1,7 +1,14 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { FamilySettingsDetailsRow } from "@/components/family/family-settings-details-row";
 import { FamilySettingsSlugRow } from "@/components/family/family-settings-slug-row";
 import { FamilySettingsFocusRow } from "@/components/family/family-settings-focus-row";
+import { FamilySettingsDeleteRow } from "@/components/family/family-settings-delete-row";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
@@ -24,7 +31,9 @@ export default async function FamilySettingsPage({
       />
       <div>
         <h1 className="font-heading text-2xl font-medium">Настройки</h1>
-        <p className="text-muted-foreground">Название, ссылка и описание архива.</p>
+        <p className="text-muted-foreground">
+          Название, ссылка и описание архива.
+        </p>
       </div>
 
       <Card>
@@ -41,10 +50,24 @@ export default async function FamilySettingsPage({
       <Card>
         <CardHeader>
           <CardTitle>Семейное дерево</CardTitle>
-          <CardDescription>Личная настройка — видна только вам.</CardDescription>
+          <CardDescription>
+            Личная настройка — видна только вам.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <FamilySettingsFocusRow />
+        </CardContent>
+      </Card>
+
+      <Card className="border-destructive/30">
+        <CardHeader>
+          <CardTitle className="text-destructive">Опасная зона</CardTitle>
+          <CardDescription>
+            Необратимые действия — доступны только владельцу.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FamilySettingsDeleteRow />
         </CardContent>
       </Card>
     </main>
