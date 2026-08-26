@@ -26,7 +26,7 @@ export function PortraitCardBody({
             sizes="160px"
             className="object-cover"
             unoptimized
-            priority={data.isFocus}
+            loading={data.isFocus ? "eager" : "lazy"}
           />
         ) : (
           <div
