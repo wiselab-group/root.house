@@ -138,23 +138,7 @@ export function TreeCanvas({
     // full-bleed treatment mobile already had; the page (FamilyTreePage)
     // drops its own max-width/padding around this element so nothing
     // constrains it from the outside either.
-    //
-    // contain: layout/size — this box's own height is a fixed calc(), it
-    // never actually needs to be recomputed from outside. Without this, the
-    // mobile header's menu panel expanding in normal flow (see
-    // MobileHeaderPanel's grid-template-rows animation) pushes this element
-    // down the page every animation frame; that's fine (a taller header is
-    // expected to shove the canvas below it), but browsers don't know this
-    // box's own layout can't be affected by that reflow, so they were
-    // re-measuring it — and XYFlow's own ResizeObserver reacts to every one
-    // of those measurements. On a family tree with no depth cap
-    // (ancestorGenerations/descendantGenerations: Infinity, see the tree
-    // page) that was enough sustained layout thrash on a phone to crash the
-    // Safari tab after a tap or two on the burger ("a problem repeatedly
-    // occurred"). `contain` tells the browser this subtree's layout is
-    // self-contained, so moving the box no longer re-triggers work inside
-    // it.
-    <div className="h-[calc(100svh-4.5rem)] w-full overflow-hidden contain-[layout_size]">
+    <div className="h-[calc(100svh-4.5rem)] w-full overflow-hidden">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -174,6 +158,20 @@ export function TreeCanvas({
         // to see everyone from there.
         minZoom={0.02}
         maxZoom={1.5}
+        // Without this, every node/edge in the connected family stays
+        // mounted in the DOM regardless of zoom or pan — fine at the
+        // default 85% focus view where only a handful are ever on screen,
+        // but a pinch-zoom-out on a 30-100 person family (this app puts no
+        // depth cap on the graph, see ancestorGenerations/
+        // descendantGenerations: Infinity above) brings most of them into
+        // view simultaneously, each a full PersonNode with a photo. On a
+        // phone that's enough sustained paint/memory pressure that the next
+        // layout-triggering event — opening the mobile header's menu panel
+        // — was enough to crash the Safari tab ("a problem repeatedly
+        // occurred"). onlyRenderVisibleElements keeps only nodes/edges
+        // actually intersecting the current viewport mounted, so the DOM
+        // cost stays bounded by what's on screen, not by family size.
+        onlyRenderVisibleElements
       >
         <InitialFocusViewport focusNode={focusNode} />
         <Background gap={24} />
