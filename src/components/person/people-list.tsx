@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/ca
 import { PersonAvatar } from "@/components/person/person-avatar";
 import { personDisplayName } from "@/domain/person/display-name";
 import { formatPartialDate } from "@/domain/shared/partial-date";
+import { personCountLabel } from "@/domain/shared/pluralize-ru";
 import type { PersonRecord } from "@/domain/person/person.repository";
 
 /** Case/diacritic-insensitive substring match — Cyrillic ё/е and similar
@@ -63,6 +64,12 @@ export function PeopleList({
         placeholder="Иванов, Анна, 1924…"
         aria-label="Поиск по людям"
       />
+
+      {query.trim().length > 0 && filtered.length > 0 && (
+        <p className="text-sm text-muted-foreground">
+          Найдено {personCountLabel(filtered.length)} из {people.length}
+        </p>
+      )}
 
       {filtered.length === 0 ? (
         <Card>

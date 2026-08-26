@@ -3,10 +3,12 @@ import { requireFamilyAccess } from "@/domain/family/access";
 import { listPeople } from "@/domain/person/person.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { LinkButton } from "@/components/ui/link-button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PeopleList } from "@/components/person/people-list";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
+import { personCountLabel } from "@/domain/shared/pluralize-ru";
 
 export default async function PeoplePage({
   params,
@@ -32,7 +34,10 @@ export default async function PeoplePage({
         ]}
       />
       <div className="flex items-center justify-between gap-4">
-        <h1 className="font-heading text-2xl font-medium">Люди</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="font-heading text-2xl font-medium">Люди</h1>
+          {people.length > 0 && <Badge variant="outline">{personCountLabel(people.length)}</Badge>}
+        </div>
         <LinkButton href={`/families/${slug}/people/new`}>
           Добавить человека
         </LinkButton>
