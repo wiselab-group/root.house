@@ -138,7 +138,23 @@ export function TreeCanvas({
     // full-bleed treatment mobile already had; the page (FamilyTreePage)
     // drops its own max-width/padding around this element so nothing
     // constrains it from the outside either.
-    <div className="h-[calc(100svh-4.5rem)] w-full overflow-hidden">
+    //
+    // contain: layout/size — this box's own height is a fixed calc(), it
+    // never actually needs to be recomputed from outside. Without this, the
+    // mobile header's menu panel expanding in normal flow (see
+    // MobileHeaderPanel's grid-template-rows animation) pushes this element
+    // down the page every animation frame; that's fine (a taller header is
+    // expected to shove the canvas below it), but browsers don't know this
+    // box's own layout can't be affected by that reflow, so they were
+    // re-measuring it — and XYFlow's own ResizeObserver reacts to every one
+    // of those measurements. On a family tree with no depth cap
+    // (ancestorGenerations/descendantGenerations: Infinity, see the tree
+    // page) that was enough sustained layout thrash on a phone to crash the
+    // Safari tab after a tap or two on the burger ("a problem repeatedly
+    // occurred"). `contain` tells the browser this subtree's layout is
+    // self-contained, so moving the box no longer re-triggers work inside
+    // it.
+    <div className="h-[calc(100svh-4.5rem)] w-full overflow-hidden contain-[layout_size]">
       <ReactFlow
         nodes={nodes}
         edges={edges}
