@@ -13,8 +13,11 @@
  * LAYOUT MODEL: one single recursive tree of "units" (a couple, or a solo
  * person), not a row-per-generation model. Every unit in the whole visible
  * tree — not just the focus couple — is laid out the same way:
- *   - the two partners always sit immediately adjacent (SIBLING_X_SPACING
- *     apart), regardless of how wide anything else around them grows;
+ *   - the two partners always sit immediately adjacent (PARTNER_X_SPACING
+ *     apart — deliberately tighter than the UNIT_X_SPACING used everywhere
+ *     else, so a couple visually reads as its own separated family cell
+ *     rather than blending into the row of unrelated/sibling cards around
+ *     it), regardless of how wide anything else around them grows;
  *   - the husband's own upward ancestor fan spreads further LEFT from him,
  *     the wife's spreads further RIGHT from her, recursively at every
  *     generation up (a classic ahnentafel/ancestor-chart fan);
@@ -114,13 +117,34 @@ export interface TreeLayoutGraph {
 }
 
 const GENERATION_Y_SPACING = 180;
-// Matches PersonNode's rendered width (220px, see xyflow-adapter.ts) plus a
-// fixed 24px gutter between adjacent cards — the ONE spacing constant used
-// everywhere in this file (between partners, between siblings, between
-// unrelated units alike): every seam between two adjacent cards is
-// "SIBLING_X_SPACING, plus however much room the wider of the two card's
-// own subtree needs reserved beyond that" — see layoutUnit's width math.
-const SIBLING_X_SPACING = 244;
+// PersonNode's rendered width (220px, see xyflow-adapter.ts) plus a fixed
+// gutter between adjacent cards (PARTNER_GAP). This is ONLY the gap between
+// two PARTNERS (husband/wife) — the tightest seam in the whole tree, so a couple
+// visually reads as one family unit. Every other seam (siblings, unrelated
+// units) uses UNIT_X_SPACING instead, specifically so a partnership doesn't
+// look the same distance apart as two people who just happen to be adjacent
+// (see UNIT_X_SPACING's own doc).
+const CARD_WIDTH = 220;
+const PARTNER_GAP = 40;
+const PARTNER_X_SPACING = CARD_WIDTH + PARTNER_GAP;
+// The seam between any two adjacent cards that are NOT partners of each
+// other — two siblings, a sibling riding beside a couple, two unrelated
+// family branches meeting in the same generation, two separate child
+// families in a children row. Deliberately a SEPARATE gap constant, not
+// PARTNER_GAP doubled outright as a spacing multiplier: CARD_WIDTH is a
+// large constant baked into both spacing numbers, so doubling
+// PARTNER_X_SPACING itself (244*2=488) blows up the VISIBLE edge-to-edge
+// gap once the fixed 220px card width is subtracted back out (24px -> way
+// more than 2x). UNIT_GAP is the actual visible gap this seam should have;
+// spacing = CARD_WIDTH + UNIT_GAP restores the same "card width + gutter"
+// relationship PARTNER_X_SPACING uses. Without a wider seam here, a sibling
+// standing next to someone ended up the exact same distance away as that
+// person's own spouse, so the tree read as one undifferentiated row of
+// cards instead of visually grouping each couple together (see
+// layoutUnit's width math for how the couple's own tighter gap and this
+// wider one combine into the final layout).
+const UNIT_GAP = 60;
+const UNIT_X_SPACING = CARD_WIDTH + UNIT_GAP;
 
 const DEFAULT_ANCESTOR_GENERATIONS = 2;
 const DEFAULT_DESCENDANT_GENERATIONS = 2;
@@ -445,7 +469,7 @@ interface UnitSlot {
  * back across it toward wherever a sibling unit will be placed. This is
  * what lets every caller (this function's own recursive calls, and
  * buildFocusTreeLayout's top-level couple) place two adjacent units at a
- * FIXED SIBLING_X_SPACING apart, always, regardless of how wide either
+ * FIXED spacing apart, always, regardless of how wide either
  * one's own subtree grows in ANY direction — units can never collide by
  * construction, in contrast to a shared-row-per-generation model, which
  * has no way to reserve room for what's happening several generations
@@ -478,7 +502,10 @@ function computeExtentByGeneration(slots: UnitSlot[]): ExtentByGeneration {
  * local coordinates, not yet offset) needs to be pushed by, on top of a
  * `desiredOffset`, so that once shifted by (desiredOffset + push) it no
  * longer overlaps `existingExtent` on any generation they share (with at
- * least SIBLING_X_SPACING clearance, matching every other adjacency rule
+ * least PARTNER_X_SPACING clearance as a minimum collision buffer (the same
+ * minimum floor whether the incoming piece is a partner, a sibling, or an
+ * unrelated branch — the wider UNIT_X_SPACING seams between non-partners
+ * come from the desiredOffset callers request, not from this floor)
  * in this file). `direction` is +1 (incoming subtree sits to the right/
  * below-right of existing content, so push it further right if needed) or
  * -1 (sits to the left, push further left). Returns 0 if there's no
@@ -498,11 +525,11 @@ function resolveCollision(
     const incomingMax = incoming.max + desiredOffset + (direction === 1 ? extraPush : -extraPush);
     if (direction === 1) {
       // Incoming sits to the right — its own min edge must clear existing's max edge.
-      const shortfall = existing.max + SIBLING_X_SPACING - incomingMin;
+      const shortfall = existing.max + PARTNER_X_SPACING - incomingMin;
       if (shortfall > 0) extraPush += shortfall;
     } else {
       // Incoming sits to the left — its own max edge must clear existing's min edge.
-      const shortfall = incomingMax - (existing.min - SIBLING_X_SPACING);
+      const shortfall = incomingMax - (existing.min - PARTNER_X_SPACING);
       if (shortfall > 0) extraPush += shortfall;
     }
   }
@@ -702,18 +729,28 @@ function layoutUnit(
   // uniformly either way.
   const siblingDirection = hasPartner ? ((-partnerSide) as 1 | -1) : partnerSide;
 
+  // First sibling sits a full UNIT_X_SPACING away from rootId — not
+  // PARTNER_X_SPACING — precisely so the couple (rootId + partner, only
+  // PARTNER_X_SPACING apart) reads as its own separated family cell instead
+  // of a sibling looking exactly as "close" to rootId as rootId's own
+  // spouse. Further siblings beyond the first are still just
+  // UNIT_X_SPACING apart from each other (a plain row, no couples between
+  // them to separate).
   siblingIds.forEach((id, index) => {
-    const desiredX = siblingDirection * (index + 1) * SIBLING_X_SPACING;
+    const desiredX = siblingDirection * (index + 1) * UNIT_X_SPACING;
     placePiece([{ id, relativeX: 0, relativeGeneration: 0 }], desiredX, 0, siblingDirection);
   });
-  const siblingRowWidth = siblingIds.length * SIBLING_X_SPACING;
+  const siblingRowWidth = siblingIds.length * UNIT_X_SPACING;
 
-  // Partner sits SIBLING_X_SPACING toward partnerSide from rootId; the
+  // Partner sits PARTNER_X_SPACING toward partnerSide from rootId — the
+  // couple's own tight, dedicated gap (see PARTNER_X_SPACING's doc). The
   // partner's own ancestor fan (partnerParentFan, already positioned in
   // ITS OWN local frame with the partner at relativeX 0 / relativeGeneration
-  // 0) AND the partner's own siblings (extending further toward
-  // partnerSide, past the partner — mirroring how rootId's own siblings
-  // extend past rootId in siblingDirection) all ride along as one piece.
+  // 0) rides along as part of the same piece. The partner's own siblings
+  // extend further toward partnerSide, past the partner — starting a full
+  // UNIT_X_SPACING beyond the partner's own position (same reasoning as
+  // rootId's siblings above: separates the couple from the partner's own
+  // sibling, not just from rootId's).
   let partnerX = 0;
   if (hasPartner) {
     const partnerPieceSlots: UnitSlot[] = [
@@ -721,11 +758,11 @@ function layoutUnit(
       ...(partnerParentFan?.slots.filter((s) => !(s.relativeGeneration === 0 && s.id === partnerId)) ?? []),
       ...partnerSiblingIds.map((id, index) => ({
         id,
-        relativeX: partnerSide * (index + 1) * SIBLING_X_SPACING,
+        relativeX: partnerSide * (index + 1) * UNIT_X_SPACING,
         relativeGeneration: 0,
       })),
     ];
-    partnerX = placePiece(partnerPieceSlots, partnerSide * SIBLING_X_SPACING, 0, partnerSide);
+    partnerX = placePiece(partnerPieceSlots, partnerSide * PARTNER_X_SPACING, 0, partnerSide);
   }
 
   // rootId's OWN parent generation sits centered over rootId's OWN row
@@ -773,8 +810,13 @@ function layoutUnit(
  * Lays out a couple's own further ancestor fan (used for BOTH "rootId's own
  * parents" and "rootId's partner's own parents" in layoutUnit — the exact
  * same logic applies to either) as ONE combined piece, already positioned
- * in its own local frame: leftId at relativeX -SIBLING_X_SPACING/2 and
- * rightId at +SIBLING_X_SPACING/2 (both relativeGeneration -1), each with
+ * in its own local frame: when leftId/rightId are partners of each other,
+ * leftId sits at relativeX -PARTNER_X_SPACING/2 and rightId at
+ * +PARTNER_X_SPACING/2 (the couple's own tight gap, same as any other
+ * partnership); when they're NOT partners (see CRITICAL note below), each
+ * sits at half of UNIT_X_SPACING instead — two recorded parents who aren't
+ * married to each other are just two unrelated people, not a family cell to
+ * visually group together. Both cases: relativeGeneration -1, each with
  * their own further-nested fan folded in at the matching offset.
  *
  * CRITICAL: when leftId/rightId ARE partners of each other (the common
@@ -808,7 +850,7 @@ function layoutCoupleFan(
     // left/right order since orderCoupleBySlot already put leftId on the
     // male/left slot when genders are known).
     const leftUnit = layoutUnit(leftId, "left", ctx);
-    const leftX = -SIBLING_X_SPACING / 2;
+    const leftX = -PARTNER_X_SPACING / 2;
     for (const slot of leftUnit.slots) {
       slots.push({ ...slot, relativeX: slot.relativeX + leftX, relativeGeneration: slot.relativeGeneration - 1 });
     }
@@ -817,14 +859,14 @@ function layoutCoupleFan(
 
   if (leftId) {
     const leftUnit = layoutUnit(leftId, "left", ctx);
-    const leftX = -SIBLING_X_SPACING / 2;
+    const leftX = -UNIT_X_SPACING / 2;
     for (const slot of leftUnit.slots) {
       slots.push({ ...slot, relativeX: slot.relativeX + leftX, relativeGeneration: slot.relativeGeneration - 1 });
     }
   }
   if (rightId) {
     const rightUnit = layoutUnit(rightId, "right", ctx);
-    const rightX = SIBLING_X_SPACING / 2;
+    const rightX = UNIT_X_SPACING / 2;
     for (const slot of rightUnit.slots) {
       slots.push({ ...slot, relativeX: slot.relativeX + rightX, relativeGeneration: slot.relativeGeneration - 1 });
     }
@@ -858,11 +900,11 @@ function layoutChildrenRow(
   childUnits.forEach((unit, index) => {
     const placeOnRight = index % 2 === 0;
     if (placeOnRight) {
-      const desiredX = index === 0 ? center : rightCursor + SIBLING_X_SPACING + unit.width;
+      const desiredX = index === 0 ? center : rightCursor + UNIT_X_SPACING + unit.width;
       const actualX = placePiece(unit.slots, desiredX, 1, 1);
       rightCursor = actualX + unit.width;
     } else {
-      const desiredX = leftCursor - SIBLING_X_SPACING - unit.width;
+      const desiredX = leftCursor - UNIT_X_SPACING - unit.width;
       const actualX = placePiece(unit.slots, desiredX, 1, -1);
       leftCursor = actualX - unit.width;
     }

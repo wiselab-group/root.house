@@ -303,7 +303,7 @@ describe("buildFocusTreeLayout", () => {
     // viktor's parents are motherA/fatherA; galina's parents are a wholly
     // separate couple, motherB/fatherB. viktor and galina are married —
     // they must still sit immediately next to each other (plain
-    // SIBLING_X_SPACING apart) — but each spouse's own ancestor line now
+    // PARTNER_X_SPACING apart) — but each spouse's own ancestor line now
     // fans out to their OWN side: viktor's parents end up to viktor's
     // left, galina's parents to galina's right, and the two fans never
     // share an x range (see file header comment's ANCESTOR LAYOUT MODEL).
@@ -339,7 +339,7 @@ describe("buildFocusTreeLayout", () => {
     const fatherB = byId.get("fatherB")!;
 
     // Husband left, wife right, exactly the plain per-card spacing apart.
-    expect(galina.x - viktor.x).toBe(244);
+    expect(galina.x - viktor.x).toBe(260);
     // viktor's own parents sit on viktor's side (left of galina)...
     expect(fatherA.x).toBeLessThan(galina.x);
     // ...galina's own parents sit on galina's side (right of viktor).
@@ -381,7 +381,7 @@ describe("buildFocusTreeLayout", () => {
     // both independently computed relativeX 122, since alice's own row
     // centered her sibling toward the couple's center instead of pushing
     // them away from it).
-    expect(Math.abs(aliceSpouse.x - alice.x)).toBe(244);
+    expect(Math.abs(aliceSpouse.x - alice.x)).toBe(260);
     // bob must sit on alice's OUTER side (away from her spouse), not between them.
     expect(Math.abs(bob.x - alice.x)).toBeLessThan(Math.abs(bob.x - aliceSpouse.x));
   });
@@ -390,7 +390,7 @@ describe("buildFocusTreeLayout", () => {
     // viktor has two siblings (viktorSib1, viktorSib2); galina has three
     // (galinaSib1..3) — a deliberately lopsided case. Regardless of how
     // wide either side's own sibling row grows, viktor and galina
-    // themselves must stay exactly SIBLING_X_SPACING apart — the key
+    // themselves must stay exactly PARTNER_X_SPACING apart — the key
     // requirement: siblings never affect the couple's own gap, however
     // many there are on either side.
     const result = buildFocusTreeLayout({
@@ -422,7 +422,7 @@ describe("buildFocusTreeLayout", () => {
     const viktor = byId.get("viktor")!;
     const galina = byId.get("galina")!;
 
-    expect(Math.abs(galina.x - viktor.x)).toBe(244);
+    expect(Math.abs(galina.x - viktor.x)).toBe(260);
 
     // No two people at the SAME generation (i.e. the same visual row) share
     // an x position — a shared x across different rows is fine (they don't

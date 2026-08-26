@@ -100,12 +100,16 @@ export interface TreeHighlightState {
 
 // Node dimensions per card style — must match what PersonNode actually
 // renders at (see its w-*/h-* classes). Server-side layout (tree-layout.builder.ts)
-// only ever computes the "compact" spacing (SIBLING_X_SPACING/GENERATION_Y_SPACING,
-// 244/180); the "portrait" style rescales those same x/y values proportionally
+// only ever computes "compact" spacing (PARTNER_X_SPACING/GENERATION_Y_SPACING,
+// 260/180); the "portrait" style rescales those same x/y values proportionally
 // below rather than asking the server to lay out twice — this is purely a
 // client-side viewing preference (see use-tree-card-style.ts), not something
-// that needs its own domain-layer layout pass.
-const COMPACT_X_SPACING = 244;
+// that needs its own domain-layer layout pass. COMPACT_X_SPACING must track
+// tree-layout.builder.ts's PARTNER_X_SPACING (the couple's own gap, the
+// tightest/baseline seam PORTRAIT_X_SPACING below was calibrated against) —
+// not UNIT_X_SPACING, the wider sibling/unrelated-unit seam, which scales
+// down by the same ratio automatically since every x uses one shared factor.
+const COMPACT_X_SPACING = 260;
 const COMPACT_Y_SPACING = 180;
 const PORTRAIT_X_SPACING = 184;
 const PORTRAIT_Y_SPACING = 260;
