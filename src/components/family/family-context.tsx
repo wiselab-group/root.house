@@ -9,6 +9,8 @@ export interface FamilyContextValue {
   familyDescription: string;
   familySlug: string;
   role: FamilyRole;
+  /** The current user's own default tree-focus person (see family.service.ts::updateDefaultFocusPerson) — null if unset. Per-user, not family-wide. */
+  defaultFocusPerson: { id: string; name: string } | null;
 }
 
 const FamilyContext = createContext<FamilyContextValue | null>(null);

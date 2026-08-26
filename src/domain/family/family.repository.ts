@@ -8,6 +8,7 @@ export interface FamilyMemberRow {
   familyId: string;
   userId: string;
   role: FamilyRole;
+  defaultFocusPersonId?: string | null;
 }
 
 /** Minimal shape of `db` this repository needs — lets tests inject a fake instead of a live connection. */
@@ -39,4 +40,22 @@ export async function familyExists(
 ): Promise<boolean> {
   const row = await database.query.families?.findFirst({ where: eq(families.id, familyId) });
   return row != null;
+}
+
+/**
+ * Sets (or clears, with personId=null) the caller's own default focus
+ * person for this family — a per-user viewing preference stored on their
+ * FamilyMember row, not a family-wide setting. Caller must have already
+ * verified membership (requireFamilyAccess) and that personId (if given)
+ * belongs to this same family — this function does not re-check either.
+ */
+export async function setDefaultFocusPerson(
+  familyId: string,
+  userId: string,
+  personId: string | null,
+): Promise<void> {
+  await defaultDb
+    .update(familyMembers)
+    .set({ defaultFocusPersonId: personId })
+    .where(and(eq(familyMembers.familyId, familyId), eq(familyMembers.userId, userId)));
 }

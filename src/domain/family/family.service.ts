@@ -1,7 +1,9 @@
 import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { families, familyMembers, persons } from "@/db/schema";
+import { getPerson } from "@/domain/person/person.service";
 import { ForbiddenError, SlugTakenError } from "./errors";
+import { setDefaultFocusPerson } from "./family.repository";
 import { ensureUniqueSlug, isValidSlugFormat, slugify } from "./slug";
 
 export interface FamilySummary {
@@ -172,6 +174,35 @@ export async function updateFamilyDetails(
     .update(families)
     .set({ name: input.name, description: input.description ?? null, updatedAt: new Date() })
     .where(eq(families.id, familyId));
+}
+
+/**
+ * Sets the caller's own default focus person for this family — the person
+ * the family tree centers on by default, next time THIS user opens it (a
+ * per-user preference, stored on their own FamilyMember row, not a
+ * family-wide setting). Pass personId=null to clear it back to "no
+ * preference" (tree/page.tsx then falls back to the first person in the
+ * family). Caller must have already verified familyId/userId via
+ * requireFamilyAccess before calling this.
+ *
+ * personId, if given, must belong to this same family — getPerson's
+ * `WHERE id = ... AND family_id = ...` check is what makes this an IDOR-safe
+ * validation rather than trusting a client-supplied id at face value.
+ */
+export async function updateDefaultFocusPerson(
+  familyId: string,
+  userId: string,
+  personId: string | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (personId !== null) {
+    const person = await getPerson(personId, familyId);
+    if (!person) {
+      return { ok: false, error: "Этот человек не найден в этой семье." };
+    }
+  }
+
+  await setDefaultFocusPerson(familyId, userId, personId);
+  return { ok: true };
 }
 
 /**

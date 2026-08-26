@@ -1,0 +1,1 @@
+ALTER TABLE "family_members" ADD COLUMN "default_focus_person_id" uuid;

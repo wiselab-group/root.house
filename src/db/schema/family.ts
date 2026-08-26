@@ -47,6 +47,18 @@ export const familyMembers = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     role: familyRoleEnum("role").notNull().default("viewer"),
     invitedBy: uuid("invited_by").references(() => users.id, { onDelete: "set null" }),
+    // Per-user "which person does the family tree open centered on" — a
+    // personal viewing preference, not a family-wide setting (each member
+    // may want to start from themselves). NO schema-level FK to persons:
+    // person.ts already imports families.ts (Person belongs to a Family),
+    // so a reference back from here would form the same circular-module
+    // import documented on persons.photoMediaId — enforced at the
+    // application layer instead (family.service.ts checks the referenced
+    // Person exists and belongs to this same family before saving).
+    // Left dangling (not cleaned up) if that Person is later deleted;
+    // callers treat a stale/missing id the same as "not set" (see
+    // tree/page.tsx's fallback chain), so no cleanup is needed.
+    defaultFocusPersonId: uuid("default_focus_person_id"),
     joinedAt: timestamp("joined_at").defaultNow().notNull(),
   },
   (table) => [

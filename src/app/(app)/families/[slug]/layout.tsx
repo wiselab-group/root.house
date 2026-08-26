@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { ForbiddenError } from "@/domain/family/errors";
 import { getFamilySummary } from "@/domain/family/family.service";
+import { getPerson } from "@/domain/person/person.service";
+import { personDisplayName } from "@/domain/person/display-name";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { FamilyProvider } from "@/components/family/family-context";
 
@@ -39,6 +41,15 @@ export default async function FamilyLayout({
     notFound();
   }
 
+  // Resolved here (not in the settings page) so every page under this
+  // layout can read it from FamilyProvider without each re-fetching —
+  // `getPerson`'s own family_id check is what makes a stale/foreign id
+  // (the referenced Person since deleted) safely resolve to null, same as
+  // tree/page.tsx's own fallback treats it as "no preference set".
+  const defaultFocusPerson = member.defaultFocusPersonId
+    ? await getPerson(member.defaultFocusPersonId, familyId)
+    : null;
+
   return (
     <FamilyProvider
       value={{
@@ -47,6 +58,9 @@ export default async function FamilyLayout({
         familyDescription: family.description ?? "",
         familySlug: family.slug,
         role: member.role,
+        defaultFocusPerson: defaultFocusPerson
+          ? { id: defaultFocusPerson.id, name: personDisplayName(defaultFocusPerson) }
+          : null,
       }}
     >
       {children}

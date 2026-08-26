@@ -14,6 +14,7 @@ import {
   getFamilySlugById,
   updateFamilyDetails,
   updateFamilySlug,
+  updateDefaultFocusPerson,
 } from "@/domain/family/family.service";
 import { SlugTakenError } from "@/domain/family/errors";
 
@@ -146,4 +147,31 @@ export async function updateFamilySlugAction(
   // and leaving the (now stale) old slug displayed in the browser.
   revalidatePath(`/families/${parsed.data.slug}`);
   redirect(`/families/${parsed.data.slug}`);
+}
+
+/**
+ * Sets (personId) or clears (null) the CALLER's own default focus person —
+ * a per-user tree-viewing preference (see family.service.ts), not a
+ * family-wide setting, so this only ever needs 'viewer' access (every
+ * member may set their own preference regardless of role) and never
+ * touches any other member's row. Not a useActionState form action (no text
+ * fields to preserve on error) — the combobox in the settings UI calls this
+ * directly and handles the result itself.
+ */
+export async function updateDefaultFocusPersonAction(
+  familyId: string,
+  personId: string | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await auth();
+  if (!session?.user) {
+    return { ok: false, error: "Сессия истекла — войдите заново." };
+  }
+
+  await requireFamilyAccess(familyId, session.user.id, "viewer");
+
+  const result = await updateDefaultFocusPerson(familyId, session.user.id, personId);
+  if (!result.ok) return result;
+
+  revalidatePath(`/families`, "layout");
+  return { ok: true };
 }

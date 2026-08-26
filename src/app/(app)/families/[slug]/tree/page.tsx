@@ -40,7 +40,7 @@ export default async function FamilyTreePage({
   if (!session?.user) return null;
 
   const familyId = await resolveFamilyIdBySlug(slug);
-  await requireFamilyAccess(familyId, session.user.id, "viewer");
+  const member = await requireFamilyAccess(familyId, session.user.id, "viewer");
   const [people, family] = await Promise.all([
     listPeople(familyId),
     getFamilySummary(familyId),
@@ -72,10 +72,17 @@ export default async function FamilyTreePage({
     );
   }
 
+  // Priority: explicit ?focus= link/click > this user's own saved default
+  // (family-settings, per-user — see family.service.ts::updateDefaultFocusPerson)
+  // > the first person in the family, as an arbitrary-but-stable fallback.
+  // people.some(...) guards both sources against a stale/foreign id (a
+  // deleted person, or a default saved before a person was removed).
   const focusPersonId =
-    typeof focus === "string" && people.some((p) => p.id === focus)
-      ? focus
-      : people[0].id;
+    (typeof focus === "string" && people.some((p) => p.id === focus) ? focus : null) ??
+    (member.defaultFocusPersonId && people.some((p) => p.id === member.defaultFocusPersonId)
+      ? member.defaultFocusPersonId
+      : null) ??
+    people[0].id;
 
   const filter = parseFilterParam(typeof filterParam === "string" ? filterParam : undefined);
   const traceAId = typeof traceA === "string" && people.some((p) => p.id === traceA) ? traceA : null;
