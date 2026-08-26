@@ -8,6 +8,8 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
+  useReactFlow,
+  type Node,
   type NodeMouseHandler,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -26,6 +28,41 @@ const edgeTypes = {
   partnership: RelationshipEdge,
   unionChild: UnionChildEdge,
 };
+
+/** The tree always opens centered on the focus person at a fixed 85% zoom
+ * — not fitView's "whatever fits the whole connected family" framing —
+ * so opening the tree reliably lands on "here's the person I asked for",
+ * regardless of how large or lopsided the rest of the family graph is.
+ * Rendered as a child of <ReactFlow> (not a sibling) specifically so
+ * useReactFlow resolves against this flow instance's own provider, which
+ * <ReactFlow> sets up internally for its children — no separate
+ * <ReactFlowProvider> needed. */
+function InitialFocusViewport({ focusNode }: { focusNode: Node | undefined }) {
+  const { setCenter } = useReactFlow();
+
+  useEffect(() => {
+    if (!focusNode) return;
+    // Prefer `measured` (XYFlow's own ResizeObserver reading of the actual
+    // rendered DOM node) over the static width/height passed into
+    // toReactFlow's NODE_DIMENSIONS — that static height in particular is
+    // only an estimate (CompactCardBody's real height depends on its text
+    // content, not a fixed CSS height), so centering against it instead of
+    // the real box put the focus card visibly off-center vertically.
+    const width = focusNode.measured?.width ?? focusNode.width ?? 0;
+    const height = focusNode.measured?.height ?? focusNode.height ?? 0;
+    setCenter(focusNode.position.x + width / 2, focusNode.position.y + height / 2, {
+      zoom: 0.85,
+    });
+    // Re-centers whenever the focus person itself changes (URL ?focus=...
+    // navigation) — NOT on every node reposition (card style toggle,
+    // filter/trace highlight), which would fight the user's own pan/zoom
+    // mid-session. focusNode's identity change (a new id) is what signals
+    // "the user asked to jump to someone else", not a mere prop update.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusNode?.id, setCenter]);
+
+  return null;
+}
 
 /**
  * Interactive desktop family tree canvas. `focusPersonId` lives in the URL
@@ -91,6 +128,8 @@ export function TreeCanvas({
     [graph.focusPersonId, setFocus],
   );
 
+  const focusNode = nodes.find((node) => node.id === graph.focusPersonId);
+
   return (
     // Full-bleed, near-full-height on every viewport — a bordered, inset
     // canvas at a fixed 70vh left most of a real family's tree lost in a
@@ -108,19 +147,19 @@ export function TreeCanvas({
         onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        fitView
         proOptions={{ hideAttribution: true }}
-        // fitView clamps its computed zoom to [minZoom, maxZoom] (see
-        // @xyflow/system's fitViewport) — with the whole connected family
-        // now laid out at once (page.tsx passes ancestorGenerations/
-        // descendantGenerations: Infinity), a large family can genuinely
-        // need to zoom out well past what a 2-generation window ever did.
-        // 0.2 used to be plenty; capped there now, fitView silently stops
-        // zooming out and crops off however many nodes/edges don't fit —
-        // they're still in `nodes`/`edges`, just outside the clamped view.
+        // No fitView here — InitialFocusViewport below centers on the focus
+        // person at a fixed 85% zoom instead (per the family's "opens with
+        // focus on" setting), so opening the tree always lands on the
+        // requested person regardless of how large or lopsided the rest of
+        // the connected family graph is. minZoom stays low enough that a
+        // large family (page.tsx passes ancestorGenerations/
+        // descendantGenerations: Infinity) can still be zoomed/panned out
+        // to see everyone from there.
         minZoom={0.02}
         maxZoom={1.5}
       >
+        <InitialFocusViewport focusNode={focusNode} />
         <Background gap={24} />
         <TreeCardStyleControl cardStyle={cardStyle} setCardStyle={setCardStyle} showZoom={!isCoarsePointer} />
         {/* Minimap needs room to read as a map, not a smudge — skip it below
