@@ -1426,12 +1426,29 @@ function layoutCoupleFan(
     return { slots, coreSlots, lateralGroups };
   }
 
+  // leftId and rightId are NOT partners of each other here — two recorded
+  // parents who were never married to each other (e.g. rootId's mother and
+  // father separately remarried other people). Each one's OWN partner (if
+  // any) is a completely different, unrelated person with no guaranteed
+  // left/right relationship to the couple-fan's own outer slot — layoutUnit's
+  // default gender rule (husband left of HIS OWN wife, wife right of HER OWN
+  // husband) would happily place leftId's new partner toward the right
+  // whenever that partner is female, walking it straight past rightId's own
+  // side (the exact bug this forcePartnerSide fixes: leftId=dad,
+  // rightId=mom, dad's new wife is female so gender-rule placed her on dad's
+  // right — i.e. toward mom — crossing the two couples into
+  // dad / mom's-new-husband / dad's-new-wife / mom instead of staying
+  // strictly split left/right of the fan's own center). forcePartnerSide=-1
+  // for leftId and +1 for rightId pin each one's own partner (and further
+  // ancestor fan) to keep growing in the SAME outward direction the couple
+  // fan itself put them in, exactly like layoutUnit already does for a
+  // sibling's own partner (see forcePartnerSide's own doc on layoutUnit).
   if (leftId) {
-    const leftUnit = layoutUnit(leftId, "left", ctx);
+    const leftUnit = layoutUnit(leftId, "left", ctx, -1);
     foldIn(leftUnit, -UNIT_X_SPACING / 2);
   }
   if (rightId) {
-    const rightUnit = layoutUnit(rightId, "right", ctx);
+    const rightUnit = layoutUnit(rightId, "right", ctx, 1);
     foldIn(rightUnit, UNIT_X_SPACING / 2);
   }
 

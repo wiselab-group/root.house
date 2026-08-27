@@ -1058,5 +1058,53 @@ describe("buildFocusTreeLayout", () => {
         expect(new Set(xValues).size).toBe(xValues.length);
       }
     });
+
+    it("keeps each of two non-partnered recorded parents' own remarriages on their own side, without crossing", () => {
+      // Reproduces a real bug: focus's two recorded parents (dad/mom) were
+      // never partnered with each other (divorced/never married), and each
+      // separately remarried. layoutCoupleFan's "not partners" branch used
+      // to call layoutUnit(dad, "left", ctx) and layoutUnit(mom, "right",
+      // ctx) WITHOUT forcePartnerSide — each call's own gender-based
+      // husband-left/wife-right rule then placed dad's new (female) wife on
+      // HIS local right (toward mom's side) and mom's new (male) husband on
+      // HER local left (toward dad's side), crossing the two family lines:
+      // dad / momNewHusband / dadNewWife / mom instead of staying strictly
+      // split, dad's whole line on the left and mom's whole line on the
+      // right of the fan's own center.
+      const result = buildFocusTreeLayout({
+        persons: [
+          person("me"),
+          person("dad", { gender: "male" }),
+          person("mom", { gender: "female" }),
+          person("dadNewWife", { gender: "female" }),
+          person("momNewHusband", { gender: "male" }),
+        ],
+        parentChildEdges: [
+          { parentId: "dad", childId: "me" },
+          { parentId: "mom", childId: "me" },
+        ],
+        partnershipEdges: [
+          { person1Id: "dad", person2Id: "dadNewWife", isCurrent: true },
+          { person1Id: "mom", person2Id: "momNewHusband", isCurrent: true },
+        ],
+        focusPersonId: "me",
+      });
+
+      const byId = new Map(result.nodes.map((n) => [n.id, n]));
+      const dadX = byId.get("dad")!.x;
+      const momX = byId.get("mom")!.x;
+      const dadNewWifeX = byId.get("dadNewWife")!.x;
+      const momNewHusbandX = byId.get("momNewHusband")!.x;
+
+      // dad and his own new wife stay together, strictly on the opposite
+      // side of the fan's center from mom and her own new husband — no
+      // crossing (dadNewWife must not land closer to mom than to dad, and
+      // momNewHusband must not land closer to dad than to mom).
+      expect(dadX).toBeLessThan(0);
+      expect(momX).toBeGreaterThan(0);
+      expect(Math.abs(dadNewWifeX - dadX)).toBeLessThan(Math.abs(dadNewWifeX - momX));
+      expect(Math.abs(momNewHusbandX - momX)).toBeLessThan(Math.abs(momNewHusbandX - dadX));
+      expect(dadNewWifeX).toBeLessThan(momNewHusbandX);
+    });
   });
 });
