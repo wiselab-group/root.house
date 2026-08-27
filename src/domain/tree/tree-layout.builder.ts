@@ -998,8 +998,20 @@ function layoutUnit(
   // coincidence of tree depth, and — being placed first — forced those
   // children far off-center to avoid "colliding" with cousins they have no
   // actual positional relationship to).
+  // Ids of every slot placed by placePartner(partnerId, ...) below (the
+  // primary partner + their own full subtree: parent fan, siblings,
+  // shared-children row) — captured so parentFan's own placement further
+  // down can selectively widen JUST this block's gap from rootId on
+  // collision, without also dragging rootId's own siblings/extra partners
+  // (placed AFTER this block, also living in `slots` by the time parentFan
+  // runs, but on siblingDirection — the opposite side — where they must
+  // NOT move; see parentFan's own doc below for why a blanket "shift
+  // everything but rootId" is wrong here).
+  const partnerBlockIds = new Set<string>();
   if (hasPartner) {
+    const slotsBeforePartner = slots.length;
     const { coreSlots: partnerCoreSlots, lateralGroups: partnerLateralGroups } = placePartner(partnerId!, partnerSide);
+    for (const slot of slots.slice(slotsBeforePartner)) partnerBlockIds.add(slot.id);
     // The primary partner (+ their own direct ancestor fan) is part of
     // THIS unit's own anchor — rootId + primary partner is the couple
     // callers of THIS layoutUnit result care about for their own collision
@@ -1296,6 +1308,55 @@ function layoutUnit(
     // own descendants happen to collide with something several branches
     // over (see placePiece's own doc on corePieceSlots — this is the
     // third occurrence of that same class of bug, fixed generally there).
+    //
+    // WHEN rootId HAS a partner whose own parent fan is already placed
+    // (the common case a collision here actually happens for): pushing
+    // parentFan alone by the FULL amount needed to clear it drags rootId's
+    // own parents a whole PARTNER_X_SPACING+ away from rootId, purely
+    // because rootId's own fan happens to be placed SECOND — genealogically
+    // rootId's own parents belong centered over rootId regardless of
+    // placement order (the exact reported bug: Виктор's own parents ended
+    // up centered a full PARTNER_X_SPACING to the left of Виктор instead of
+    // directly above him, because Галина's own parent fan — placed first —
+    // kept its natural position and Виктор's fan alone absorbed the entire
+    // separating push). rootId itself can never move (layoutUnit's own
+    // invariant: rootId sits at relativeX EXACTLY 0, every caller relies on
+    // this without re-checking), and rootId's own siblings/extra partners
+    // (also already in `slots`/`extent` by this point, but on
+    // siblingDirection — the SAME side parentFan itself needs) must not
+    // move either, or they'd be dragged off toward partnerSide for no
+    // reason. Only partnerBlockIds (the primary partner + their own full
+    // subtree, captured above) is free to widen further outward on
+    // partnerSide with no positional constraint beyond a MINIMUM
+    // PARTNER_X_SPACING gap from rootId — so half the push is applied
+    // there instead, splitting the separation instead of rootId's own
+    // parents absorbing it alone.
+    if (hasPartner && partnerBlockIds.size > 0) {
+      const parentFanCoreExtent = computeExtentByGeneration(parentFan.coreSlots);
+      const neededPush = resolveCollision(extent, parentFanCoreExtent, parentRowCenter, siblingDirection);
+      if (neededPush > 0) {
+        const coupleShift = neededPush / 2;
+        for (const slot of slots) {
+          if (partnerBlockIds.has(slot.id)) slot.relativeX += partnerSide * coupleShift;
+        }
+        for (const slot of coreSlots) {
+          if (partnerBlockIds.has(slot.id)) slot.relativeX += partnerSide * coupleShift;
+        }
+        for (const group of lateralGroups) {
+          for (const slot of group.slots) {
+            if (partnerBlockIds.has(slot.id)) slot.relativeX += partnerSide * coupleShift;
+          }
+        }
+        // extent is per-generation aggregated, not per-id — recomputed
+        // from scratch from the now-shifted `slots` rather than guessing
+        // which generations belong to the partner block (siblings/extra
+        // partners can share a generation with the partner's own fan/
+        // children, e.g. both at rootId's own generation 0).
+        const recomputed = computeExtentByGeneration(slots);
+        extent.clear();
+        for (const [generation, range] of recomputed) extent.set(generation, range);
+      }
+    }
     const slotsBeforeParentFan = slots.length;
     const parentFanActualX = placePiece(
       parentFan.slots,

@@ -299,20 +299,30 @@ describe("buildFocusTreeLayout", () => {
     expect(result.nodes.find((n) => n.id === "bobsMother")?.generation).toBe(-1);
   });
 
-  it("keeps a married couple immediately adjacent, ancestor fan model: husband's line fans left, wife's fans right", () => {
+  it("keeps a married couple's own ancestor fans centered on each spouse: husband's line fans left, wife's fans right", () => {
     // viktor's parents are motherA/fatherA; galina's parents are a wholly
-    // separate couple, motherB/fatherB. viktor and galina are married —
-    // they must still sit immediately next to each other (plain
-    // PARTNER_X_SPACING apart) — but each spouse's own ancestor line now
-    // fans out to their OWN side: viktor's parents end up to viktor's
-    // left, galina's parents to galina's right, and the two fans never
-    // share an x range (see file header comment's ANCESTOR LAYOUT MODEL).
+    // separate couple, motherB/fatherB. viktor and galina are married — at
+    // LEAST PARTNER_X_SPACING apart (widened further when both spouses'
+    // own ancestor fans would otherwise collide in the middle — see below)
+    // — and each spouse's own ancestor line fans out to their OWN side:
+    // viktor's parents end up to viktor's left, galina's parents to
+    // galina's right, and the two fans never share an x range (see file
+    // header comment's ANCESTOR LAYOUT MODEL).
+    //
+    // Both spouses here have their own visible parent fan, so the two fans
+    // meet in the middle with no natural gap between them — splitting that
+    // separation between both sides (rather than viktor's own fan alone
+    // absorbing the full push) is what keeps EACH fan centered close to
+    // its own person instead of one drifting a full PARTNER_X_SPACING away
+    // from viktor purely because his fan happened to be placed second (a
+    // real reported bug: Виктор's own parents ended up centered under
+    // where his SISTER stood instead of under him).
     const result = buildFocusTreeLayout({
       persons: [
-        person("motherA"),
+        person("motherA", { gender: "female" }),
         person("fatherA", { gender: "male" }),
         person("viktor", { gender: "male" }),
-        person("motherB"),
+        person("motherB", { gender: "female" }),
         person("fatherB", { gender: "male" }),
         person("galina", { gender: "female" }),
       ],
@@ -335,15 +345,33 @@ describe("buildFocusTreeLayout", () => {
     const byId = new Map(result.nodes.map((n) => [n.id, n]));
     const viktor = byId.get("viktor")!;
     const galina = byId.get("galina")!;
+    const motherA = byId.get("motherA")!;
     const fatherA = byId.get("fatherA")!;
+    const motherB = byId.get("motherB")!;
     const fatherB = byId.get("fatherB")!;
 
-    // Husband left, wife right, exactly the plain per-card spacing apart.
-    expect(galina.x - viktor.x).toBe(260);
+    // Husband left, wife right, at least the plain per-card spacing apart
+    // (never LESS — widened only as far as needed to give both ancestor
+    // fans room).
+    expect(galina.x - viktor.x).toBeGreaterThanOrEqual(260);
     // viktor's own parents sit on viktor's side (left of galina)...
     expect(fatherA.x).toBeLessThan(galina.x);
-    // ...galina's own parents sit on galina's side (right of viktor).
+    expect(motherA.x).toBeLessThan(galina.x);
+    // ...galina's own parents sit on galina's side (right of viktor —
+    // motherB can legitimately land exactly AT viktor's own x, since
+    // they're a different generation and PARTNER_X_SPACING is still
+    // respected against viktor's own fan; never further left, i.e. never
+    // crossing into viktor's own side).
     expect(fatherB.x).toBeGreaterThan(viktor.x);
+    expect(motherB.x).toBeGreaterThanOrEqual(viktor.x);
+
+    // Each fan stays reasonably CENTERED on its own person — the actual
+    // regression this test guards against — not dragged off toward the
+    // other spouse's side.
+    const fanACenter = (motherA.x + fatherA.x) / 2;
+    const fanBCenter = (motherB.x + fatherB.x) / 2;
+    expect(Math.abs(fanACenter - viktor.x)).toBeLessThan(200);
+    expect(Math.abs(fanBCenter - galina.x)).toBeLessThan(200);
   });
 
   it("places a person's own siblings beside them, not off in the ancestor fan", () => {
@@ -1105,6 +1133,79 @@ describe("buildFocusTreeLayout", () => {
       expect(Math.abs(dadNewWifeX - dadX)).toBeLessThan(Math.abs(dadNewWifeX - momX));
       expect(Math.abs(momNewHusbandX - momX)).toBeLessThan(Math.abs(momNewHusbandX - dadX));
       expect(dadNewWifeX).toBeLessThan(momNewHusbandX);
+    });
+
+    it("keeps BOTH spouses' own parent fans centered on their own person when both fans would otherwise collide", () => {
+      // Reproduces a real production bug: focus = Виктор, married to
+      // Галина. BOTH of them have their own visible parents, so the two
+      // ancestor fans meet in the middle with zero natural gap. The old
+      // behavior pushed Виктор's own parent fan alone by the FULL
+      // separating amount (rootId's fan is placed AFTER the primary
+      // partner's, so it alone absorbed the whole push) — Виктор's own
+      // parents ended up centered a full PARTNER_X_SPACING away from him,
+      // near where his SISTER stood instead of directly above him. The fix
+      // splits the push: half widens the gap between Виктор and Галина
+      // (free to grow — nothing pins an EXACT distance between them, only
+      // a minimum), half is still absorbed by Виктор's own fan — so both
+      // fans land close to their own person.
+      const result = buildFocusTreeLayout({
+        persons: [
+          person("viktor", { gender: "male" }),
+          person("galina", { gender: "female" }),
+          person("nikolayK", { gender: "male" }),
+          person("elizavetaK", { gender: "female" }),
+          person("nikolayKozl", { gender: "male" }),
+          person("nadezhdaKozl", { gender: "female" }),
+        ],
+        parentChildEdges: [
+          { parentId: "nikolayK", childId: "viktor" },
+          { parentId: "elizavetaK", childId: "viktor" },
+          { parentId: "nikolayKozl", childId: "galina" },
+          { parentId: "nadezhdaKozl", childId: "galina" },
+        ],
+        partnershipEdges: [
+          { person1Id: "viktor", person2Id: "galina", isCurrent: true },
+          { person1Id: "nikolayK", person2Id: "elizavetaK", isCurrent: true },
+          { person1Id: "nikolayKozl", person2Id: "nadezhdaKozl", isCurrent: true },
+        ],
+        focusPersonId: "viktor",
+      });
+
+      const byId = new Map(result.nodes.map((n) => [n.id, n]));
+      const viktorX = byId.get("viktor")!.x;
+      const galinaX = byId.get("galina")!.x;
+      const nikolayKX = byId.get("nikolayK")!.x;
+      const elizavetaKX = byId.get("elizavetaK")!.x;
+      const nikolayKozlX = byId.get("nikolayKozl")!.x;
+      const nadezhdaKozlX = byId.get("nadezhdaKozl")!.x;
+
+      // Виктор never moves (layoutUnit's own invariant: rootId always sits
+      // at relativeX 0 within its own frame — the top-level couple here has
+      // Виктор as focus, so his x stays exactly where buildFocusTreeLayout
+      // put him).
+      expect(viktorX).toBe(0);
+      // Both fans stay on their own correct side, no crossing.
+      expect(Math.max(nikolayKX, elizavetaKX)).toBeLessThan(Math.min(nikolayKozlX, nadezhdaKozlX));
+
+      // The actual regression: Виктор's own parents must stay CLOSE to
+      // Виктор, not drift off toward Галина's side by a full
+      // PARTNER_X_SPACING or more.
+      const viktorParentsCenter = (nikolayKX + elizavetaKX) / 2;
+      expect(Math.abs(viktorParentsCenter - viktorX)).toBeLessThan(200);
+      // Галина's own parents stay exactly centered on her (unaffected by
+      // the split — she's the primary partner, placed first).
+      const galinaParentsCenter = (nikolayKozlX + nadezhdaKozlX) / 2;
+      expect(galinaParentsCenter).toBe(galinaX);
+
+      // No x-collisions at any generation.
+      const xByGeneration = new Map<number, number[]>();
+      for (const node of result.nodes) {
+        if (!xByGeneration.has(node.generation)) xByGeneration.set(node.generation, []);
+        xByGeneration.get(node.generation)!.push(node.x);
+      }
+      for (const [, xValues] of xByGeneration) {
+        expect(new Set(xValues).size).toBe(xValues.length);
+      }
     });
   });
 });
