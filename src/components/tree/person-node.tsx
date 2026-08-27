@@ -186,7 +186,7 @@ function PersonNodePopoverActions({
             <button
               type="button"
               onClick={() => data.onFocusPerson?.(data.personId)}
-              className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-[0.8rem] hover:bg-accent hover:text-accent-foreground"
+              className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-[0.8rem] hover:bg-accent hover:text-accent-foreground"
             />
           }
         >

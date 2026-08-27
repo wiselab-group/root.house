@@ -12,6 +12,7 @@ import {
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { updateDefaultFocusPersonAction } from "@/actions/family.actions";
 import type { TreeLayoutGraph } from "@/domain/tree/tree-layout.builder";
 import { toReactFlow, type TreeHighlightState } from "./adapters/xyflow-adapter";
 import { PersonNode } from "./person-node";
@@ -93,8 +94,16 @@ export function TreeCanvas({
       const params = new URLSearchParams(searchParams.toString());
       params.set("focus", personId);
       router.push(`${pathname}?${params.toString()}`);
+      // Persists as this user's own "tree opens focused on" default (Family
+      // Settings' FamilyFocusSettings, same server action it calls) — a
+      // deliberate "сделать фокус-персоной" click means "this is who I want
+      // to see when I come back", not just a one-off navigation, so it
+      // should stick past this session too. Fire-and-forget: the URL
+      // navigation above is the action's own immediate, visible effect;
+      // this save trails it and has nothing useful to block on.
+      void updateDefaultFocusPersonAction(familyId, personId);
     },
-    [pathname, router, searchParams],
+    [familyId, pathname, router, searchParams],
   );
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
