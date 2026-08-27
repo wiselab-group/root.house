@@ -1207,5 +1207,77 @@ describe("buildFocusTreeLayout", () => {
         expect(new Set(xValues).size).toBe(xValues.length);
       }
     });
+
+    it("keeps a spouse's own sibling on ITS natural side, not dragged past the other spouse's siblings", () => {
+      // Reproduces a real production bug: focus = Александр, whose parents
+      // Виктор+Галина are reached through layoutCoupleFan (a single nested
+      // layoutUnit(Виктор, ...) call folds the whole couple in as ONE
+      // piece, generation -1). Виктор has his OWN sibling; Галина has
+      // several siblings of her own. parentFan.lateralGroups mixes BOTH
+      // spouses' own sibling groups into one array — Виктор's own sibling
+      // naturally sits on Виктор's side (left of the couple's own
+      // midpoint), Галина's siblings naturally sit on Галина's side
+      // (right). placePiece's lateral-group loop used to push EVERY group
+      // using the single outer `direction` (the direction the WHOLE
+      // parentFan piece itself was pushed on collision) — for a couple's
+      // combined fan, that direction is arbitrary relative to each
+      // individual sibling group's own natural side. Виктор's own sibling,
+      // naturally far to the left, got treated as "approaching from the
+      // right" and shoved thousands of pixels past ALL of Галина's own
+      // siblings instead of staying near Виктор.
+      const result = buildFocusTreeLayout({
+        persons: [
+          person("alexander", { gender: "male" }),
+          person("viktor", { gender: "male" }),
+          person("galina", { gender: "female" }),
+          person("nikolayK", { gender: "male" }),
+          person("elizavetaK", { gender: "female" }),
+          person("viktorSib", { gender: "female" }),
+          person("nikolayKozl", { gender: "male" }),
+          person("nadezhdaKozl", { gender: "female" }),
+          ...Array.from({ length: 3 }, (_, i) => person(`galinaSib${i}`, { gender: i % 2 === 0 ? "female" : "male" })),
+        ],
+        parentChildEdges: [
+          { parentId: "viktor", childId: "alexander" },
+          { parentId: "galina", childId: "alexander" },
+          { parentId: "nikolayK", childId: "viktor" },
+          { parentId: "elizavetaK", childId: "viktor" },
+          { parentId: "nikolayK", childId: "viktorSib" },
+          { parentId: "elizavetaK", childId: "viktorSib" },
+          { parentId: "nikolayKozl", childId: "galina" },
+          { parentId: "nadezhdaKozl", childId: "galina" },
+          ...Array.from({ length: 3 }, (_, i) => ({ parentId: "nikolayKozl", childId: `galinaSib${i}` })),
+        ],
+        partnershipEdges: [
+          { person1Id: "viktor", person2Id: "galina", isCurrent: true },
+          { person1Id: "nikolayK", person2Id: "elizavetaK", isCurrent: true },
+          { person1Id: "nikolayKozl", person2Id: "nadezhdaKozl", isCurrent: true },
+        ],
+        focusPersonId: "alexander",
+      });
+
+      const byId = new Map(result.nodes.map((n) => [n.id, n]));
+      const viktorX = byId.get("viktor")!.x;
+      const galinaX = byId.get("galina")!.x;
+      const viktorSibX = byId.get("viktorSib")!.x;
+      const galinaSib0X = byId.get("galinaSib0")!.x;
+
+      // Виктор's own sibling stays on Виктор's side — never crossing past
+      // Виктор himself, and never landing among/past Галина's siblings.
+      expect(viktorSibX).toBeLessThan(viktorX);
+      expect(viktorSibX).toBeLessThan(galinaSib0X);
+      // Галина's siblings stay on Галина's side.
+      expect(galinaSib0X).toBeGreaterThan(galinaX);
+
+      // No x-collisions at any generation.
+      const xByGeneration2 = new Map<number, number[]>();
+      for (const node of result.nodes) {
+        if (!xByGeneration2.has(node.generation)) xByGeneration2.set(node.generation, []);
+        xByGeneration2.get(node.generation)!.push(node.x);
+      }
+      for (const [, xValues] of xByGeneration2) {
+        expect(new Set(xValues).size).toBe(xValues.length);
+      }
+    });
   });
 });
