@@ -736,9 +736,15 @@ function layoutUnit(
   // doc for why it must be the one deciding how many layoutUnit calls to
   // make, not this function calling layoutUnit directly for both parents).
   const parents = ctx.parentsOf.get(rootId) ?? [];
+  // splitByPartner=true: this is THE couple whose combined fan is about to
+  // be placed as one piece against rootId's own siblingDirection — a
+  // DIFFERENT axis than "which spouse this rider belongs to" (see
+  // layoutCoupleFan's own doc on splitByPartner for why only this ONE call
+  // site needs the split).
   const parentFan = layoutCoupleFan(
     parents.filter((id) => ctx.visibleIds.has(id) && !ctx.visited.has(id)),
     ctx,
+    true,
   );
 
   // Which side the partner sits on relative to rootId — a LOCAL rule
@@ -1187,6 +1193,10 @@ function layoutUnit(
     ctx.visited.add(thisPartnerId);
     const thisPartnerSiblingIds = collectSiblings(thisPartnerId, ctx);
     const thisPartnerParents = ctx.parentsOf.get(thisPartnerId) ?? [];
+    // splitByPartner defaults to false here (deliberately NOT passed) —
+    // thisPartnerId's own parents' fan is a NESTED ancestor generation,
+    // not rootId's own direct parentFan; it must stay one rigid, internally
+    // consistent shape (see layoutCoupleFan's own doc on splitByPartner).
     const thisPartnerParentFan = layoutCoupleFan(
       thisPartnerParents.filter((id) => ctx.visibleIds.has(id) && !ctx.visited.has(id)),
       ctx,
@@ -1480,6 +1490,32 @@ function layoutUnit(
 function layoutCoupleFan(
   parentIds: string[],
   ctx: LayoutContext,
+  /**
+   * Whether this couple's own combined lateral riders (each spouse's own
+   * siblings) should be split into independently-directed groups (see the
+   * arePartners branch's own doc). Only ever `true` for the ONE call that
+   * builds rootId's OWN parentFan directly inside layoutUnit — the couple
+   * whose fan is about to be placed as a single piece against a DIFFERENT
+   * outer `direction` (rootId's own siblingDirection), where "which spouse
+   * this rider belongs to" and "which way the whole fan piece gets pushed"
+   * are two genuinely different axes that must be tracked independently.
+   *
+   * `false` (the default) for every NESTED call — a spouse's own PARENTS'
+   * fan (placePartner's thisPartnerParentFan), and this function's own
+   * recursive calls for further ancestor generations. At those levels the
+   * whole fan (both grandparents/great-grandparents AND every one of
+   * THEIR siblings) is already one internally-consistent, correctly laid
+   * out rigid shape — it moves as ONE block wherever its containing piece
+   * gets placed, same axis for everyone in it. Splitting it AGAIN there
+   * corrupts the split: a stamped direction from THIS level's own local
+   * sign has no valid meaning once re-interpreted against a completely
+   * different outer piece's own `direction` several levels up (the exact
+   * reported bug: Алексей Козловский, Николай Козловский's own brother,
+   * stamped correctly relative to their own local fan, ended up shoved to
+   * Виктор's side once that whole fan was re-split again at the outer
+   * Виктор+Галина level).
+   */
+  splitByPartner = false,
 ): { slots: UnitSlot[]; coreSlots: UnitSlot[]; lateralGroups: LateralGroup[] } | null {
   const { leftId, rightId, arePartners } = orderCoupleBySlot(parentIds, ctx.partnersOf, ctx.genderOf);
   if (!leftId && !rightId) return null;
@@ -1516,24 +1552,40 @@ function layoutCoupleFan(
     // leftId's own siblings (naturally negative/left of leftId's own local
     // 0) AND rightId's own siblings/children, bubbled up from the nested
     // placePartner call (naturally positive/right, since rightId sits at
-    // leftId's local +PARTNER_X_SPACING). Each group's own PRE-FOLD sign
+    // leftId's local +PARTNER_X_SPACING). ONLY when splitByPartner is true
+    // (see this function's own doc — exclusively the ONE call from
+    // layoutUnit's own parentFan) does each group's PRE-FOLD sign
     // (relative to leftId's own local 0, the one point in the whole
-    // recursion where "which side" is unambiguous for this couple) decides
-    // which spouse it belongs to — stamped as an explicit `direction` so
-    // whichever OUTER placePiece call later places this whole folded
-    // parentFan piece never has to guess a single shared direction for
-    // both spouses' worth of lateral riders at once (see LateralGroup's
-    // own doc, and placePiece's own doc on `direction` — this is what
-    // fixes a real reported bug: a spouse's own sibling's own CHILDREN,
-    // riding along inside that sibling's own group, used to inherit
-    // whichever direction the whole parentFan piece got pushed in at the
-    // top level — which has nothing to do with which spouse's side they
-    // actually belong to — and ended up thousands of pixels away from
-    // their own parents).
-    const leftUnitLateralGroups: LateralGroup[] = leftUnit.lateralGroups.map((group) => {
-      const groupCenter = group.slots.reduce((sum, s) => sum + s.relativeX, 0) / group.slots.length;
-      return { ...group, direction: groupCenter < 0 ? (-1 as const) : (1 as const) };
-    });
+    // recursion where "which side" is unambiguous for THIS couple) get
+    // stamped as an explicit `direction`, so the OUTER placePiece call
+    // that places this whole parentFan piece against a DIFFERENT axis
+    // (rootId's own siblingDirection) never has to guess a single shared
+    // direction for both spouses' worth of lateral riders at once (see
+    // LateralGroup's own doc, and placePiece's own doc on `direction` —
+    // this is what fixes a real reported bug: a spouse's own sibling's own
+    // CHILDREN, riding along inside that sibling's own group, used to
+    // inherit whichever direction the whole parentFan piece got pushed in
+    // — which has nothing to do with which spouse's side they belong to).
+    //
+    // When splitByPartner is false (every NESTED ancestor-fan call — a
+    // spouse's own parents, grandparents, etc), leftUnit.lateralGroups is
+    // passed through UNCHANGED: the whole fan (both this couple AND every
+    // one of their own siblings) is already one internally consistent
+    // rigid shape that will move together wherever ITS OWN containing
+    // piece gets placed — stamping a direction here too would corrupt it,
+    // since a sign that's correct relative to THIS level's own local 0 has
+    // no valid meaning once re-interpreted several outer levels up against
+    // a completely different piece's own `direction` (the exact reported
+    // bug: Алексей Козловский, Николай Козловский's own brother, stamped
+    // correctly relative to their own local fan, ended up shoved to
+    // Виктор's side once that whole fan was re-split again at the outer
+    // Виктор+Галина level).
+    const leftUnitLateralGroups: LateralGroup[] = splitByPartner
+      ? leftUnit.lateralGroups.map((group) => {
+          const groupCenter = group.slots.reduce((sum, s) => sum + s.relativeX, 0) / group.slots.length;
+          return { ...group, direction: groupCenter < 0 ? (-1 as const) : (1 as const) };
+        })
+      : leftUnit.lateralGroups;
     foldIn({ ...leftUnit, lateralGroups: leftUnitLateralGroups }, -PARTNER_X_SPACING / 2);
     return { slots, coreSlots, lateralGroups };
   }

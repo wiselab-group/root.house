@@ -1361,5 +1361,97 @@ describe("buildFocusTreeLayout", () => {
         expect(new Set(xValues).size).toBe(xValues.length);
       }
     });
+
+    it("keeps a grandparent's own siblings on their own family's side, not split across into the other spouse's line", () => {
+      // Reproduces a real production bug: focus = Александр. Виктор's own
+      // ancestor line (Купчик) must stay entirely on Виктор's side; Галина's
+      // own ancestor line (her parents Николай Козловский + Надежда
+      // Козловская, AND Николай's own siblings — an uncle/aunt one
+      // generation further up) must stay entirely on Галина's side. The
+      // previous fix (stamping a direction on a couple's own combined
+      // lateral riders) was applied at EVERY nested layoutCoupleFan call,
+      // not just the outermost — so Николай Козловский's own siblings,
+      // stamped correctly relative to THEIR OWN local fan one level down,
+      // got RE-interpreted (and corrupted) against the outer Виктор+Галина
+      // fan's own different axis, splitting one sibling off across onto
+      // Виктор's side while the rest of his own siblings stayed with
+      // Галина. This test locks in that a nested ancestor generation's own
+      // sibling group never crosses into the OTHER spouse's line.
+      const result = buildFocusTreeLayout({
+        persons: [
+          person("alexander", { gender: "male" }),
+          person("viktor", { gender: "male" }),
+          person("galina", { gender: "female" }),
+          person("nikolayK", { gender: "male" }),
+          person("elizavetaK", { gender: "female" }),
+          person("nikolayKozl", { gender: "male" }),
+          person("nadezhdaKozl", { gender: "female" }),
+          person("vasily", { gender: "male" }),
+          person("elizavetaKozl", { gender: "female" }),
+          person("yuzik", { gender: "male" }),
+          person("daniil", { gender: "male" }),
+          person("alexeyKozl", { gender: "male" }),
+          person("grigoryK", { gender: "male" }),
+          person("agrafena", { gender: "female" }),
+        ],
+        parentChildEdges: [
+          { parentId: "viktor", childId: "alexander" },
+          { parentId: "galina", childId: "alexander" },
+          { parentId: "nikolayK", childId: "viktor" },
+          { parentId: "elizavetaK", childId: "viktor" },
+          { parentId: "nikolayKozl", childId: "galina" },
+          { parentId: "nadezhdaKozl", childId: "galina" },
+          { parentId: "vasily", childId: "nikolayKozl" },
+          { parentId: "elizavetaKozl", childId: "nikolayKozl" },
+          { parentId: "vasily", childId: "yuzik" },
+          { parentId: "elizavetaKozl", childId: "yuzik" },
+          { parentId: "vasily", childId: "daniil" },
+          { parentId: "elizavetaKozl", childId: "daniil" },
+          { parentId: "vasily", childId: "alexeyKozl" },
+          { parentId: "elizavetaKozl", childId: "alexeyKozl" },
+          { parentId: "grigoryK", childId: "nadezhdaKozl" },
+          { parentId: "agrafena", childId: "nadezhdaKozl" },
+        ],
+        partnershipEdges: [
+          { person1Id: "viktor", person2Id: "galina", isCurrent: true },
+          { person1Id: "nikolayK", person2Id: "elizavetaK", isCurrent: true },
+          { person1Id: "nikolayKozl", person2Id: "nadezhdaKozl", isCurrent: true },
+          { person1Id: "vasily", person2Id: "elizavetaKozl", isCurrent: true },
+          { person1Id: "grigoryK", person2Id: "agrafena", isCurrent: true },
+        ],
+        focusPersonId: "alexander",
+        ancestorGenerations: Infinity,
+      });
+
+      const byId = new Map(result.nodes.map((n) => [n.id, n]));
+      const viktorX = byId.get("viktor")!.x;
+      const galinaX = byId.get("galina")!.x;
+      const nikolayKX = byId.get("nikolayK")!.x;
+      const elizavetaKX = byId.get("elizavetaK")!.x;
+      const nikolayKozlX = byId.get("nikolayKozl")!.x;
+      const yuzikX = byId.get("yuzik")!.x;
+      const daniilX = byId.get("daniil")!.x;
+      const alexeyKozlX = byId.get("alexeyKozl")!.x;
+
+      // Виктор's own line (his parents) stays entirely left of Галина's
+      // own line (her parents + her father's own siblings) — no crossing.
+      expect(Math.max(nikolayKX, elizavetaKX)).toBeLessThan(nikolayKozlX);
+      // Николай Козловский's own siblings stay together on Галина's side —
+      // NONE of them cross back to Виктор's side.
+      for (const sibX of [yuzikX, daniilX, alexeyKozlX]) {
+        expect(sibX).toBeGreaterThan(Math.max(nikolayKX, elizavetaKX));
+      }
+      expect(viktorX).toBeLessThan(galinaX);
+
+      // No x-collisions at any generation.
+      const xByGeneration4 = new Map<number, number[]>();
+      for (const node of result.nodes) {
+        if (!xByGeneration4.has(node.generation)) xByGeneration4.set(node.generation, []);
+        xByGeneration4.get(node.generation)!.push(node.x);
+      }
+      for (const [, xValues] of xByGeneration4) {
+        expect(new Set(xValues).size).toBe(xValues.length);
+      }
+    });
   });
 });
