@@ -386,6 +386,104 @@ describe("buildFocusTreeLayout", () => {
     expect(Math.abs(bob.x - alice.x)).toBeLessThan(Math.abs(bob.x - aliceSpouse.x));
   });
 
+  it("includes a sibling's own partner, not just the sibling themself", () => {
+    // Reproduces the reported bug: focus (elenaSibling) is one of two
+    // children of parent1+parent2; the OTHER child, elena, has her own
+    // partner (nikolai) who has no other connection to the family at all.
+    // elena herself is discovered only as elenaSibling's sibling (never
+    // focus, never anyone's ancestor/descendant) — nikolai must still show
+    // up beside her, because a sibling is a full person with their own
+    // partner, not a dead end.
+    const result = buildFocusTreeLayout({
+      persons: [
+        person("parent1"),
+        person("parent2"),
+        person("elenaSibling"),
+        person("elena"),
+        person("nikolai"),
+      ],
+      parentChildEdges: [
+        { parentId: "parent1", childId: "elenaSibling" },
+        { parentId: "parent2", childId: "elenaSibling" },
+        { parentId: "parent1", childId: "elena" },
+        { parentId: "parent2", childId: "elena" },
+      ],
+      partnershipEdges: [
+        { person1Id: "parent1", person2Id: "parent2", isCurrent: true },
+        { person1Id: "nikolai", person2Id: "elena", isCurrent: true },
+      ],
+      focusPersonId: "elenaSibling",
+    });
+
+    const byId = new Map(result.nodes.map((n) => [n.id, n]));
+    expect(byId.has("elena")).toBe(true);
+    expect(byId.has("nikolai")).toBe(true);
+    // nikolai rides at elena's own generation, immediately beside her.
+    expect(byId.get("nikolai")!.generation).toBe(byId.get("elena")!.generation);
+    expect(Math.abs(byId.get("nikolai")!.x - byId.get("elena")!.x)).toBe(260);
+  });
+
+  it("never flips a sibling's own partner back toward whoever placed the sibling", () => {
+    // Reproduces the reported follow-up bug. grandpa+grandma have two
+    // daughters: elizaveta (male partner nikolaiKupchik) and elena (male
+    // partner nikolaiUshkar) — the focus is a grandchild of elizaveta, so
+    // elizaveta is discovered as a "root" (via elizaveta+nikolaiKupchik's
+    // own children), elena only as elizaveta's OWN sibling.
+    // elizaveta (female) + nikolaiKupchik (male): pure gender order puts
+    // nikolaiKupchik at partnerSide -1 (male left of female) — so
+    // siblingDirection (opposite of partnerSide) pushes elena to +1 (right
+    // of elizaveta). elena's own partner nikolaiUshkar (male) + elena
+    // (female): pure gender order would put HIM at -1 relative to elena —
+    // i.e. flipped back toward elizaveta, landing almost on top of her.
+    // The fix: nikolaiUshkar must land further +1 (past elena), because
+    // that's the direction elena herself was pushed — never back toward
+    // elizaveta, regardless of what gender order alone would say.
+    const result = buildFocusTreeLayout({
+      persons: [
+        person("grandpa", { gender: "male" }),
+        person("grandma", { gender: "female" }),
+        person("elizaveta", { gender: "female" }),
+        person("nikolaiKupchik", { gender: "male" }),
+        person("elena", { gender: "female" }),
+        person("nikolaiUshkar", { gender: "male" }),
+        person("kid", { gender: "unknown" }),
+      ],
+      parentChildEdges: [
+        { parentId: "grandpa", childId: "elizaveta" },
+        { parentId: "grandma", childId: "elizaveta" },
+        { parentId: "grandpa", childId: "elena" },
+        { parentId: "grandma", childId: "elena" },
+        { parentId: "elizaveta", childId: "kid" },
+        { parentId: "nikolaiKupchik", childId: "kid" },
+      ],
+      partnershipEdges: [
+        { person1Id: "grandpa", person2Id: "grandma", isCurrent: true },
+        { person1Id: "elizaveta", person2Id: "nikolaiKupchik", isCurrent: true },
+        { person1Id: "elena", person2Id: "nikolaiUshkar", isCurrent: true },
+      ],
+      focusPersonId: "kid",
+    });
+
+    const byId = new Map(result.nodes.map((n) => [n.id, n]));
+    expect(byId.has("elena")).toBe(true);
+    expect(byId.has("nikolaiUshkar")).toBe(true);
+
+    const order = ["nikolaiKupchik", "elizaveta", "elena", "nikolaiUshkar"]
+      .map((id) => byId.get(id)!.x)
+      .every((x, i, arr) => i === 0 || x > arr[i - 1]);
+    expect(order).toBe(true);
+
+    // No two cards at the same generation collide (each at least
+    // PARTNER_X_SPACING=260 apart from its neighbor) — the reported bug put
+    // nikolaiUshkar only 20 apart from elizaveta.
+    const sameGen = result.nodes
+      .filter((n) => n.generation === byId.get("elizaveta")!.generation)
+      .sort((a, b) => a.x - b.x);
+    for (let i = 1; i < sameGen.length; i++) {
+      expect(sameGen[i].x - sameGen[i - 1].x).toBeGreaterThanOrEqual(260);
+    }
+  });
+
   it("keeps the couple adjacent no matter how many siblings either spouse has", () => {
     // viktor has two siblings (viktorSib1, viktorSib2); galina has three
     // (galinaSib1..3) — a deliberately lopsided case. Regardless of how

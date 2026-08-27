@@ -581,6 +581,24 @@ function layoutUnit(
   rootId: string,
   side: "left" | "right",
   ctx: LayoutContext,
+  /**
+   * Overrides the gender-based husband-left/wife-right rule below for
+   * rootId's OWN partner — used only when layoutUnit is called for a
+   * sibling that's already been placed outward of some other unit (see the
+   * two collectSiblings-driven call sites below, both of which pass
+   * `outward` here). A sibling's partner must always sit FURTHER outward
+   * from rootId's OWN unit, in the SAME direction the sibling itself was
+   * pushed — never flipped back toward whatever placed the sibling, or the
+   * partner lands on top of it (the exact reported bug: Николай Ушкар,
+   * partnered with Елена — a sibling pushed to one side of Елизавета —
+   * landed BETWEEN Елизавета and Елена instead of beside Елена, because
+   * pure gender order put him on Елена's OTHER side, back toward
+   * Елизавета). Left undefined for every non-sibling call (the focus
+   * person, and every "root" placed via layoutCoupleFan/childUnits) so the
+   * ordinary husband-left/wife-right rule keeps deciding those on gender
+   * alone, exactly as before.
+   */
+  forcePartnerSide?: 1 | -1,
 ): { width: number; slots: UnitSlot[]; extentByGeneration: ExtentByGeneration } {
   ctx.visited.add(rootId);
   const outward = side === "left" ? -1 : 1;
@@ -633,13 +651,14 @@ function layoutUnit(
   // `outward` only when gender is unknown (nothing to key the local
   // order off, so any deterministic direction is as good as another).
   const partnerSide: 1 | -1 = hasPartner
-    ? (() => {
+    ? (forcePartnerSide ??
+      (() => {
         const rootGender = ctx.genderOf.get(rootId) ?? "unknown";
         const partnerGender = ctx.genderOf.get(partnerId!) ?? "unknown";
         if (rootGender === "male" && partnerGender === "female") return 1;
         if (rootGender === "female" && partnerGender === "male") return -1;
         return outward as 1 | -1;
-      })()
+      })())
     : (outward as 1 | -1);
   const partnerParents = hasPartner ? (ctx.parentsOf.get(partnerId!) ?? []) : [];
   const partnerParentFan = hasPartner
@@ -736,11 +755,31 @@ function layoutUnit(
   // spouse. Further siblings beyond the first are still just
   // UNIT_X_SPACING apart from each other (a plain row, no couples between
   // them to separate).
-  siblingIds.forEach((id, index) => {
-    const desiredX = siblingDirection * (index + 1) * UNIT_X_SPACING;
-    placePiece([{ id, relativeX: 0, relativeGeneration: 0 }], desiredX, 0, siblingDirection);
+  //
+  // Each sibling is laid out via its own layoutUnit call, not placed as a
+  // bare slot — a sibling is a full person who can have their OWN partner
+  // (and that partner's own descendants/further ancestor fan), same as
+  // rootId itself. A bare `{ id, relativeX: 0 }` slot silently dropped a
+  // sibling's own partner from the tree entirely (they were never marked
+  // visited by anything, so hasPartner never ran for them and they simply
+  // never got a LayoutNode) — this is the actual bug that omitted a
+  // partnered sibling's spouse from the rendered tree. siblingUnit.width
+  // (not a flat UNIT_X_SPACING) spaces consecutive siblings apart so a
+  // sibling's own partner doesn't collide with the next sibling over —
+  // placePiece's own collision resolution still pushes further if needed.
+  // forcePartnerSide=siblingDirection: this sibling's own partner (if any)
+  // must sit further in siblingDirection, past the sibling — never flipped
+  // back toward rootId by pure gender order, which would land the partner
+  // between rootId and the sibling instead of past both (see
+  // forcePartnerSide's own doc on layoutUnit).
+  let siblingCursor = 0;
+  siblingIds.forEach((id) => {
+    const siblingUnit = layoutUnit(id, siblingDirection === 1 ? "right" : "left", ctx, siblingDirection);
+    const desiredX = siblingCursor + siblingDirection * UNIT_X_SPACING;
+    const actualX = placePiece(siblingUnit.slots, desiredX, 0, siblingDirection);
+    siblingCursor = actualX + siblingDirection * siblingUnit.width;
   });
-  const siblingRowWidth = siblingIds.length * UNIT_X_SPACING;
+  const siblingRowWidth = Math.abs(siblingCursor);
 
   // Partner sits PARTNER_X_SPACING toward partnerSide from rootId — the
   // couple's own tight, dedicated gap (see PARTNER_X_SPACING's doc). The
@@ -753,14 +792,33 @@ function layoutUnit(
   // sibling, not just from rootId's).
   let partnerX = 0;
   if (hasPartner) {
+    // Same fix as rootId's own siblings above: a partner's sibling is a
+    // full person who can have their own partner/descendants, so they need
+    // their own layoutUnit call too, not a bare slot (which silently
+    // dropped that sibling's own partner from the tree). Positioned
+    // one-at-a-time via a running cursor, same pattern as siblingIds above,
+    // so consecutive partner-siblings don't collide with each other before
+    // the whole piece is placed against rootId's own side of the tree.
+    let partnerSiblingCursor = 0;
+    const partnerSiblingSlots: UnitSlot[] = [];
+    // forcePartnerSide=partnerSide: same fix as rootId's own siblings —
+    // this partner-sibling's own partner must sit further in partnerSide,
+    // past the sibling, never flipped back toward rootId's partner by pure
+    // gender order (the exact reported bug: a sibling's spouse landing
+    // between the sibling and rootId's own partner instead of past both).
+    partnerSiblingIds.forEach((id) => {
+      const siblingUnit = layoutUnit(id, partnerSide === 1 ? "right" : "left", ctx, partnerSide);
+      const desiredX = partnerSiblingCursor + partnerSide * UNIT_X_SPACING;
+      for (const slot of siblingUnit.slots) {
+        partnerSiblingSlots.push({ ...slot, relativeX: slot.relativeX + desiredX });
+      }
+      partnerSiblingCursor = desiredX + partnerSide * siblingUnit.width;
+    });
+
     const partnerPieceSlots: UnitSlot[] = [
       { id: partnerId!, relativeX: 0, relativeGeneration: 0 },
       ...(partnerParentFan?.slots.filter((s) => !(s.relativeGeneration === 0 && s.id === partnerId)) ?? []),
-      ...partnerSiblingIds.map((id, index) => ({
-        id,
-        relativeX: partnerSide * (index + 1) * UNIT_X_SPACING,
-        relativeGeneration: 0,
-      })),
+      ...partnerSiblingSlots,
     ];
     partnerX = placePiece(partnerPieceSlots, partnerSide * PARTNER_X_SPACING, 0, partnerSide);
   }
