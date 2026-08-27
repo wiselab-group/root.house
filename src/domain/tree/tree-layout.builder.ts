@@ -310,7 +310,7 @@ export function buildFocusTreeLayout(
   // person's OWN further-nested units grow; "right" is an arbitrary but
   // stable choice (their own partner still gets rootId's outward side,
   // "right" here, per layoutUnit's own partner-placement rule).
-  const focusUnit = layoutUnit(focusPersonId, "right", ctx);
+  const focusUnit = layoutUnit(focusPersonId, "right", ctx, undefined, true);
 
   const nodes: LayoutNode[] = [];
   for (const slot of focusUnit.slots) {
@@ -680,6 +680,32 @@ function layoutUnit(
    * alone, exactly as before.
    */
   forcePartnerSide?: 1 | -1,
+  /**
+   * True ONLY for the single outermost `layoutUnit` call — the focus
+   * person, called directly from `buildFocusTreeLayout` — whose own
+   * `slots`/`lateralGroups` are the FINAL output, never folded into a
+   * bigger piece by anything further out. Every other call (recursive
+   * self-calls for siblings/children, and `layoutCoupleFan`'s own
+   * `layoutUnit(leftId, ...)` for an ancestor couple) leaves this `false`
+   * (the default).
+   *
+   * Only controls whether THIS call's own `parentFan` (rootId's direct
+   * parents) is allowed to split its combined lateral riders by spouse
+   * (see layoutCoupleFan's own doc on `splitByPartner`) — that split is
+   * only safe at the ONE level whose own result will never be re-wrapped
+   * and re-interpreted against a different outer `direction` afterward.
+   * Passing `true` for a nested call was a real bug: rootId's own
+   * parentFan got correctly split relative to ITS OWN local axis, but
+   * once that whole nested layoutUnit result became part of an EVEN
+   * OUTER piece (e.g. Виктор's own parentFan, folded into the outer
+   * Виктор+Галина couple fan), the stamped direction was reinterpreted
+   * against the wrong axis and corrupted again (the exact reported bug:
+   * Елена Ушкар — Елизавета Купчик's own sister, i.e. Виктор's aunt —
+   * ended up thousands of px away on Галина's side, because Виктор's own
+   * `layoutUnit` call, itself nested inside the outer couple fan, still
+   * split its OWN parentFan as if it were the final, unwrapped result).
+   */
+  isTopLevel = false,
 ): {
   width: number;
   slots: UnitSlot[];
@@ -736,15 +762,15 @@ function layoutUnit(
   // doc for why it must be the one deciding how many layoutUnit calls to
   // make, not this function calling layoutUnit directly for both parents).
   const parents = ctx.parentsOf.get(rootId) ?? [];
-  // splitByPartner=true: this is THE couple whose combined fan is about to
-  // be placed as one piece against rootId's own siblingDirection — a
-  // DIFFERENT axis than "which spouse this rider belongs to" (see
-  // layoutCoupleFan's own doc on splitByPartner for why only this ONE call
-  // site needs the split).
+  // splitByPartner=isTopLevel: only the ONE outermost layoutUnit call (see
+  // isTopLevel's own doc above) is allowed to split its own parentFan's
+  // combined lateral riders by spouse — every nested call leaves the whole
+  // fan as one rigid group, since its own result will still be folded into
+  // a bigger piece with a different axis by whatever called it.
   const parentFan = layoutCoupleFan(
     parents.filter((id) => ctx.visibleIds.has(id) && !ctx.visited.has(id)),
     ctx,
-    true,
+    isTopLevel,
   );
 
   // Which side the partner sits on relative to rootId — a LOCAL rule

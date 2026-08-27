@@ -1453,5 +1453,83 @@ describe("buildFocusTreeLayout", () => {
         expect(new Set(xValues).size).toBe(xValues.length);
       }
     });
+
+    it("keeps a great-aunt on her own great-grandparents' side across TWO nested couple fans", () => {
+      // Reproduces a real production bug one level deeper than the previous
+      // test: focus = Александр. Виктор's own MOTHER (Елизавета) has a
+      // sister (Елена) — an ordinary great-aunt, reached through TWO
+      // nested layoutCoupleFan calls: the outer one for Виктор+Галина
+      // (splits by spouse — correct, needed), and an INNER one, entirely
+      // within Виктор's own nested layoutUnit call, for Виктор's OWN
+      // parents (Николай Купчик + Елизавета). That inner call used to
+      // ALSO split its own parentFan's lateral riders by spouse (isTopLevel
+      // was always true for every layoutUnit's own parentFan) — stamping
+      // Елена's group with a direction relative to Виктор's own parents'
+      // local axis. But Виктор's own layoutUnit result is itself STILL
+      // going to be folded into the OUTER Виктор+Галина fan afterward —
+      // that stamped direction got reinterpreted against the outer axis
+      // and corrupted, shoving Елена thousands of px onto Галина's side
+      // (the exact reported bug: Елена Ушкар ended up past Козловский/
+      // Колесникович instead of beside Виктор's own parents).
+      const result = buildFocusTreeLayout({
+        persons: [
+          person("alexander", { gender: "male" }),
+          person("viktor", { gender: "male" }),
+          person("galina", { gender: "female" }),
+          person("nikolayK", { gender: "male" }),
+          person("elizavetaK", { gender: "female" }),
+          person("grigoryKrivusha", { gender: "male" }),
+          person("elizavetaKrivusha", { gender: "female" }),
+          person("elenaUshkar", { gender: "female" }),
+          person("nikolayKozl", { gender: "male" }),
+          person("nadezhdaKozl", { gender: "female" }),
+          ...Array.from({ length: 4 }, (_, i) => person(`galinaSib${i}`, { gender: i % 2 === 0 ? "female" : "male" })),
+        ],
+        parentChildEdges: [
+          { parentId: "viktor", childId: "alexander" },
+          { parentId: "galina", childId: "alexander" },
+          { parentId: "nikolayK", childId: "viktor" },
+          { parentId: "elizavetaK", childId: "viktor" },
+          { parentId: "grigoryKrivusha", childId: "elizavetaK" },
+          { parentId: "elizavetaKrivusha", childId: "elizavetaK" },
+          { parentId: "grigoryKrivusha", childId: "elenaUshkar" },
+          { parentId: "elizavetaKrivusha", childId: "elenaUshkar" },
+          { parentId: "nikolayKozl", childId: "galina" },
+          { parentId: "nadezhdaKozl", childId: "galina" },
+          ...Array.from({ length: 4 }, (_, i) => ({ parentId: "nikolayKozl", childId: `galinaSib${i}` })),
+        ],
+        partnershipEdges: [
+          { person1Id: "viktor", person2Id: "galina", isCurrent: true },
+          { person1Id: "nikolayK", person2Id: "elizavetaK", isCurrent: true },
+          { person1Id: "grigoryKrivusha", person2Id: "elizavetaKrivusha", isCurrent: true },
+          { person1Id: "nikolayKozl", person2Id: "nadezhdaKozl", isCurrent: true },
+        ],
+        focusPersonId: "alexander",
+        ancestorGenerations: Infinity,
+      });
+
+      const byId = new Map(result.nodes.map((n) => [n.id, n]));
+      const viktorX = byId.get("viktor")!.x;
+      const galinaX = byId.get("galina")!.x;
+      const elizavetaKX = byId.get("elizavetaK")!.x;
+      const elenaUshkarX = byId.get("elenaUshkar")!.x;
+      const nikolayKozlX = byId.get("nikolayKozl")!.x;
+
+      // Елена (Виктор's own aunt) stays on Виктор's side — left of Виктор
+      // and Галина both, never crossing to Галина's side.
+      expect(viktorX).toBeLessThan(galinaX);
+      expect(elenaUshkarX).toBeLessThan(nikolayKozlX);
+      expect(Math.abs(elenaUshkarX - elizavetaKX)).toBeLessThan(600);
+
+      // No x-collisions at any generation.
+      const xByGeneration5 = new Map<number, number[]>();
+      for (const node of result.nodes) {
+        if (!xByGeneration5.has(node.generation)) xByGeneration5.set(node.generation, []);
+        xByGeneration5.get(node.generation)!.push(node.x);
+      }
+      for (const [, xValues] of xByGeneration5) {
+        expect(new Set(xValues).size).toBe(xValues.length);
+      }
+    });
   });
 });
