@@ -182,10 +182,23 @@ export function buildFocusTreeLayout(
     (e) => e.parentId,
     (e) => e.childId,
   );
-  const partnerOf = new Map<string, string>();
+  // A person can have multiple recorded partnerships (divorce+remarriage,
+  // several partners, etc — relationships_partnership deliberately has no
+  // unique(person1Id, person2Id) constraint, see docs/architecture.md) —
+  // Map<string, string[]>, built in the stable order partnershipEdges
+  // itself arrives in (DB row order), not a single Map<string, string>
+  // (which would silently let the last edge overwrite every earlier one,
+  // dropping all but one partner from the visible tree). layoutUnit below
+  // treats partnersOf.get(rootId)[0] as rootId's "primary" partner (same
+  // placement rule as before) and any further entries as additional
+  // partnerships laid out as their own couple units — see layoutUnit's own
+  // doc for how those are placed.
+  const partnersOf = new Map<string, string[]>();
   for (const { person1Id, person2Id } of input.partnershipEdges) {
-    partnerOf.set(person1Id, person2Id);
-    partnerOf.set(person2Id, person1Id);
+    if (!partnersOf.has(person1Id)) partnersOf.set(person1Id, []);
+    if (!partnersOf.has(person2Id)) partnersOf.set(person2Id, []);
+    partnersOf.get(person1Id)!.push(person2Id);
+    partnersOf.get(person2Id)!.push(person1Id);
   }
   const genderOf = new Map<string, Gender>(persons.map((p) => [p.id, p.gender]));
 
@@ -287,7 +300,7 @@ export function buildFocusTreeLayout(
 
   const visibleIds = new Set(generationOf.keys());
   const visited = new Set<string>();
-  const ctx: LayoutContext = { visibleIds, parentsOf, childrenOf, partnerOf, genderOf, visited };
+  const ctx: LayoutContext = { visibleIds, parentsOf, childrenOf, partnersOf, genderOf, visited };
 
   // layoutUnit already handles its OWN root's partner internally (their own
   // ancestor fan, nested exactly like any other couple in the tree — see
@@ -412,14 +425,14 @@ interface OrderedCouple {
 
 function orderCoupleBySlot(
   ids: string[],
-  partnerOf: Map<string, string>,
+  partnersOf: Map<string, string[]>,
   genderOf: Map<string, Gender>,
 ): OrderedCouple {
   if (ids.length === 0) return { leftId: null, rightId: null, arePartners: false };
   if (ids.length === 1) return { leftId: ids[0], rightId: null, arePartners: false };
 
   const [a, b] = ids;
-  const arePartners = partnerOf.get(a) === b;
+  const arePartners = (partnersOf.get(a) ?? []).includes(b);
   if (!arePartners) {
     const [leftId, rightId] = [...ids].sort();
     return { leftId, rightId, arePartners: false };
@@ -436,7 +449,7 @@ interface LayoutContext {
   visibleIds: Set<string>;
   parentsOf: Map<string, string[]>;
   childrenOf: Map<string, string[]>;
-  partnerOf: Map<string, string>;
+  partnersOf: Map<string, string[]>;
   genderOf: Map<string, Gender>;
   /** Shared across the WHOLE recursion (both directions) — every person is placed exactly once, however many paths could reach them. */
   visited: Set<string>;
@@ -551,27 +564,59 @@ function mergeExtent(target: ExtentByGeneration, incoming: ExtentByGeneration, o
 }
 
 /**
+ * The OTHER recorded parent of childId, given one of their parents
+ * (thisParentId) — used to attribute a child to the specific couple they
+ * were recorded under when rootId has multiple partnerships (see
+ * childUnitsFor in layoutUnit). Returns undefined when childId has no
+ * second recorded parent at all (an unpartnered/unknown-other-parent
+ * case), which callers treat as "belongs with the primary partner's row"
+ * to preserve existing single-parent-recorded behavior unchanged.
+ */
+function otherParentOf(childId: string, thisParentId: string, ctx: LayoutContext): string | undefined {
+  return ctx.parentsOf.get(childId)?.find((p) => p !== thisParentId);
+}
+
+/**
  * Finds personId's own siblings (same recorded parents, still visible, not
  * already claimed by someone else's own layoutUnit call) and marks them
  * visited. Shared between rootId and rootId's own partner in layoutUnit
  * (see COUPLE SYMMETRY note there) — a partner is a full person with their
  * own sibling group too, not just an inline placeholder, so this must run
  * for them exactly the same way it runs for rootId.
+ *
+ * HALF-SIBLINGS FROM A DIFFERENT PARTNERSHIP are deliberately EXCLUDED here
+ * when that other partnership is itself visible: a candidate childId who
+ * shares parentId with personId but has a DIFFERENT, visible other-parent
+ * is a child of parentId's OTHER couple (see childUnitsFor/placePartner in
+ * layoutUnit), not a plain sibling riding beside personId — they get their
+ * own position centered under THEIR OWN parents' pairing instead. Without
+ * this check, collectSiblings(child1) would pull in child2 (root's OTHER
+ * partner's child) as if they were a shared full/half sibling, mark them
+ * visited here, and silently steal them from partnerB's own children row
+ * before placePartner ever got to lay it out (the exact bug this guards
+ * against). A candidate is still a normal (half-)sibling when their other
+ * recorded parent MATCHES personId's own other parent for this shared
+ * parentId (full siblings), or when EITHER side has no second recorded
+ * parent at all (the existing single-parent-recorded case, unaffected).
  */
 function collectSiblings(personId: string, ctx: LayoutContext): string[] {
   const parents = ctx.parentsOf.get(personId) ?? [];
   const siblingIds: string[] = [];
   for (const parentId of parents) {
+    const personOtherParent = otherParentOf(personId, parentId, ctx);
     for (const childId of ctx.childrenOf.get(parentId) ?? []) {
-      if (
-        childId !== personId &&
-        ctx.visibleIds.has(childId) &&
-        !ctx.visited.has(childId) &&
-        !siblingIds.includes(childId)
-      ) {
-        siblingIds.push(childId);
-        ctx.visited.add(childId);
+      if (childId === personId || !ctx.visibleIds.has(childId) || ctx.visited.has(childId) || siblingIds.includes(childId)) {
+        continue;
       }
+      const childOtherParent = otherParentOf(childId, parentId, ctx);
+      const belongsToADifferentVisibleCouple =
+        childOtherParent !== undefined &&
+        personOtherParent !== undefined &&
+        childOtherParent !== personOtherParent &&
+        ctx.visibleIds.has(childOtherParent);
+      if (belongsToADifferentVisibleCouple) continue;
+      siblingIds.push(childId);
+      ctx.visited.add(childId);
     }
   }
   return siblingIds;
@@ -613,14 +658,33 @@ function layoutUnit(
   // descendants of parent2's own layoutUnit call instead of riding beside
   // galina in her own row, because galina herself never went through
   // collectSiblings at all — only rootId did).
-  const partnerId = ctx.partnerOf.get(rootId);
-  const hasPartner = partnerId != null && ctx.visibleIds.has(partnerId) && !ctx.visited.has(partnerId);
-  if (hasPartner) ctx.visited.add(partnerId!);
+  //
+  // MULTIPLE PARTNERSHIPS: rootId can have more than one recorded partner
+  // (divorce+remarriage, several partnerships — see partnersOf's own doc).
+  // allPartnerIds[0] is rootId's "primary" partner and keeps every existing
+  // placement rule unchanged (gender-based side, PARTNER_X_SPACING
+  // adjacency, etc — see partnerSide below); allPartnerIds.slice(1) are
+  // additional partners, each laid out as their OWN couple unit further
+  // out on siblingDirection (the side NOT already claimed by the primary
+  // partner), in the same stable order partnersOf itself preserves (DB row
+  // order) — see the loop below for how each of those pairs (and their own
+  // shared children) gets its own position.
+  const allPartnerIds = (ctx.partnersOf.get(rootId) ?? []).filter(
+    (id) => ctx.visibleIds.has(id) && !ctx.visited.has(id),
+  );
+  const partnerId = allPartnerIds[0];
+  const hasPartner = partnerId != null;
+  if (hasPartner) ctx.visited.add(partnerId);
+  const extraPartnerIds = allPartnerIds.slice(1);
 
   // rootId's siblings (same parents, still visible, not already placed by
   // an outer call) ride beside them in this same row, extending outward.
+  // Each partner's OWN siblings are collected later, inside placePartner
+  // (called once per partnership below) — not here — since collectSiblings
+  // has the side effect of marking siblings visited, and doing it twice for
+  // the same partner (once here, once inside placePartner) would silently
+  // find nothing the second time.
   const siblingIds = collectSiblings(rootId, ctx);
-  const partnerSiblingIds = hasPartner ? collectSiblings(partnerId!, ctx) : [];
 
   // rootId's own parents (if visible) become this subtree's own further
   // ancestor fan, nested entirely on this subtree's outward side (see
@@ -660,18 +724,19 @@ function layoutUnit(
         return outward as 1 | -1;
       })())
     : (outward as 1 | -1);
-  const partnerParents = hasPartner ? (ctx.parentsOf.get(partnerId!) ?? []) : [];
-  const partnerParentFan = hasPartner
-    ? layoutCoupleFan(
-        partnerParents.filter((id) => ctx.visibleIds.has(id) && !ctx.visited.has(id)),
-        ctx,
-      )
-    : null;
 
   // rootId's (and their partner's, if any) children become this subtree's
   // own descendant row, one generation down — each child who is themself
   // partnered becomes the root of ITS OWN nested unit (own ancestor fan
   // for whoever they married in, own descendants), recursively.
+  //
+  // With MULTIPLE partnerships, each child is attributed to the ONE couple
+  // they were actually recorded under — a child with no second recorded
+  // parent still defaults to the PRIMARY partner's row (preserves every
+  // existing single-partner/single-recorded-parent test unchanged); a
+  // child whose other recorded parent is a DIFFERENT, visible partner is
+  // laid out under THAT partner's own row instead (see the per-partner
+  // loop below), never duplicated into both.
   //
   // Deliberately NOT a static "compute the full list up front, then .map()
   // over it": a child's own layoutUnit call can itself discover (and mark
@@ -687,15 +752,23 @@ function layoutUnit(
   // twice in a lopsided-siblings scenario, laid out once as galinaSib1's
   // own siblings and again via this loop's own next iterations). Checking
   // `ctx.visited` fresh on every iteration is what avoids that.
-  const childIds = [...new Set(ctx.childrenOf.get(rootId) ?? [])].filter((id) => ctx.visibleIds.has(id));
-  const childUnits: { width: number; slots: UnitSlot[] }[] = [];
-  for (const childId of childIds) {
-    if (ctx.visited.has(childId)) continue; // claimed as an earlier sibling's own sibling — already laid out
-    // A child's own partner is handled INSIDE layoutUnit's own hasPartner
-    // branch (just like rootId's partner above) — layoutUnit always owns
-    // its own root's partner, so children are never pre-paired here.
-    childUnits.push(layoutUnit(childId, CHILD_SIDE, ctx));
+  function childUnitsFor(thisPartnerId: string | undefined): { width: number; slots: UnitSlot[] }[] {
+    const ids = [...new Set(ctx.childrenOf.get(rootId) ?? [])].filter((id) => {
+      if (!ctx.visibleIds.has(id)) return false;
+      const other = otherParentOf(id, rootId, ctx);
+      return other === undefined || other === thisPartnerId;
+    });
+    const units: { width: number; slots: UnitSlot[] }[] = [];
+    for (const childId of ids) {
+      if (ctx.visited.has(childId)) continue; // claimed as an earlier sibling's own sibling — already laid out
+      // A child's own partner is handled INSIDE layoutUnit's own hasPartner
+      // branch (just like rootId's partner above) — layoutUnit always owns
+      // its own root's partner, so children are never pre-paired here.
+      units.push(layoutUnit(childId, CHILD_SIDE, ctx));
+    }
+    return units;
   }
+  const childUnits = childUnitsFor(partnerId);
 
   // Every piece of this subtree is placed incrementally into `slots`/
   // `extent`, each new piece checked against everything already placed so
@@ -783,15 +856,61 @@ function layoutUnit(
 
   // Partner sits PARTNER_X_SPACING toward partnerSide from rootId — the
   // couple's own tight, dedicated gap (see PARTNER_X_SPACING's doc). The
-  // partner's own ancestor fan (partnerParentFan, already positioned in
+  // partner's own ancestor fan (computed inside placePartner, positioned in
   // ITS OWN local frame with the partner at relativeX 0 / relativeGeneration
   // 0) rides along as part of the same piece. The partner's own siblings
   // extend further toward partnerSide, past the partner — starting a full
   // UNIT_X_SPACING beyond the partner's own position (same reasoning as
   // rootId's siblings above: separates the couple from the partner's own
   // sibling, not just from rootId's).
-  let partnerX = 0;
-  if (hasPartner) {
+  if (hasPartner) placePartner(partnerId!, partnerSide);
+
+  // ADDITIONAL PARTNERSHIPS (2nd, 3rd, ...): each extra partner is placed
+  // as its OWN couple unit — same placePartner logic as the primary
+  // partner above (own ancestor fan, own siblings, own shared-children row
+  // via childUnitsFor), just on siblingDirection (the side NOT claimed by
+  // the primary partner) instead of partnerSide, at increasing distance
+  // past rootId's own siblings — so the stable left-to-right order reads
+  // [extra partner's own fan] [extra partner] [rootId's siblings]
+  // [rootId] [primary partner] [primary partner's own fan], matching the
+  // order partnersOf itself preserves (DB row order), not an arbitrary
+  // Set/Map iteration order. Siblings and extra partners share one running
+  // cursor on siblingDirection so they don't collide with each other —
+  // extra partners are placed AFTER siblings, continuing outward from
+  // siblingCursor (siblings closer to rootId, extra partners further out;
+  // an extra partner never has a "sibling of the couple" adjacency
+  // convention to preserve the way the primary partner does, so there's no
+  // reason to interleave them).
+  let extraPartnerCursor = siblingCursor;
+  for (const extraPartnerId of extraPartnerIds) {
+    if (ctx.visited.has(extraPartnerId)) continue; // claimed as a sibling's own partner in the meantime
+    const desiredX = extraPartnerCursor + siblingDirection * UNIT_X_SPACING;
+    const actualX = placePartner(extraPartnerId, siblingDirection, desiredX);
+    extraPartnerCursor = actualX;
+  }
+
+  /**
+   * Places thisPartnerId (rootId's partner in one specific partnership) —
+   * their own ancestor fan, their own siblings, and the children rootId
+   * shares specifically with THEM (via childUnitsFor, centered under this
+   * exact pair's own midpoint) — as one self-contained couple unit on
+   * `side`. Shared by the primary-partner placement above and the extra-
+   * partners loop above, parametrized only by which partner and which
+   * side, so there is exactly one implementation of "place a couple" for
+   * however many partnerships rootId has. `desiredX` overrides the default
+   * PARTNER_X_SPACING offset (used by extra partners, which stack outward
+   * past rootId's own siblings rather than sitting at the couple's own
+   * tight gap — see the extra-partners loop's own doc).
+   */
+  function placePartner(thisPartnerId: string, side: 1 | -1, desiredX?: number): number {
+    ctx.visited.add(thisPartnerId);
+    const thisPartnerSiblingIds = collectSiblings(thisPartnerId, ctx);
+    const thisPartnerParents = ctx.parentsOf.get(thisPartnerId) ?? [];
+    const thisPartnerParentFan = layoutCoupleFan(
+      thisPartnerParents.filter((id) => ctx.visibleIds.has(id) && !ctx.visited.has(id)),
+      ctx,
+    );
+
     // Same fix as rootId's own siblings above: a partner's sibling is a
     // full person who can have their own partner/descendants, so they need
     // their own layoutUnit call too, not a bare slot (which silently
@@ -801,26 +920,41 @@ function layoutUnit(
     // the whole piece is placed against rootId's own side of the tree.
     let partnerSiblingCursor = 0;
     const partnerSiblingSlots: UnitSlot[] = [];
-    // forcePartnerSide=partnerSide: same fix as rootId's own siblings —
-    // this partner-sibling's own partner must sit further in partnerSide,
+    // forcePartnerSide=side: same fix as rootId's own siblings —
+    // this partner-sibling's own partner must sit further in `side`,
     // past the sibling, never flipped back toward rootId's partner by pure
     // gender order (the exact reported bug: a sibling's spouse landing
     // between the sibling and rootId's own partner instead of past both).
-    partnerSiblingIds.forEach((id) => {
-      const siblingUnit = layoutUnit(id, partnerSide === 1 ? "right" : "left", ctx, partnerSide);
-      const desiredX = partnerSiblingCursor + partnerSide * UNIT_X_SPACING;
+    thisPartnerSiblingIds.forEach((id) => {
+      const siblingUnit = layoutUnit(id, side === 1 ? "right" : "left", ctx, side);
+      const desiredSiblingX = partnerSiblingCursor + side * UNIT_X_SPACING;
       for (const slot of siblingUnit.slots) {
-        partnerSiblingSlots.push({ ...slot, relativeX: slot.relativeX + desiredX });
+        partnerSiblingSlots.push({ ...slot, relativeX: slot.relativeX + desiredSiblingX });
       }
-      partnerSiblingCursor = desiredX + partnerSide * siblingUnit.width;
+      partnerSiblingCursor = desiredSiblingX + side * siblingUnit.width;
     });
 
     const partnerPieceSlots: UnitSlot[] = [
-      { id: partnerId!, relativeX: 0, relativeGeneration: 0 },
-      ...(partnerParentFan?.slots.filter((s) => !(s.relativeGeneration === 0 && s.id === partnerId)) ?? []),
+      { id: thisPartnerId, relativeX: 0, relativeGeneration: 0 },
+      ...(thisPartnerParentFan?.slots.filter((s) => !(s.relativeGeneration === 0 && s.id === thisPartnerId)) ?? []),
       ...partnerSiblingSlots,
     ];
-    partnerX = placePiece(partnerPieceSlots, partnerSide * PARTNER_X_SPACING, 0, partnerSide);
+    const actualX = placePiece(partnerPieceSlots, desiredX ?? side * PARTNER_X_SPACING, 0, side);
+
+    // Children rootId shares specifically with thisPartnerId, centered
+    // under this exact pair's own midpoint — NOT under rootId+primary
+    // partner's row when thisPartnerId is an extra partner (see
+    // childUnitsFor's own doc on per-couple child attribution). `side` is
+    // passed as firstChildDirection so a collision on the first child
+    // pushes further AWAY from rootId in the same direction this couple
+    // itself grew in, not always "right" — critical once an extra
+    // partner's own couple sits on rootId's negative side (see
+    // layoutChildrenRow's own doc on firstChildDirection for the exact bug
+    // this avoids: a first child jumping back across rootId's position).
+    const thisCoupleChildUnits = thisPartnerId === partnerId ? childUnits : childUnitsFor(thisPartnerId);
+    layoutChildrenRow(placePiece, thisCoupleChildUnits, actualX / 2, side);
+
+    return actualX;
   }
 
   // rootId's OWN parent generation sits centered over rootId's OWN row
@@ -835,8 +969,9 @@ function layoutUnit(
   if (parentFan) {
     const parentRowCenter = siblingDirection * (siblingRowWidth / 2);
     // Direction must be siblingDirection (away from the partner side), not
-    // an arbitrary pick: the partner's own parent fan (partnerParentFan)
-    // was already placed above, at generation -1, on partnerSide — if
+    // an arbitrary pick: the primary partner's own parent fan (placed
+    // inside placePartner above) was already placed above, at generation
+    // -1, on partnerSide — if
     // rootId's own parents collide with it (the common case: BOTH sides
     // of a couple have their own two parents visible, so both fans land
     // near generation -1 at once), they must be pushed AWAY from the
@@ -846,18 +981,23 @@ function layoutUnit(
     placePiece(parentFan.slots, parentRowCenter, 0, siblingDirection);
   }
 
-  // Children sit one generation down, centered under rootId+partner's own
-  // row (NOT under the ancestor fan above — descendants of a couple are
-  // "below the couple", regardless of how wide either spouse's own
-  // ancestor line fans out). Each child unit is placed one at a time,
-  // left-to-right alternating outward from center, checked against
-  // EVERYTHING placed so far (siblings, partner+fan, parent+fan, and any
-  // earlier children already placed) — this is what catches a child's own
-  // spouse's ancestor fan reaching back into an already-occupied
-  // generation (the exact bug this whole incremental-placement approach
-  // exists for).
-  const coupleRowCenter = hasPartner ? partnerX / 2 : 0;
-  layoutChildrenRow(placePiece, childUnits, coupleRowCenter);
+  // Children sit one generation down, centered under rootId (NOT under the
+  // ancestor fan above — descendants are "below the couple", regardless of
+  // how wide either spouse's own ancestor line fans out). Only reached
+  // when rootId has NO partner at all — when hasPartner is true, rootId's
+  // children (attributed to the primary partner by childUnitsFor's own
+  // fallback: no second recorded parent, or the primary partner by name)
+  // were already placed inside placePartner(partnerId!, partnerSide)
+  // above, centered under that specific couple's own midpoint instead of
+  // under rootId alone. Each child unit is placed one at a time, left-to-
+  // right alternating outward from center, checked against EVERYTHING
+  // placed so far (siblings, parent+fan, and any earlier children already
+  // placed) — this is what catches a child's own spouse's ancestor fan
+  // reaching back into an already-occupied generation (the exact bug this
+  // whole incremental-placement approach exists for).
+  if (!hasPartner) {
+    layoutChildrenRow(placePiece, childUnits, 0);
+  }
 
   const width = Math.max(0, ...slots.map((s) => Math.abs(s.relativeX)));
 
@@ -894,7 +1034,7 @@ function layoutCoupleFan(
   parentIds: string[],
   ctx: LayoutContext,
 ): { slots: UnitSlot[] } | null {
-  const { leftId, rightId, arePartners } = orderCoupleBySlot(parentIds, ctx.partnerOf, ctx.genderOf);
+  const { leftId, rightId, arePartners } = orderCoupleBySlot(parentIds, ctx.partnersOf, ctx.genderOf);
   if (!leftId && !rightId) return null;
 
   const slots: UnitSlot[] = [];
@@ -946,6 +1086,22 @@ function layoutChildrenRow(
   placePiece: (pieceSlots: UnitSlot[], desiredX: number, generationDelta: number, direction: 1 | -1) => number,
   childUnits: { width: number; slots: UnitSlot[] }[],
   center: number,
+  /**
+   * Which way a COLLISION on the very first child (index 0, placed exactly
+   * at `center`) should push it: +1 (right) or -1 (left). Every layout in
+   * the tree used to have exactly one couple per generation growing off
+   * rootId, always toward rootId's own positive side (primary partner side
+   * — center always >= 0), so hardcoding +1 here never mattered. With
+   * multiple partnerships, an EXTRA partner's own couple can sit on
+   * rootId's negative side (siblingDirection, see placePartner) — its
+   * center is negative, and a first child pushed +1 on collision would
+   * jump back across rootId's own position (and everything already placed
+   * between them) instead of moving further away from the couple, same
+   * direction the couple itself grew in. Defaults to 1 (the couple's own
+   * partnerSide sign for the common single-partnership case) so every
+   * existing caller/test keeps its exact prior behavior.
+   */
+  firstChildDirection: 1 | -1 = 1,
 ): void {
   // Alternate: 1st child at center, 2nd to its right, 3rd to its left, 4th
   // further right, etc. — keeps the row visually balanced around `center`
@@ -956,13 +1112,19 @@ function layoutChildrenRow(
   let rightCursor = center;
   let leftCursor = center;
   childUnits.forEach((unit, index) => {
-    const placeOnRight = index % 2 === 0;
+    // Alternates starting from firstChildDirection instead of always
+    // starting from "right" — index 0 uses firstChildDirection itself,
+    // every later index still alternates the same way as before relative
+    // to that starting side (1st, 3rd, 5th... on the starting side; 2nd,
+    // 4th... on the other), so the row still reads as balanced around
+    // `center` regardless of which side it starts growing toward.
+    const placeOnRight = index % 2 === 0 ? firstChildDirection === 1 : firstChildDirection === -1;
     if (placeOnRight) {
       const desiredX = index === 0 ? center : rightCursor + UNIT_X_SPACING + unit.width;
       const actualX = placePiece(unit.slots, desiredX, 1, 1);
       rightCursor = actualX + unit.width;
     } else {
-      const desiredX = leftCursor - UNIT_X_SPACING - unit.width;
+      const desiredX = index === 0 ? center : leftCursor - UNIT_X_SPACING - unit.width;
       const actualX = placePiece(unit.slots, desiredX, 1, -1);
       leftCursor = actualX - unit.width;
     }

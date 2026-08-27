@@ -637,4 +637,220 @@ describe("buildFocusTreeLayout", () => {
       expect(new Set(xValues).size).toBe(xValues.length);
     }
   });
+
+  describe("multiple partnerships", () => {
+    it("shows all of a person's partners at once, each with their own shared children centered under them", () => {
+      const result = buildFocusTreeLayout({
+        persons: [
+          person("root", { gender: "male" }),
+          person("partnerA", { gender: "female" }),
+          person("partnerB", { gender: "female" }),
+          person("child1"),
+          person("child2"),
+        ],
+        parentChildEdges: [
+          { parentId: "root", childId: "child1" },
+          { parentId: "partnerA", childId: "child1" },
+          { parentId: "root", childId: "child2" },
+          { parentId: "partnerB", childId: "child2" },
+        ],
+        partnershipEdges: [
+          { person1Id: "root", person2Id: "partnerA", isCurrent: false },
+          { person1Id: "root", person2Id: "partnerB", isCurrent: true },
+        ],
+        focusPersonId: "root",
+      });
+
+      const byId = new Map(result.nodes.map((n) => [n.id, n]));
+      // Both partners are present as their own nodes — neither overwrites the other.
+      expect(byId.has("partnerA")).toBe(true);
+      expect(byId.has("partnerB")).toBe(true);
+      expect(byId.get("partnerA")?.generation).toBe(0);
+      expect(byId.get("partnerB")?.generation).toBe(0);
+
+      const rootX = byId.get("root")!.x;
+      const partnerAX = byId.get("partnerA")!.x;
+      const partnerBX = byId.get("partnerB")!.x;
+      const child1X = byId.get("child1")!.x;
+      const child2X = byId.get("child2")!.x;
+
+      // child1 (root+partnerA's own child) is centered under (root, partnerA)'s
+      // own midpoint, NOT under (root, partnerB)'s.
+      expect(child1X).toBeCloseTo((rootX + partnerAX) / 2);
+      // child2 (root+partnerB's own child) is centered under (root, partnerB)'s
+      // own midpoint, NOT under (root, partnerA)'s.
+      expect(child2X).toBeCloseTo((rootX + partnerBX) / 2);
+      expect(child1X).not.toBeCloseTo((rootX + partnerBX) / 2);
+    });
+
+    it("keeps both partnership edges — none dropped when overwriting a single-partner map", () => {
+      const result = buildFocusTreeLayout({
+        persons: [
+          person("root", { gender: "male" }),
+          person("partnerA", { gender: "female" }),
+          person("partnerB", { gender: "female" }),
+        ],
+        parentChildEdges: [],
+        partnershipEdges: [
+          { person1Id: "root", person2Id: "partnerA", isCurrent: false },
+          { person1Id: "root", person2Id: "partnerB", isCurrent: true },
+        ],
+        focusPersonId: "root",
+      });
+
+      const partnershipEdges = result.edges.filter((e) => e.kind === "partnership");
+      expect(partnershipEdges).toHaveLength(2);
+      const partnerIds = partnershipEdges.map((e) => (e.source === "root" ? e.target : e.source)).sort();
+      expect(partnerIds).toEqual(["partnerA", "partnerB"]);
+    });
+
+    it("keeps every partner (and their own ancestor fan) collision-free", () => {
+      const result = buildFocusTreeLayout({
+        persons: [
+          person("root", { gender: "male" }),
+          person("partnerA", { gender: "female" }),
+          person("partnerAMother"),
+          person("partnerAFather"),
+          person("partnerB", { gender: "female" }),
+          person("partnerBMother"),
+          person("partnerBFather"),
+        ],
+        parentChildEdges: [
+          { parentId: "partnerAMother", childId: "partnerA" },
+          { parentId: "partnerAFather", childId: "partnerA" },
+          { parentId: "partnerBMother", childId: "partnerB" },
+          { parentId: "partnerBFather", childId: "partnerB" },
+        ],
+        partnershipEdges: [
+          { person1Id: "root", person2Id: "partnerA", isCurrent: false },
+          { person1Id: "root", person2Id: "partnerB", isCurrent: true },
+          { person1Id: "partnerAMother", person2Id: "partnerAFather", isCurrent: true },
+          { person1Id: "partnerBMother", person2Id: "partnerBFather", isCurrent: true },
+        ],
+        focusPersonId: "root",
+        ancestorGenerations: Infinity,
+        descendantGenerations: Infinity,
+      });
+
+      const xByGeneration = new Map<number, number[]>();
+      for (const node of result.nodes) {
+        if (!xByGeneration.has(node.generation)) xByGeneration.set(node.generation, []);
+        xByGeneration.get(node.generation)!.push(node.x);
+      }
+      for (const [, xValues] of xByGeneration) {
+        expect(new Set(xValues).size).toBe(xValues.length);
+      }
+
+      const byId = new Map(result.nodes.map((n) => [n.id, n]));
+      const rootX = byId.get("root")!.x;
+      const partnerAX = byId.get("partnerA")!.x;
+      const partnerBX = byId.get("partnerB")!.x;
+      expect(Math.abs(rootX - partnerAX)).toBeGreaterThanOrEqual(220);
+      expect(Math.abs(rootX - partnerBX)).toBeGreaterThanOrEqual(220);
+      expect(Math.abs(partnerAX - partnerBX)).toBeGreaterThanOrEqual(220);
+    });
+
+    it("still groups a child with no second recorded parent under the primary partner's row", () => {
+      const result = buildFocusTreeLayout({
+        persons: [
+          person("root", { gender: "male" }),
+          person("partnerA", { gender: "female" }),
+          person("soloChild"), // recorded with root only — no second parent
+        ],
+        parentChildEdges: [{ parentId: "root", childId: "soloChild" }],
+        partnershipEdges: [{ person1Id: "root", person2Id: "partnerA", isCurrent: true }],
+        focusPersonId: "root",
+      });
+
+      const byId = new Map(result.nodes.map((n) => [n.id, n]));
+      expect(byId.has("soloChild")).toBe(true);
+      const rootX = byId.get("root")!.x;
+      const partnerAX = byId.get("partnerA")!.x;
+      const soloChildX = byId.get("soloChild")!.x;
+      expect(soloChildX).toBeCloseTo((rootX + partnerAX) / 2);
+    });
+
+    it("lays out 3 partnerships deterministically, in partnershipEdges order", () => {
+      const input = {
+        persons: [
+          person("root", { gender: "male" }),
+          person("partnerA", { gender: "female" }),
+          person("partnerB", { gender: "female" }),
+          person("partnerC", { gender: "female" }),
+        ],
+        parentChildEdges: [],
+        partnershipEdges: [
+          { person1Id: "root", person2Id: "partnerA", isCurrent: false },
+          { person1Id: "root", person2Id: "partnerB", isCurrent: false },
+          { person1Id: "root", person2Id: "partnerC", isCurrent: true },
+        ],
+        focusPersonId: "root",
+      };
+
+      const result1 = buildFocusTreeLayout(input);
+      const result2 = buildFocusTreeLayout(input);
+      expect(result1).toEqual(result2);
+
+      const byId = new Map(result1.nodes.map((n) => [n.id, n]));
+      // All partner x positions are distinct and collision-free.
+      const xs = [byId.get("partnerA")!.x, byId.get("partnerB")!.x, byId.get("partnerC")!.x];
+      expect(new Set(xs).size).toBe(3);
+    });
+
+    it("doesn't duplicate a partner also reachable via another path in the visible tree", () => {
+      const result = buildFocusTreeLayout({
+        persons: [
+          person("root", { gender: "male" }),
+          person("partnerA", { gender: "female" }),
+          person("partnerB", { gender: "female" }),
+          person("sharedGrandparent"),
+        ],
+        parentChildEdges: [
+          { parentId: "sharedGrandparent", childId: "partnerB" },
+          { parentId: "sharedGrandparent", childId: "rootParent" },
+          { parentId: "rootParent", childId: "root" },
+        ],
+        partnershipEdges: [
+          { person1Id: "root", person2Id: "partnerA", isCurrent: false },
+          { person1Id: "root", person2Id: "partnerB", isCurrent: true },
+        ],
+        focusPersonId: "root",
+        ancestorGenerations: Infinity,
+        descendantGenerations: Infinity,
+      });
+
+      const ids = result.nodes.map((n) => n.id);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+
+    it("keeps half-siblings from different partners in separate rows, not merged into one sibling group", () => {
+      const result = buildFocusTreeLayout({
+        persons: [
+          person("root", { gender: "male" }),
+          person("partnerA", { gender: "female" }),
+          person("partnerB", { gender: "female" }),
+          person("childOfA"),
+          person("childOfB"),
+        ],
+        parentChildEdges: [
+          { parentId: "root", childId: "childOfA" },
+          { parentId: "partnerA", childId: "childOfA" },
+          { parentId: "root", childId: "childOfB" },
+          { parentId: "partnerB", childId: "childOfB" },
+        ],
+        partnershipEdges: [
+          { person1Id: "root", person2Id: "partnerA", isCurrent: false },
+          { person1Id: "root", person2Id: "partnerB", isCurrent: true },
+        ],
+        focusPersonId: "root",
+      });
+
+      const byId = new Map(result.nodes.map((n) => [n.id, n]));
+      // Both half-siblings are present, at the same generation, but NOT at
+      // the same x (they ride under their own parent's couple, not stacked
+      // together as a plain sibling row).
+      expect(byId.get("childOfA")?.generation).toBe(byId.get("childOfB")?.generation);
+      expect(byId.get("childOfA")!.x).not.toBe(byId.get("childOfB")!.x);
+    });
+  });
 });
