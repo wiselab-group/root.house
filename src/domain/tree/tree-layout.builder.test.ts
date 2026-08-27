@@ -1279,5 +1279,87 @@ describe("buildFocusTreeLayout", () => {
         expect(new Set(xValues).size).toBe(xValues.length);
       }
     });
+
+    it("keeps a spouse's own sibling's CHILDREN right next to that sibling, not thousands of px away", () => {
+      // Reproduces a real production bug: focus = Александр, Виктор's own
+      // sibling (Светлана) is herself partnered with children (Юрий,
+      // Ольга) — an ordinary uncle/aunt's own kids. Виктор's sibling group
+      // was correctly stamped with its own `direction` by the previous fix
+      // (see the test above), but the group's OWN nested children rode
+      // along inside that SAME group's slots — and `placePiece`'s lateral-
+      // group loop only reads `group.direction` once per group, applying
+      // it uniformly to every slot in that group (Светлана AND her kids
+      // alike), so this part already worked... UNLESS a naive fix instead
+      // re-derived direction per-group from that group's own center sign
+      // (an earlier, reverted attempt at this fix) — a children pair
+      // straddling zero (e.g. one child left, one right of their own
+      // parent) has an arbitrary-sign center, breaking exactly this case.
+      // This test locks in the correct behavior: a sibling's own children
+      // always land close to that sibling, regardless of their own
+      // individual left/right straddle.
+      const result = buildFocusTreeLayout({
+        persons: [
+          person("alexander", { gender: "male" }),
+          person("viktor", { gender: "male" }),
+          person("galina", { gender: "female" }),
+          person("nikolayK", { gender: "male" }),
+          person("elizavetaK", { gender: "female" }),
+          person("svetlana", { gender: "female" }),
+          person("viktorE", { gender: "male" }),
+          person("yuri", { gender: "male" }),
+          person("olga", { gender: "female" }),
+          person("nikolayKozl", { gender: "male" }),
+          person("nadezhdaKozl", { gender: "female" }),
+          ...Array.from({ length: 6 }, (_, i) => person(`galinaSib${i}`, { gender: i % 2 === 0 ? "female" : "male" })),
+        ],
+        parentChildEdges: [
+          { parentId: "viktor", childId: "alexander" },
+          { parentId: "galina", childId: "alexander" },
+          { parentId: "nikolayK", childId: "viktor" },
+          { parentId: "elizavetaK", childId: "viktor" },
+          { parentId: "nikolayK", childId: "svetlana" },
+          { parentId: "elizavetaK", childId: "svetlana" },
+          { parentId: "svetlana", childId: "yuri" },
+          { parentId: "viktorE", childId: "yuri" },
+          { parentId: "svetlana", childId: "olga" },
+          { parentId: "viktorE", childId: "olga" },
+          { parentId: "nikolayKozl", childId: "galina" },
+          { parentId: "nadezhdaKozl", childId: "galina" },
+          ...Array.from({ length: 6 }, (_, i) => ({ parentId: "nikolayKozl", childId: `galinaSib${i}` })),
+        ],
+        partnershipEdges: [
+          { person1Id: "viktor", person2Id: "galina", isCurrent: true },
+          { person1Id: "nikolayK", person2Id: "elizavetaK", isCurrent: true },
+          { person1Id: "svetlana", person2Id: "viktorE", isCurrent: true },
+          { person1Id: "nikolayKozl", person2Id: "nadezhdaKozl", isCurrent: true },
+        ],
+        focusPersonId: "alexander",
+        descendantGenerations: 1,
+      });
+
+      const byId = new Map(result.nodes.map((n) => [n.id, n]));
+      const svetlanaX = byId.get("svetlana")!.x;
+      const viktorEX = byId.get("viktorE")!.x;
+      const yuriX = byId.get("yuri")!.x;
+      const olgaX = byId.get("olga")!.x;
+
+      // Юрий/Ольга stay close to their own parents (Светлана+Виктор Е.) —
+      // not dragged thousands of px away toward Галина's own huge sibling
+      // group.
+      expect(Math.abs(yuriX - svetlanaX)).toBeLessThan(600);
+      expect(Math.abs(olgaX - svetlanaX)).toBeLessThan(600);
+      expect(Math.abs(yuriX - viktorEX)).toBeLessThan(600);
+      expect(Math.abs(olgaX - viktorEX)).toBeLessThan(600);
+
+      // No x-collisions at any generation.
+      const xByGeneration3 = new Map<number, number[]>();
+      for (const node of result.nodes) {
+        if (!xByGeneration3.has(node.generation)) xByGeneration3.set(node.generation, []);
+        xByGeneration3.get(node.generation)!.push(node.x);
+      }
+      for (const [, xValues] of xByGeneration3) {
+        expect(new Set(xValues).size).toBe(xValues.length);
+      }
+    });
   });
 });

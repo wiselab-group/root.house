@@ -477,6 +477,25 @@ interface UnitSlot {
  */
 interface LateralGroup {
   slots: UnitSlot[];
+  /**
+   * Overrides `placePiece`'s own `direction` param for JUST this group's
+   * push, when set. Left undefined for the common case (every lateral
+   * rider naturally extends the same way the whole piece does — a
+   * partner's own siblings past the partner, a sibling's own children
+   * below the sibling — so the outer `direction` already describes this
+   * group correctly). Set explicitly only by `layoutCoupleFan`'s single-
+   * call branch (see its own doc): parentFan is a piece spanning a full
+   * COUPLE, so its own lateral riders legitimately sit on EITHER side of
+   * the couple's own midpoint (one spouse's own siblings naturally left,
+   * the other spouse's own siblings naturally right) — there `direction`
+   * alone can't tell which side a given rider belongs to, so the caller
+   * who folded that spouse's own subtree in (and therefore knows which
+   * side they're on) stamps it here instead. A group's own children/
+   * grandchildren riding along with it never need their own override —
+   * they inherit whichever side their own parent's group was stamped
+   * with, same as `direction` would ordinarily apply to the whole family.
+   */
+  direction?: 1 | -1;
 }
 
 /**
@@ -917,32 +936,21 @@ function layoutUnit(
     // slotOffsets accumulates each slot's own final relativeX shift (on
     // top of its already-recorded relativeX within pieceSlots) — core
     // slots get 0 (they stay exactly at actualX, per corePush above);
-    // each lateral group gets its OWN independently-resolved push.
-    //
-    // Each group's OWN natural side (left or right of the piece's own
-    // local zero, from its pre-push relativeX) — NOT the outer `direction`
-    // — decides which way ITS push applies. `direction` is correct for the
-    // common case (every lateral rider extends further the same way the
-    // whole piece does, e.g. a partner's own siblings past the partner),
-    // but parentFan is a piece that spans a full COUPLE — its own lateral
-    // riders legitimately sit on EITHER side of the couple's own midpoint
-    // (one spouse's own siblings naturally left, the other spouse's own
-    // siblings naturally right). Using the single outer `direction` for
-    // every group treated a rider naturally on the opposite side as if it
-    // were "approaching from `direction`", computing a shortfall against
-    // whatever the OTHER side's groups had already claimed — even though
-    // the two never actually overlap — and shoving it thousands of pixels
-    // across to the wrong side (the exact reported bug: Виктор's own
-    // sibling, naturally left of the Виктор+Галина couple, ended up pushed
-    // past ALL of Галина's own siblings on the right instead).
+    // each lateral group gets its OWN independently-resolved push, in
+    // `group.direction` when the caller stamped one (see LateralGroup's
+    // own doc — only layoutCoupleFan's single-call branch does this,
+    // for a lateral rider that belongs to one specific spouse's own side
+    // of a combined couple fan), falling back to the outer `direction`
+    // otherwise (the common case: every lateral rider — a partner's own
+    // siblings, a sibling's own children — naturally extends the same way
+    // the whole piece itself does).
     const slotOffsets = new Map<string, number>();
     for (const group of allLateralGroups) {
       if (group.slots.length === 0) continue;
       const groupExtent = computeExtentByGeneration(
         group.slots.map((s) => ({ ...s, relativeGeneration: s.relativeGeneration + generationDelta })),
       );
-      const groupCenter = group.slots.reduce((sum, s) => sum + s.relativeX, 0) / group.slots.length;
-      const groupDirection: 1 | -1 = groupCenter === 0 ? direction : groupCenter > 0 ? 1 : -1;
+      const groupDirection: 1 | -1 = group.direction ?? direction;
       const groupPush = resolveCollision(runningExtent, groupExtent, actualX, groupDirection);
       for (const slot of group.slots) {
         slotOffsets.set(slot.id, groupDirection * groupPush);
@@ -1229,6 +1237,7 @@ function layoutUnit(
     const partnerParentFanPlacedById = new Map(slots.slice(slotsBeforePartnerPiece).map((s) => [s.id, s]));
     const partnerParentFanLateralGroups: LateralGroup[] = (thisPartnerParentFan?.lateralGroups ?? []).map((group) => ({
       slots: group.slots.map((s) => partnerParentFanPlacedById.get(s.id)!),
+      direction: group.direction,
     }));
 
     // Children rootId shares specifically with thisPartnerId, centered
@@ -1402,7 +1411,7 @@ function layoutUnit(
     // partner's own lateral groups above.
     const placedSlotById = new Map(slots.slice(slotsBeforeParentFan).map((s) => [s.id, s]));
     for (const group of parentFan.lateralGroups) {
-      lateralGroups.push({ slots: group.slots.map((s) => placedSlotById.get(s.id)!) });
+      lateralGroups.push({ slots: group.slots.map((s) => placedSlotById.get(s.id)!), direction: group.direction });
     }
   }
 
@@ -1489,6 +1498,7 @@ function layoutCoupleFan(
     for (const group of unit.lateralGroups) {
       lateralGroups.push({
         slots: group.slots.map((s) => ({ ...s, relativeX: s.relativeX + offsetX, relativeGeneration: s.relativeGeneration - 1 })),
+        direction: group.direction,
       });
     }
   };
@@ -1502,7 +1512,29 @@ function layoutCoupleFan(
     // left/right order since orderCoupleBySlot already put leftId on the
     // male/left slot when genders are known).
     const leftUnit = layoutUnit(leftId, "left", ctx);
-    foldIn(leftUnit, -PARTNER_X_SPACING / 2);
+    // leftUnit.lateralGroups mixes riders from BOTH spouses' own sides —
+    // leftId's own siblings (naturally negative/left of leftId's own local
+    // 0) AND rightId's own siblings/children, bubbled up from the nested
+    // placePartner call (naturally positive/right, since rightId sits at
+    // leftId's local +PARTNER_X_SPACING). Each group's own PRE-FOLD sign
+    // (relative to leftId's own local 0, the one point in the whole
+    // recursion where "which side" is unambiguous for this couple) decides
+    // which spouse it belongs to — stamped as an explicit `direction` so
+    // whichever OUTER placePiece call later places this whole folded
+    // parentFan piece never has to guess a single shared direction for
+    // both spouses' worth of lateral riders at once (see LateralGroup's
+    // own doc, and placePiece's own doc on `direction` — this is what
+    // fixes a real reported bug: a spouse's own sibling's own CHILDREN,
+    // riding along inside that sibling's own group, used to inherit
+    // whichever direction the whole parentFan piece got pushed in at the
+    // top level — which has nothing to do with which spouse's side they
+    // actually belong to — and ended up thousands of pixels away from
+    // their own parents).
+    const leftUnitLateralGroups: LateralGroup[] = leftUnit.lateralGroups.map((group) => {
+      const groupCenter = group.slots.reduce((sum, s) => sum + s.relativeX, 0) / group.slots.length;
+      return { ...group, direction: groupCenter < 0 ? (-1 as const) : (1 as const) };
+    });
+    foldIn({ ...leftUnit, lateralGroups: leftUnitLateralGroups }, -PARTNER_X_SPACING / 2);
     return { slots, coreSlots, lateralGroups };
   }
 
