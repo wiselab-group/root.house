@@ -15,6 +15,8 @@ import type { TreeCardStyle } from "../use-tree-card-style";
 
 export interface PersonNodeData extends Record<string, unknown> {
   personId: string;
+  /** This person's own slug — with familySlug, builds the /families/[familySlug]/people/[slug] profile link shown in the card's click popover. */
+  slug: string;
   firstName: string | null;
   lastName: string | null;
   nickname: string | null;
@@ -27,6 +29,8 @@ export interface PersonNodeData extends Record<string, unknown> {
    *  photo request is family-scoped (see media.service.ts), so the node
    *  can't fetch its own avatar without knowing which family it belongs to. */
   familyId: string;
+  /** The family's URL slug (not its id) — see slug above. */
+  familySlug: string;
   isFocus: boolean;
   generation: number;
   cardStyle: TreeCardStyle;
@@ -34,6 +38,8 @@ export interface PersonNodeData extends Record<string, unknown> {
   isFilterMatch?: boolean;
   /** Relationship Trace (tree-trace.ts) — true while this person is on the currently traced A-to-B path. */
   isOnTracePath?: boolean;
+  /** Re-centers the tree on this person (pushes ?focus= to the URL) — wired from TreeCanvas so PersonNode's click popover can offer "сделать фокус-персоной" without importing routing itself. Undefined for the currently-focused person, who has nothing to focus onto. */
+  onFocusPerson?: (personId: string) => void;
 }
 
 export interface RelationshipEdgeData extends Record<string, unknown> {
@@ -125,8 +131,10 @@ const NODE_DIMENSIONS: Record<
 function toFlowNode(
   node: LayoutNode,
   familyId: string,
+  familySlug: string,
   cardStyle: TreeCardStyle,
   highlight: TreeHighlightState,
+  onFocusPerson: (personId: string) => void,
 ): PersonFlowNode {
   const xScale =
     cardStyle === "portrait" ? PORTRAIT_X_SPACING / COMPACT_X_SPACING : 1;
@@ -139,6 +147,7 @@ function toFlowNode(
     position: { x: node.x * xScale, y: node.y * yScale },
     data: {
       personId: node.person.id,
+      slug: node.person.slug,
       firstName: node.person.firstName,
       lastName: node.person.lastName,
       nickname: node.person.nickname,
@@ -148,11 +157,16 @@ function toFlowNode(
       deathYear: node.person.deathYear,
       photoMediaId: node.person.photoMediaId,
       familyId,
+      familySlug,
       isFocus: node.isFocus,
       generation: node.generation,
       cardStyle,
       isFilterMatch: highlight.filterMatchedIds ? highlight.filterMatchedIds.has(node.id) : undefined,
       isOnTracePath: highlight.tracePersonIds ? highlight.tracePersonIds.has(node.id) : undefined,
+      // Focusing the already-focused person would be a no-op navigation —
+      // omitting the callback entirely (rather than passing one that no-ops)
+      // lets the popover hide "сделать фокус-персоной" for that one card.
+      onFocusPerson: node.isFocus ? undefined : onFocusPerson,
     },
     // XYFlow needs explicit dimensions before layout/fitView math is
     // reliable; matches the fixed size PersonNode renders each style at.
@@ -300,8 +314,10 @@ function toFlowEdges(
 export function toReactFlow(
   graph: TreeLayoutGraph,
   familyId: string,
+  familySlug: string,
   cardStyle: TreeCardStyle,
   highlight: TreeHighlightState = {},
+  onFocusPerson: (personId: string) => void = () => {},
 ): { nodes: PersonFlowNode[]; edges: TreeFlowEdge[] } {
   const edges = toFlowEdges(graph, highlight);
   // Array order does NOT control paint order here — XYFlow's default
@@ -323,7 +339,9 @@ export function toReactFlow(
   });
 
   return {
-    nodes: graph.nodes.map((node) => toFlowNode(node, familyId, cardStyle, highlight)),
+    nodes: graph.nodes.map((node) =>
+      toFlowNode(node, familyId, familySlug, cardStyle, highlight, onFocusPerson),
+    ),
     edges: elevatedEdges,
   };
 }

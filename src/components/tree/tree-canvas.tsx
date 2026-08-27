@@ -10,11 +10,10 @@ import {
   useEdgesState,
   useReactFlow,
   type Node,
-  type NodeMouseHandler,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { TreeLayoutGraph } from "@/domain/tree/tree-layout.builder";
-import { toReactFlow, type PersonFlowNode, type TreeHighlightState } from "./adapters/xyflow-adapter";
+import { toReactFlow, type TreeHighlightState } from "./adapters/xyflow-adapter";
 import { PersonNode } from "./person-node";
 import { RelationshipEdge } from "./relationship-edge";
 import { UnionChildEdge } from "./union-child-edge";
@@ -73,10 +72,13 @@ function InitialFocusViewport({ focusNode }: { focusNode: Node | undefined }) {
 export function TreeCanvas({
   graph,
   familyId,
+  familySlug,
   highlight,
 }: {
   graph: TreeLayoutGraph;
   familyId: string;
+  /** The family's URL slug — passed through to node data so each card's click popover can link to /families/[familySlug]/people/[slug]. */
+  familySlug: string;
   /** Filter/Focus (tree-filter.ts) + Relationship Trace (tree-trace.ts) state to render — see xyflow-adapter.ts's TreeHighlightState. Omit when neither is active. */
   highlight?: TreeHighlightState;
 }) {
@@ -86,9 +88,18 @@ export function TreeCanvas({
   const [cardStyle, setCardStyle] = useTreeCardStyle();
   const isCoarsePointer = useCoarsePointer();
 
+  const setFocus = useCallback(
+    (personId: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("focus", personId);
+      router.push(`${pathname}?${params.toString()}`);
+    },
+    [pathname, router, searchParams],
+  );
+
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
-    () => toReactFlow(graph, familyId, cardStyle, highlight),
-    [graph, familyId, cardStyle, highlight],
+    () => toReactFlow(graph, familyId, familySlug, cardStyle, highlight, setFocus),
+    [graph, familyId, familySlug, cardStyle, highlight, setFocus],
   );
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -110,24 +121,6 @@ export function TreeCanvas({
     setEdges(initialEdges);
   }, [initialEdges, setEdges]);
 
-  const setFocus = useCallback(
-    (personId: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("focus", personId);
-      router.push(`${pathname}?${params.toString()}`);
-    },
-    [pathname, router, searchParams],
-  );
-
-  const handleNodeClick: NodeMouseHandler<PersonFlowNode> = useCallback(
-    (_event, node) => {
-      if (node.data.personId !== graph.focusPersonId) {
-        setFocus(node.data.personId);
-      }
-    },
-    [graph.focusPersonId, setFocus],
-  );
-
   const focusNode = nodes.find((node) => node.id === graph.focusPersonId);
 
   return (
@@ -144,7 +137,6 @@ export function TreeCanvas({
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onNodeClick={handleNodeClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         proOptions={{ hideAttribution: true }}

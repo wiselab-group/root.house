@@ -35,6 +35,7 @@ import type { TreeHighlightState } from "./adapters/xyflow-adapter";
  */
 export function TreeToolbar({
   familyId,
+  familySlug,
   graph,
   highlight,
   traceA,
@@ -43,6 +44,8 @@ export function TreeToolbar({
   filter,
 }: {
   familyId: string;
+  /** The family's URL slug — threaded down to TreeCanvas for each card's click-popover profile link. */
+  familySlug: string;
   graph: TreeLayoutGraph;
   highlight?: TreeHighlightState;
   traceA: { id: string; name: string } | null;
@@ -88,7 +91,7 @@ export function TreeToolbar({
 
   return (
     <>
-      <TreeCanvas graph={graph} familyId={familyId} highlight={highlight} />
+      <TreeCanvas graph={graph} familyId={familyId} familySlug={familySlug} highlight={highlight} />
 
       <Button
         variant={isTraceActive ? "default" : "outline"}

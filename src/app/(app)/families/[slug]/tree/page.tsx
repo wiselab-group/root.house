@@ -117,6 +117,7 @@ export default async function FamilyTreePage({
       <SetBreadcrumbs items={breadcrumbItems} />
       <TreeToolbar
         familyId={familyId}
+        familySlug={slug}
         graph={tracedGraph}
         highlight={{
           filterMatchedIds: "matchedIds" in layoutGraph ? layoutGraph.matchedIds : undefined,
