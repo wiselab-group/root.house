@@ -7,6 +7,7 @@ import { BrandMark } from "@/components/brand-mark";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { MobileHeaderToggle, MobileHeaderPanel } from "@/components/mobile-header-panel";
 import { useBreadcrumbs } from "@/components/breadcrumbs-context";
+import { useFamilyNav } from "@/components/family-nav-context";
 
 /**
  * Top bar for the authenticated area — brand mark link, current page's
@@ -17,6 +18,7 @@ import { useBreadcrumbs } from "@/components/breadcrumbs-context";
  */
 export function AppHeader({ userEmail }: { userEmail: string | null | undefined }) {
   const breadcrumbs = useBreadcrumbs();
+  const navItems = useFamilyNav();
   const [menuOpen, setMenuOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
 
@@ -63,6 +65,7 @@ export function AppHeader({ userEmail }: { userEmail: string | null | undefined 
       <MobileHeaderPanel
         open={menuOpen}
         breadcrumbs={breadcrumbs}
+        navItems={navItems}
         userEmail={userEmail}
         onNavigate={() => setMenuOpen(false)}
       />

@@ -7,6 +7,7 @@ import { getPerson } from "@/domain/person/person.service";
 import { personDisplayName } from "@/domain/person/display-name";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { FamilyProvider } from "@/components/family/family-context";
+import { SetFamilyNav } from "@/components/family-nav-context";
 
 export default async function FamilyLayout({
   children,
@@ -63,6 +64,18 @@ export default async function FamilyLayout({
           : null,
       }}
     >
+      {/* Same 4 destinations as the dashboard's FamilyNavCard grid
+          (families/[slug]/page.tsx) — published here so they're available in
+          AppHeader's mobile panel on every page under this family section,
+          not just the dashboard itself. */}
+      <SetFamilyNav
+        items={[
+          { href: `/families/${slug}/tree`, icon: "tree", label: "Семейное дерево" },
+          { href: `/families/${slug}/people`, icon: "people", label: "Люди" },
+          { href: `/families/${slug}/places`, icon: "places", label: "Места" },
+          { href: `/families/${slug}/settings`, icon: "settings", label: "Настройки" },
+        ]}
+      />
       {children}
     </FamilyProvider>
   );
