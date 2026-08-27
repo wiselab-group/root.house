@@ -1,4 +1,5 @@
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import type { PersonRecord } from "@/domain/person/person.service";
 
 const GENDER_OPTIONS: Array<{ value: PersonRecord["gender"]; label: string }> =
@@ -34,17 +35,18 @@ export function PersonGenderLivingFields({
           ))}
         </select>
       </div>
-      <label htmlFor="isLiving" className="flex items-center gap-2 pt-6 text-sm">
-        <input
+      <div className="flex items-center gap-2.5 pt-6">
+        <Switch
           id="isLiving"
           name="isLiving"
-          type="checkbox"
+          size="lg"
           checked={isLiving}
-          onChange={(e) => onIsLivingChange(e.target.checked)}
-          className="size-4"
+          onCheckedChange={onIsLivingChange}
         />
-        Жив(а)
-      </label>
+        <Label htmlFor="isLiving" className="cursor-pointer text-sm font-normal">
+          Жив(а)
+        </Label>
+      </div>
     </div>
   );
 }
