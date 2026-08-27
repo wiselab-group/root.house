@@ -87,15 +87,27 @@ export function TreeFilterPanel({
             </div>
           </div>
 
-          <Button
-            type="button"
-            variant={draft.isLiving === false ? "default" : "outline"}
-            size="sm"
-            className="self-start"
-            onClick={() => setDraft({ ...draft, isLiving: draft.isLiving === false ? undefined : false })}
-          >
-            Только умершие
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Label>Статус</Label>
+            <div className="flex flex-wrap gap-1.5">
+              <Button
+                type="button"
+                variant={draft.isLiving === true ? "default" : "outline"}
+                size="sm"
+                onClick={() => setDraft({ ...draft, isLiving: draft.isLiving === true ? undefined : true })}
+              >
+                Живые
+              </Button>
+              <Button
+                type="button"
+                variant={draft.isLiving === false ? "default" : "outline"}
+                size="sm"
+                onClick={() => setDraft({ ...draft, isLiving: draft.isLiving === false ? undefined : false })}
+              >
+                Умершие
+              </Button>
+            </div>
+          </div>
         </div>
 
         <DialogFooter>
