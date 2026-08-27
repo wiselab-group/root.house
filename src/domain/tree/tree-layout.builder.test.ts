@@ -926,4 +926,137 @@ describe("buildFocusTreeLayout", () => {
       }
     });
   });
+
+  describe("core/lateral split via layoutCoupleFan (focus is a grandchild)", () => {
+    it("keeps a grandchild's own parents centered near them, even when one parent's OWN sibling married into a large family", () => {
+      // Reproduces a real production bug: focus = Эва (great-granddaughter).
+      // Her parents (Александр + Элеонора) are reached through
+      // layoutCoupleFan, which itself contains Александр's sibling Дарья —
+      // fine on its own — AND Александр's own parents Виктор+Галина, whose
+      // OWN wide sibling group (Galina has many siblings, each with a
+      // family) used to inflate the whole combined layoutCoupleFan piece
+      // enough to drag Александр+Элеонора thousands of pixels from Эва.
+      const result = buildFocusTreeLayout({
+        persons: [
+          person("nikolaySr", { gender: "male" }),
+          person("elizaveta", { gender: "female" }),
+          person("viktor", { gender: "male" }),
+          person("galina", { gender: "female" }),
+          ...Array.from({ length: 6 }, (_, i) => person(`galinaSib${i}`, { gender: i % 2 === 0 ? "female" : "male" })),
+          ...Array.from({ length: 6 }, (_, i) => person(`galinaSibPartner${i}`, { gender: i % 2 === 0 ? "male" : "female" })),
+          person("alexander", { gender: "male" }),
+          person("darya"),
+          person("eleonora", { gender: "female" }),
+          person("eva"),
+        ],
+        parentChildEdges: [
+          { parentId: "nikolaySr", childId: "viktor" },
+          { parentId: "elizaveta", childId: "viktor" },
+          ...Array.from({ length: 6 }, (_, i) => ({ parentId: "nikolaySr", childId: `galinaSib${i}` })),
+          { parentId: "viktor", childId: "alexander" },
+          { parentId: "galina", childId: "alexander" },
+          { parentId: "viktor", childId: "darya" },
+          { parentId: "galina", childId: "darya" },
+          { parentId: "alexander", childId: "eva" },
+          { parentId: "eleonora", childId: "eva" },
+        ],
+        partnershipEdges: [
+          { person1Id: "nikolaySr", person2Id: "elizaveta", isCurrent: true },
+          { person1Id: "viktor", person2Id: "galina", isCurrent: true },
+          { person1Id: "alexander", person2Id: "eleonora", isCurrent: true },
+          ...Array.from({ length: 6 }, (_, i) => ({
+            person1Id: `galinaSib${i}`,
+            person2Id: `galinaSibPartner${i}`,
+            isCurrent: true,
+          })),
+        ],
+        focusPersonId: "eva",
+        ancestorGenerations: Infinity,
+        descendantGenerations: Infinity,
+      });
+
+      const byId = new Map(result.nodes.map((n) => [n.id, n]));
+      const alexanderX = byId.get("alexander")!.x;
+      const viktorX = byId.get("viktor")!.x;
+      const galinaX = byId.get("galina")!.x;
+
+      // Alexander (Eva's own father) stays close to HIS OWN parents
+      // Виктор+Галина, not dragged off by Галина's own sibling group.
+      const coupleCenter = (viktorX + galinaX) / 2;
+      expect(Math.abs(alexanderX - coupleCenter)).toBeLessThan(600);
+
+      // No x-collisions at any generation.
+      const xByGeneration = new Map<number, number[]>();
+      for (const node of result.nodes) {
+        if (!xByGeneration.has(node.generation)) xByGeneration.set(node.generation, []);
+        xByGeneration.get(node.generation)!.push(node.x);
+      }
+      for (const [, xValues] of xByGeneration) {
+        expect(new Set(xValues).size).toBe(xValues.length);
+      }
+    });
+
+    it("keeps an unpartnered sibling near their own parents' couple, even when a DIFFERENT sibling has a large in-law family", () => {
+      // Reproduces a real production bug: Дарья (unpartnered) used to be
+      // dragged 9000+ px away because layoutChildrenRow flattened ALL
+      // children into one push, and a sibling's own large in-law family
+      // (via a DIFFERENT child, e.g. grandparent-level siblings) inflated
+      // that single push. This constructs a shape where Дарья's own
+      // generation contains a wide, unrelated lateral group from a
+      // grandparent's own siblings.
+      const result = buildFocusTreeLayout({
+        persons: [
+          person("nikolaySr", { gender: "male" }),
+          person("elizaveta", { gender: "female" }),
+          ...Array.from({ length: 5 }, (_, i) => person(`sib${i}`, { gender: i % 2 === 0 ? "female" : "male" })),
+          ...Array.from({ length: 5 }, (_, i) => person(`sibPartner${i}`, { gender: i % 2 === 0 ? "male" : "female" })),
+          ...Array.from({ length: 5 }, (_, i) => person(`sibChild${i}`)),
+          person("viktor", { gender: "male" }),
+          person("galina", { gender: "female" }),
+          person("alexander", { gender: "male" }),
+          person("darya"),
+        ],
+        parentChildEdges: [
+          { parentId: "nikolaySr", childId: "viktor" },
+          { parentId: "elizaveta", childId: "viktor" },
+          ...Array.from({ length: 5 }, (_, i) => ({ parentId: "nikolaySr", childId: `sib${i}` })),
+          ...Array.from({ length: 5 }, (_, i) => ({ parentId: `sib${i}`, childId: `sibChild${i}` })),
+          ...Array.from({ length: 5 }, (_, i) => ({ parentId: `sibPartner${i}`, childId: `sibChild${i}` })),
+          { parentId: "viktor", childId: "alexander" },
+          { parentId: "galina", childId: "alexander" },
+          { parentId: "viktor", childId: "darya" },
+          { parentId: "galina", childId: "darya" },
+        ],
+        partnershipEdges: [
+          { person1Id: "nikolaySr", person2Id: "elizaveta", isCurrent: true },
+          { person1Id: "viktor", person2Id: "galina", isCurrent: true },
+          ...Array.from({ length: 5 }, (_, i) => ({
+            person1Id: `sib${i}`,
+            person2Id: `sibPartner${i}`,
+            isCurrent: true,
+          })),
+        ],
+        focusPersonId: "alexander",
+        ancestorGenerations: Infinity,
+        descendantGenerations: Infinity,
+      });
+
+      const byId = new Map(result.nodes.map((n) => [n.id, n]));
+      const alexanderX = byId.get("alexander")!.x;
+      const daryaX = byId.get("darya")!.x;
+
+      // Darya (Alexander's own sibling, unpartnered) stays close to
+      // Alexander — not dragged off by unrelated great-uncles/aunts.
+      expect(Math.abs(daryaX - alexanderX)).toBeLessThan(600);
+
+      const xByGeneration = new Map<number, number[]>();
+      for (const node of result.nodes) {
+        if (!xByGeneration.has(node.generation)) xByGeneration.set(node.generation, []);
+        xByGeneration.get(node.generation)!.push(node.x);
+      }
+      for (const [, xValues] of xByGeneration) {
+        expect(new Set(xValues).size).toBe(xValues.length);
+      }
+    });
+  });
 });
