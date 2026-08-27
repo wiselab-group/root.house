@@ -26,7 +26,19 @@ export function PortraitCardBody({
             sizes="160px"
             className="object-cover"
             unoptimized
-            loading={data.isFocus ? "eager" : "lazy"}
+            // Which card is the actual LCP element depends on where the
+            // tree's initial 85%-zoom viewport (InitialFocusViewport in
+            // tree-canvas.tsx) lands, not just on which single node is
+            // isFocus — a same-generation sibling or partner sitting right
+            // next to the focus card is just as likely to be the visually
+            // largest paint. Eager-loading everyone within one generation of
+            // focus (not only the exact focus node) covers that realistic
+            // "above the fold at open" set without eager-loading the whole
+            // tree. Per Next's own guidance for this exact "multiple images
+            // could be the LCP element depending on viewport" case: prefer
+            // loading="eager", not the `preload` prop (which assumes a
+            // single deterministic LCP element).
+            loading={Math.abs(data.generation) <= 1 ? "eager" : "lazy"}
           />
         ) : (
           <div
