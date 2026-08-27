@@ -853,4 +853,77 @@ describe("buildFocusTreeLayout", () => {
       expect(byId.get("childOfA")!.x).not.toBe(byId.get("childOfB")!.x);
     });
   });
+
+  describe("a partner's own sibling with children", () => {
+    it("keeps a person's own children centered under their couple, even when the partner's sibling's kids share the same generation", () => {
+      // Reproduces a real production bug: Виктор's sister Светлана is
+      // herself partnered (Виктор Ефимович) with two kids (Юрий, Ольга) —
+      // ordinary cousins of Виктор+Галина's own children, but landing at
+      // the SAME generation purely by coincidence of tree depth. Their
+      // subtree used to get merged into the shared collision extent BEFORE
+      // Виктор+Галина's own children were placed, shoving those children
+      // (Александр, Дарья) far sideways to "avoid" cousins they have no
+      // actual positional relationship to.
+      const result = buildFocusTreeLayout({
+        persons: [
+          person("nikolaySr", { gender: "male" }),
+          person("elizaveta", { gender: "female" }),
+          person("viktor", { gender: "male" }),
+          person("svetlana", { gender: "female" }),
+          person("viktorEfimovich", { gender: "male" }),
+          person("yuri"),
+          person("olga"),
+          person("galina", { gender: "female" }),
+          person("alexander", { gender: "male" }),
+          person("darya", { gender: "female" }),
+        ],
+        parentChildEdges: [
+          { parentId: "nikolaySr", childId: "viktor" },
+          { parentId: "elizaveta", childId: "viktor" },
+          { parentId: "nikolaySr", childId: "svetlana" },
+          { parentId: "elizaveta", childId: "svetlana" },
+          { parentId: "svetlana", childId: "yuri" },
+          { parentId: "viktorEfimovich", childId: "yuri" },
+          { parentId: "svetlana", childId: "olga" },
+          { parentId: "viktorEfimovich", childId: "olga" },
+          { parentId: "viktor", childId: "alexander" },
+          { parentId: "galina", childId: "alexander" },
+          { parentId: "viktor", childId: "darya" },
+          { parentId: "galina", childId: "darya" },
+        ],
+        partnershipEdges: [
+          { person1Id: "nikolaySr", person2Id: "elizaveta", isCurrent: true },
+          { person1Id: "svetlana", person2Id: "viktorEfimovich", isCurrent: true },
+          { person1Id: "viktor", person2Id: "galina", isCurrent: true },
+        ],
+        focusPersonId: "galina",
+        ancestorGenerations: Infinity,
+        descendantGenerations: Infinity,
+      });
+
+      const byId = new Map(result.nodes.map((n) => [n.id, n]));
+      const galinaX = byId.get("galina")!.x;
+      const viktorX = byId.get("viktor")!.x;
+      const alexanderX = byId.get("alexander")!.x;
+      const coupleCenter = (galinaX + viktorX) / 2;
+
+      // Alexander (Виктор+Галина's own child) is centered under HIS OWN
+      // parents' couple, not shoved off toward his cousins Юрий/Ольга.
+      // 280 == UNIT_X_SPACING (the seam between unrelated units) — well
+      // under the ~800+ offset the bug used to produce.
+      expect(Math.abs(alexanderX - coupleCenter)).toBeLessThan(280);
+
+      // No x-collisions at any generation, including generation 1 where
+      // Alexander/Darya (Виктор's own kids) and Yuri/Olga (his sister's
+      // kids) both land.
+      const xByGeneration = new Map<number, number[]>();
+      for (const node of result.nodes) {
+        if (!xByGeneration.has(node.generation)) xByGeneration.set(node.generation, []);
+        xByGeneration.get(node.generation)!.push(node.x);
+      }
+      for (const [, xValues] of xByGeneration) {
+        expect(new Set(xValues).size).toBe(xValues.length);
+      }
+    });
+  });
 });

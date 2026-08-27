@@ -821,6 +821,29 @@ function layoutUnit(
   // uniformly either way.
   const siblingDirection = hasPartner ? ((-partnerSide) as 1 | -1) : partnerSide;
 
+  // Partner sits PARTNER_X_SPACING toward partnerSide from rootId — the
+  // couple's own tight, dedicated gap (see PARTNER_X_SPACING's doc). The
+  // partner's own ancestor fan (computed inside placePartner, positioned in
+  // ITS OWN local frame with the partner at relativeX 0 / relativeGeneration
+  // 0) rides along as part of the same piece. The partner's own siblings
+  // extend further toward partnerSide, past the partner — starting a full
+  // UNIT_X_SPACING beyond the partner's own position (same reasoning as
+  // rootId's siblings above: separates the couple from the partner's own
+  // sibling, not just from rootId's).
+  //
+  // Placed BEFORE rootId's own siblingIds below (see that block's own
+  // doc for why) — rootId's own children (placed inside placePartner) must
+  // claim their centered position in the shared collision extent before
+  // ANY sibling's descendants (rootId's own siblings' kids, ordinary
+  // cousins of rootId's children) get a chance to occupy the same
+  // generation first and shove the real children row sideways to route
+  // around them (a real bug: a partnered sibling's own descendants used to
+  // land at the same generation as rootId's own children purely by
+  // coincidence of tree depth, and — being placed first — forced those
+  // children far off-center to avoid "colliding" with cousins they have no
+  // actual positional relationship to).
+  if (hasPartner) placePartner(partnerId!, partnerSide);
+
   // First sibling sits a full UNIT_X_SPACING away from rootId — not
   // PARTNER_X_SPACING — precisely so the couple (rootId + partner, only
   // PARTNER_X_SPACING apart) reads as its own separated family cell instead
@@ -853,17 +876,6 @@ function layoutUnit(
     siblingCursor = actualX + siblingDirection * siblingUnit.width;
   });
   const siblingRowWidth = Math.abs(siblingCursor);
-
-  // Partner sits PARTNER_X_SPACING toward partnerSide from rootId — the
-  // couple's own tight, dedicated gap (see PARTNER_X_SPACING's doc). The
-  // partner's own ancestor fan (computed inside placePartner, positioned in
-  // ITS OWN local frame with the partner at relativeX 0 / relativeGeneration
-  // 0) rides along as part of the same piece. The partner's own siblings
-  // extend further toward partnerSide, past the partner — starting a full
-  // UNIT_X_SPACING beyond the partner's own position (same reasoning as
-  // rootId's siblings above: separates the couple from the partner's own
-  // sibling, not just from rootId's).
-  if (hasPartner) placePartner(partnerId!, partnerSide);
 
   // ADDITIONAL PARTNERSHIPS (2nd, 3rd, ...): each extra partner is placed
   // as its OWN couple unit — same placePartner logic as the primary
@@ -911,33 +923,18 @@ function layoutUnit(
       ctx,
     );
 
-    // Same fix as rootId's own siblings above: a partner's sibling is a
-    // full person who can have their own partner/descendants, so they need
-    // their own layoutUnit call too, not a bare slot (which silently
-    // dropped that sibling's own partner from the tree). Positioned
-    // one-at-a-time via a running cursor, same pattern as siblingIds above,
-    // so consecutive partner-siblings don't collide with each other before
-    // the whole piece is placed against rootId's own side of the tree.
-    let partnerSiblingCursor = 0;
-    const partnerSiblingSlots: UnitSlot[] = [];
-    // forcePartnerSide=side: same fix as rootId's own siblings —
-    // this partner-sibling's own partner must sit further in `side`,
-    // past the sibling, never flipped back toward rootId's partner by pure
-    // gender order (the exact reported bug: a sibling's spouse landing
-    // between the sibling and rootId's own partner instead of past both).
-    thisPartnerSiblingIds.forEach((id) => {
-      const siblingUnit = layoutUnit(id, side === 1 ? "right" : "left", ctx, side);
-      const desiredSiblingX = partnerSiblingCursor + side * UNIT_X_SPACING;
-      for (const slot of siblingUnit.slots) {
-        partnerSiblingSlots.push({ ...slot, relativeX: slot.relativeX + desiredSiblingX });
-      }
-      partnerSiblingCursor = desiredSiblingX + side * siblingUnit.width;
-    });
-
+    // thisPartnerId (+ their own ancestor fan, generation -1 relative to
+    // them — never reaches generation +1) is placed FIRST, on its own,
+    // deliberately BEFORE thisPartnerSiblingIds below — see that block's
+    // own doc for why order matters here: a sibling's own DESCENDANTS can
+    // land at the exact same generation as rootId's own children purely by
+    // coincidence of tree depth (an uncle/aunt's kids are ordinary cousins
+    // of rootId's children, not a positional constraint on them), so they
+    // must never get to "claim" that generation's collision extent before
+    // rootId's own children do.
     const partnerPieceSlots: UnitSlot[] = [
       { id: thisPartnerId, relativeX: 0, relativeGeneration: 0 },
       ...(thisPartnerParentFan?.slots.filter((s) => !(s.relativeGeneration === 0 && s.id === thisPartnerId)) ?? []),
-      ...partnerSiblingSlots,
     ];
     const actualX = placePiece(partnerPieceSlots, desiredX ?? side * PARTNER_X_SPACING, 0, side);
 
@@ -951,8 +948,41 @@ function layoutUnit(
     // partner's own couple sits on rootId's negative side (see
     // layoutChildrenRow's own doc on firstChildDirection for the exact bug
     // this avoids: a first child jumping back across rootId's position).
+    //
+    // Placed BEFORE thisPartnerSiblingIds below (see that block's own
+    // doc) — this is what actually fixes a real reported bug: a partner's
+    // sibling who is themself partnered with children (an ordinary
+    // uncle/aunt's own kids) used to occupy generation+1's shared extent
+    // FIRST, so rootId's own children got shoved far sideways to avoid
+    // "colliding" with cousins they have no positional relationship to at
+    // all — genealogically unrelated branches that only happen to share a
+    // generation should never outrank the couple's own direct children for
+    // center-of-row placement.
     const thisCoupleChildUnits = thisPartnerId === partnerId ? childUnits : childUnitsFor(thisPartnerId);
     layoutChildrenRow(placePiece, thisCoupleChildUnits, actualX / 2, side);
+
+    // thisPartnerId's own siblings (and THEIR full subtrees — own partner,
+    // own descendants, own ancestor fan) extend further toward `side`,
+    // past thisPartnerId — placed LAST, after rootId's own children row
+    // above, so a sibling's descendants reaching into the same generation
+    // as those children get pushed out of THEIR way instead of the other
+    // way around (see this function's own doc above for the bug this
+    // ordering fixes). Same reasoning as rootId's own siblings above:
+    // separates the couple from the partner's own sibling, not just from
+    // rootId's — starts a full UNIT_X_SPACING beyond the partner's own
+    // position.
+    let partnerSiblingCursor = actualX;
+    // forcePartnerSide=side: same fix as rootId's own siblings —
+    // this partner-sibling's own partner must sit further in `side`,
+    // past the sibling, never flipped back toward rootId's partner by pure
+    // gender order (the exact reported bug: a sibling's spouse landing
+    // between the sibling and rootId's own partner instead of past both).
+    thisPartnerSiblingIds.forEach((id) => {
+      const siblingUnit = layoutUnit(id, side === 1 ? "right" : "left", ctx, side);
+      const desiredSiblingX = partnerSiblingCursor + side * UNIT_X_SPACING;
+      const actualSiblingX = placePiece(siblingUnit.slots, desiredSiblingX, 0, side);
+      partnerSiblingCursor = actualSiblingX + side * siblingUnit.width;
+    });
 
     return actualX;
   }
