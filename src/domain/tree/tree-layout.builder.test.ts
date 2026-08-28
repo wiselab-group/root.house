@@ -210,7 +210,9 @@ describe("buildFocusTreeLayout", () => {
 
     const ids = result.nodes.map((n) => n.id);
     expect(ids).toContain("grandparentsSibling");
-    expect(result.nodes.find((n) => n.id === "grandparentsSibling")?.generation).toBe(-2);
+    expect(
+      result.nodes.find((n) => n.id === "grandparentsSibling")?.generation,
+    ).toBe(-2);
   });
 
   it("shows the same connected family whether focus is an ancestor or a descendant", () => {
@@ -229,7 +231,9 @@ describe("buildFocusTreeLayout", () => {
       { parentId: "viktor", childId: "eleonora" },
       { parentId: "galina", childId: "eleonora" },
     ];
-    const partnershipEdges = [{ person1Id: "viktor", person2Id: "galina", isCurrent: true }];
+    const partnershipEdges = [
+      { person1Id: "viktor", person2Id: "galina", isCurrent: true },
+    ];
     // viktorsSibling shares a parent with viktor — give both a common parent
     // so deriveSiblings-style logic (here: the parentsOf/childrenOf sibling
     // expansion) finds them.
@@ -296,7 +300,9 @@ describe("buildFocusTreeLayout", () => {
     const ids = result.nodes.map((n) => n.id);
     expect(ids).toContain("bobsMother");
     expect(ids).toContain("bobsFather");
-    expect(result.nodes.find((n) => n.id === "bobsMother")?.generation).toBe(-1);
+    expect(result.nodes.find((n) => n.id === "bobsMother")?.generation).toBe(
+      -1,
+    );
   });
 
   it("keeps a married couple's own ancestor fans centered on each spouse: husband's line fans left, wife's fans right", () => {
@@ -411,7 +417,9 @@ describe("buildFocusTreeLayout", () => {
     // them away from it).
     expect(Math.abs(aliceSpouse.x - alice.x)).toBe(260);
     // bob must sit on alice's OUTER side (away from her spouse), not between them.
-    expect(Math.abs(bob.x - alice.x)).toBeLessThan(Math.abs(bob.x - aliceSpouse.x));
+    expect(Math.abs(bob.x - alice.x)).toBeLessThan(
+      Math.abs(bob.x - aliceSpouse.x),
+    );
   });
 
   it("includes a sibling's own partner, not just the sibling themself", () => {
@@ -486,7 +494,11 @@ describe("buildFocusTreeLayout", () => {
       ],
       partnershipEdges: [
         { person1Id: "grandpa", person2Id: "grandma", isCurrent: true },
-        { person1Id: "elizaveta", person2Id: "nikolaiKupchik", isCurrent: true },
+        {
+          person1Id: "elizaveta",
+          person2Id: "nikolaiKupchik",
+          isCurrent: true,
+        },
         { person1Id: "elena", person2Id: "nikolaiUshkar", isCurrent: true },
       ],
       focusPersonId: "kid",
@@ -540,7 +552,9 @@ describe("buildFocusTreeLayout", () => {
         { parentId: "parent2", childId: "galinaSib2" },
         { parentId: "parent2", childId: "galinaSib3" },
       ],
-      partnershipEdges: [{ person1Id: "viktor", person2Id: "galina", isCurrent: true }],
+      partnershipEdges: [
+        { person1Id: "viktor", person2Id: "galina", isCurrent: true },
+      ],
       focusPersonId: "viktor",
     });
 
@@ -555,7 +569,8 @@ describe("buildFocusTreeLayout", () => {
     // occupy the same visual slot), so this checks per-generation, not globally.
     const xByGeneration = new Map<number, number[]>();
     for (const node of result.nodes) {
-      if (!xByGeneration.has(node.generation)) xByGeneration.set(node.generation, []);
+      if (!xByGeneration.has(node.generation))
+        xByGeneration.set(node.generation, []);
       xByGeneration.get(node.generation)!.push(node.x);
     }
     for (const [, xValues] of xByGeneration) {
@@ -594,7 +609,13 @@ describe("buildFocusTreeLayout", () => {
         { parentId: "spouseParent", childId: "grandchildSpouse" },
         { parentId: "spouseGrandparent", childId: "spouseParent" },
       ],
-      partnershipEdges: [{ person1Id: "grandchild", person2Id: "grandchildSpouse", isCurrent: true }],
+      partnershipEdges: [
+        {
+          person1Id: "grandchild",
+          person2Id: "grandchildSpouse",
+          isCurrent: true,
+        },
+      ],
       focusPersonId: "focus",
       ancestorGenerations: Infinity,
       descendantGenerations: Infinity,
@@ -609,7 +630,8 @@ describe("buildFocusTreeLayout", () => {
     // not land on top of `focus` (also generation 0).
     const xByGeneration = new Map<number, number[]>();
     for (const node of result.nodes) {
-      if (!xByGeneration.has(node.generation)) xByGeneration.set(node.generation, []);
+      if (!xByGeneration.has(node.generation))
+        xByGeneration.set(node.generation, []);
       xByGeneration.get(node.generation)!.push(node.x);
     }
     for (const [, xValues] of xByGeneration) {
@@ -658,7 +680,8 @@ describe("buildFocusTreeLayout", () => {
 
     const xByGeneration = new Map<number, number[]>();
     for (const node of result.nodes) {
-      if (!xByGeneration.has(node.generation)) xByGeneration.set(node.generation, []);
+      if (!xByGeneration.has(node.generation))
+        xByGeneration.set(node.generation, []);
       xByGeneration.get(node.generation)!.push(node.x);
     }
     for (const [, xValues] of xByGeneration) {
@@ -726,9 +749,13 @@ describe("buildFocusTreeLayout", () => {
         focusPersonId: "root",
       });
 
-      const partnershipEdges = result.edges.filter((e) => e.kind === "partnership");
+      const partnershipEdges = result.edges.filter(
+        (e) => e.kind === "partnership",
+      );
       expect(partnershipEdges).toHaveLength(2);
-      const partnerIds = partnershipEdges.map((e) => (e.source === "root" ? e.target : e.source)).sort();
+      const partnerIds = partnershipEdges
+        .map((e) => (e.source === "root" ? e.target : e.source))
+        .sort();
       expect(partnerIds).toEqual(["partnerA", "partnerB"]);
     });
 
@@ -752,8 +779,16 @@ describe("buildFocusTreeLayout", () => {
         partnershipEdges: [
           { person1Id: "root", person2Id: "partnerA", isCurrent: false },
           { person1Id: "root", person2Id: "partnerB", isCurrent: true },
-          { person1Id: "partnerAMother", person2Id: "partnerAFather", isCurrent: true },
-          { person1Id: "partnerBMother", person2Id: "partnerBFather", isCurrent: true },
+          {
+            person1Id: "partnerAMother",
+            person2Id: "partnerAFather",
+            isCurrent: true,
+          },
+          {
+            person1Id: "partnerBMother",
+            person2Id: "partnerBFather",
+            isCurrent: true,
+          },
         ],
         focusPersonId: "root",
         ancestorGenerations: Infinity,
@@ -762,7 +797,8 @@ describe("buildFocusTreeLayout", () => {
 
       const xByGeneration = new Map<number, number[]>();
       for (const node of result.nodes) {
-        if (!xByGeneration.has(node.generation)) xByGeneration.set(node.generation, []);
+        if (!xByGeneration.has(node.generation))
+          xByGeneration.set(node.generation, []);
         xByGeneration.get(node.generation)!.push(node.x);
       }
       for (const [, xValues] of xByGeneration) {
@@ -786,7 +822,9 @@ describe("buildFocusTreeLayout", () => {
           person("soloChild"), // recorded with root only — no second parent
         ],
         parentChildEdges: [{ parentId: "root", childId: "soloChild" }],
-        partnershipEdges: [{ person1Id: "root", person2Id: "partnerA", isCurrent: true }],
+        partnershipEdges: [
+          { person1Id: "root", person2Id: "partnerA", isCurrent: true },
+        ],
         focusPersonId: "root",
       });
 
@@ -821,7 +859,11 @@ describe("buildFocusTreeLayout", () => {
 
       const byId = new Map(result1.nodes.map((n) => [n.id, n]));
       // All partner x positions are distinct and collision-free.
-      const xs = [byId.get("partnerA")!.x, byId.get("partnerB")!.x, byId.get("partnerC")!.x];
+      const xs = [
+        byId.get("partnerA")!.x,
+        byId.get("partnerB")!.x,
+        byId.get("partnerC")!.x,
+      ];
       expect(new Set(xs).size).toBe(3);
     });
 
@@ -877,7 +919,9 @@ describe("buildFocusTreeLayout", () => {
       // Both half-siblings are present, at the same generation, but NOT at
       // the same x (they ride under their own parent's couple, not stacked
       // together as a plain sibling row).
-      expect(byId.get("childOfA")?.generation).toBe(byId.get("childOfB")?.generation);
+      expect(byId.get("childOfA")?.generation).toBe(
+        byId.get("childOfB")?.generation,
+      );
       expect(byId.get("childOfA")!.x).not.toBe(byId.get("childOfB")!.x);
     });
   });
@@ -921,7 +965,11 @@ describe("buildFocusTreeLayout", () => {
         ],
         partnershipEdges: [
           { person1Id: "nikolaySr", person2Id: "elizaveta", isCurrent: true },
-          { person1Id: "svetlana", person2Id: "viktorEfimovich", isCurrent: true },
+          {
+            person1Id: "svetlana",
+            person2Id: "viktorEfimovich",
+            isCurrent: true,
+          },
           { person1Id: "viktor", person2Id: "galina", isCurrent: true },
         ],
         focusPersonId: "galina",
@@ -946,7 +994,8 @@ describe("buildFocusTreeLayout", () => {
       // kids) both land.
       const xByGeneration = new Map<number, number[]>();
       for (const node of result.nodes) {
-        if (!xByGeneration.has(node.generation)) xByGeneration.set(node.generation, []);
+        if (!xByGeneration.has(node.generation))
+          xByGeneration.set(node.generation, []);
         xByGeneration.get(node.generation)!.push(node.x);
       }
       for (const [, xValues] of xByGeneration) {
@@ -970,8 +1019,16 @@ describe("buildFocusTreeLayout", () => {
           person("elizaveta", { gender: "female" }),
           person("viktor", { gender: "male" }),
           person("galina", { gender: "female" }),
-          ...Array.from({ length: 6 }, (_, i) => person(`galinaSib${i}`, { gender: i % 2 === 0 ? "female" : "male" })),
-          ...Array.from({ length: 6 }, (_, i) => person(`galinaSibPartner${i}`, { gender: i % 2 === 0 ? "male" : "female" })),
+          ...Array.from({ length: 6 }, (_, i) =>
+            person(`galinaSib${i}`, {
+              gender: i % 2 === 0 ? "female" : "male",
+            }),
+          ),
+          ...Array.from({ length: 6 }, (_, i) =>
+            person(`galinaSibPartner${i}`, {
+              gender: i % 2 === 0 ? "male" : "female",
+            }),
+          ),
           person("alexander", { gender: "male" }),
           person("darya"),
           person("eleonora", { gender: "female" }),
@@ -980,7 +1037,10 @@ describe("buildFocusTreeLayout", () => {
         parentChildEdges: [
           { parentId: "nikolaySr", childId: "viktor" },
           { parentId: "elizaveta", childId: "viktor" },
-          ...Array.from({ length: 6 }, (_, i) => ({ parentId: "nikolaySr", childId: `galinaSib${i}` })),
+          ...Array.from({ length: 6 }, (_, i) => ({
+            parentId: "nikolaySr",
+            childId: `galinaSib${i}`,
+          })),
           { parentId: "viktor", childId: "alexander" },
           { parentId: "galina", childId: "alexander" },
           { parentId: "viktor", childId: "darya" },
@@ -1016,7 +1076,8 @@ describe("buildFocusTreeLayout", () => {
       // No x-collisions at any generation.
       const xByGeneration = new Map<number, number[]>();
       for (const node of result.nodes) {
-        if (!xByGeneration.has(node.generation)) xByGeneration.set(node.generation, []);
+        if (!xByGeneration.has(node.generation))
+          xByGeneration.set(node.generation, []);
         xByGeneration.get(node.generation)!.push(node.x);
       }
       for (const [, xValues] of xByGeneration) {
@@ -1036,8 +1097,14 @@ describe("buildFocusTreeLayout", () => {
         persons: [
           person("nikolaySr", { gender: "male" }),
           person("elizaveta", { gender: "female" }),
-          ...Array.from({ length: 5 }, (_, i) => person(`sib${i}`, { gender: i % 2 === 0 ? "female" : "male" })),
-          ...Array.from({ length: 5 }, (_, i) => person(`sibPartner${i}`, { gender: i % 2 === 0 ? "male" : "female" })),
+          ...Array.from({ length: 5 }, (_, i) =>
+            person(`sib${i}`, { gender: i % 2 === 0 ? "female" : "male" }),
+          ),
+          ...Array.from({ length: 5 }, (_, i) =>
+            person(`sibPartner${i}`, {
+              gender: i % 2 === 0 ? "male" : "female",
+            }),
+          ),
           ...Array.from({ length: 5 }, (_, i) => person(`sibChild${i}`)),
           person("viktor", { gender: "male" }),
           person("galina", { gender: "female" }),
@@ -1047,9 +1114,18 @@ describe("buildFocusTreeLayout", () => {
         parentChildEdges: [
           { parentId: "nikolaySr", childId: "viktor" },
           { parentId: "elizaveta", childId: "viktor" },
-          ...Array.from({ length: 5 }, (_, i) => ({ parentId: "nikolaySr", childId: `sib${i}` })),
-          ...Array.from({ length: 5 }, (_, i) => ({ parentId: `sib${i}`, childId: `sibChild${i}` })),
-          ...Array.from({ length: 5 }, (_, i) => ({ parentId: `sibPartner${i}`, childId: `sibChild${i}` })),
+          ...Array.from({ length: 5 }, (_, i) => ({
+            parentId: "nikolaySr",
+            childId: `sib${i}`,
+          })),
+          ...Array.from({ length: 5 }, (_, i) => ({
+            parentId: `sib${i}`,
+            childId: `sibChild${i}`,
+          })),
+          ...Array.from({ length: 5 }, (_, i) => ({
+            parentId: `sibPartner${i}`,
+            childId: `sibChild${i}`,
+          })),
           { parentId: "viktor", childId: "alexander" },
           { parentId: "galina", childId: "alexander" },
           { parentId: "viktor", childId: "darya" },
@@ -1079,7 +1155,8 @@ describe("buildFocusTreeLayout", () => {
 
       const xByGeneration = new Map<number, number[]>();
       for (const node of result.nodes) {
-        if (!xByGeneration.has(node.generation)) xByGeneration.set(node.generation, []);
+        if (!xByGeneration.has(node.generation))
+          xByGeneration.set(node.generation, []);
         xByGeneration.get(node.generation)!.push(node.x);
       }
       for (const [, xValues] of xByGeneration) {
@@ -1130,8 +1207,12 @@ describe("buildFocusTreeLayout", () => {
       // momNewHusband must not land closer to dad than to mom).
       expect(dadX).toBeLessThan(0);
       expect(momX).toBeGreaterThan(0);
-      expect(Math.abs(dadNewWifeX - dadX)).toBeLessThan(Math.abs(dadNewWifeX - momX));
-      expect(Math.abs(momNewHusbandX - momX)).toBeLessThan(Math.abs(momNewHusbandX - dadX));
+      expect(Math.abs(dadNewWifeX - dadX)).toBeLessThan(
+        Math.abs(dadNewWifeX - momX),
+      );
+      expect(Math.abs(momNewHusbandX - momX)).toBeLessThan(
+        Math.abs(momNewHusbandX - dadX),
+      );
       expect(dadNewWifeX).toBeLessThan(momNewHusbandX);
     });
 
@@ -1166,7 +1247,11 @@ describe("buildFocusTreeLayout", () => {
         partnershipEdges: [
           { person1Id: "viktor", person2Id: "galina", isCurrent: true },
           { person1Id: "nikolayK", person2Id: "elizavetaK", isCurrent: true },
-          { person1Id: "nikolayKozl", person2Id: "nadezhdaKozl", isCurrent: true },
+          {
+            person1Id: "nikolayKozl",
+            person2Id: "nadezhdaKozl",
+            isCurrent: true,
+          },
         ],
         focusPersonId: "viktor",
       });
@@ -1185,7 +1270,9 @@ describe("buildFocusTreeLayout", () => {
       // put him).
       expect(viktorX).toBe(0);
       // Both fans stay on their own correct side, no crossing.
-      expect(Math.max(nikolayKX, elizavetaKX)).toBeLessThan(Math.min(nikolayKozlX, nadezhdaKozlX));
+      expect(Math.max(nikolayKX, elizavetaKX)).toBeLessThan(
+        Math.min(nikolayKozlX, nadezhdaKozlX),
+      );
 
       // The actual regression: Виктор's own parents must stay CLOSE to
       // Виктор, not drift off toward Галина's side by a full
@@ -1200,7 +1287,8 @@ describe("buildFocusTreeLayout", () => {
       // No x-collisions at any generation.
       const xByGeneration = new Map<number, number[]>();
       for (const node of result.nodes) {
-        if (!xByGeneration.has(node.generation)) xByGeneration.set(node.generation, []);
+        if (!xByGeneration.has(node.generation))
+          xByGeneration.set(node.generation, []);
         xByGeneration.get(node.generation)!.push(node.x);
       }
       for (const [, xValues] of xByGeneration) {
@@ -1235,7 +1323,11 @@ describe("buildFocusTreeLayout", () => {
           person("viktorSib", { gender: "female" }),
           person("nikolayKozl", { gender: "male" }),
           person("nadezhdaKozl", { gender: "female" }),
-          ...Array.from({ length: 3 }, (_, i) => person(`galinaSib${i}`, { gender: i % 2 === 0 ? "female" : "male" })),
+          ...Array.from({ length: 3 }, (_, i) =>
+            person(`galinaSib${i}`, {
+              gender: i % 2 === 0 ? "female" : "male",
+            }),
+          ),
         ],
         parentChildEdges: [
           { parentId: "viktor", childId: "alexander" },
@@ -1246,12 +1338,19 @@ describe("buildFocusTreeLayout", () => {
           { parentId: "elizavetaK", childId: "viktorSib" },
           { parentId: "nikolayKozl", childId: "galina" },
           { parentId: "nadezhdaKozl", childId: "galina" },
-          ...Array.from({ length: 3 }, (_, i) => ({ parentId: "nikolayKozl", childId: `galinaSib${i}` })),
+          ...Array.from({ length: 3 }, (_, i) => ({
+            parentId: "nikolayKozl",
+            childId: `galinaSib${i}`,
+          })),
         ],
         partnershipEdges: [
           { person1Id: "viktor", person2Id: "galina", isCurrent: true },
           { person1Id: "nikolayK", person2Id: "elizavetaK", isCurrent: true },
-          { person1Id: "nikolayKozl", person2Id: "nadezhdaKozl", isCurrent: true },
+          {
+            person1Id: "nikolayKozl",
+            person2Id: "nadezhdaKozl",
+            isCurrent: true,
+          },
         ],
         focusPersonId: "alexander",
       });
@@ -1272,7 +1371,8 @@ describe("buildFocusTreeLayout", () => {
       // No x-collisions at any generation.
       const xByGeneration2 = new Map<number, number[]>();
       for (const node of result.nodes) {
-        if (!xByGeneration2.has(node.generation)) xByGeneration2.set(node.generation, []);
+        if (!xByGeneration2.has(node.generation))
+          xByGeneration2.set(node.generation, []);
         xByGeneration2.get(node.generation)!.push(node.x);
       }
       for (const [, xValues] of xByGeneration2) {
@@ -1310,7 +1410,11 @@ describe("buildFocusTreeLayout", () => {
           person("olga", { gender: "female" }),
           person("nikolayKozl", { gender: "male" }),
           person("nadezhdaKozl", { gender: "female" }),
-          ...Array.from({ length: 6 }, (_, i) => person(`galinaSib${i}`, { gender: i % 2 === 0 ? "female" : "male" })),
+          ...Array.from({ length: 6 }, (_, i) =>
+            person(`galinaSib${i}`, {
+              gender: i % 2 === 0 ? "female" : "male",
+            }),
+          ),
         ],
         parentChildEdges: [
           { parentId: "viktor", childId: "alexander" },
@@ -1325,13 +1429,20 @@ describe("buildFocusTreeLayout", () => {
           { parentId: "viktorE", childId: "olga" },
           { parentId: "nikolayKozl", childId: "galina" },
           { parentId: "nadezhdaKozl", childId: "galina" },
-          ...Array.from({ length: 6 }, (_, i) => ({ parentId: "nikolayKozl", childId: `galinaSib${i}` })),
+          ...Array.from({ length: 6 }, (_, i) => ({
+            parentId: "nikolayKozl",
+            childId: `galinaSib${i}`,
+          })),
         ],
         partnershipEdges: [
           { person1Id: "viktor", person2Id: "galina", isCurrent: true },
           { person1Id: "nikolayK", person2Id: "elizavetaK", isCurrent: true },
           { person1Id: "svetlana", person2Id: "viktorE", isCurrent: true },
-          { person1Id: "nikolayKozl", person2Id: "nadezhdaKozl", isCurrent: true },
+          {
+            person1Id: "nikolayKozl",
+            person2Id: "nadezhdaKozl",
+            isCurrent: true,
+          },
         ],
         focusPersonId: "alexander",
         descendantGenerations: 1,
@@ -1354,7 +1465,8 @@ describe("buildFocusTreeLayout", () => {
       // No x-collisions at any generation.
       const xByGeneration3 = new Map<number, number[]>();
       for (const node of result.nodes) {
-        if (!xByGeneration3.has(node.generation)) xByGeneration3.set(node.generation, []);
+        if (!xByGeneration3.has(node.generation))
+          xByGeneration3.set(node.generation, []);
         xByGeneration3.get(node.generation)!.push(node.x);
       }
       for (const [, xValues] of xByGeneration3) {
@@ -1415,7 +1527,11 @@ describe("buildFocusTreeLayout", () => {
         partnershipEdges: [
           { person1Id: "viktor", person2Id: "galina", isCurrent: true },
           { person1Id: "nikolayK", person2Id: "elizavetaK", isCurrent: true },
-          { person1Id: "nikolayKozl", person2Id: "nadezhdaKozl", isCurrent: true },
+          {
+            person1Id: "nikolayKozl",
+            person2Id: "nadezhdaKozl",
+            isCurrent: true,
+          },
           { person1Id: "vasily", person2Id: "elizavetaKozl", isCurrent: true },
           { person1Id: "grigoryK", person2Id: "agrafena", isCurrent: true },
         ],
@@ -1446,10 +1562,123 @@ describe("buildFocusTreeLayout", () => {
       // No x-collisions at any generation.
       const xByGeneration4 = new Map<number, number[]>();
       for (const node of result.nodes) {
-        if (!xByGeneration4.has(node.generation)) xByGeneration4.set(node.generation, []);
+        if (!xByGeneration4.has(node.generation))
+          xByGeneration4.set(node.generation, []);
         xByGeneration4.get(node.generation)!.push(node.x);
       }
       for (const [, xValues] of xByGeneration4) {
+        expect(new Set(xValues).size).toBe(xValues.length);
+      }
+    });
+
+    it("keeps a couple's own two sibling-fans as separate contiguous blocks, not interleaved", () => {
+      // Reproduces a real production bug: focus = Александр, ancestor
+      // couple Николай Козловский + Надежда Козловская (Галина's parents).
+      // Николай's own siblings (Юзик/Даниил/Алексей Козловский, via HIS
+      // parents Василий+Елизавета) and Надежда's own siblings (Николай/
+      // Алексей/Павел/Григорий Колесникович, via HER parents Григорий
+      // (Юрий)+Аграфена Колесникович) both land at the same generation.
+      // Before this fix, both groups fell back to the single outer
+      // `direction` used to place the whole Николай+Надежда parentFan
+      // piece, collapsing what should be two separate family blocks (each
+      // flanking its own couple) into one flat, interleaved-looking row —
+      // reported as "Николай Колесникович, Купчик, Ушкар — одна линия,
+      // Козловский, Колесникович — другая" appearing merged in one line.
+      const result = buildFocusTreeLayout({
+        persons: [
+          person("alexander", { gender: "male" }),
+          person("viktor", { gender: "male" }),
+          person("galina", { gender: "female" }),
+          person("nikolayKozl", { gender: "male" }),
+          person("nadezhdaKozl", { gender: "female" }),
+          person("vasily", { gender: "male" }),
+          person("elizavetaKozl", { gender: "female" }),
+          person("grigoryK", { gender: "male" }),
+          person("agrafena", { gender: "female" }),
+          person("yuzik", { gender: "male" }),
+          person("daniil", { gender: "male" }),
+          person("alexeyKozl", { gender: "male" }),
+          person("nikolayKol", { gender: "male" }),
+          person("alexeyKol", { gender: "male" }),
+          person("pavelKol", { gender: "male" }),
+          person("grigoryKol", { gender: "male" }),
+        ],
+        parentChildEdges: [
+          { parentId: "viktor", childId: "alexander" },
+          { parentId: "galina", childId: "alexander" },
+          { parentId: "nikolayKozl", childId: "galina" },
+          { parentId: "nadezhdaKozl", childId: "galina" },
+          { parentId: "vasily", childId: "nikolayKozl" },
+          { parentId: "elizavetaKozl", childId: "nikolayKozl" },
+          { parentId: "vasily", childId: "yuzik" },
+          { parentId: "elizavetaKozl", childId: "yuzik" },
+          { parentId: "vasily", childId: "daniil" },
+          { parentId: "elizavetaKozl", childId: "daniil" },
+          { parentId: "vasily", childId: "alexeyKozl" },
+          { parentId: "elizavetaKozl", childId: "alexeyKozl" },
+          { parentId: "grigoryK", childId: "nadezhdaKozl" },
+          { parentId: "agrafena", childId: "nadezhdaKozl" },
+          { parentId: "grigoryK", childId: "nikolayKol" },
+          { parentId: "agrafena", childId: "nikolayKol" },
+          { parentId: "grigoryK", childId: "alexeyKol" },
+          { parentId: "agrafena", childId: "alexeyKol" },
+          { parentId: "grigoryK", childId: "pavelKol" },
+          { parentId: "agrafena", childId: "pavelKol" },
+          { parentId: "grigoryK", childId: "grigoryKol" },
+          { parentId: "agrafena", childId: "grigoryKol" },
+        ],
+        partnershipEdges: [
+          { person1Id: "viktor", person2Id: "galina", isCurrent: true },
+          {
+            person1Id: "nikolayKozl",
+            person2Id: "nadezhdaKozl",
+            isCurrent: true,
+          },
+          { person1Id: "vasily", person2Id: "elizavetaKozl", isCurrent: true },
+          { person1Id: "grigoryK", person2Id: "agrafena", isCurrent: true },
+        ],
+        focusPersonId: "alexander",
+        ancestorGenerations: Infinity,
+      });
+
+      const byId = new Map(result.nodes.map((n) => [n.id, n]));
+      const nikolayKozlX = byId.get("nikolayKozl")!.x;
+      const nadezhdaKozlX = byId.get("nadezhdaKozl")!.x;
+      const kozlSibXs = ["yuzik", "daniil", "alexeyKozl"].map(
+        (id) => byId.get(id)!.x,
+      );
+      const kolSibXs = [
+        "nikolayKol",
+        "alexeyKol",
+        "pavelKol",
+        "grigoryKol",
+      ].map((id) => byId.get(id)!.x);
+
+      // Николай+Надежда stay adjacent as a couple, both sibling groups sit
+      // beyond them (never between/before the couple itself).
+      expect(Math.abs(nikolayKozlX - nadezhdaKozlX)).toBeLessThan(400);
+      const coupleMax = Math.max(nikolayKozlX, nadezhdaKozlX);
+      for (const x of [...kozlSibXs, ...kolSibXs])
+        expect(x).toBeGreaterThan(coupleMax);
+
+      // Each sibling group forms its OWN contiguous block — none of
+      // Николай's own siblings is interleaved between any of Надежда's,
+      // or vice versa (the exact reported "merged into one line" bug).
+      const kozlMax = Math.max(...kozlSibXs);
+      const kozlMin = Math.min(...kozlSibXs);
+      const kolMax = Math.max(...kolSibXs);
+      const kolMin = Math.min(...kolSibXs);
+      const rangesOverlap = kozlMin <= kolMax && kolMin <= kozlMax;
+      expect(rangesOverlap).toBe(false);
+
+      // No x-collisions at any generation.
+      const xByGeneration6 = new Map<number, number[]>();
+      for (const node of result.nodes) {
+        if (!xByGeneration6.has(node.generation))
+          xByGeneration6.set(node.generation, []);
+        xByGeneration6.get(node.generation)!.push(node.x);
+      }
+      for (const [, xValues] of xByGeneration6) {
         expect(new Set(xValues).size).toBe(xValues.length);
       }
     });
@@ -1483,7 +1712,11 @@ describe("buildFocusTreeLayout", () => {
           person("elenaUshkar", { gender: "female" }),
           person("nikolayKozl", { gender: "male" }),
           person("nadezhdaKozl", { gender: "female" }),
-          ...Array.from({ length: 4 }, (_, i) => person(`galinaSib${i}`, { gender: i % 2 === 0 ? "female" : "male" })),
+          ...Array.from({ length: 4 }, (_, i) =>
+            person(`galinaSib${i}`, {
+              gender: i % 2 === 0 ? "female" : "male",
+            }),
+          ),
         ],
         parentChildEdges: [
           { parentId: "viktor", childId: "alexander" },
@@ -1496,13 +1729,24 @@ describe("buildFocusTreeLayout", () => {
           { parentId: "elizavetaKrivusha", childId: "elenaUshkar" },
           { parentId: "nikolayKozl", childId: "galina" },
           { parentId: "nadezhdaKozl", childId: "galina" },
-          ...Array.from({ length: 4 }, (_, i) => ({ parentId: "nikolayKozl", childId: `galinaSib${i}` })),
+          ...Array.from({ length: 4 }, (_, i) => ({
+            parentId: "nikolayKozl",
+            childId: `galinaSib${i}`,
+          })),
         ],
         partnershipEdges: [
           { person1Id: "viktor", person2Id: "galina", isCurrent: true },
           { person1Id: "nikolayK", person2Id: "elizavetaK", isCurrent: true },
-          { person1Id: "grigoryKrivusha", person2Id: "elizavetaKrivusha", isCurrent: true },
-          { person1Id: "nikolayKozl", person2Id: "nadezhdaKozl", isCurrent: true },
+          {
+            person1Id: "grigoryKrivusha",
+            person2Id: "elizavetaKrivusha",
+            isCurrent: true,
+          },
+          {
+            person1Id: "nikolayKozl",
+            person2Id: "nadezhdaKozl",
+            isCurrent: true,
+          },
         ],
         focusPersonId: "alexander",
         ancestorGenerations: Infinity,
@@ -1524,7 +1768,8 @@ describe("buildFocusTreeLayout", () => {
       // No x-collisions at any generation.
       const xByGeneration5 = new Map<number, number[]>();
       for (const node of result.nodes) {
-        if (!xByGeneration5.has(node.generation)) xByGeneration5.set(node.generation, []);
+        if (!xByGeneration5.has(node.generation))
+          xByGeneration5.set(node.generation, []);
         xByGeneration5.get(node.generation)!.push(node.x);
       }
       for (const [, xValues] of xByGeneration5) {

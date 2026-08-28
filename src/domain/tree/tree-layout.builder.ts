@@ -200,7 +200,9 @@ export function buildFocusTreeLayout(
     partnersOf.get(person1Id)!.push(person2Id);
     partnersOf.get(person2Id)!.push(person1Id);
   }
-  const genderOf = new Map<string, Gender>(persons.map((p) => [p.id, p.gender]));
+  const genderOf = new Map<string, Gender>(
+    persons.map((p) => [p.id, p.gender]),
+  );
 
   // generation: personId -> integer offset from focus (0 = focus's generation)
   const generationOf = new Map<string, number>([[focusPersonId, 0]]);
@@ -234,7 +236,10 @@ export function buildFocusTreeLayout(
           generationOf.set(parentId, generation - 1);
           addedAny = true;
         }
-        if (!ancestorDepthOf.has(parentId) || ancestorDepthOf.get(parentId)! > depth + 1) {
+        if (
+          !ancestorDepthOf.has(parentId) ||
+          ancestorDepthOf.get(parentId)! > depth + 1
+        ) {
           ancestorDepthOf.set(parentId, depth + 1);
           addedAny = true;
         }
@@ -250,7 +255,10 @@ export function buildFocusTreeLayout(
           generationOf.set(childId, generation + 1);
           addedAny = true;
         }
-        if (!descendantDepthOf.has(childId) || descendantDepthOf.get(childId)! > depth + 1) {
+        if (
+          !descendantDepthOf.has(childId) ||
+          descendantDepthOf.get(childId)! > depth + 1
+        ) {
           descendantDepthOf.set(childId, depth + 1);
           addedAny = true;
         }
@@ -267,7 +275,10 @@ export function buildFocusTreeLayout(
           }
           if (parentAncestorDepth !== undefined) {
             const siblingBudget = parentAncestorDepth + 1;
-            if (!ancestorDepthOf.has(siblingId) || ancestorDepthOf.get(siblingId)! > siblingBudget) {
+            if (
+              !ancestorDepthOf.has(siblingId) ||
+              ancestorDepthOf.get(siblingId)! > siblingBudget
+            ) {
               ancestorDepthOf.set(siblingId, siblingBudget);
               addedAny = true;
             }
@@ -293,14 +304,22 @@ export function buildFocusTreeLayout(
 
       if (generationOf.has(person1Id) && generationOf.has(person2Id)) {
         if (mergeBudget(ancestorDepthOf, person1Id, person2Id)) addedAny = true;
-        if (mergeBudget(descendantDepthOf, person1Id, person2Id)) addedAny = true;
+        if (mergeBudget(descendantDepthOf, person1Id, person2Id))
+          addedAny = true;
       }
     }
   }
 
   const visibleIds = new Set(generationOf.keys());
   const visited = new Set<string>();
-  const ctx: LayoutContext = { visibleIds, parentsOf, childrenOf, partnersOf, genderOf, visited };
+  const ctx: LayoutContext = {
+    visibleIds,
+    parentsOf,
+    childrenOf,
+    partnersOf,
+    genderOf,
+    visited,
+  };
 
   // layoutUnit already handles its OWN root's partner internally (their own
   // ancestor fan, nested exactly like any other couple in the tree — see
@@ -428,8 +447,10 @@ function orderCoupleBySlot(
   partnersOf: Map<string, string[]>,
   genderOf: Map<string, Gender>,
 ): OrderedCouple {
-  if (ids.length === 0) return { leftId: null, rightId: null, arePartners: false };
-  if (ids.length === 1) return { leftId: ids[0], rightId: null, arePartners: false };
+  if (ids.length === 0)
+    return { leftId: null, rightId: null, arePartners: false };
+  if (ids.length === 1)
+    return { leftId: ids[0], rightId: null, arePartners: false };
 
   const [a, b] = ids;
   const arePartners = (partnersOf.get(a) ?? []).includes(b);
@@ -439,8 +460,10 @@ function orderCoupleBySlot(
   }
   const genderA = genderOf.get(a) ?? "unknown";
   const genderB = genderOf.get(b) ?? "unknown";
-  if (genderA === "male" && genderB === "female") return { leftId: a, rightId: b, arePartners: true };
-  if (genderA === "female" && genderB === "male") return { leftId: b, rightId: a, arePartners: true };
+  if (genderA === "male" && genderB === "female")
+    return { leftId: a, rightId: b, arePartners: true };
+  if (genderA === "female" && genderB === "male")
+    return { leftId: b, rightId: a, arePartners: true };
   const [leftId, rightId] = [...ids].sort();
   return { leftId, rightId, arePartners: true };
 }
@@ -478,22 +501,28 @@ interface UnitSlot {
 interface LateralGroup {
   slots: UnitSlot[];
   /**
-   * Overrides `placePiece`'s own `direction` param for JUST this group's
-   * push, when set. Left undefined for the common case (every lateral
-   * rider naturally extends the same way the whole piece does — a
-   * partner's own siblings past the partner, a sibling's own children
-   * below the sibling — so the outer `direction` already describes this
-   * group correctly). Set explicitly only by `layoutCoupleFan`'s single-
-   * call branch (see its own doc): parentFan is a piece spanning a full
-   * COUPLE, so its own lateral riders legitimately sit on EITHER side of
-   * the couple's own midpoint (one spouse's own siblings naturally left,
-   * the other spouse's own siblings naturally right) — there `direction`
-   * alone can't tell which side a given rider belongs to, so the caller
-   * who folded that spouse's own subtree in (and therefore knows which
-   * side they're on) stamps it here instead. A group's own children/
-   * grandchildren riding along with it never need their own override —
-   * they inherit whichever side their own parent's group was stamped
-   * with, same as `direction` would ordinarily apply to the whole family.
+   * The direction this group's own EXTRA collision push (beyond whatever
+   * offset is already baked into its slots' own `relativeX`) should go,
+   * relative to rootId — read by `placePiece` ONLY when its own
+   * `allowDirectionOverride` is true (see that param's own doc). Left
+   * undefined for groups that never need their own override (a couple's
+   * shared children row, for instance — always fine following the whole
+   * piece's own `direction`).
+   *
+   * Stamped at the exact point where each group is first produced, using
+   * THAT site's own unambiguous local axis — layoutUnit's own sibling loop
+   * stamps `siblingDirection` for rootId's own siblings, placePartner
+   * stamps `side` for thisPartnerId's own siblings and (overwriting any
+   * deeper stamp) thisPartnerId's own parentFan lateral riders. A group
+   * bubbling up through multiple nested calls gets RE-stamped at each site
+   * that bubbles it further (never left as a stale stamp from several
+   * levels down) — a stamp from a couple several generations up has no
+   * valid meaning once reinterpreted against a different, unrelated axis
+   * (the exact reported bug: Елена Ушкар's group, correctly stamped
+   * relative to her own parents' local axis, still tried to push on that
+   * stamped side even once the whole fan carrying her became part of an
+   * unrelated outer piece pushed in the opposite direction — sending her
+   * across zero into the wrong spouse's territory).
    */
   direction?: 1 | -1;
 }
@@ -537,7 +566,10 @@ function computeExtentByGeneration(slots: UnitSlot[]): ExtentByGeneration {
   for (const slot of slots) {
     const existing = extent.get(slot.relativeGeneration);
     if (!existing) {
-      extent.set(slot.relativeGeneration, { min: slot.relativeX, max: slot.relativeX });
+      extent.set(slot.relativeGeneration, {
+        min: slot.relativeX,
+        max: slot.relativeX,
+      });
     } else {
       existing.min = Math.min(existing.min, slot.relativeX);
       existing.max = Math.max(existing.max, slot.relativeX);
@@ -570,8 +602,10 @@ function resolveCollision(
   for (const [generation, incoming] of incomingExtent) {
     const existing = existingExtent.get(generation);
     if (!existing) continue;
-    const incomingMin = incoming.min + desiredOffset + (direction === 1 ? extraPush : -extraPush);
-    const incomingMax = incoming.max + desiredOffset + (direction === 1 ? extraPush : -extraPush);
+    const incomingMin =
+      incoming.min + desiredOffset + (direction === 1 ? extraPush : -extraPush);
+    const incomingMax =
+      incoming.max + desiredOffset + (direction === 1 ? extraPush : -extraPush);
     if (direction === 1) {
       // Incoming sits to the right — its own min edge must clear existing's max edge.
       const shortfall = existing.max + PARTNER_X_SPACING - incomingMin;
@@ -585,7 +619,11 @@ function resolveCollision(
   return extraPush;
 }
 
-function mergeExtent(target: ExtentByGeneration, incoming: ExtentByGeneration, offset: number): void {
+function mergeExtent(
+  target: ExtentByGeneration,
+  incoming: ExtentByGeneration,
+  offset: number,
+): void {
   for (const [generation, { min, max }] of incoming) {
     const existing = target.get(generation);
     const shiftedMin = min + offset;
@@ -608,7 +646,11 @@ function mergeExtent(target: ExtentByGeneration, incoming: ExtentByGeneration, o
  * case), which callers treat as "belongs with the primary partner's row"
  * to preserve existing single-parent-recorded behavior unchanged.
  */
-function otherParentOf(childId: string, thisParentId: string, ctx: LayoutContext): string | undefined {
+function otherParentOf(
+  childId: string,
+  thisParentId: string,
+  ctx: LayoutContext,
+): string | undefined {
   return ctx.parentsOf.get(childId)?.find((p) => p !== thisParentId);
 }
 
@@ -641,7 +683,12 @@ function collectSiblings(personId: string, ctx: LayoutContext): string[] {
   for (const parentId of parents) {
     const personOtherParent = otherParentOf(personId, parentId, ctx);
     for (const childId of ctx.childrenOf.get(parentId) ?? []) {
-      if (childId === personId || !ctx.visibleIds.has(childId) || ctx.visited.has(childId) || siblingIds.includes(childId)) {
+      if (
+        childId === personId ||
+        !ctx.visibleIds.has(childId) ||
+        ctx.visited.has(childId) ||
+        siblingIds.includes(childId)
+      ) {
         continue;
       }
       const childOtherParent = otherParentOf(childId, parentId, ctx);
@@ -689,21 +736,25 @@ function layoutUnit(
    * `layoutUnit(leftId, ...)` for an ancestor couple) leaves this `false`
    * (the default).
    *
-   * Only controls whether THIS call's own `parentFan` (rootId's direct
-   * parents) is allowed to split its combined lateral riders by spouse
-   * (see layoutCoupleFan's own doc on `splitByPartner`) — that split is
-   * only safe at the ONE level whose own result will never be re-wrapped
-   * and re-interpreted against a different outer `direction` afterward.
-   * Passing `true` for a nested call was a real bug: rootId's own
-   * parentFan got correctly split relative to ITS OWN local axis, but
-   * once that whole nested layoutUnit result became part of an EVEN
-   * OUTER piece (e.g. Виктор's own parentFan, folded into the outer
-   * Виктор+Галина couple fan), the stamped direction was reinterpreted
-   * against the wrong axis and corrupted again (the exact reported bug:
-   * Елена Ушкар — Елизавета Купчик's own sister, i.e. Виктор's aunt —
-   * ended up thousands of px away on Галина's side, because Виктор's own
-   * `layoutUnit` call, itself nested inside the outer couple fan, still
-   * split its OWN parentFan as if it were the final, unwrapped result).
+   * Only controls whether THIS call's own `parentFan` placement (below) is
+   * allowed to READ each lateral group's stamped `direction` (see
+   * LateralGroup's own doc, and layoutCoupleFan's `arePartners` branch,
+   * which stamps a `direction` on EVERY couple's own combined sibling
+   * groups, at every nesting depth — the stamp itself is always correct
+   * relative to ITS OWN couple's local axis). At any NESTED level, this
+   * whole parentFan piece (core AND every stamped lateral group alike)
+   * still has to move together as ONE rigid block once ITS OWN containing
+   * piece gets pushed by a DIFFERENT outer `direction` a level further up
+   * (e.g. Виктор's own parentFan, still nested inside the outer
+   * Виктор+Галина couple fan) — reading the stamp there instead of the
+   * call's own `direction` corrupts it (the exact reported bug: Елена
+   * Ушкар's group, correctly stamped relative to Николай Купчик's own
+   * local axis, still tried to push on its stamped side even once the
+   * whole fan became Виктор's own parentFan and got pushed as a block in
+   * the OPPOSITE direction, sending her across zero into Галина's
+   * territory). Only the ONE level whose own result is never re-wrapped —
+   * the true top-level parentFan — can safely let each spouse's own
+   * sibling group extend its own separate way.
    */
   isTopLevel = false,
 ): {
@@ -762,15 +813,9 @@ function layoutUnit(
   // doc for why it must be the one deciding how many layoutUnit calls to
   // make, not this function calling layoutUnit directly for both parents).
   const parents = ctx.parentsOf.get(rootId) ?? [];
-  // splitByPartner=isTopLevel: only the ONE outermost layoutUnit call (see
-  // isTopLevel's own doc above) is allowed to split its own parentFan's
-  // combined lateral riders by spouse — every nested call leaves the whole
-  // fan as one rigid group, since its own result will still be folded into
-  // a bigger piece with a different axis by whatever called it.
   const parentFan = layoutCoupleFan(
     parents.filter((id) => ctx.visibleIds.has(id) && !ctx.visited.has(id)),
     ctx,
-    isTopLevel,
   );
 
   // Which side the partner sits on relative to rootId — a LOCAL rule
@@ -837,7 +882,12 @@ function layoutUnit(
       const other = otherParentOf(id, rootId, ctx);
       return other === undefined || other === thisPartnerId;
     });
-    const units: { width: number; slots: UnitSlot[]; coreSlots: UnitSlot[]; lateralGroups: LateralGroup[] }[] = [];
+    const units: {
+      width: number;
+      slots: UnitSlot[];
+      coreSlots: UnitSlot[];
+      lateralGroups: LateralGroup[];
+    }[] = [];
     for (const childId of ids) {
       if (ctx.visited.has(childId)) continue; // claimed as an earlier sibling's own sibling — already laid out
       // A child's own partner is handled INSIDE layoutUnit's own hasPartner
@@ -857,7 +907,9 @@ function layoutUnit(
   // already occupies (e.g. rootId's own generation, or rootId's parents'),
   // which a width-only check has no way to see (see file header comment
   // and git history for the exact bug this fixes).
-  const slots: UnitSlot[] = [{ id: rootId, relativeX: 0, relativeGeneration: 0 }];
+  const slots: UnitSlot[] = [
+    { id: rootId, relativeX: 0, relativeGeneration: 0 },
+  ];
   const extent: ExtentByGeneration = computeExtentByGeneration(slots);
   // The "anchor" subset of `slots` — rootId, their primary partner, and
   // both sides' DIRECT ancestor fans — that this unit's OWN caller should
@@ -866,7 +918,9 @@ function layoutUnit(
   // extraPartnerIds, and a partner's own siblings, all handled below)
   // deliberately never get added here — they can extend arbitrarily far
   // without dragging rootId/partner along with them.
-  const coreSlots: UnitSlot[] = [{ id: rootId, relativeX: 0, relativeGeneration: 0 }];
+  const coreSlots: UnitSlot[] = [
+    { id: rootId, relativeX: 0, relativeGeneration: 0 },
+  ];
   // Every lateral rider this unit places (rootId's own siblings, extra
   // partners, a partner's own siblings, and rootId's own parentFan's
   // lateral groups bubbled up) — kept as INDEPENDENT groups (not flattened
@@ -933,11 +987,34 @@ function layoutUnit(
     direction: 1 | -1,
     corePieceSlots: UnitSlot[] = pieceSlots,
     lateralGroups: LateralGroup[] = [],
+    /**
+     * Whether a lateral group's own stamped `direction` (see LateralGroup's
+     * own doc) may override this call's own `direction` for that group's
+     * push. `false` (the default) for every call EXCEPT the one placing
+     * rootId's own `parentFan` when `isTopLevel` is true (see layoutUnit's
+     * own doc on `isTopLevel`) — everywhere else, the whole piece (core AND
+     * every lateral group alike) must move together as one rigid block in
+     * THIS call's own `direction`, since a stamp from a couple several
+     * levels down has no valid meaning once this piece itself gets folded
+     * into a bigger one with a different axis (see isTopLevel's own doc for
+     * the exact bug an unconditional override caused).
+     */
+    allowDirectionOverride = false,
   ): number {
     const isSplitPiece = corePieceSlots !== pieceSlots;
     const corePieceExtent = isSplitPiece
-      ? computeExtentByGeneration(corePieceSlots.map((s) => ({ ...s, relativeGeneration: s.relativeGeneration + generationDelta })))
-      : computeExtentByGeneration(pieceSlots.map((s) => ({ ...s, relativeGeneration: s.relativeGeneration + generationDelta })));
+      ? computeExtentByGeneration(
+          corePieceSlots.map((s) => ({
+            ...s,
+            relativeGeneration: s.relativeGeneration + generationDelta,
+          })),
+        )
+      : computeExtentByGeneration(
+          pieceSlots.map((s) => ({
+            ...s,
+            relativeGeneration: s.relativeGeneration + generationDelta,
+          })),
+        );
     const push = resolveCollision(extent, corePieceExtent, desiredX, direction);
     const actualX = desiredX + direction * push;
 
@@ -958,8 +1035,12 @@ function layoutUnit(
     // Any pieceSlots not claimed by corePieceSlots or an explicit
     // lateralGroups entry become their own trivial one-slot groups — see
     // this function's own doc above.
-    const groupedIds = new Set(lateralGroups.flatMap((g) => g.slots.map((s) => s.id)));
-    const ungroupedLateralSlots = pieceSlots.filter((s) => !coreIds.has(s.id) && !groupedIds.has(s.id));
+    const groupedIds = new Set(
+      lateralGroups.flatMap((g) => g.slots.map((s) => s.id)),
+    );
+    const ungroupedLateralSlots = pieceSlots.filter(
+      (s) => !coreIds.has(s.id) && !groupedIds.has(s.id),
+    );
     const allLateralGroups: LateralGroup[] = [
       ...lateralGroups,
       ...ungroupedLateralSlots.map((s) => ({ slots: [s] })),
@@ -967,32 +1048,55 @@ function layoutUnit(
 
     // slotOffsets accumulates each slot's own final relativeX shift (on
     // top of its already-recorded relativeX within pieceSlots) — core
-    // slots get 0 (they stay exactly at actualX, per corePush above);
-    // each lateral group gets its OWN independently-resolved push, in
-    // `group.direction` when the caller stamped one (see LateralGroup's
-    // own doc — only layoutCoupleFan's single-call branch does this,
-    // for a lateral rider that belongs to one specific spouse's own side
-    // of a combined couple fan), falling back to the outer `direction`
-    // otherwise (the common case: every lateral rider — a partner's own
-    // siblings, a sibling's own children — naturally extends the same way
-    // the whole piece itself does).
+    // slots get 0 (they stay exactly at actualX, per corePush above); each
+    // lateral group gets its OWN independently-resolved push, in a
+    // direction resolved from `group.direction` ONLY when this call passed
+    // `allowDirectionOverride: true` (falling back to this call's own
+    // `direction` otherwise, and whenever no stamp exists) — see this
+    // param's own doc, and LateralGroup's own doc, for why the override
+    // must stay off almost everywhere: a stamp is only ever meaningful
+    // relative to the couple whose own local axis produced it, and every
+    // group-producing site in this file (layoutUnit's own sibling loop,
+    // placePartner's own sibling/parentFan bubbling) already re-stamps its
+    // OWN bubbled-up groups with ITS OWN unambiguous local direction as
+    // they pass through, so by the time a group reaches any `placePiece`
+    // call, its stamp (if allowed to be read) already means exactly "which
+    // way should this group's own EXTRA collision push go, relative to
+    // rootId" — never anything from a deeper, unrelated axis.
     const slotOffsets = new Map<string, number>();
     for (const group of allLateralGroups) {
       if (group.slots.length === 0) continue;
       const groupExtent = computeExtentByGeneration(
-        group.slots.map((s) => ({ ...s, relativeGeneration: s.relativeGeneration + generationDelta })),
+        group.slots.map((s) => ({
+          ...s,
+          relativeGeneration: s.relativeGeneration + generationDelta,
+        })),
       );
-      const groupDirection: 1 | -1 = group.direction ?? direction;
-      const groupPush = resolveCollision(runningExtent, groupExtent, actualX, groupDirection);
+      const groupDirection: 1 | -1 =
+        (allowDirectionOverride ? group.direction : undefined) ?? direction;
+      const groupPush = resolveCollision(
+        runningExtent,
+        groupExtent,
+        actualX,
+        groupDirection,
+      );
       for (const slot of group.slots) {
         slotOffsets.set(slot.id, groupDirection * groupPush);
       }
-      mergeExtent(runningExtent, groupExtent, actualX + groupDirection * groupPush);
+      mergeExtent(
+        runningExtent,
+        groupExtent,
+        actualX + groupDirection * groupPush,
+      );
     }
 
     for (const slot of pieceSlots) {
       const slotX = actualX + (slotOffsets.get(slot.id) ?? 0);
-      slots.push({ ...slot, relativeX: slot.relativeX + slotX, relativeGeneration: slot.relativeGeneration + generationDelta });
+      slots.push({
+        ...slot,
+        relativeX: slot.relativeX + slotX,
+        relativeGeneration: slot.relativeGeneration + generationDelta,
+      });
     }
     // mergeExtent needs the TOTAL shift from the piece's own local zero to
     // where it actually landed (actualX) — NOT actualX - desiredX (the
@@ -1034,7 +1138,7 @@ function layoutUnit(
   // still grows outward from rootId) — partnerSide itself already equals
   // outward in the no-partner case (see its own fallback), so this reads
   // uniformly either way.
-  const siblingDirection = hasPartner ? ((-partnerSide) as 1 | -1) : partnerSide;
+  const siblingDirection = hasPartner ? (-partnerSide as 1 | -1) : partnerSide;
 
   // Partner sits PARTNER_X_SPACING toward partnerSide from rootId — the
   // couple's own tight, dedicated gap (see PARTNER_X_SPACING's doc). The
@@ -1069,8 +1173,10 @@ function layoutUnit(
   const partnerBlockIds = new Set<string>();
   if (hasPartner) {
     const slotsBeforePartner = slots.length;
-    const { coreSlots: partnerCoreSlots, lateralGroups: partnerLateralGroups } = placePartner(partnerId!, partnerSide);
-    for (const slot of slots.slice(slotsBeforePartner)) partnerBlockIds.add(slot.id);
+    const { coreSlots: partnerCoreSlots, lateralGroups: partnerLateralGroups } =
+      placePartner(partnerId!, partnerSide);
+    for (const slot of slots.slice(slotsBeforePartner))
+      partnerBlockIds.add(slot.id);
     // The primary partner (+ their own direct ancestor fan) is part of
     // THIS unit's own anchor — rootId + primary partner is the couple
     // callers of THIS layoutUnit result care about for their own collision
@@ -1121,7 +1227,12 @@ function layoutUnit(
   // the sibling row itself).
   let siblingCoreRowWidth = 0;
   siblingIds.forEach((id) => {
-    const siblingUnit = layoutUnit(id, siblingDirection === 1 ? "right" : "left", ctx, siblingDirection);
+    const siblingUnit = layoutUnit(
+      id,
+      siblingDirection === 1 ? "right" : "left",
+      ctx,
+      siblingDirection,
+    );
     const desiredX = siblingCursor + siblingDirection * UNIT_X_SPACING;
     // siblingUnit.coreSlots/lateralGroups (not just .slots as one flat
     // blob) — a sibling's own spouse and THEIR ancestor fan/siblings can
@@ -1131,7 +1242,14 @@ function layoutUnit(
     // by, and must not itself drag, its own further lateral riders (see
     // placePiece's own doc on lateralGroups — this is the fifth
     // occurrence of the anchor-drag bug class, on the sibling-row path).
-    const actualX = placePiece(siblingUnit.slots, desiredX, 0, siblingDirection, siblingUnit.coreSlots, siblingUnit.lateralGroups);
+    const actualX = placePiece(
+      siblingUnit.slots,
+      desiredX,
+      0,
+      siblingDirection,
+      siblingUnit.coreSlots,
+      siblingUnit.lateralGroups,
+    );
     siblingCursor = actualX + siblingDirection * siblingUnit.width;
     siblingCoreRowWidth = Math.max(siblingCoreRowWidth, Math.abs(actualX));
     // This sibling (+ their own full subtree) becomes its OWN lateral
@@ -1139,8 +1257,22 @@ function layoutUnit(
     // up — never merged with any other sibling's group (each already got
     // its own independent push above; that independence must survive
     // being bubbled up too, or the fourth-occurrence bug this whole
-    // grouping mechanism exists for reappears one level higher).
-    lateralGroups.push({ slots: siblingUnit.slots.map((s) => ({ ...s, relativeX: s.relativeX + actualX })) });
+    // grouping mechanism exists for reappears one level higher). Stamped
+    // with `siblingDirection` — this level's own unambiguous axis for
+    // "which way rootId's own siblings extend relative to rootId" — so
+    // that once this whole layoutUnit result is folded into a combined
+    // couple-fan piece (layoutCoupleFan's `arePartners` branch), rootId's
+    // own siblings keep pushing on THEIR side even if that combined piece
+    // later gets folded again into a further outer piece with a different
+    // `direction` (see LateralGroup's own doc, and layoutUnit's own doc on
+    // `isTopLevel`).
+    lateralGroups.push({
+      slots: siblingUnit.slots.map((s) => ({
+        ...s,
+        relativeX: s.relativeX + actualX,
+      })),
+      direction: siblingDirection,
+    });
   });
   const siblingRowWidth = siblingCoreRowWidth;
 
@@ -1174,14 +1306,18 @@ function layoutUnit(
     // move as one unit if something ABOVE this level ever needs to push
     // it further; it just must never share a push with rootId's own
     // unrelated siblings, which this grouping still keeps independent.
-    const { actualX, coreSlots: extraPartnerCoreSlots, lateralGroups: extraPartnerLateralGroups } = placePartner(
-      extraPartnerId,
-      siblingDirection,
-      desiredX,
-    );
+    const {
+      actualX,
+      coreSlots: extraPartnerCoreSlots,
+      lateralGroups: extraPartnerLateralGroups,
+    } = placePartner(extraPartnerId, siblingDirection, desiredX);
     extraPartnerCursor = actualX;
     lateralGroups.push({
-      slots: [...extraPartnerCoreSlots, ...extraPartnerLateralGroups.flatMap((g) => g.slots)],
+      slots: [
+        ...extraPartnerCoreSlots,
+        ...extraPartnerLateralGroups.flatMap((g) => g.slots),
+      ],
+      direction: siblingDirection,
     });
   }
 
@@ -1219,12 +1355,10 @@ function layoutUnit(
     ctx.visited.add(thisPartnerId);
     const thisPartnerSiblingIds = collectSiblings(thisPartnerId, ctx);
     const thisPartnerParents = ctx.parentsOf.get(thisPartnerId) ?? [];
-    // splitByPartner defaults to false here (deliberately NOT passed) —
-    // thisPartnerId's own parents' fan is a NESTED ancestor generation,
-    // not rootId's own direct parentFan; it must stay one rigid, internally
-    // consistent shape (see layoutCoupleFan's own doc on splitByPartner).
     const thisPartnerParentFan = layoutCoupleFan(
-      thisPartnerParents.filter((id) => ctx.visibleIds.has(id) && !ctx.visited.has(id)),
+      thisPartnerParents.filter(
+        (id) => ctx.visibleIds.has(id) && !ctx.visited.has(id),
+      ),
       ctx,
     );
 
@@ -1250,10 +1384,16 @@ function layoutUnit(
     // Виктор/Галина bug).
     const partnerPieceSlots: UnitSlot[] = [
       { id: thisPartnerId, relativeX: 0, relativeGeneration: 0 },
-      ...(thisPartnerParentFan?.coreSlots.filter((s) => !(s.relativeGeneration === 0 && s.id === thisPartnerId)) ?? []),
+      ...(thisPartnerParentFan?.coreSlots.filter(
+        (s) => !(s.relativeGeneration === 0 && s.id === thisPartnerId),
+      ) ?? []),
     ];
-    const partnerParentFanLateralSlots = thisPartnerParentFan?.lateralGroups.flatMap((g) => g.slots) ?? [];
-    const fullPartnerPieceSlots = [...partnerPieceSlots, ...partnerParentFanLateralSlots];
+    const partnerParentFanLateralSlots =
+      thisPartnerParentFan?.lateralGroups.flatMap((g) => g.slots) ?? [];
+    const fullPartnerPieceSlots = [
+      ...partnerPieceSlots,
+      ...partnerParentFanLateralSlots,
+    ];
     const slotsBeforePartnerPiece = slots.length;
     const actualX = placePiece(
       fullPartnerPieceSlots,
@@ -1270,10 +1410,30 @@ function layoutUnit(
     // thisPartnerParentFan's own lateral groups (thisPartnerId's aunts/
     // uncles and their families) become part of THIS placePartner call's
     // own returned lateralGroups too, at their ACTUAL final positions.
-    const partnerParentFanPlacedById = new Map(slots.slice(slotsBeforePartnerPiece).map((s) => [s.id, s]));
-    const partnerParentFanLateralGroups: LateralGroup[] = (thisPartnerParentFan?.lateralGroups ?? []).map((group) => ({
+    const partnerParentFanPlacedById = new Map(
+      slots.slice(slotsBeforePartnerPiece).map((s) => [s.id, s]),
+    );
+    // Overwrites each group's own (possibly deeper-nested) stamp with
+    // `side` — this function's own unambiguous local axis for "which way
+    // thisPartnerId's own ancestor fan extends relative to rootId". A
+    // group here may already carry a stamp from a nested layoutCoupleFan
+    // call several ancestor generations up (e.g. thisPartnerId's own
+    // grandparent's own sibling) — that stamp was only ever meaningful
+    // relative to ITS OWN couple's local axis, and this placePartner call
+    // already placed it correctly using `side` (not that stamp — see the
+    // placePiece call above, which never sets allowDirectionOverride).
+    // Once bubbled up past this point, all that matters to any FURTHER
+    // outer piece is which side of rootId the whole group sits on, which
+    // is exactly `side` — carrying the stale deeper stamp forward instead
+    // would let it resurface and get misread again once this whole
+    // placePartner result eventually reaches the one true top-level
+    // `placePiece` call that actually reads stamps (see LateralGroup's own
+    // doc, and layoutUnit's own doc on `isTopLevel`).
+    const partnerParentFanLateralGroups: LateralGroup[] = (
+      thisPartnerParentFan?.lateralGroups ?? []
+    ).map((group) => ({
       slots: group.slots.map((s) => partnerParentFanPlacedById.get(s.id)!),
-      direction: group.direction,
+      direction: side,
     }));
 
     // Children rootId shares specifically with thisPartnerId, centered
@@ -1296,7 +1456,8 @@ function layoutUnit(
     // all — genealogically unrelated branches that only happen to share a
     // generation should never outrank the couple's own direct children for
     // center-of-row placement.
-    const thisCoupleChildUnits = thisPartnerId === partnerId ? childUnits : childUnitsFor(thisPartnerId);
+    const thisCoupleChildUnits =
+      thisPartnerId === partnerId ? childUnits : childUnitsFor(thisPartnerId);
     // Each child unit (already individually pushed by layoutChildrenRow's
     // own placePiece calls) comes back as its own lateral group — see
     // layoutChildrenRow's own doc — for when THIS whole placePartner
@@ -1306,7 +1467,13 @@ function layoutUnit(
     // aunts/uncles), computed above.
     const partnerLateralGroups: LateralGroup[] = [
       ...partnerParentFanLateralGroups,
-      ...layoutChildrenRow(placePiece, slots, thisCoupleChildUnits, actualX / 2, side),
+      ...layoutChildrenRow(
+        placePiece,
+        slots,
+        thisCoupleChildUnits,
+        actualX / 2,
+        side,
+      ),
     ];
 
     // thisPartnerId's own siblings (and THEIR full subtrees — own partner,
@@ -1326,20 +1493,52 @@ function layoutUnit(
     // gender order (the exact reported bug: a sibling's spouse landing
     // between the sibling and rootId's own partner instead of past both).
     thisPartnerSiblingIds.forEach((id) => {
-      const siblingUnit = layoutUnit(id, side === 1 ? "right" : "left", ctx, side);
+      const siblingUnit = layoutUnit(
+        id,
+        side === 1 ? "right" : "left",
+        ctx,
+        side,
+      );
       const desiredSiblingX = partnerSiblingCursor + side * UNIT_X_SPACING;
       // Same core/lateral split as rootId's own siblingIds loop above —
       // this partner-sibling's own spouse/ancestor fan must not drag the
       // sibling themself sideways (see placePiece's own doc on
       // lateralGroups).
-      const actualSiblingX = placePiece(siblingUnit.slots, desiredSiblingX, 0, side, siblingUnit.coreSlots, siblingUnit.lateralGroups);
+      const actualSiblingX = placePiece(
+        siblingUnit.slots,
+        desiredSiblingX,
+        0,
+        side,
+        siblingUnit.coreSlots,
+        siblingUnit.lateralGroups,
+      );
       partnerSiblingCursor = actualSiblingX + side * siblingUnit.width;
+      // Stamped with `side` — this function's own unambiguous local axis
+      // for "which way thisPartnerId's own siblings extend relative to
+      // rootId" — so that once this whole placePartner result becomes part
+      // of a combined couple-fan piece (layoutCoupleFan's `arePartners`
+      // branch folds rootId's OWN siblings and thisPartnerId's OWN siblings
+      // into one array), thisPartnerId's siblings keep pushing on THEIR
+      // side even after that combined piece itself gets folded again into
+      // a further outer piece with a different `direction` (see
+      // LateralGroup's own doc, and layoutUnit's own doc on `isTopLevel`,
+      // for why an unstamped group would otherwise silently inherit
+      // whatever `direction` the outermost allowDirectionOverride call
+      // happens to use).
       partnerLateralGroups.push({
-        slots: siblingUnit.slots.map((s) => ({ ...s, relativeX: s.relativeX + actualSiblingX })),
+        slots: siblingUnit.slots.map((s) => ({
+          ...s,
+          relativeX: s.relativeX + actualSiblingX,
+        })),
+        direction: side,
       });
     });
 
-    return { actualX, coreSlots: partnerCoreSlots, lateralGroups: partnerLateralGroups };
+    return {
+      actualX,
+      coreSlots: partnerCoreSlots,
+      lateralGroups: partnerLateralGroups,
+    };
   }
 
   // rootId's OWN parent generation sits centered over rootId's OWN row
@@ -1396,19 +1595,29 @@ function layoutUnit(
     // there instead, splitting the separation instead of rootId's own
     // parents absorbing it alone.
     if (hasPartner && partnerBlockIds.size > 0) {
-      const parentFanCoreExtent = computeExtentByGeneration(parentFan.coreSlots);
-      const neededPush = resolveCollision(extent, parentFanCoreExtent, parentRowCenter, siblingDirection);
+      const parentFanCoreExtent = computeExtentByGeneration(
+        parentFan.coreSlots,
+      );
+      const neededPush = resolveCollision(
+        extent,
+        parentFanCoreExtent,
+        parentRowCenter,
+        siblingDirection,
+      );
       if (neededPush > 0) {
         const coupleShift = neededPush / 2;
         for (const slot of slots) {
-          if (partnerBlockIds.has(slot.id)) slot.relativeX += partnerSide * coupleShift;
+          if (partnerBlockIds.has(slot.id))
+            slot.relativeX += partnerSide * coupleShift;
         }
         for (const slot of coreSlots) {
-          if (partnerBlockIds.has(slot.id)) slot.relativeX += partnerSide * coupleShift;
+          if (partnerBlockIds.has(slot.id))
+            slot.relativeX += partnerSide * coupleShift;
         }
         for (const group of lateralGroups) {
           for (const slot of group.slots) {
-            if (partnerBlockIds.has(slot.id)) slot.relativeX += partnerSide * coupleShift;
+            if (partnerBlockIds.has(slot.id))
+              slot.relativeX += partnerSide * coupleShift;
           }
         }
         // extent is per-generation aggregated, not per-id — recomputed
@@ -1418,7 +1627,8 @@ function layoutUnit(
         // children, e.g. both at rootId's own generation 0).
         const recomputed = computeExtentByGeneration(slots);
         extent.clear();
-        for (const [generation, range] of recomputed) extent.set(generation, range);
+        for (const [generation, range] of recomputed)
+          extent.set(generation, range);
       }
     }
     const slotsBeforeParentFan = slots.length;
@@ -1429,6 +1639,7 @@ function layoutUnit(
       siblingDirection,
       parentFan.coreSlots,
       parentFan.lateralGroups,
+      isTopLevel,
     );
     // rootId's own parents (the anchor part of parentFan) become part of
     // THIS unit's own coreSlots too — they're rootId's direct ancestors,
@@ -1444,10 +1655,21 @@ function layoutUnit(
     // just populated with each group's own independently-resolved push —
     // see placePiece's own doc on lateralGroups) — preserving their
     // independence at every level of recursion, exactly like the primary
-    // partner's own lateral groups above.
-    const placedSlotById = new Map(slots.slice(slotsBeforeParentFan).map((s) => [s.id, s]));
+    // partner's own lateral groups above. Each group's stamp is overwritten
+    // with `siblingDirection` — this level's own unambiguous axis for
+    // "which way rootId's whole parentFan extends relative to rootId" —
+    // same reasoning as placePartner's own bubbling of
+    // thisPartnerParentFan's lateral groups (see its own doc): a group here
+    // may carry a stamp from a deeper nested couple's own local axis, which
+    // is no longer meaningful once bubbled up past this point.
+    const placedSlotById = new Map(
+      slots.slice(slotsBeforeParentFan).map((s) => [s.id, s]),
+    );
     for (const group of parentFan.lateralGroups) {
-      lateralGroups.push({ slots: group.slots.map((s) => placedSlotById.get(s.id)!), direction: group.direction });
+      lateralGroups.push({
+        slots: group.slots.map((s) => placedSlotById.get(s.id)!),
+        direction: siblingDirection,
+      });
     }
   }
 
@@ -1516,50 +1738,51 @@ function layoutUnit(
 function layoutCoupleFan(
   parentIds: string[],
   ctx: LayoutContext,
-  /**
-   * Whether this couple's own combined lateral riders (each spouse's own
-   * siblings) should be split into independently-directed groups (see the
-   * arePartners branch's own doc). Only ever `true` for the ONE call that
-   * builds rootId's OWN parentFan directly inside layoutUnit — the couple
-   * whose fan is about to be placed as a single piece against a DIFFERENT
-   * outer `direction` (rootId's own siblingDirection), where "which spouse
-   * this rider belongs to" and "which way the whole fan piece gets pushed"
-   * are two genuinely different axes that must be tracked independently.
-   *
-   * `false` (the default) for every NESTED call — a spouse's own PARENTS'
-   * fan (placePartner's thisPartnerParentFan), and this function's own
-   * recursive calls for further ancestor generations. At those levels the
-   * whole fan (both grandparents/great-grandparents AND every one of
-   * THEIR siblings) is already one internally-consistent, correctly laid
-   * out rigid shape — it moves as ONE block wherever its containing piece
-   * gets placed, same axis for everyone in it. Splitting it AGAIN there
-   * corrupts the split: a stamped direction from THIS level's own local
-   * sign has no valid meaning once re-interpreted against a completely
-   * different outer piece's own `direction` several levels up (the exact
-   * reported bug: Алексей Козловский, Николай Козловский's own brother,
-   * stamped correctly relative to their own local fan, ended up shoved to
-   * Виктор's side once that whole fan was re-split again at the outer
-   * Виктор+Галина level).
-   */
-  splitByPartner = false,
-): { slots: UnitSlot[]; coreSlots: UnitSlot[]; lateralGroups: LateralGroup[] } | null {
-  const { leftId, rightId, arePartners } = orderCoupleBySlot(parentIds, ctx.partnersOf, ctx.genderOf);
+): {
+  slots: UnitSlot[];
+  coreSlots: UnitSlot[];
+  lateralGroups: LateralGroup[];
+} | null {
+  const { leftId, rightId, arePartners } = orderCoupleBySlot(
+    parentIds,
+    ctx.partnersOf,
+    ctx.genderOf,
+  );
   if (!leftId && !rightId) return null;
 
   const slots: UnitSlot[] = [];
   const coreSlots: UnitSlot[] = [];
   const lateralGroups: LateralGroup[] = [];
 
-  const foldIn = (unit: { slots: UnitSlot[]; coreSlots: UnitSlot[]; lateralGroups: LateralGroup[] }, offsetX: number) => {
+  const foldIn = (
+    unit: {
+      slots: UnitSlot[];
+      coreSlots: UnitSlot[];
+      lateralGroups: LateralGroup[];
+    },
+    offsetX: number,
+  ) => {
     for (const slot of unit.slots) {
-      slots.push({ ...slot, relativeX: slot.relativeX + offsetX, relativeGeneration: slot.relativeGeneration - 1 });
+      slots.push({
+        ...slot,
+        relativeX: slot.relativeX + offsetX,
+        relativeGeneration: slot.relativeGeneration - 1,
+      });
     }
     for (const slot of unit.coreSlots) {
-      coreSlots.push({ ...slot, relativeX: slot.relativeX + offsetX, relativeGeneration: slot.relativeGeneration - 1 });
+      coreSlots.push({
+        ...slot,
+        relativeX: slot.relativeX + offsetX,
+        relativeGeneration: slot.relativeGeneration - 1,
+      });
     }
     for (const group of unit.lateralGroups) {
       lateralGroups.push({
-        slots: group.slots.map((s) => ({ ...s, relativeX: s.relativeX + offsetX, relativeGeneration: s.relativeGeneration - 1 })),
+        slots: group.slots.map((s) => ({
+          ...s,
+          relativeX: s.relativeX + offsetX,
+          relativeGeneration: s.relativeGeneration - 1,
+        })),
         direction: group.direction,
       });
     }
@@ -1576,43 +1799,16 @@ function layoutCoupleFan(
     const leftUnit = layoutUnit(leftId, "left", ctx);
     // leftUnit.lateralGroups mixes riders from BOTH spouses' own sides —
     // leftId's own siblings (naturally negative/left of leftId's own local
-    // 0) AND rightId's own siblings/children, bubbled up from the nested
-    // placePartner call (naturally positive/right, since rightId sits at
-    // leftId's local +PARTNER_X_SPACING). ONLY when splitByPartner is true
-    // (see this function's own doc — exclusively the ONE call from
-    // layoutUnit's own parentFan) does each group's PRE-FOLD sign
-    // (relative to leftId's own local 0, the one point in the whole
-    // recursion where "which side" is unambiguous for THIS couple) get
-    // stamped as an explicit `direction`, so the OUTER placePiece call
-    // that places this whole parentFan piece against a DIFFERENT axis
-    // (rootId's own siblingDirection) never has to guess a single shared
-    // direction for both spouses' worth of lateral riders at once (see
-    // LateralGroup's own doc, and placePiece's own doc on `direction` —
-    // this is what fixes a real reported bug: a spouse's own sibling's own
-    // CHILDREN, riding along inside that sibling's own group, used to
-    // inherit whichever direction the whole parentFan piece got pushed in
-    // — which has nothing to do with which spouse's side they belong to).
-    //
-    // When splitByPartner is false (every NESTED ancestor-fan call — a
-    // spouse's own parents, grandparents, etc), leftUnit.lateralGroups is
-    // passed through UNCHANGED: the whole fan (both this couple AND every
-    // one of their own siblings) is already one internally consistent
-    // rigid shape that will move together wherever ITS OWN containing
-    // piece gets placed — stamping a direction here too would corrupt it,
-    // since a sign that's correct relative to THIS level's own local 0 has
-    // no valid meaning once re-interpreted several outer levels up against
-    // a completely different piece's own `direction` (the exact reported
-    // bug: Алексей Козловский, Николай Козловский's own brother, stamped
-    // correctly relative to their own local fan, ended up shoved to
-    // Виктор's side once that whole fan was re-split again at the outer
-    // Виктор+Галина level).
-    const leftUnitLateralGroups: LateralGroup[] = splitByPartner
-      ? leftUnit.lateralGroups.map((group) => {
-          const groupCenter = group.slots.reduce((sum, s) => sum + s.relativeX, 0) / group.slots.length;
-          return { ...group, direction: groupCenter < 0 ? (-1 as const) : (1 as const) };
-        })
-      : leftUnit.lateralGroups;
-    foldIn({ ...leftUnit, lateralGroups: leftUnitLateralGroups }, -PARTNER_X_SPACING / 2);
+    // 0, stamped by layoutUnit's own sibling loop) AND rightId's own
+    // siblings/parentFan riders, bubbled up from the nested placePartner
+    // call (naturally positive/right, since rightId sits at leftId's local
+    // +PARTNER_X_SPACING — stamped by placePartner itself). Both sources
+    // already stamp their own groups with THEIR OWN unambiguous local
+    // `direction` at the exact point where "which side" is unambiguous
+    // (see layoutUnit's own sibling loop and placePartner's own docs) — no
+    // further stamping needed here, just fold the whole thing through
+    // unchanged.
+    foldIn(leftUnit, -PARTNER_X_SPACING / 2);
     return { slots, coreSlots, lateralGroups };
   }
 
@@ -1665,7 +1861,12 @@ function layoutChildrenRow(
   ) => number,
   /** All slots placePiece has pushed so far — used to read back a child's ACTUAL final position (post core/lateral split), not its pre-push local one. See the doc below on why unit.width alone isn't enough here. */
   placedSlots: UnitSlot[],
-  childUnits: { width: number; slots: UnitSlot[]; coreSlots?: UnitSlot[]; lateralGroups?: LateralGroup[] }[],
+  childUnits: {
+    width: number;
+    slots: UnitSlot[];
+    coreSlots?: UnitSlot[];
+    lateralGroups?: LateralGroup[];
+  }[],
   center: number,
   /**
    * Which way a COLLISION on the very first child (index 0, placed exactly
@@ -1706,7 +1907,8 @@ function layoutChildrenRow(
     // to that starting side (1st, 3rd, 5th... on the starting side; 2nd,
     // 4th... on the other), so the row still reads as balanced around
     // `center` regardless of which side it starts growing toward.
-    const placeOnRight = index % 2 === 0 ? firstChildDirection === 1 : firstChildDirection === -1;
+    const placeOnRight =
+      index % 2 === 0 ? firstChildDirection === 1 : firstChildDirection === -1;
     // A child unit is itself a full layoutUnit result — it can carry its
     // OWN wide lateral tail (the child's own spouse's many siblings, each
     // with their own family — the exact shape that produced the reported
@@ -1721,12 +1923,28 @@ function layoutChildrenRow(
     let actualX: number;
     const slotsBeforeThisUnit = placedSlots.length;
     if (placeOnRight) {
-      const desiredX = index === 0 ? center : rightCursor + UNIT_X_SPACING + unit.width;
-      actualX = placePiece(unit.slots, desiredX, 1, 1, unit.coreSlots, unit.lateralGroups);
+      const desiredX =
+        index === 0 ? center : rightCursor + UNIT_X_SPACING + unit.width;
+      actualX = placePiece(
+        unit.slots,
+        desiredX,
+        1,
+        1,
+        unit.coreSlots,
+        unit.lateralGroups,
+      );
       rightCursor = actualX + unit.width;
     } else {
-      const desiredX = index === 0 ? center : leftCursor - UNIT_X_SPACING - unit.width;
-      actualX = placePiece(unit.slots, desiredX, 1, -1, unit.coreSlots, unit.lateralGroups);
+      const desiredX =
+        index === 0 ? center : leftCursor - UNIT_X_SPACING - unit.width;
+      actualX = placePiece(
+        unit.slots,
+        desiredX,
+        1,
+        -1,
+        unit.coreSlots,
+        unit.lateralGroups,
+      );
       leftCursor = actualX - unit.width;
     }
     // Read back each slot's ACTUAL final position from placedSlots (what
@@ -1734,7 +1952,9 @@ function layoutChildrenRow(
     // `actualX` to every slot — a lateral rider within this child unit may
     // have landed at a further-nudged position than the unit's own core
     // (see placePiece's own doc on lateralGroups).
-    const placedById = new Map(placedSlots.slice(slotsBeforeThisUnit).map((s) => [s.id, s]));
+    const placedById = new Map(
+      placedSlots.slice(slotsBeforeThisUnit).map((s) => [s.id, s]),
+    );
     placedGroups.push({ slots: unit.slots.map((s) => placedById.get(s.id)!) });
   });
   return placedGroups;
