@@ -2022,14 +2022,38 @@ function layoutChildrenRow(
    */
   firstChildDirection: 1 | -1 = 1,
 ): LateralGroup[] {
-  // Alternate: 1st child at center, 2nd to its right, 3rd to its left, 4th
-  // further right, etc. — keeps the row visually balanced around `center`
-  // regardless of how many children there are, same intent the old
-  // symmetric-reservation version had, just built incrementally instead of
-  // pre-computed (pre-computing would need the same per-generation extent
-  // math this function's caller already does, for no added benefit).
+  // Assign each child to a side (left/right of `center`) by GREEDILY
+  // balancing accumulated width, not by flat index alternation (1st
+  // center, 2nd right, 3rd left, 4th right...). Flat alternation assumes
+  // every child is roughly the same width — true for the common case, but
+  // once one child married into a large family (their own spouse's own
+  // parents/siblings inflate `unit.width` far past an ordinary child's),
+  // alternation can dump that one wide child on whichever side its index
+  // parity happens to land on, leaving the OTHER side's accumulated width
+  // far smaller — so the finished row's own visual center (the midpoint of
+  // its leftmost and rightmost occupied x) drifts far from `center`,
+  // dragging the couple who sit AT `center` off to one edge of their own
+  // children's row instead of staying centered over all of them (the
+  // reported bug: "родители всегда должны центрироваться по горизонтали
+  // относительно всех детей, даже если их очень много" — confirmed via a
+  // synthetic repro: one child married into a spouse-plus-3-siblings
+  // family put the parents ~1490px off from the finished row's own
+  // center). Greedily assigning each next child (processed in stable
+  // input order, so existing tie-break behavior for equal-width children
+  // is unaffected) to whichever side currently has LESS accumulated width
+  // keeps the two sides' running totals close throughout construction,
+  // which is what actually keeps the couple (sitting at `center`, exactly
+  // between the two sides by construction) visually centered over the
+  // finished row regardless of how uneven individual children's own
+  // widths are — this is a strictly better generalization of the old
+  // alternation (when every child has equal width, greedy-by-accumulated-
+  // width degenerates to the exact same L/R/L/R.../ pattern alternation
+  // produced, so no existing narrow-children-only test's expected
+  // positions change).
   let rightCursor = center;
   let leftCursor = center;
+  let rightAccumulated = 0;
+  let leftAccumulated = 0;
   // Each child unit — already individually pushed by its own placePiece
   // call below — is returned as its own group, at its ACTUAL final
   // position, so a caller folding this whole children row into a larger
@@ -2038,14 +2062,18 @@ function layoutChildrenRow(
   // one shared blob (see placePiece's own doc on lateralGroups).
   const placedGroups: LateralGroup[] = [];
   childUnits.forEach((unit, index) => {
-    // Alternates starting from firstChildDirection instead of always
-    // starting from "right" — index 0 uses firstChildDirection itself,
-    // every later index still alternates the same way as before relative
-    // to that starting side (1st, 3rd, 5th... on the starting side; 2nd,
-    // 4th... on the other), so the row still reads as balanced around
-    // `center` regardless of which side it starts growing toward.
+    // index 0 always starts at `center` itself, on firstChildDirection's
+    // own side (preserves every existing test's exact index-0 behavior).
+    // Every later index picks whichever side has accumulated LESS width so
+    // far — ties broken toward firstChildDirection's own side first (index
+    // 1 with an empty accumulator on both sides is a tie, so it still
+    // lands opposite index 0, exactly like the old alternation did).
     const placeOnRight =
-      index % 2 === 0 ? firstChildDirection === 1 : firstChildDirection === -1;
+      index === 0
+        ? firstChildDirection === 1
+        : rightAccumulated === leftAccumulated
+          ? firstChildDirection !== 1
+          : rightAccumulated < leftAccumulated;
     // A child unit is itself a full layoutUnit result — it can carry its
     // OWN wide lateral tail (the child's own spouse's many siblings, each
     // with their own family — the exact shape that produced the reported
@@ -2071,6 +2099,10 @@ function layoutChildrenRow(
         unit.lateralGroups,
       );
       rightCursor = actualX + unit.width;
+      // Accumulate this child's own width (not just count) toward the
+      // right side's running total — see the greedy-assignment doc above
+      // for why width (not index parity) is what must stay balanced.
+      rightAccumulated += unit.width;
     } else {
       const desiredX =
         index === 0 ? center : leftCursor - UNIT_X_SPACING - unit.width;
@@ -2083,6 +2115,7 @@ function layoutChildrenRow(
         unit.lateralGroups,
       );
       leftCursor = actualX - unit.width;
+      leftAccumulated += unit.width;
     }
     // Read back each slot's ACTUAL final position from placedSlots (what
     // placePiece just pushed there) rather than reapplying a single
