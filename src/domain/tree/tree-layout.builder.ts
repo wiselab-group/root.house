@@ -1335,6 +1335,7 @@ function layoutUnit(
     // by, and must not itself drag, its own further lateral riders (see
     // placePiece's own doc on lateralGroups — this is the fifth
     // occurrence of the anchor-drag bug class, on the sibling-row path).
+    const slotsBeforeSibling = slots.length;
     const actualX = placePiece(
       siblingUnit.slots,
       desiredX,
@@ -1359,11 +1360,36 @@ function layoutUnit(
     // later gets folded again into a further outer piece with a different
     // `direction` (see LateralGroup's own doc, and layoutUnit's own doc on
     // `isTopLevel`).
+    //
+    // Read back each slot's ACTUAL final position from `slots` (what
+    // placePiece just pushed there) rather than reapplying a single
+    // `actualX` to siblingUnit.slots' own pre-push local coordinates — a
+    // lateral rider WITHIN this sibling's own unit (e.g. the sibling's own
+    // spouse, gender-flipped onto the sibling's inward side per
+    // partnerSide's own doc) may have landed at a further-nudged position
+    // than a flat `relativeX + actualX` would give (see placePiece's own
+    // doc on lateralGroups: each lateral group gets its OWN independent
+    // push). Reapplying a flat offset here silently DROPPED that push from
+    // the bubbled-up copy — `slots` (the real output) had the sibling's
+    // spouse at the correct, collision-resolved position, but this
+    // lateral-group copy of the same subtree, read by whichever OUTER
+    // piece folds this whole sibling in next, still carried the
+    // pre-push position. Once gender order could put a sibling's spouse on
+    // the INWARD side (see the husband-left/wife-right fix), that stale
+    // position was frequently close enough to an unrelated neighboring
+    // branch to produce a real card-to-card collision the outer level's
+    // own `resolveCollision` had no way to see (confirmed via direct
+    // tracing against real data, family Купчик — Владимир Евтух and
+    // Виктор Равбецкий, two unrelated sibling-in-laws each on their own
+    // spouse's inward side, ending up 80px apart instead of a full
+    // PARTNER_X_SPACING). Same fix as parentFan's own lateral bubbling
+    // above and layoutChildrenRow's own placedGroups — see either for the
+    // same read-back pattern.
+    const placedBySiblingId = new Map(
+      slots.slice(slotsBeforeSibling).map((s) => [s.id, s]),
+    );
     lateralGroups.push({
-      slots: siblingUnit.slots.map((s) => ({
-        ...s,
-        relativeX: s.relativeX + actualX,
-      })),
+      slots: siblingUnit.slots.map((s) => placedBySiblingId.get(s.id)!),
       direction: siblingDirection,
     });
   });
@@ -1597,6 +1623,7 @@ function layoutUnit(
       // this partner-sibling's own spouse/ancestor fan must not drag the
       // sibling themself sideways (see placePiece's own doc on
       // lateralGroups).
+      const slotsBeforeSibling = slots.length;
       const actualSiblingX = placePiece(
         siblingUnit.slots,
         desiredSiblingX,
@@ -1618,11 +1645,22 @@ function layoutUnit(
       // for why an unstamped group would otherwise silently inherit
       // whatever `direction` the outermost allowDirectionOverride call
       // happens to use).
+      //
+      // Read back each slot's ACTUAL final position from `slots` rather
+      // than reapplying a single `actualSiblingX` to siblingUnit.slots' own
+      // pre-push local coordinates — same fix, same reasoning, as
+      // layoutUnit's own siblingIds loop above (see its own doc on this
+      // exact pattern for the real-data bug this avoids: a lateral rider
+      // WITHIN this sibling's own unit, e.g. their own gender-flipped
+      // inward spouse, can land at a further-nudged position than a flat
+      // offset would give, and silently dropping that push here is what
+      // let two unrelated sibling-in-laws end up only 80px apart on real
+      // data).
+      const placedBySiblingId = new Map(
+        slots.slice(slotsBeforeSibling).map((s) => [s.id, s]),
+      );
       partnerLateralGroups.push({
-        slots: siblingUnit.slots.map((s) => ({
-          ...s,
-          relativeX: s.relativeX + actualSiblingX,
-        })),
+        slots: siblingUnit.slots.map((s) => placedBySiblingId.get(s.id)!),
         direction: side,
       });
     });
