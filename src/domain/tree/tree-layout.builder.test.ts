@@ -459,21 +459,24 @@ describe("buildFocusTreeLayout", () => {
     expect(Math.abs(byId.get("nikolai")!.x - byId.get("elena")!.x)).toBe(260);
   });
 
-  it("never flips a sibling's own partner back toward whoever placed the sibling", () => {
-    // Reproduces the reported follow-up bug. grandpa+grandma have two
-    // daughters: elizaveta (male partner nikolaiKupchik) and elena (male
-    // partner nikolaiUshkar) — the focus is a grandchild of elizaveta, so
-    // elizaveta is discovered as a "root" (via elizaveta+nikolaiKupchik's
-    // own children), elena only as elizaveta's OWN sibling.
+  it("keeps husband-left/wife-right for a sibling's own partner even when the sibling row grows toward the husband's gender side", () => {
+    // Reproduces the reported follow-up bug (and its later real-data
+    // correction). grandpa+grandma have two daughters: elizaveta (male
+    // partner nikolaiKupchik) and elena (male partner nikolaiUshkar) — the
+    // focus is a grandchild of elizaveta, so elizaveta is discovered as a
+    // "root" (via elizaveta+nikolaiKupchik's own children), elena only as
+    // elizaveta's OWN sibling.
     // elizaveta (female) + nikolaiKupchik (male): pure gender order puts
     // nikolaiKupchik at partnerSide -1 (male left of female) — so
     // siblingDirection (opposite of partnerSide) pushes elena to +1 (right
     // of elizaveta). elena's own partner nikolaiUshkar (male) + elena
-    // (female): pure gender order would put HIM at -1 relative to elena —
-    // i.e. flipped back toward elizaveta, landing almost on top of her.
-    // The fix: nikolaiUshkar must land further +1 (past elena), because
-    // that's the direction elena herself was pushed — never back toward
-    // elizaveta, regardless of what gender order alone would say.
+    // (female): "муж слева, жена справа" is the higher-priority invariant
+    // (confirmed against real production data — see git history for the
+    // Вера/Владимир Артюх case an earlier version of this test's own
+    // expectations got backwards), so nikolaiUshkar must land to elena's
+    // OWN left — i.e. BETWEEN elizaveta and elena in x, not past elena —
+    // while still keeping a full PARTNER_X_SPACING clear of elizaveta
+    // (collision resolution's job, not gender order's).
     const result = buildFocusTreeLayout({
       persons: [
         person("grandpa", { gender: "male" }),
@@ -508,14 +511,19 @@ describe("buildFocusTreeLayout", () => {
     expect(byId.has("elena")).toBe(true);
     expect(byId.has("nikolaiUshkar")).toBe(true);
 
-    const order = ["nikolaiKupchik", "elizaveta", "elena", "nikolaiUshkar"]
+    // Husband-left/wife-right holds for BOTH couples: nikolaiKupchik left
+    // of elizaveta, AND nikolaiUshkar left of elena — even though that
+    // means nikolaiUshkar sits between elizaveta and elena, not past both.
+    const order = ["nikolaiKupchik", "elizaveta", "nikolaiUshkar", "elena"]
       .map((id) => byId.get(id)!.x)
       .every((x, i, arr) => i === 0 || x > arr[i - 1]);
     expect(order).toBe(true);
 
     // No two cards at the same generation collide (each at least
     // PARTNER_X_SPACING=260 apart from its neighbor) — the reported bug put
-    // nikolaiUshkar only 20 apart from elizaveta.
+    // nikolaiUshkar only 20 apart from elizaveta; collision resolution must
+    // still keep a full gap here even with nikolaiUshkar on elena's inward
+    // side.
     const sameGen = result.nodes
       .filter((n) => n.generation === byId.get("elizaveta")!.generation)
       .sort((a, b) => a.x - b.x);
@@ -757,6 +765,42 @@ describe("buildFocusTreeLayout", () => {
         .map((e) => (e.source === "root" ? e.target : e.source))
         .sort();
       expect(partnerIds).toEqual(["partnerA", "partnerB"]);
+    });
+
+    it("keeps the CURRENT spouse in the tight adjacent slot even when an ex-partner's DB row comes first", () => {
+      // "если у человека две жены то та на которой он женат должна быть
+      // рядом" — the current marriage (isCurrent: true) must claim the
+      // tight PARTNER_X_SPACING adjacency slot regardless of which
+      // partnership row the DB happens to return first. Deliberately lists
+      // partnerA (the EX-wife, isCurrent: false) BEFORE partnerB (the
+      // CURRENT wife, isCurrent: true) in partnershipEdges — a naive
+      // "first edge wins" primary-partner pick would put the ex-wife right
+      // beside root and shove the current wife out to the further
+      // extra-partner slot, exactly backwards from what the domain
+      // requires.
+      const result = buildFocusTreeLayout({
+        persons: [
+          person("root", { gender: "male" }),
+          person("exWife", { gender: "female" }),
+          person("currentWife", { gender: "female" }),
+        ],
+        parentChildEdges: [],
+        partnershipEdges: [
+          { person1Id: "root", person2Id: "exWife", isCurrent: false },
+          { person1Id: "root", person2Id: "currentWife", isCurrent: true },
+        ],
+        focusPersonId: "root",
+      });
+
+      const byId = new Map(result.nodes.map((n) => [n.id, n]));
+      const rootX = byId.get("root")!.x;
+      const currentWifeX = byId.get("currentWife")!.x;
+      const exWifeX = byId.get("exWife")!.x;
+
+      // currentWife sits in the tight couple-adjacency slot (exactly
+      // PARTNER_X_SPACING = 260 from root); exWife is further out.
+      expect(Math.abs(currentWifeX - rootX)).toBe(260);
+      expect(Math.abs(exWifeX - rootX)).toBeGreaterThan(260);
     });
 
     it("keeps every partner (and their own ancestor fan) collision-free", () => {

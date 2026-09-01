@@ -193,12 +193,47 @@ export function buildFocusTreeLayout(
   // placement rule as before) and any further entries as additional
   // partnerships laid out as their own couple units — see layoutUnit's own
   // doc for how those are placed.
+  //
+  // "Primary" must be the CURRENT marriage (isCurrent: true), not merely
+  // whichever partnership row happens to have been inserted into the DB
+  // first — a person's ex-wife recorded before their current wife must
+  // never outrank her for the tight PARTNER_X_SPACING adjacency slot ("та,
+  // на которой женат, должна быть рядом" — the current spouse sits right
+  // beside them; any ex-partner is laid out further out as an additional
+  // partnership, see the extraPartnerIds loop below). Entries are sorted
+  // current-first, stable otherwise (Array.prototype.sort is a stable sort
+  // in a spec-compliant engine, so DB row order is preserved among
+  // multiple exes, or when isCurrent is tied/false for all — e.g. no
+  // partnership is marked current at all, a normal case for historical-
+  // only records).
   const partnersOf = new Map<string, string[]>();
-  for (const { person1Id, person2Id } of input.partnershipEdges) {
+  const isCurrentOf = new Map<string, boolean>();
+  for (const { person1Id, person2Id, isCurrent } of input.partnershipEdges) {
     if (!partnersOf.has(person1Id)) partnersOf.set(person1Id, []);
     if (!partnersOf.has(person2Id)) partnersOf.set(person2Id, []);
     partnersOf.get(person1Id)!.push(person2Id);
     partnersOf.get(person2Id)!.push(person1Id);
+    // Same pair can only be marked current from one direction's perspective
+    // in this lookup (isCurrentOf keys on the OTHER partner's id relative
+    // to a given rootId) — safe to just OR any existing value in, since a
+    // given (rootId, partnerId) pair's isCurrent is the same edge either
+    // way partnershipEdges recorded it.
+    isCurrentOf.set(
+      `${person1Id}|${person2Id}`,
+      isCurrent || (isCurrentOf.get(`${person1Id}|${person2Id}`) ?? false),
+    );
+    isCurrentOf.set(
+      `${person2Id}|${person1Id}`,
+      isCurrent || (isCurrentOf.get(`${person2Id}|${person1Id}`) ?? false),
+    );
+  }
+  for (const [personId, ids] of partnersOf) {
+    ids.sort((a, b) => {
+      const aCurrent = isCurrentOf.get(`${personId}|${a}`) ?? false;
+      const bCurrent = isCurrentOf.get(`${personId}|${b}`) ?? false;
+      if (aCurrent === bCurrent) return 0; // stable sort keeps DB row order
+      return aCurrent ? -1 : 1;
+    });
   }
   const genderOf = new Map<string, Gender>(
     persons.map((p) => [p.id, p.gender]),
@@ -329,7 +364,14 @@ export function buildFocusTreeLayout(
   // person's OWN further-nested units grow; "right" is an arbitrary but
   // stable choice (their own partner still gets rootId's outward side,
   // "right" here, per layoutUnit's own partner-placement rule).
-  const focusUnit = layoutUnit(focusPersonId, "right", ctx, undefined, true);
+  const focusUnit = layoutUnit(
+    focusPersonId,
+    "right",
+    ctx,
+    undefined,
+    undefined,
+    true,
+  );
 
   const nodes: LayoutNode[] = [];
   for (const slot of focusUnit.slots) {
@@ -710,23 +752,57 @@ function layoutUnit(
   side: "left" | "right",
   ctx: LayoutContext,
   /**
-   * Overrides the gender-based husband-left/wife-right rule below for
-   * rootId's OWN partner — used only when layoutUnit is called for a
-   * sibling that's already been placed outward of some other unit (see the
-   * two collectSiblings-driven call sites below, both of which pass
-   * `outward` here). A sibling's partner must always sit FURTHER outward
-   * from rootId's OWN unit, in the SAME direction the sibling itself was
-   * pushed — never flipped back toward whatever placed the sibling, or the
-   * partner lands on top of it (the exact reported bug: Николай Ушкар,
-   * partnered with Елена — a sibling pushed to one side of Елизавета —
-   * landed BETWEEN Елизавета and Елена instead of beside Елена, because
-   * pure gender order put him on Елена's OTHER side, back toward
-   * Елизавета). Left undefined for every non-sibling call (the focus
-   * person, and every "root" placed via layoutCoupleFan/childUnits) so the
-   * ordinary husband-left/wife-right rule keeps deciding those on gender
-   * alone, exactly as before.
+   * A SOFT preference for which side rootId's OWN partner sits on, used
+   * only as an unknown-gender tie-breaker — used when layoutUnit is called
+   * for a sibling that's already been placed outward of some other unit
+   * (see the two collectSiblings-driven call sites below, both of which
+   * pass `siblingDirection`/`side` here).
+   *
+   * NEVER overrides a KNOWN gender order — "муж слева, жена справа" is the
+   * higher-priority invariant (confirmed against real data: an earlier
+   * version let this param win unconditionally, which silently swapped
+   * husband/wife for EVERY married sibling whose row happened to grow
+   * toward the side gender disagreed with — e.g. Вера Артюх's husband
+   * Владимир landing to HER right just because her sisters' row grows
+   * rightward). When gender is known, partnerSide is decided by gender
+   * ALONE, and this param is ignored entirely for that decision.
+   *
+   * The DIFFERENT problem this param used to also try to solve — a
+   * sibling's own partner folding back toward whoever placed the sibling
+   * instead of extending past them (the reported Николай Ушкар/Елена bug)
+   * — doesn't actually need partnerSide's help: `width` already reflects
+   * both sides of rootId's own local 0 (see the width computation at the
+   * end of this function), so `placePiece`'s own collision resolution
+   * already keeps a "flipped" couple block (partner on the inward side)
+   * from overlapping whatever's already placed on that inward side — no
+   * special-casing needed here for that. See `pinPartnerSide` below for
+   * the ONE case that genuinely does need to override gender: two
+   * unrelated recorded parents (not partnered with each other) each
+   * remarried — see `layoutCoupleFan`'s own doc for why THAT case must
+   * pin a side even against gender, to avoid crossing two unrelated family
+   * lines.
    */
   forcePartnerSide?: 1 | -1,
+  /**
+   * A HARD override for which side rootId's OWN partner sits on — wins
+   * even over a KNOWN gender order. Used ONLY by `layoutCoupleFan`'s own
+   * "not partners of each other" branch (two recorded parents who were
+   * never married to each other, each separately remarried) — there,
+   * rootId's own new partner is a completely unrelated person with no
+   * guaranteed left/right relationship to the OTHER recorded parent's own
+   * side of the fan; gender-based placement alone would happily send
+   * rootId's new (opposite-gender) partner toward the OTHER parent's side,
+   * crossing the two family lines (the exact bug this fixes: dad's new
+   * wife, placed by pure gender order, drifting right past 0 into mom's
+   * own territory — see `layoutCoupleFan`'s own doc for the full
+   * reasoning). Keeping two unrelated ancestor lines from crossing is a
+   * higher-priority invariant here than gender order within THIS
+   * particular new pairing, unlike the sibling case above (where there is
+   * no second family line to protect — just one row growing one way).
+   * Left undefined everywhere else, so `forcePartnerSide`'s own
+   * unknown-gender-only tie-break (or plain gender) decides instead.
+   */
+  pinPartnerSide?: 1 | -1,
   /**
    * True ONLY for the single outermost `layoutUnit` call — the focus
    * person, called directly from `buildFocusTreeLayout` — whose own
@@ -830,17 +906,34 @@ function layoutUnit(
   // female root whose own branch still needs to grow further "outward"
   // in the `side="left"` sense — her own husband must still end up to
   // HER left, i.e. even FURTHER in that same outward direction, not
-  // flipped back toward the couple above). partnerSide falls back to
-  // `outward` only when gender is unknown (nothing to key the local
-  // order off, so any deterministic direction is as good as another).
+  // flipped back toward the couple above).
+  //
+  // `pinPartnerSide` (hard override — two unrelated remarriages that must
+  // never cross, see its own doc) wins even over a KNOWN gender order.
+  // Otherwise, gender ALWAYS decides partnerSide when known —
+  // `forcePartnerSide` (soft) is consulted only as an unknown-gender
+  // tie-breaker, never as an override of a known gender order. An earlier
+  // version let the sibling-loop's soft preference win unconditionally
+  // (meant only to keep a sibling's own couple from folding back toward
+  // whatever placed the sibling — see forcePartnerSide's own doc) — that
+  // silently swapped husband/wife for EVERY married sibling whose row
+  // happened to grow toward the side gender disagreed with (the confirmed
+  // real-data bug: Вера Артюх's husband Владимир landing to HER right
+  // because her sisters' row grows rightward, even though gender says a
+  // husband belongs on his wife's left). "муж слева, жена справа" is the
+  // higher-priority invariant for THAT case — keeping the whole couple
+  // block from folding back toward rootId's row doesn't actually need
+  // partnerSide's help at all (see forcePartnerSide's own doc: `width`
+  // already covers both sides of local 0, so collision resolution alone
+  // keeps a flipped block clear of whatever's inward of it).
   const partnerSide: 1 | -1 = hasPartner
-    ? (forcePartnerSide ??
+    ? (pinPartnerSide ??
       (() => {
         const rootGender = ctx.genderOf.get(rootId) ?? "unknown";
         const partnerGender = ctx.genderOf.get(partnerId!) ?? "unknown";
         if (rootGender === "male" && partnerGender === "female") return 1;
         if (rootGender === "female" && partnerGender === "male") return -1;
-        return outward as 1 | -1;
+        return forcePartnerSide ?? (outward as 1 | -1);
       })())
     : (outward as 1 | -1);
 
@@ -1820,21 +1913,27 @@ function layoutCoupleFan(
   // default gender rule (husband left of HIS OWN wife, wife right of HER OWN
   // husband) would happily place leftId's new partner toward the right
   // whenever that partner is female, walking it straight past rightId's own
-  // side (the exact bug this forcePartnerSide fixes: leftId=dad,
-  // rightId=mom, dad's new wife is female so gender-rule placed her on dad's
-  // right — i.e. toward mom — crossing the two couples into
-  // dad / mom's-new-husband / dad's-new-wife / mom instead of staying
-  // strictly split left/right of the fan's own center). forcePartnerSide=-1
-  // for leftId and +1 for rightId pin each one's own partner (and further
-  // ancestor fan) to keep growing in the SAME outward direction the couple
-  // fan itself put them in, exactly like layoutUnit already does for a
-  // sibling's own partner (see forcePartnerSide's own doc on layoutUnit).
+  // side (the exact bug this pinPartnerSide fixes: leftId=dad, rightId=mom,
+  // dad's new wife is female so gender-rule placed her on dad's right — i.e.
+  // toward mom — crossing the two couples into dad / mom's-new-husband /
+  // dad's-new-wife / mom instead of staying strictly split left/right of
+  // the fan's own center). pinPartnerSide=-1 for leftId and +1 for rightId
+  // pin each one's own partner (and further ancestor fan) to keep growing
+  // in the SAME outward direction the couple fan itself put them in — a
+  // HARD override (unlike the sibling case in layoutUnit's own sibling
+  // loop, which uses the SOFT forcePartnerSide instead): keeping two
+  // unrelated ancestor lines from crossing is a higher-priority invariant
+  // here than gender order within this particular new pairing, since
+  // there's no sensible "husband left of wife" reading when the wife in
+  // question belongs to a completely different family line than the
+  // person she'd be flipped toward (see pinPartnerSide's own doc on
+  // layoutUnit for why this case is different from the sibling one).
   if (leftId) {
-    const leftUnit = layoutUnit(leftId, "left", ctx, -1);
+    const leftUnit = layoutUnit(leftId, "left", ctx, undefined, -1);
     foldIn(leftUnit, -UNIT_X_SPACING / 2);
   }
   if (rightId) {
-    const rightUnit = layoutUnit(rightId, "right", ctx, 1);
+    const rightUnit = layoutUnit(rightId, "right", ctx, undefined, 1);
     foldIn(rightUnit, UNIT_X_SPACING / 2);
   }
 
