@@ -1,11 +1,10 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ReactFlow,
   Background,
   Controls,
-  Panel,
   applyNodeChanges,
   type NodeTypes,
   type EdgeTypes,
@@ -14,7 +13,6 @@ import {
 import "@xyflow/react/dist/style.css";
 import { buildTreeV4Layout } from "@/domain/tree-v4/layout";
 import type { FamilyGraph } from "@/domain/tree-v4/types";
-import { Switch } from "@/components/ui/switch";
 import { PersonNode, type PersonFlowNode } from "./person-node";
 import { PartnershipEdge } from "./partnership-edge";
 import { ParentChildEdge } from "./parent-child-edge";
@@ -80,14 +78,13 @@ function TreeCanvasInner({
   }, [graph, focusPersonId]);
 
   const [nodes, setNodes] = useState<PersonFlowNode[]>(initial.nodes);
-  // Global drag lock — toggled by the user (e.g. while just browsing the
-  // tree) so cards can't be accidentally moved. This blocks dragging itself
-  // (nodesDraggable=false), unlike the reactflow.dev node-collisions example
-  // it's modeled after in spirit, which lets dragging happen and only
-  // resolves overlaps afterward — here there is no per-card collision
-  // resolution, only an all-or-nothing lock.
-  const [dragLocked, setDragLocked] = useState(false);
-  const dragLockId = useId();
+  // Global drag lock, toggled via the Controls panel's built-in lock button
+  // (showInteractive, on by default) — same lock/unlock icon and placement
+  // as the reactflow.dev examples use, rather than a custom Panel + Switch.
+  // React Flow's own "interactive" toggle covers dragging (and, as a side
+  // effect, connecting/selecting too), which is fine here since tree-v4 has
+  // no connect-handles UI of its own for the user to lose.
+  const [nodesDraggable, setNodesDraggable] = useState(true);
 
   const edges = useMemo(() => {
     const centerById = new Map(
@@ -114,25 +111,12 @@ function TreeCanvasInner({
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={handleNodesChange}
-        nodesDraggable={!dragLocked}
+        nodesDraggable={nodesDraggable}
         fitView
         proOptions={{ hideAttribution: true }}
       >
         <Background />
-        <Controls showInteractive={false} />
-        <Panel position="top-right">
-          <label
-            htmlFor={dragLockId}
-            className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-card-foreground shadow-sm"
-          >
-            Заблокировать перетаскивание
-            <Switch
-              id={dragLockId}
-              checked={dragLocked}
-              onCheckedChange={setDragLocked}
-            />
-          </label>
-        </Panel>
+        <Controls onInteractiveChange={setNodesDraggable} />
       </ReactFlow>
     </div>
   );
