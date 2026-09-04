@@ -283,6 +283,33 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     expect(grigoryKrivusha.x).toBeGreaterThan(elizavetaKupchik.x);
   });
 
+  it("keeps Vladimir+Marfa centered over ALL 3 of their children, not just Nikolai Sr. (§10)", () => {
+    // Nikolai Sr. Kupchik has full siblings — Mikhail and Vera Kupchik
+    // (same parents, Vladimir+Marfa). Vladimir+Marfa must stay centered
+    // over the FULL row of 3 children, even though their pair also
+    // collides with Elizaveta Kupchik's own parents (Grigory+Elizaveta
+    // Krivusha) on the same Y and needs to be pushed apart from them.
+    // Product decision: "центрируй родителей строго над их детьми" —
+    // when the pinned side (Vladimir+Marfa, has a sibling row to stay
+    // centered over) collides with an unpinned side, only the UNPINNED
+    // side (Grigory+Elizaveta Krivusha, Elizaveta has no siblings here)
+    // may move — matches the existing Nikolai Sr./Elizaveta Kupchik
+    // asymmetric-pin precedent ("как Николая и Елизавету").
+    const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
+    const byId = new Map(result.persons.map((p) => [p.id, p]));
+    const nikolaiSrKupchik = byId.get("nikolai-kupchik")!;
+    const mikhail = byId.get("mikhail-kupchik")!;
+    const vera = byId.get("vera-kupchik")!;
+    const vladimir = byId.get("vladimir-kupchik")!;
+    const marfa = byId.get("marfa-kupchik")!;
+
+    const junction = (vladimir.x + marfa.x) / 2;
+    const childrenXs = [nikolaiSrKupchik.x, mikhail.x, vera.x];
+    const childrenCenter =
+      (Math.min(...childrenXs) + Math.max(...childrenXs)) / 2;
+    expect(junction).toBe(childrenCenter);
+  });
+
   // Пропущено: fixture временно урезан пользователем — nikolai-ushkar/
   // elena-ushkar (Виктора paternal aunt's family) больше нет в графе. Вернуть
   // .skip → обычный it, когда Ushkar-ветка снова появится в fixture.ts.

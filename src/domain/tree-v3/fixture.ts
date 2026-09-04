@@ -37,6 +37,8 @@ const marfaId = "marfa-kupchik";
 const yustinId = "yustin-kupchik";
 const grigoryKrivushaId = "grigory-krivusha";
 const elizavetaKrivushaId = "elizaveta-krivusha";
+const mikhailKupchikId = "mikhail-kupchik";
+const veraKupchikId = "vera-kupchik";
 
 export const initialFamilyGraph: FamilyGraph = {
   persons: [
@@ -194,6 +196,18 @@ export const initialFamilyGraph: FamilyGraph = {
       id: elizavetaKrivushaId,
       firstName: "Елизавета",
       lastName: "Кривуша",
+      gender: "female",
+    },
+    {
+      id: mikhailKupchikId,
+      firstName: "Михаил",
+      lastName: "Купчик",
+      gender: "male",
+    },
+    {
+      id: veraKupchikId,
+      firstName: "Вера",
+      lastName: "Купчик",
       gender: "female",
     },
   ],
@@ -431,6 +445,30 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: marfaId,
       to: nikolaiKupchikId,
+    },
+    {
+      id: "vladimir-mikhail-parent",
+      kind: "parent-child",
+      from: vladimirId,
+      to: mikhailKupchikId,
+    },
+    {
+      id: "marfa-mikhail-parent",
+      kind: "parent-child",
+      from: marfaId,
+      to: mikhailKupchikId,
+    },
+    {
+      id: "vladimir-vera-kupchik-parent",
+      kind: "parent-child",
+      from: vladimirId,
+      to: veraKupchikId,
+    },
+    {
+      id: "marfa-vera-kupchik-parent",
+      kind: "parent-child",
+      from: marfaId,
+      to: veraKupchikId,
     },
     {
       id: "yustin-vladimir-parent",

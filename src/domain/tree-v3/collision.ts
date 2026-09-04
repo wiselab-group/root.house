@@ -516,23 +516,48 @@ function resolveAdjacentAncestorCouples(
   // пара — напр. Николай ст.+Елизавета Купчик), их взаимный зазор ФИКСИРОВАН
   // (SPOUSE_GAP, §9 "супруги всегда рядом") и НЕ подлежит растяжению даже
   // ради разведения их родителей (product decision: "верни расстояние между
-  // Николаем и Елизаветой" — раздвигать саму пару ЗАПРЕЩЕНО, даже если это
-  // означает, что линия к прабабушкам/прадедушкам получит небольшой излом
-  // именно в этой одной точке — "излом линий это норм" для ЭТОГО конкретного
-  // случая, в отличие от paternal-vs-maternal коллизии НЕСВЯЗАННЫХ веток
-  // (там обе стороны свободны двигаться, см. основную ветку ниже). Сдвигаем
-  // ТОЛЬКО сами grandparent-пары — раздвигаем их от центра их собственного
-  // (неподвижного) ребёнка — не трогая ни paternalParent, ни maternalParent,
-  // ни что-либо ниже них.
+  // Николаем и Елизаветой" — раздвигать саму пару ЗАПРЕЩЕНО). Сдвигаем ТОЛЬКО
+  // grandparent-пары, никогда paternalParent/maternalParent самих.
+  //
+  // НО: §10 "родители должны быть отцентрированы над ИХ детьми" — если у
+  // grandparent-пары ЕСТЬ ещё дети, кроме paternalParent/maternalParent
+  // (напр. Владимир+Марфа — родители не только Николая ст., но и его
+  // сиблингов Михаила/Веры), эта пара УЖЕ жёстко центрирована над ВСЕМ своим
+  // рядом детей — сдвигать её без сдвига всего ряда сломало бы центрировку
+  // (product decision: "центрируй родителей строго над их детьми, и
+  // запомни это"), а сдвигать весь ряд запрещено предыдущим правилом (это
+  // сдвинуло бы paternalParent относительно его супруга). Значит эта пара
+  // "pinned" — как и в НЕ-supружеской ветке ниже (hasFullSiblings), сдвигать
+  // нужно ТОЛЬКО непиненную сторону, на полную величину.
   if (arePartners(graph, paternalParent.id, maternalParent.id)) {
-    const shiftEachForKink = Math.max(deficit / 2, minShiftForOwnChildBound);
-    for (const id of paternalGrandparentIds) {
-      const pos = positionByPerson.get(id);
-      if (pos) pos.x -= shiftEachForKink;
+    const paternalPinnedBySiblings = hasFullSiblings(graph, paternalParent.id);
+    const maternalPinnedBySiblings = hasFullSiblings(graph, maternalParent.id);
+    if (paternalPinnedBySiblings && maternalPinnedBySiblings) {
+      // Обе стороны пинены собственными sibling-row'ами — сдвигать некого
+      // без поломки §10 у одной из них. Оставляем как есть (residual sweep
+      // поймает реальную коллизию, если она физически осталась).
+      return;
     }
-    for (const id of maternalGrandparentIds) {
-      const pos = positionByPerson.get(id);
-      if (pos) pos.x += shiftEachForKink;
+    const shiftEachForKink = Math.max(deficit / 2, minShiftForOwnChildBound);
+    if (!paternalPinnedBySiblings && !maternalPinnedBySiblings) {
+      for (const id of paternalGrandparentIds) {
+        const pos = positionByPerson.get(id);
+        if (pos) pos.x -= shiftEachForKink;
+      }
+      for (const id of maternalGrandparentIds) {
+        const pos = positionByPerson.get(id);
+        if (pos) pos.x += shiftEachForKink;
+      }
+    } else if (!paternalPinnedBySiblings) {
+      for (const id of paternalGrandparentIds) {
+        const pos = positionByPerson.get(id);
+        if (pos) pos.x -= shiftEachForKink * 2;
+      }
+    } else {
+      for (const id of maternalGrandparentIds) {
+        const pos = positionByPerson.get(id);
+        if (pos) pos.x += shiftEachForKink * 2;
+      }
     }
     return;
   }
