@@ -461,19 +461,54 @@ function placeAncestorUnit(
     : undefined;
 
   const unitWidth = spouseId ? CARD_WIDTH * 2 + SPOUSE_GAP : CARD_WIDTH;
+
+  // Place any not-yet-placed siblings of the descendant that pulled this
+  // ancestor pair into the graph BEFORE computing where the parents
+  // themselves go — a parent pair must center over the FULL sibling row
+  // (every child, not just whichever child happened to be placed first by
+  // the earlier downward pass), so the sibling row has to exist first.
+  // Placed at this same generation's Y (not the parents' Y) so it doesn't
+  // reserve space the parents' own unitWidth still needs.
+  const childrenIds =
+    partnership?.childrenIds ??
+    graph.soloParentByPersonId.get(personId)?.childrenIds ??
+    [];
+  placeUnplacedSiblings(
+    graph,
+    childrenIds,
+    y + GENERATION_GAP,
+    occupancy,
+    positionByPerson,
+    junctionByPartnership,
+  );
+
   const childPulledX =
     preferredAncestorX(graph, personId, positionByPerson) ??
     preferredAncestorX(graph, spouseId, positionByPerson) ??
     0;
 
-  // Paternal branches prefer to sit left of their pulling child, maternal
-  // branches prefer right — this must bias the SEARCH itself, not just the
-  // no-space-found fallback, or two same-row ancestor clusters (paternal +
-  // maternal grandparents) both pulled toward the same empty area end up on
-  // whichever side findFreeInterval happens to check first (§22 paternal/
-  // maternal side is directional, not incidental).
-  const direction =
-    person.branch === "maternal" ? 1 : person.branch === "paternal" ? -1 : 0;
+  // Paternal/maternal direction only matters between DIFFERENT ancestor
+  // clusters sharing a row (e.g. paternal grandparents vs maternal
+  // grandparents) — never inside a single married pair, where one partner
+  // is naturally "paternal" (the parent this branch descends from) and the
+  // other "maternal" by construction, even though they are one couple that
+  // must stay centered on their pulling child, not split apart by a
+  // directional bias. So the bias only applies when this ancestor is NOT
+  // paired with a spouse of the opposite direction.
+  const spouseBranch = spouseId
+    ? graph.personById.get(spouseId)?.branch
+    : undefined;
+  const isOppositeDirectionCouple =
+    (person.branch === "paternal" && spouseBranch === "maternal") ||
+    (person.branch === "maternal" && spouseBranch === "paternal");
+
+  const direction = isOppositeDirectionCouple
+    ? 0
+    : person.branch === "maternal"
+      ? 1
+      : person.branch === "paternal"
+        ? -1
+        : 0;
   const gap = Math.max(SIBLING_GAP, INTER_FAMILY_GAP);
   const sideBias = (unitWidth / 2 + gap / 2) * direction;
   const preferredX = childPulledX + sideBias;
@@ -506,10 +541,11 @@ function placeAncestorUnit(
       width: CARD_WIDTH,
       height: CARD_HEIGHT,
     });
-    junctionByPartnership.set(partnership.id, {
+    const junctionPoint = {
       x: (selfX + spouseX) / 2,
       y: y + CARD_HEIGHT / 2 + GENERATION_GAP / 2,
-    });
+    };
+    junctionByPartnership.set(partnership.id, junctionPoint);
   } else {
     positionByPerson.set(personId, { x: centerX, y });
     occupancy.reserve({
@@ -518,6 +554,201 @@ function placeAncestorUnit(
       width: CARD_WIDTH,
       height: CARD_HEIGHT,
     });
+  }
+}
+
+/**
+ * Places any children of an ancestor partnership that aren't placed yet —
+ * i.e. siblings of whichever descendant already pulled this ancestor pair
+ * into the graph. Already-placed children (typically the focus person, or a
+ * descendant already grown from the main downward pass) are left exactly
+ * where they are; each unplaced sibling is anchored immediately next to its
+ * nearest already-placed sibling's OWN card — not next to that sibling's
+ * spouse, even when the spouse happens to occupy the nearer-looking side.
+ *
+ * A full sibling belongs right beside the person they're related to by
+ * blood: if that person has a spouse sitting on one side, the sibling goes
+ * on the OTHER side (immediately adjacent to the blood relative, not
+ * "wherever the first free slot happens to be") — jumping past a spouse to
+ * land further out reads as "unrelated person next to my sister's husband,"
+ * which breaks the sibling-adjacency rule even though geometrically nothing
+ * overlaps.
+ */
+function placeUnplacedSiblings(
+  graph: NormalizedGraph,
+  childrenIds: string[],
+  y: number,
+  occupancy: OccupancyModel,
+  positionByPerson: Map<string, Point>,
+  junctionByPartnership: Map<string, Point>,
+): void {
+  const unplaced = childrenIds.filter((id) => !positionByPerson.has(id));
+  if (unplaced.length === 0) return;
+
+  const placedSiblingIds = childrenIds.filter((id) => positionByPerson.has(id));
+
+  for (const childId of unplaced) {
+    // Anchor on the most recently placed BLOOD sibling's own card — not an
+    // average of the whole row, which could sit anywhere once spouses are
+    // folded in — so each new sibling lands directly beside a relative,
+    // preferring whichever side of that relative isn't already taken by
+    // their own spouse.
+    const nearestSiblingId = placedSiblingIds[placedSiblingIds.length - 1];
+    const anchorX = nearestSiblingId
+      ? positionByPerson.get(nearestSiblingId)!.x
+      : 0;
+
+    const leftCandidateX = anchorX - CARD_WIDTH - SIBLING_GAP;
+    const rightCandidateX = anchorX + CARD_WIDTH + SIBLING_GAP;
+    const leftFree = !occupancy.intersects(
+      { x: leftCandidateX, y, width: CARD_WIDTH, height: CARD_HEIGHT },
+      SIBLING_GAP,
+    );
+    const rightFree = !occupancy.intersects(
+      { x: rightCandidateX, y, width: CARD_WIDTH, height: CARD_HEIGHT },
+      SIBLING_GAP,
+    );
+
+    // Prefer whichever immediately-adjacent side is free; if both are
+    // free, prefer left (deterministic tie-break, §39). Only fall back to
+    // searching further outward when NEITHER immediately-adjacent slot is
+    // actually free (e.g. that side is blocked by an unrelated branch).
+    let resolvedX: number;
+    if (leftFree) {
+      resolvedX = leftCandidateX;
+    } else if (rightFree) {
+      resolvedX = rightCandidateX;
+    } else {
+      resolvedX =
+        occupancy.findFreeInterval(
+          y,
+          CARD_HEIGHT,
+          CARD_WIDTH,
+          SIBLING_GAP,
+          leftCandidateX,
+          3000,
+          -1,
+        ) ??
+        occupancy.findFreeInterval(
+          y,
+          CARD_HEIGHT,
+          CARD_WIDTH,
+          SIBLING_GAP,
+          rightCandidateX,
+          3000,
+          1,
+        ) ??
+        leftCandidateX;
+    }
+
+    positionByPerson.set(childId, { x: resolvedX, y });
+    occupancy.reserve({
+      x: resolvedX,
+      y,
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
+    });
+    placedSiblingIds.push(childId);
+
+    // This sibling may themselves have partnerships/descendants — grow
+    // those too, same as any other branch (§13 subtree = space applies
+    // recursively here as well).
+    growPersonDescendants(
+      graph,
+      childId,
+      resolvedX,
+      y,
+      occupancy,
+      positionByPerson,
+      junctionByPartnership,
+    );
+  }
+}
+
+/**
+ * Grows a person's own partnerships/descendants after they've ALREADY been
+ * placed at a fixed x (e.g. as a newly-placed sibling in
+ * placeUnplacedSiblings) — mirrors the branch-growing half of
+ * placePersonBranch, but anchors each partnership relative to the person's
+ * real card position instead of computing it from scratch.
+ */
+function growPersonDescendants(
+  graph: NormalizedGraph,
+  personId: string,
+  personX: number,
+  y: number,
+  occupancy: OccupancyModel,
+  positionByPerson: Map<string, Point>,
+  junctionByPartnership: Map<string, Point>,
+): void {
+  const memo: SubtreeMemo = new Map();
+  const person = graph.personById.get(personId);
+  if (!person) return;
+
+  const partnerships = person.partnershipIds
+    .map((id) => graph.partnershipById.get(id))
+    .filter((p): p is Partnership => Boolean(p));
+  const solo = graph.soloParentByPersonId.get(personId);
+  if (partnerships.length === 0 && !solo) return;
+
+  for (const partnership of partnerships) {
+    if (junctionByPartnership.has(partnership.id)) continue; // already grown from the other spouse's side
+    const isLeft = partnership.leftPersonId === personId;
+    const spouseId = isLeft
+      ? partnership.rightPersonId
+      : partnership.leftPersonId;
+    if (positionByPerson.has(spouseId)) continue; // spouse placed elsewhere — avoid double placement
+
+    const preferredSpouseX = isLeft
+      ? personX + CARD_WIDTH / 2 + SPOUSE_GAP / 2 + CARD_WIDTH / 2
+      : personX - CARD_WIDTH / 2 - SPOUSE_GAP / 2 - CARD_WIDTH / 2;
+    const direction = isLeft ? 1 : -1;
+    const spouseX =
+      occupancy.findFreeInterval(
+        y,
+        CARD_HEIGHT,
+        CARD_WIDTH,
+        REMARRIAGE_GAP,
+        preferredSpouseX,
+        2000,
+        direction,
+      ) ?? preferredSpouseX;
+
+    positionByPerson.set(spouseId, { x: spouseX, y });
+    occupancy.reserve({
+      x: spouseX,
+      y,
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
+    });
+
+    const junctionX = (personX + spouseX) / 2;
+    const junctionY = y + CARD_HEIGHT / 2 + GENERATION_GAP / 2;
+    junctionByPartnership.set(partnership.id, { x: junctionX, y: junctionY });
+
+    placeChildrenRow(
+      graph,
+      partnership.childrenIds,
+      junctionX,
+      y + GENERATION_GAP,
+      occupancy,
+      positionByPerson,
+      junctionByPartnership,
+      memo,
+    );
+  }
+
+  if (solo) {
+    placeChildrenRow(
+      graph,
+      solo.childrenIds,
+      personX,
+      y + GENERATION_GAP,
+      occupancy,
+      positionByPerson,
+      junctionByPartnership,
+      memo,
+    );
   }
 }
 

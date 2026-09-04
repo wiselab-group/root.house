@@ -1,6 +1,7 @@
 # CLAUDE.md — System Core Guidance
 
 ## WHAT
+
 Root house — premium-уровня семейный архив: граф людей (Person) и
 связей (Relationship) в основе, поверх которого строятся интерактивное семейное
 дерево, профили людей, события, медиа (фото/видео/аудио/документы) и семейные
@@ -15,6 +16,7 @@ Visual Target: Awwwards/FWA-уровень качества, но тёплый �
 тон — не enterprise CRM feel.
 
 ## WHY
+
 - Awwwards/FWA visual quality — originality и motion над benchmark-показателями
 - Core Web Vitals targets: Performance 85+ desktop / 75+ mobile, Accessibility 100, SEO 100, CLS 0.00
 - Каждый интерактивный элемент имеет explicit hover/active/focus/loading states
@@ -27,20 +29,22 @@ Visual Target: Awwwards/FWA-уровень качества, но тёплый �
   генограмма, timeline — разные UI-представления одних и тех же данных
 
 ## COMMANDS
-- Dev:          `pnpm dev`
-- Build:        `pnpm build`
-- Lint:         `pnpm lint`
-- Type-check:   `pnpm typecheck`
-- Tests:        `pnpm test` (watch: `pnpm test:watch`)
-- DB schema:    `pnpm db:generate` (генерирует SQL-миграцию из src/db/schema)
-- DB migrate:   `pnpm db:migrate` (применяет миграции к DATABASE_URL)
-- DB studio:    `pnpm db:studio` (drizzle-kit studio — визуальный браузер БД)
+
+- Dev: `pnpm dev`
+- Build: `pnpm build`
+- Lint: `pnpm lint`
+- Type-check: `pnpm typecheck`
+- Tests: `pnpm test` (watch: `pnpm test:watch`)
+- DB schema: `pnpm db:generate` (генерирует SQL-миграцию из src/db/schema)
+- DB migrate: `pnpm db:migrate` (применяет миграции к DATABASE_URL)
+- DB studio: `pnpm db:studio` (drizzle-kit studio — визуальный браузер БД)
 - Rule: запускать `pnpm lint` и `pnpm typecheck` перед тем, как считать ЛЮБУЮ задачу завершённой. Zero warnings = done.
 - Полный `pnpm build` требует настоящего `DATABASE_URL` (Next.js исполняет
   код страниц при сборе данных) — до появления реальной Neon-БД typecheck/
   lint/test остаются основной проверкой, build запускается когда БД доступна.
 
 ## DESIGN TOKENS
+
 Тёплая «семейная» палитра реализована (`src/app/globals.css`) — один тёплый
 акцент (терракота, OKLCH hue 45), тёплые нейтральные (кремовый фон, тёплый
 графитово-коричневый текст), НЕ стартаперский сине-фиолетовый градиент.
@@ -52,6 +56,7 @@ Sans; оба с кириллическим subset (весь интерфейс �
 Все цвета — только через `var(--color-name)`, никаких raw hex в компонентах.
 
 ## ANIMATION RULES
+
 - Hardware acceleration ONLY: transform и opacity. Никогда top/left/width/height.
 - will-change: transform, opacity — только на активно анимирующихся узлах
 - Переходы focus-person в дереве — только transform (translate/scale),
@@ -59,9 +64,11 @@ Sans; оба с кириллическим subset (весь интерфейс �
 - Всегда реализовывать `prefers-reduced-motion` fallback
 
 ## TREE LAYOUT RULES
+
 Инварианты `src/domain/tree/tree-layout.builder.ts` (custom recursive layout,
 не dagre/elk) — нарушение любого из них считается багом, даже если формальных
 x-коллизий нет:
+
 - **Линии-коннекторы никогда не пересекаются** — это главное правило.
   Пересечение линий читается как «перепутанное родство» даже когда каждая
   карточка технически на своём месте без коллизий.
@@ -91,7 +98,32 @@ x-коллизий нет:
   Neon (`getFocusTreeLayout`), а не только на синтетических fixtures:
   синтетические репро могут случайно не задеть нужную комбинацию условий.
 
+### tree-v4 (`src/domain/tree-v4/`)
+
+Независимая реализация (не переиспользует layout tree-v2/tree-v3), свой
+набор инвариантов:
+
+- Родной сиблинг фокус-персоны (общие родители) должен стоять рядом с самой
+  фокус-персоной, вплотную к её карточке — а не «через» её супруга/супругу,
+  даже если место сразу за супругом(ой) технически первое свободное и
+  коллизий не возникает. Пример: у Александра есть жена Элеонора и родная
+  сестра Дарья — Дарья должна оказаться прямо рядом с Александром (с той
+  стороны, где нет Элеоноры), а не за Элеонорой. Геометрическая
+  бесколлизионность не оправдывает разрыв кровного родства чужим человеком
+  визуально между сиблингами.
+- Родители должны быть выровнены по центру ВСЕГО ряда своих детей — не
+  только по позиции того ребёнка, который оказался размещён первым (обычно
+  фокус-персоны). Если у фокуса есть сиблинг (например, у Александра —
+  Дарья), пара родителей (Виктор+Галина) центрируется над серединой между
+  Александром и Дарьей, а не над одним Александром. Фокус-персона остаётся
+  неподвижным якорем координат (x=0) — выравнивание всегда достигается
+  сдвигом РОДИТЕЛЕЙ под готовый ряд детей, а не сдвигом уже зафиксированных
+  детей под родителей. Практически это значит: все ещё не размещённые
+  сиблинги фокуса нужно разместить ДО вычисления итоговой позиции их общих
+  родителей, иначе родители зафиксируются над неполным рядом.
+
 ## CODE RULES
+
 - TypeScript strict — zero `any` типов
 - Компоненты: максимум 150 строк — разбивать на под-компоненты при превышении
 - Никаких raw hex цветов — всегда `var(--color-name)`
@@ -107,6 +139,7 @@ x-коллизий нет:
   «нашли, но потом отказали»
 
 ## FORBIDDEN
+
 - Generic Bootstrap-style компоненты
 - Default CSS ease или linear easing curves
 - Layout-shifting свойства в анимациях (top, left, height, width)

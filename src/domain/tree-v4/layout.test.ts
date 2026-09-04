@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildTreeV4Layout } from "./layout";
 import { detectOverlaps } from "./collision";
-import { CARD_WIDTH, SPOUSE_GAP } from "./subtree";
+import { CARD_WIDTH, SIBLING_GAP, SPOUSE_GAP } from "./subtree";
 import { initialFamilyGraph, focusPersonId as realFocusId } from "./fixture";
 import {
   case1SimpleFamily,
@@ -28,10 +28,10 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva minimal core)", () => {
+describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    expect(result.persons).toHaveLength(3);
+    expect(result.persons).toHaveLength(6);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -77,6 +77,76 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva minimal core)", () => {
     const r1 = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     const r2 = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     expect(positionMap(r1)).toEqual(positionMap(r2));
+  });
+
+  it("Alexander's parents (Viktor and Galina) are above him", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const alexander = personById(result, "alexander-kupchik");
+    const viktor = personById(result, "viktor-kupchik");
+    const galina = personById(result, "galina-kupchik");
+    expect(viktor.y).toBeLessThan(alexander.y);
+    expect(galina.y).toBeLessThan(alexander.y);
+  });
+
+  it("Viktor (husband) is left of Galina (wife)", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const viktor = personById(result, "viktor-kupchik");
+    const galina = personById(result, "galina-kupchik");
+    expect(viktor.x).toBeLessThan(galina.x);
+  });
+
+  it("the grandparents' partnership is centered above the FULL sibling row (Alexander + Daria), not just Alexander", () => {
+    // The focus person is always fixed at x=0 first, before ancestors are
+    // placed — but ancestors must center over the complete set of their
+    // children, including a sibling placed later than the focus person, not
+    // just whichever child happened to exist first. Parents/children stay
+    // mutually aligned by moving the PARENTS to match the children's true
+    // center, never the other way around (the focus anchor must not move).
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const viktor = personById(result, "viktor-kupchik");
+    const galina = personById(result, "galina-kupchik");
+    const alexander = personById(result, "alexander-kupchik");
+    const daria = personById(result, "daria-kupchik");
+    const grandparentsCenterX = (viktor.x + galina.x) / 2;
+    const siblingRowCenterX = (alexander.x + daria.x) / 2;
+    expect(grandparentsCenterX).toBeCloseTo(siblingRowCenterX, 5);
+  });
+
+  it("Daria (Alexander's sister) is at the same generation, next to Alexander, under their shared parents", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const alexander = personById(result, "alexander-kupchik");
+    const daria = personById(result, "daria-kupchik");
+    expect(daria.y).toBe(alexander.y);
+    expect(Math.abs(daria.x - alexander.x)).toBeGreaterThanOrEqual(CARD_WIDTH);
+  });
+
+  it("Daria sits immediately beside Alexander himself, not past his spouse (regression: sibling landed next to the spouse instead of the blood relative)", () => {
+    // Bug: a full sibling's nearest-free-slot search jumped past the focus
+    // person's own spouse (Eleonora) and landed the sibling on the far side
+    // of her instead of directly next to the blood relative — geometrically
+    // collision-free, but wrong genealogically: a sibling must be adjacent
+    // to the person they're related to by blood, never separated from them
+    // by an in-law.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const alexander = personById(result, "alexander-kupchik");
+    const eleonora = personById(result, "eleonora-kupchik");
+    const daria = personById(result, "daria-kupchik");
+    const gapToAlexander = Math.abs(daria.x - alexander.x);
+    expect(gapToAlexander).toBeCloseTo(CARD_WIDTH + SIBLING_GAP, 5);
+    // Daria must be on Alexander's FAR side from Eleonora, not beyond her.
+    const eleonoraIsRightOfAlexander = eleonora.x > alexander.x;
+    if (eleonoraIsRightOfAlexander) {
+      expect(daria.x).toBeLessThan(alexander.x);
+    } else {
+      expect(daria.x).toBeGreaterThan(alexander.x);
+    }
+  });
+
+  it("full siblings Alexander and Daria are placed adjacent to each other without overlapping", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const alexander = personById(result, "alexander-kupchik");
+    const daria = personById(result, "daria-kupchik");
+    expect(Math.abs(alexander.x - daria.x)).toBeGreaterThanOrEqual(CARD_WIDTH);
   });
 });
 

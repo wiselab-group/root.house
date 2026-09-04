@@ -1,16 +1,22 @@
 import type { FamilyGraph } from "./types";
 
 /**
- * tree-v4 — real genealogy data, minimal core only: Alexander Kupczyk,
- * Eleonora (his wife), Eva (their daughter). This is the ONLY real data
- * reused from the existing project data (people/relationships, never
- * layout code — tree-v2/tree-v3 remain untouched and are not imported here).
- * Broader family/ancestor/divorce/remarriage scenarios are covered by the
- * synthetic fixtures below, not by expanding this real dataset.
+ * tree-v4 — real genealogy data, minimal core: Alexander Kupczyk, Eleonora
+ * (his wife), Eva (their daughter), Alexander's parents Viktor and Galina,
+ * and his sister Daria. This is the ONLY real data reused from the existing
+ * project data (people/relationships, never layout code — tree-v2/tree-v3
+ * remain untouched and are not imported here); ids match the existing
+ * tree-v2/tree-v3 fixtures so this stays the same canonical people, not new
+ * synthetic stand-ins. Broader family/ancestor/divorce/remarriage scenarios
+ * beyond this core are covered by the synthetic fixtures below, not by
+ * further expanding this real dataset.
  */
 export const focusPersonId = "alexander-kupchik";
 const eleonoraId = "eleonora-kupchik";
 const evaId = "eva-kupchik";
+const viktorId = "viktor-kupchik";
+const galinaId = "galina-kupchik";
+const dariaId = "daria-kupchik";
 
 export const initialFamilyGraph: FamilyGraph = {
   persons: [
@@ -27,6 +33,24 @@ export const initialFamilyGraph: FamilyGraph = {
       gender: "female",
     },
     { id: evaId, firstName: "Эва", lastName: "Купчик", gender: "female" },
+    {
+      id: viktorId,
+      firstName: "Виктор",
+      lastName: "Купчик",
+      gender: "male",
+    },
+    {
+      id: galinaId,
+      firstName: "Галина",
+      lastName: "Купчик",
+      gender: "female",
+    },
+    {
+      id: dariaId,
+      firstName: "Дарья",
+      lastName: "Купчик",
+      gender: "female",
+    },
   ],
   relationships: [
     {
@@ -47,6 +71,37 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: eleonoraId,
       to: evaId,
+    },
+    {
+      id: "viktor-galina-spouse",
+      kind: "spouse",
+      from: viktorId,
+      to: galinaId,
+      status: "married",
+    },
+    {
+      id: "viktor-alexander-parent",
+      kind: "parent-child",
+      from: viktorId,
+      to: focusPersonId,
+    },
+    {
+      id: "galina-alexander-parent",
+      kind: "parent-child",
+      from: galinaId,
+      to: focusPersonId,
+    },
+    {
+      id: "viktor-daria-parent",
+      kind: "parent-child",
+      from: viktorId,
+      to: dariaId,
+    },
+    {
+      id: "galina-daria-parent",
+      kind: "parent-child",
+      from: galinaId,
+      to: dariaId,
     },
   ],
 };
