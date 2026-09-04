@@ -28,10 +28,10 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria minimal core)", () => {
+describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta + Nikolai/Nadezhda Kozlovsky minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    expect(result.persons).toHaveLength(6);
+    expect(result.persons).toHaveLength(10);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -147,6 +147,122 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria mi
     const alexander = personById(result, "alexander-kupchik");
     const daria = personById(result, "daria-kupchik");
     expect(Math.abs(alexander.x - daria.x)).toBeGreaterThanOrEqual(CARD_WIDTH);
+  });
+
+  it("Viktor's own parents (Nikolai and Elizaveta) are above him, one generation further up than Viktor/Galina", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const viktor = personById(result, "viktor-kupchik");
+    const nikolai = personById(result, "nikolai-kupchik");
+    const elizaveta = personById(result, "elizaveta-kupchik");
+    expect(nikolai.y).toBeLessThan(viktor.y);
+    expect(elizaveta.y).toBeLessThan(viktor.y);
+  });
+
+  it("Nikolai (husband) is left of Elizaveta (wife)", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const nikolai = personById(result, "nikolai-kupchik");
+    const elizaveta = personById(result, "elizaveta-kupchik");
+    expect(nikolai.x).toBeLessThan(elizaveta.x);
+  });
+
+  it("Nikolai and Elizaveta's partnership is pulled off-center from Viktor by exactly the same amount Kozlovsky is pulled off-center from Galina (symmetric kink, not one-straight-one-kinked)", () => {
+    // Viktor and Galina stay compact (standard SPOUSE_GAP), so their two
+    // great-grandparent couples cannot both center exactly under their own
+    // child without overlapping — there isn't enough room. The fix is to
+    // split that shortfall evenly between BOTH couples rather than letting
+    // whichever one is processed first (paternal, by sideRank) keep a
+    // perfect center while the maternal couple absorbs the entire
+    // adjustment via collision-avoidance. See CLAUDE.md tree-v4: "если
+    // раздвигать одну сторону, а не обе — получится один род с прямой
+    // линией, другой с изогнутой — это неверно, должно быть симметрично."
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const viktor = personById(result, "viktor-kupchik");
+    const galina = personById(result, "galina-kupchik");
+    const nikolai = personById(result, "nikolai-kupchik");
+    const elizaveta = personById(result, "elizaveta-kupchik");
+    const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
+    const nadezhda = personById(result, "nadezhda-kozlovskaya");
+
+    const paternalCenterX = (nikolai.x + elizaveta.x) / 2;
+    const maternalCenterX = (nikolaiKozlovsky.x + nadezhda.x) / 2;
+    const paternalOffset = paternalCenterX - viktor.x;
+    const maternalOffset = maternalCenterX - galina.x;
+
+    // Neither couple is left exactly centered (offset 0) while the other
+    // absorbs the whole shortfall...
+    expect(Math.abs(paternalOffset)).toBeGreaterThan(1);
+    expect(Math.abs(maternalOffset)).toBeGreaterThan(1);
+    // ...and the two offsets are equal in magnitude, opposite in direction
+    // (paternal pulled left/negative, maternal pulled right/positive) — a
+    // symmetric kink around the Viktor/Galina midpoint.
+    expect(paternalOffset).toBeCloseTo(-maternalOffset, 5);
+  });
+
+  it("no overlaps across all three generations (Nikolai/Elizaveta, Viktor/Galina + Daria, Alexander + Eleonora/Eva)", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    expect(detectOverlaps(positionMap(result))).toEqual([]);
+  });
+
+  it("Galina's own parents (Nikolai and Nadezhda Kozlovsky) are above her, at the same generation as Nikolai/Elizaveta Kupchik", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const galina = personById(result, "galina-kupchik");
+    const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
+    const nadezhda = personById(result, "nadezhda-kozlovskaya");
+    const nikolaiKupchik = personById(result, "nikolai-kupchik");
+    expect(nikolaiKozlovsky.y).toBeLessThan(galina.y);
+    expect(nadezhda.y).toBeLessThan(galina.y);
+    expect(nikolaiKozlovsky.y).toBe(nikolaiKupchik.y);
+  });
+
+  it("Nikolai Kozlovsky (husband) is left of Nadezhda (wife)", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
+    const nadezhda = personById(result, "nadezhda-kozlovskaya");
+    expect(nikolaiKozlovsky.x).toBeLessThan(nadezhda.x);
+  });
+
+  it("Nikolai/Nadezhda Kozlovsky's partnership stays right of Galina, pulled off-center by half the shortfall (not the whole thing)", () => {
+    // Viktor and Galina ALWAYS stay at the standard SPOUSE_GAP — a married
+    // couple is a compact visual unit and must never be stretched apart
+    // just to make room for their own (not-yet-placed) grandparents
+    // (CLAUDE.md: "супруги всегда рядом" outranks perfectly straight
+    // ancestor connector lines). Because Viktor/Galina stay close together,
+    // both great-grandparent couples physically cannot each center exactly
+    // under their own child without overlapping each other. The shortfall is
+    // now split evenly (see the symmetric-kink test above) — Kozlovsky
+    // shifts right by roughly half of what it would need to fully clear the
+    // Kupchik couple alone, and the Kupchik couple shifts left by the same
+    // amount, rather than Kozlovsky absorbing the entire adjustment.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const galina = personById(result, "galina-kupchik");
+    const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
+    const nadezhda = personById(result, "nadezhda-kozlovskaya");
+    const kozlovskyCenterX = (nikolaiKozlovsky.x + nadezhda.x) / 2;
+    expect(kozlovskyCenterX).toBeGreaterThan(galina.x);
+    expect(kozlovskyCenterX - galina.x).toBeLessThan(CARD_WIDTH * 2);
+  });
+
+  it("Viktor and Galina stay at the standard spouse gap, never stretched apart for their own grandparents' sake", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const viktor = personById(result, "viktor-kupchik");
+    const galina = personById(result, "galina-kupchik");
+    expect(galina.x - viktor.x).toBeCloseTo(CARD_WIDTH + SPOUSE_GAP, 5);
+  });
+
+  it("paternal great-grandparents (Nikolai/Elizaveta Kupchik) stay left of maternal great-grandparents (Nikolai/Nadezhda Kozlovsky) — the two ancestor lines never mix", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const nikolaiKupchik = personById(result, "nikolai-kupchik");
+    const elizaveta = personById(result, "elizaveta-kupchik");
+    const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
+    const nadezhda = personById(result, "nadezhda-kozlovskaya");
+    const paternalMaxX = Math.max(nikolaiKupchik.x, elizaveta.x);
+    const maternalMinX = Math.min(nikolaiKozlovsky.x, nadezhda.x);
+    expect(paternalMaxX).toBeLessThan(maternalMinX);
+  });
+
+  it("no overlaps with both great-grandparent couples on the same row", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 });
 

@@ -7,6 +7,7 @@
 > `:root`/`.dark`, как и предполагалось изначально.
 
 ## Typography
+
 - **Body/UI**: Geist Sans (`--font-geist-sans`, subsets `latin`+`cyrillic` —
   весь интерфейс на русском, это обязательно), через Tailwind `font-sans`.
 - **Заголовки** (Person Profile, Story, карточные `CardTitle`, страничные
@@ -23,6 +24,7 @@
 карточные заголовки), не на каждом UI-элементе.
 
 ## Color Tokens
+
 Один тёплый акцент — терракота (`hue 45` в OKLCH) — используется всюду:
 `--primary`, generation color-coding в дереве, фокус-кольца. Никакого
 стартаперского сине-фиолетового градиента. Все пары фон/текст ниже проверены
@@ -48,26 +50,29 @@ relative luminance перед фиксацией значений — не по�
 один и тот же hue 45°, lightness растёт и chroma падает с ростом `|generation|`
 (удалённости от focus-person) — `--chart-1`…`--chart-5`, не радуга по
 поколениям:
+
 ```
 |gen|=0: oklch(0.55 0.14 45)   |gen|=2: oklch(0.75 0.08 45)
 |gen|=1: oklch(0.65 0.11 45)   |gen|=3+: oklch(0.85 0.05 45) / oklch(0.9 0.03 45)
 ```
 
 ## Spacing System (8px base grid)
---space-1:   8px
---space-2:   16px
---space-3:   24px
---space-4:   32px
---space-6:   48px
---space-8:   64px
---space-12:  96px
---space-16:  128px
---space-20:  160px
+
+--space-1: 8px
+--space-2: 16px
+--space-3: 24px
+--space-4: 32px
+--space-6: 48px
+--space-8: 64px
+--space-12: 96px
+--space-16: 128px
+--space-20: 160px
 --spacing-section-y: clamp(64px, 10vw, 120px)
 
 ## Motion Principles
 
 ### Универсальные правила
+
 - Page/section transitions: укладываться в 600-800ms максимум
 - Именованные easing-алиасы — реализованы как CSS custom properties в
   `:root` (`src/app/globals.css`), использовать по имени, не как magic-числа:
@@ -83,6 +88,7 @@ relative luminance перед фиксацией значений — не по�
 - НИКОГДА не анимировать: top, left, width, height — layout shift и jank
 
 ### Family Tree specific
+
 - **Смена focus-person — entrance stagger, не FLIP-переход между позициями.**
   Фокус-переход — это полная навигация страницы (`?focus=` в URL, сервер
   пересчитывает layout) — старый и новый набор nodes не имеют общего React
@@ -101,33 +107,41 @@ relative luminance перед фиксацией значений — не по�
   курсив на имени).
 
 ## Component States
+
 Buttons:
+
 - Default / Hover / Active / Focus / Disabled (opacity 0.4, cursor not-allowed, pointer-events none) —
   уже реализовано в `src/components/ui/button.tsx` через `focus-visible:ring`,
   `active:translate-y-px`, `disabled:opacity-50`
 
 Cards / интерактивные поверхности:
+
 - Hover: едва заметный подъём (translateY(-2px)) + мягкая тень
 - Focus: `outline: 2px solid var(--ring)`, `outline-offset: 2px`
 
 ## Responsive Breakpoints
-- sm:  640px
-- md:  768px  ← порог переключения family tree canvas → mobile focus-view
-- lg:  1024px
-- xl:  1280px
+
+- sm: 640px
+- md: 768px ← порог переключения family tree canvas → mobile focus-view
+- lg: 1024px
+- xl: 1280px
 - 2xl: 1536px
 
 Container: max-width 1440px, padding clamp(16px, 5vw, 80px)
 
 ## Accessibility (обязательно, не подлежит удалению)
+
 ```css
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
 ```
+
 - Focus rings: видимы на всех интерактивных элементах
 - Цветовой контраст: минимум 4.5:1 для body text, 3:1 для крупного текста (WCAG 2.1 AA)

@@ -3,13 +3,14 @@ import type { FamilyGraph } from "./types";
 /**
  * tree-v4 — real genealogy data, minimal core: Alexander Kupczyk, Eleonora
  * (his wife), Eva (their daughter), Alexander's parents Viktor and Galina,
- * and his sister Daria. This is the ONLY real data reused from the existing
- * project data (people/relationships, never layout code — tree-v2/tree-v3
- * remain untouched and are not imported here); ids match the existing
- * tree-v2/tree-v3 fixtures so this stays the same canonical people, not new
- * synthetic stand-ins. Broader family/ancestor/divorce/remarriage scenarios
- * beyond this core are covered by the synthetic fixtures below, not by
- * further expanding this real dataset.
+ * his sister Daria, Viktor's own parents Nikolai and Elizaveta, and Galina's
+ * own parents Nikolai and Nadezhda Kozlovsky. This is the ONLY real data
+ * reused from the existing project data (people/relationships, never layout
+ * code — tree-v2/tree-v3 remain untouched and are not imported here); ids
+ * match the existing tree-v2/tree-v3 fixtures so this stays the same
+ * canonical people, not new synthetic stand-ins. Broader family/ancestor/
+ * divorce/remarriage scenarios beyond this core are covered by the
+ * synthetic fixtures below, not by further expanding this real dataset.
  */
 export const focusPersonId = "alexander-kupchik";
 const eleonoraId = "eleonora-kupchik";
@@ -17,6 +18,10 @@ const evaId = "eva-kupchik";
 const viktorId = "viktor-kupchik";
 const galinaId = "galina-kupchik";
 const dariaId = "daria-kupchik";
+const nikolaiKupchikId = "nikolai-kupchik";
+const elizavetaId = "elizaveta-kupchik";
+const nikolaiKozlovskyId = "nikolai-kozlovsky";
+const nadezhdaId = "nadezhda-kozlovskaya";
 
 export const initialFamilyGraph: FamilyGraph = {
   persons: [
@@ -49,6 +54,30 @@ export const initialFamilyGraph: FamilyGraph = {
       id: dariaId,
       firstName: "Дарья",
       lastName: "Купчик",
+      gender: "female",
+    },
+    {
+      id: nikolaiKupchikId,
+      firstName: "Николай",
+      lastName: "Купчик",
+      gender: "male",
+    },
+    {
+      id: elizavetaId,
+      firstName: "Елизавета",
+      lastName: "Купчик",
+      gender: "female",
+    },
+    {
+      id: nikolaiKozlovskyId,
+      firstName: "Николай",
+      lastName: "Козловский",
+      gender: "male",
+    },
+    {
+      id: nadezhdaId,
+      firstName: "Надежда",
+      lastName: "Козловская",
       gender: "female",
     },
   ],
@@ -102,6 +131,44 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: galinaId,
       to: dariaId,
+    },
+    {
+      id: "nikolai-kupchik-elizaveta-spouse",
+      kind: "spouse",
+      from: nikolaiKupchikId,
+      to: elizavetaId,
+      status: "married",
+    },
+    {
+      id: "nikolai-kupchik-viktor-parent",
+      kind: "parent-child",
+      from: nikolaiKupchikId,
+      to: viktorId,
+    },
+    {
+      id: "elizaveta-viktor-parent",
+      kind: "parent-child",
+      from: elizavetaId,
+      to: viktorId,
+    },
+    {
+      id: "nikolai-kozlovsky-nadezhda-spouse",
+      kind: "spouse",
+      from: nikolaiKozlovskyId,
+      to: nadezhdaId,
+      status: "married",
+    },
+    {
+      id: "nikolai-kozlovsky-galina-parent",
+      kind: "parent-child",
+      from: nikolaiKozlovskyId,
+      to: galinaId,
+    },
+    {
+      id: "nadezhda-galina-parent",
+      kind: "parent-child",
+      from: nadezhdaId,
+      to: galinaId,
     },
   ],
 };

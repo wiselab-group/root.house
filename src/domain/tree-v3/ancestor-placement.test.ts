@@ -23,7 +23,15 @@ describe("RowRegistry.place", () => {
 
   it("does not move a second cluster that already clears INTER_FAMILY_GAP from an unrelated neighbor", () => {
     const registry = new RowRegistry();
-    registry.place(-720, "cluster-a", "paternal", "family-a", -500, COUPLE_WIDTH, -500);
+    registry.place(
+      -720,
+      "cluster-a",
+      "paternal",
+      "family-a",
+      -500,
+      COUPLE_WIDTH,
+      -500,
+    );
     // Far enough right that INTER_FAMILY_GAP is already satisfied.
     const result = registry.place(
       -720,
@@ -40,7 +48,15 @@ describe("RowRegistry.place", () => {
 
   it("pushes an unrelated-family neighbor right by exactly the INTER_FAMILY_GAP deficit", () => {
     const registry = new RowRegistry();
-    registry.place(-720, "cluster-a", "paternal", "family-a", 0, COUPLE_WIDTH, 0);
+    registry.place(
+      -720,
+      "cluster-a",
+      "paternal",
+      "family-a",
+      0,
+      COUPLE_WIDTH,
+      0,
+    );
     // cluster-a occupies [-COUPLE_WIDTH/2, COUPLE_WIDTH/2]. Ask for a
     // neighbor whose preferred LEFT EDGE (preferredCenterX - width/2) is
     // only 10px clear of that right edge.
@@ -63,7 +79,15 @@ describe("RowRegistry.place", () => {
 
   it("uses the tighter same-family sibling gap (2×SPOUSE_GAP) for clusters sharing a familyRootId", () => {
     const registry = new RowRegistry();
-    registry.place(-720, "cluster-a", "paternal", "family-a", 0, COUPLE_WIDTH, 0);
+    registry.place(
+      -720,
+      "cluster-a",
+      "paternal",
+      "family-a",
+      0,
+      COUPLE_WIDTH,
+      0,
+    );
     const preferredLeftEdge = COUPLE_WIDTH / 2 + 10;
     const preferredCenterX = preferredLeftEdge + COUPLE_WIDTH / 2;
     const result = registry.place(
@@ -82,7 +106,15 @@ describe("RowRegistry.place", () => {
 
   it("never nudges a cluster left — only ever pushes right against its left neighbor", () => {
     const registry = new RowRegistry();
-    registry.place(-720, "cluster-a", "paternal", "family-a", 0, COUPLE_WIDTH, 0);
+    registry.place(
+      -720,
+      "cluster-a",
+      "paternal",
+      "family-a",
+      0,
+      COUPLE_WIDTH,
+      0,
+    );
     const result = registry.place(
       -720,
       "cluster-b",
@@ -97,7 +129,15 @@ describe("RowRegistry.place", () => {
 
   it("keeps rows on different Y fully independent", () => {
     const registry = new RowRegistry();
-    registry.place(-720, "cluster-a", "paternal", "family-a", 0, COUPLE_WIDTH, 0);
+    registry.place(
+      -720,
+      "cluster-a",
+      "paternal",
+      "family-a",
+      0,
+      COUPLE_WIDTH,
+      0,
+    );
     const result = registry.place(
       -960,
       "cluster-b",
@@ -116,10 +156,42 @@ describe("RowRegistry.place", () => {
     // Reproduces the actual bug trigger: 4 unrelated ancestor-couples on one
     // row. Preferred centers are close enough to force the sweep to nudge —
     // spaced by COUPLE_WIDTH exactly (no gap at all before resolution).
-    const r1 = registry.place(-720, "vladimir-marfa", "paternal", "family-1", -600, COUPLE_WIDTH, -600);
-    const r2 = registry.place(-720, "krivusha", "paternal", "family-2", -600 + COUPLE_WIDTH, COUPLE_WIDTH, -600 + COUPLE_WIDTH);
-    const r3 = registry.place(-720, "vasily-elizaveta", "maternal", "family-3", 600, COUPLE_WIDTH, 600);
-    const r4 = registry.place(-720, "grigory-agrafena", "maternal", "family-4", 600 + COUPLE_WIDTH, COUPLE_WIDTH, 600 + COUPLE_WIDTH);
+    const r1 = registry.place(
+      -720,
+      "vladimir-marfa",
+      "paternal",
+      "family-1",
+      -600,
+      COUPLE_WIDTH,
+      -600,
+    );
+    const r2 = registry.place(
+      -720,
+      "krivusha",
+      "paternal",
+      "family-2",
+      -600 + COUPLE_WIDTH,
+      COUPLE_WIDTH,
+      -600 + COUPLE_WIDTH,
+    );
+    const r3 = registry.place(
+      -720,
+      "vasily-elizaveta",
+      "maternal",
+      "family-3",
+      600,
+      COUPLE_WIDTH,
+      600,
+    );
+    const r4 = registry.place(
+      -720,
+      "grigory-agrafena",
+      "maternal",
+      "family-4",
+      600 + COUPLE_WIDTH,
+      COUPLE_WIDTH,
+      600 + COUPLE_WIDTH,
+    );
 
     expect(r1.centerX).toBeLessThan(r2.centerX);
     expect(r2.centerX).toBeLessThan(r3.centerX);

@@ -407,17 +407,143 @@ function placeAncestors(
 
     const y = gen * GENERATION_GAP;
 
+    // First, place every not-yet-placed sibling row this generation's units
+    // pull in — needed so each unit's "preferred center" below reflects the
+    // FULL sibling row, not just whichever child was placed first.
     for (const person of peopleInRow) {
-      if (positionByPerson.has(person.id)) continue; // may have been placed as a spouse below
+      const partnershipId = person.partnershipIds.find((id) => {
+        const p = graph.partnershipById.get(id);
+        return (
+          p && (p.leftPersonId === person.id || p.rightPersonId === person.id)
+        );
+      });
+      const partnership = partnershipId
+        ? graph.partnershipById.get(partnershipId)
+        : undefined;
+      const childrenIds =
+        partnership?.childrenIds ??
+        graph.soloParentByPersonId.get(person.id)?.childrenIds ??
+        [];
+      placeUnplacedSiblings(
+        graph,
+        childrenIds,
+        y + GENERATION_GAP,
+        occupancy,
+        positionByPerson,
+        junctionByPartnership,
+      );
+    }
+
+    // Compute each not-yet-placed unit's IDEAL (unbiased, uncollided) center
+    // — the pull from its own already-placed children — before anything on
+    // this row reserves space. Two units whose ideal centers would overlap
+    // (e.g. Viktor's parents and Galina's parents, pulled toward x=-328 and
+    // x=-120 respectively, each needing ~384px) must not be resolved by
+    // "whichever gets processed first keeps its exact ideal, the other gets
+    // pushed" — that reads as one lineage's connector line being perfectly
+    // straight and the other's kinked, which is not actually centered, just
+    // first-come-first-served. Instead the shortfall is split evenly: both
+    // units move the same distance off their own ideal, toward each other's
+    // side, so if a kink is unavoidable both lines bend equally rather than
+    // one staying straight at the other's expense.
+    // Dedupe by partnership: peopleInRow lists BOTH spouses of a paired
+    // ancestor unit as separate NormalizedPerson entries (e.g. Nikolai AND
+    // Elizaveta), but they are ONE visual unit and must get exactly one
+    // idealX plan entry between them — otherwise resolveSymmetricOverlaps
+    // would treat a couple as two separate units and push them apart from
+    // each other.
+    const seenUnit = new Set<string>();
+    const units: AncestorUnitPlan[] = [];
+    for (const person of peopleInRow) {
+      const spouseId = spouseOf(graph, person.id);
+      const unitKey = spouseId
+        ? [person.id, spouseId].sort().join("|")
+        : person.id;
+      if (seenUnit.has(unitKey)) continue;
+      seenUnit.add(unitKey);
+
+      const width = ancestorUnitWidth(graph, person.id);
+      const idealX =
+        preferredAncestorX(graph, person.id, positionByPerson) ??
+        preferredAncestorX(graph, spouseId, positionByPerson) ??
+        0;
+      units.push({ person, width, idealX });
+    }
+    resolveSymmetricOverlaps(units);
+
+    for (const unit of units) {
+      if (positionByPerson.has(unit.person.id)) continue; // may have been placed as a spouse below
       placeAncestorUnit(
         graph,
-        person.id,
+        unit.person.id,
+        unit.idealX,
         y,
         occupancy,
         positionByPerson,
         junctionByPartnership,
       );
     }
+  }
+}
+
+interface AncestorUnitPlan {
+  person: { id: string; branch: string };
+  width: number;
+  idealX: number;
+}
+
+/** The full width (both cards + gap) an ancestor unit will occupy, whether paired or solo. */
+function ancestorUnitWidth(graph: NormalizedGraph, personId: string): number {
+  const spouseId = spouseOf(graph, personId);
+  return spouseId ? CARD_WIDTH * 2 + SPOUSE_GAP : CARD_WIDTH;
+}
+
+function spouseOf(
+  graph: NormalizedGraph,
+  personId: string,
+): string | undefined {
+  const person = graph.personById.get(personId);
+  if (!person) return undefined;
+  const partnershipId = person.partnershipIds.find((id) => {
+    const p = graph.partnershipById.get(id);
+    return p && (p.leftPersonId === personId || p.rightPersonId === personId);
+  });
+  const partnership = partnershipId
+    ? graph.partnershipById.get(partnershipId)
+    : undefined;
+  if (!partnership) return undefined;
+  return partnership.leftPersonId === personId
+    ? partnership.rightPersonId
+    : partnership.leftPersonId;
+}
+
+/**
+ * Adjusts each unit's idealX in place, symmetrically, whenever two adjacent
+ * units' ideal footprints would overlap — instead of leaving the first one
+ * untouched and pushing only the second. Units are already sorted paternal
+ * (left) → unknown → maternal (right), so a left neighbor's ideal max edge
+ * overlapping a right neighbor's ideal min edge is resolved by moving BOTH
+ * outward by half the shortfall, keeping their shared midpoint fixed.
+ */
+function resolveSymmetricOverlaps(units: AncestorUnitPlan[]): void {
+  const requiredGap = Math.max(SIBLING_GAP, INTER_FAMILY_GAP);
+  for (let i = 0; i < units.length - 1; i++) {
+    const left = units[i];
+    const right = units[i + 1];
+    const leftEdge = left.idealX + left.width / 2;
+    const rightEdge = right.idealX - right.width / 2;
+    const shortfall = leftEdge + requiredGap - rightEdge;
+    if (shortfall <= 0) continue; // already enough room, nothing to resolve
+
+    // Required center-to-center distance so both footprints fit with the
+    // gap between them, then split evenly around their shared midpoint —
+    // each unit moves by the same amount off its own ideal, so if a kink is
+    // unavoidable both connector lines bend equally rather than one staying
+    // perfectly straight at the other's expense.
+    const midpoint = (left.idealX + right.idealX) / 2;
+    const requiredDistance = left.width / 2 + requiredGap + right.width / 2;
+    left.idealX = midpoint - requiredDistance / 2;
+    right.idealX = midpoint + requiredDistance / 2;
   }
 }
 
@@ -439,6 +565,7 @@ function sideRank(branch: string): number {
 function placeAncestorUnit(
   graph: NormalizedGraph,
   personId: string,
+  idealX: number,
   y: number,
   occupancy: OccupancyModel,
   positionByPerson: Map<string, Point>,
@@ -460,58 +587,40 @@ function placeAncestorUnit(
       : partnership.leftPersonId
     : undefined;
 
-  const unitWidth = spouseId ? CARD_WIDTH * 2 + SPOUSE_GAP : CARD_WIDTH;
+  // Spouses ALWAYS stay at the standard SPOUSE_GAP — never stretched apart
+  // to make room for their own (not-yet-placed) parents. "Husband and wife
+  // are a compact visual unit" outranks "the connector line to grandparents
+  // is perfectly straight": widening the gap between Viktor and Galina
+  // themselves to fit their respective grandparent couples reads as "these
+  // two aren't really together," which is a worse failure than one
+  // grandparent couple's connector line kinking sideways. If both sides
+  // have their own recorded parents and can't both center perfectly without
+  // colliding, the grandparent COUPLES may end up slightly off-center
+  // (resolved later purely by collision-avoidance, not by moving Viktor or
+  // Galina) — never the spouses themselves.
+  const spouseGap = SPOUSE_GAP;
+  const unitWidth = spouseId ? CARD_WIDTH * 2 + spouseGap : CARD_WIDTH;
 
-  // Place any not-yet-placed siblings of the descendant that pulled this
-  // ancestor pair into the graph BEFORE computing where the parents
-  // themselves go — a parent pair must center over the FULL sibling row
-  // (every child, not just whichever child happened to be placed first by
-  // the earlier downward pass), so the sibling row has to exist first.
-  // Placed at this same generation's Y (not the parents' Y) so it doesn't
-  // reserve space the parents' own unitWidth still needs.
-  const childrenIds =
-    partnership?.childrenIds ??
-    graph.soloParentByPersonId.get(personId)?.childrenIds ??
-    [];
-  placeUnplacedSiblings(
-    graph,
-    childrenIds,
-    y + GENERATION_GAP,
-    occupancy,
-    positionByPerson,
-    junctionByPartnership,
-  );
-
-  const childPulledX =
-    preferredAncestorX(graph, personId, positionByPerson) ??
-    preferredAncestorX(graph, spouseId, positionByPerson) ??
-    0;
-
-  // Paternal/maternal direction only matters between DIFFERENT ancestor
-  // clusters sharing a row (e.g. paternal grandparents vs maternal
-  // grandparents) — never inside a single married pair, where one partner
-  // is naturally "paternal" (the parent this branch descends from) and the
-  // other "maternal" by construction, even though they are one couple that
-  // must stay centered on their pulling child, not split apart by a
-  // directional bias. So the bias only applies when this ancestor is NOT
-  // paired with a spouse of the opposite direction.
-  const spouseBranch = spouseId
-    ? graph.personById.get(spouseId)?.branch
-    : undefined;
-  const isOppositeDirectionCouple =
-    (person.branch === "paternal" && spouseBranch === "maternal") ||
-    (person.branch === "maternal" && spouseBranch === "paternal");
-
-  const direction = isOppositeDirectionCouple
-    ? 0
-    : person.branch === "maternal"
-      ? 1
-      : person.branch === "paternal"
-        ? -1
-        : 0;
+  // idealX has ALREADY been resolved at the row level, in placeAncestors:
+  // it starts as the pull from this unit's own already-placed children, then
+  // — if it would overlap a neighboring unit's own ideal footprint on this
+  // same row — resolveSymmetricOverlaps() has moved BOTH units off their
+  // ideals by an equal amount, rather than letting whichever unit is
+  // processed first keep a perfect center while the other absorbs the whole
+  // shortfall (§ the Kozlovsky/Kupchik "one line straight, one line kinked"
+  // bug — see CLAUDE.md tree-v4 principle). So this function only needs to
+  // resolve actual, already-reserved collisions from OTHER rows/branches,
+  // using idealX as the preferred candidate.
+  //
+  // branchDirection is still the paternal=-1/maternal=+1 search direction
+  // used when findFreeInterval must move a unit off idealX to avoid an
+  // actual reservation — a paternal cluster and a maternal cluster must
+  // never end up swapped sides just because collision resolution picked the
+  // nearer-looking free interval on the wrong side.
+  const branchDirection =
+    person.branch === "maternal" ? 1 : person.branch === "paternal" ? -1 : 0;
   const gap = Math.max(SIBLING_GAP, INTER_FAMILY_GAP);
-  const sideBias = (unitWidth / 2 + gap / 2) * direction;
-  const preferredX = childPulledX + sideBias;
+  const preferredX = idealX;
 
   const resolvedX = occupancy.findFreeInterval(
     y,
@@ -520,18 +629,18 @@ function placeAncestorUnit(
     gap,
     preferredX,
     4000,
-    direction,
+    branchDirection,
   );
-  const centerX = resolvedX ?? preferredX + direction * gap;
+  const centerX = resolvedX ?? preferredX + branchDirection * gap;
 
   if (spouseId && partnership) {
     const isLeft = partnership.leftPersonId === personId;
     const selfX = isLeft
-      ? centerX - CARD_WIDTH / 2 - SPOUSE_GAP / 2
-      : centerX + CARD_WIDTH / 2 + SPOUSE_GAP / 2;
+      ? centerX - CARD_WIDTH / 2 - spouseGap / 2
+      : centerX + CARD_WIDTH / 2 + spouseGap / 2;
     const spouseX = isLeft
-      ? centerX + CARD_WIDTH / 2 + SPOUSE_GAP / 2
-      : centerX - CARD_WIDTH / 2 - SPOUSE_GAP / 2;
+      ? centerX + CARD_WIDTH / 2 + spouseGap / 2
+      : centerX - CARD_WIDTH / 2 - spouseGap / 2;
     positionByPerson.set(personId, { x: selfX, y });
     positionByPerson.set(spouseId, { x: spouseX, y });
     occupancy.reserve({ x: selfX, y, width: CARD_WIDTH, height: CARD_HEIGHT });

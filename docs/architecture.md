@@ -309,6 +309,7 @@ SELECT DISTINCT parent_id FROM ancestors;
 Descendants — то же самое зеркально (обход `parent_id → child_id`).
 
 `computeRelationshipPath(personAId, personBId)` (domain-only, без UI в MVP):
+
 1. Построить ancestors(A) и ancestors(B) с глубиной каждого предка.
 2. Найти lowest common ancestor(s) (пересечение множеств в JS/TS — множества
    обычно маленькие, не требует SQL-level intersection).
@@ -354,13 +355,22 @@ CREATE INDEX persons_name_trgm_idx ON persons
 ## Media storage
 
 `StorageService` interface (`domain/media/storage.service.ts`):
+
 ```ts
 interface StorageService {
-  upload(input: { key: string; file: Buffer | ReadableStream; contentType: string }): Promise<{ storageKey: string }>;
+  upload(input: {
+    key: string;
+    file: Buffer | ReadableStream;
+    contentType: string;
+  }): Promise<{ storageKey: string }>;
   delete(storageKey: string): Promise<void>;
-  getSignedUrl(storageKey: string, opts?: { expiresInSeconds?: number }): Promise<string>;
+  getSignedUrl(
+    storageKey: string,
+    opts?: { expiresInSeconds?: number },
+  ): Promise<string>;
 }
 ```
+
 Провайдер MVP — **Vercel Blob** (нулевая инфраструктурная конфигурация).
 `Media.storage_provider` колонка допускает будущую миграцию на Cloudflare R2
 (дешевле для видео/большого объёма) без переписывания domain-кода —
@@ -374,6 +384,7 @@ client-token upload**, вопреки первоначальному предп�
 т.е. любой файл, загруженный этим путём, становится публичным. Это
 конфликтует с жёстким требованием "private/family по умолчанию, никогда
 public без явного действия" — особенно для фото. Поэтому:
+
 - `POST /api/media/upload` (Route Handler, не Server Action — у Server
   Actions маленький дефолтный лимит тела запроса, непригодный для файлов) —
   принимает multipart FormData, проверяет `requireFamilyAccess`, вызывает
@@ -405,13 +416,13 @@ public без явного действия" — особенно для фот�
 
 ## Риски и принятые митигации
 
-| Риск | Митигация |
-|---|---|
-| Циклы/противоречивые relationships | Валидация в `relationship.service.ts`: self-reference CHECK в БД, ancestors-check перед вставкой parent_child против циклов |
-| Производительность recursive CTE при росте данных | Индексы уже в схеме, `maxDepth` limit, `EXPLAIN ANALYZE` на реалистичных тестовых данных перед продакшеном |
-| GEDCOM incompatibility в будущем | Поля структурированы для прямого маппинга (`INDI`→Person, `FAM`→partnership+дети, `BIRT/DEAT`→Event) — mapping-документ пишется, когда фича берётся в работу |
-| IDOR / privacy leak через join-таблицы | Обязательный `familyId` как первый аргумент в каждой repository-функции, единый паттерн `WHERE id=... AND family_id=...` |
-| Auth.js v5 в статусе beta | Версия зафиксирована точно в package.json |
+| Риск                                              | Митигация                                                                                                                                                    |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Циклы/противоречивые relationships                | Валидация в `relationship.service.ts`: self-reference CHECK в БД, ancestors-check перед вставкой parent_child против циклов                                  |
+| Производительность recursive CTE при росте данных | Индексы уже в схеме, `maxDepth` limit, `EXPLAIN ANALYZE` на реалистичных тестовых данных перед продакшеном                                                   |
+| GEDCOM incompatibility в будущем                  | Поля структурированы для прямого маппинга (`INDI`→Person, `FAM`→partnership+дети, `BIRT/DEAT`→Event) — mapping-документ пишется, когда фича берётся в работу |
+| IDOR / privacy leak через join-таблицы            | Обязательный `familyId` как первый аргумент в каждой repository-функции, единый паттерн `WHERE id=... AND family_id=...`                                     |
+| Auth.js v5 в статусе beta                         | Версия зафиксирована точно в package.json                                                                                                                    |
 
 ## Тестовая стратегия
 

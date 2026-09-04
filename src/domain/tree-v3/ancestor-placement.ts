@@ -383,7 +383,9 @@ function layoutOneCluster(
   let rowMaxX = anchorX + CARD_WIDTH / 2;
   {
     const siblingIds = fullSiblingsOf(graph, personId);
-    let cursor = rowGrowsLeft ? anchorX - CARD_WIDTH / 2 : anchorX + CARD_WIDTH / 2;
+    let cursor = rowGrowsLeft
+      ? anchorX - CARD_WIDTH / 2
+      : anchorX + CARD_WIDTH / 2;
     let prevId = personId;
     for (const siblingId of siblingIds) {
       if (placer.isPlaced(siblingId)) {

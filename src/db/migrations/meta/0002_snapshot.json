@@ -81,12 +81,8 @@
           "name": "accounts_user_id_users_id_fk",
           "tableFrom": "accounts",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -94,10 +90,7 @@
       "compositePrimaryKeys": {
         "accounts_provider_provider_account_id_pk": {
           "name": "accounts_provider_provider_account_id_pk",
-          "columns": [
-            "provider",
-            "provider_account_id"
-          ]
+          "columns": ["provider", "provider_account_id"]
         }
       },
       "uniqueConstraints": {},
@@ -134,12 +127,8 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -206,9 +195,7 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -243,10 +230,7 @@
       "compositePrimaryKeys": {
         "verification_tokens_identifier_token_pk": {
           "name": "verification_tokens_identifier_token_pk",
-          "columns": [
-            "identifier",
-            "token"
-          ]
+          "columns": ["identifier", "token"]
         }
       },
       "uniqueConstraints": {},
@@ -334,12 +318,8 @@
           "name": "families_created_by_users_id_fk",
           "tableFrom": "families",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -453,12 +433,8 @@
           "name": "family_members_family_id_families_id_fk",
           "tableFrom": "family_members",
           "tableTo": "families",
-          "columnsFrom": [
-            "family_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["family_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -466,12 +442,8 @@
           "name": "family_members_user_id_users_id_fk",
           "tableFrom": "family_members",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -479,12 +451,8 @@
           "name": "family_members_invited_by_users_id_fk",
           "tableFrom": "family_members",
           "tableTo": "users",
-          "columnsFrom": [
-            "invited_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["invited_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -578,12 +546,8 @@
           "name": "places_family_id_families_id_fk",
           "tableFrom": "places",
           "tableTo": "families",
-          "columnsFrom": [
-            "family_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["family_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -837,12 +801,8 @@
           "name": "persons_family_id_families_id_fk",
           "tableFrom": "persons",
           "tableTo": "families",
-          "columnsFrom": [
-            "family_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["family_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -850,12 +810,8 @@
           "name": "persons_birth_place_id_places_id_fk",
           "tableFrom": "persons",
           "tableTo": "places",
-          "columnsFrom": [
-            "birth_place_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["birth_place_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -863,12 +819,8 @@
           "name": "persons_death_place_id_places_id_fk",
           "tableFrom": "persons",
           "tableTo": "places",
-          "columnsFrom": [
-            "death_place_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["death_place_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -876,12 +828,8 @@
           "name": "persons_created_by_users_id_fk",
           "tableFrom": "persons",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -995,12 +943,8 @@
           "name": "relationships_parent_child_family_id_families_id_fk",
           "tableFrom": "relationships_parent_child",
           "tableTo": "families",
-          "columnsFrom": [
-            "family_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["family_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1008,12 +952,8 @@
           "name": "relationships_parent_child_parent_id_persons_id_fk",
           "tableFrom": "relationships_parent_child",
           "tableTo": "persons",
-          "columnsFrom": [
-            "parent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["parent_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1021,12 +961,8 @@
           "name": "relationships_parent_child_child_id_persons_id_fk",
           "tableFrom": "relationships_parent_child",
           "tableTo": "persons",
-          "columnsFrom": [
-            "child_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["child_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1191,12 +1127,8 @@
           "name": "relationships_partnership_family_id_families_id_fk",
           "tableFrom": "relationships_partnership",
           "tableTo": "families",
-          "columnsFrom": [
-            "family_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["family_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1204,12 +1136,8 @@
           "name": "relationships_partnership_person1_id_persons_id_fk",
           "tableFrom": "relationships_partnership",
           "tableTo": "persons",
-          "columnsFrom": [
-            "person1_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["person1_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1217,12 +1145,8 @@
           "name": "relationships_partnership_person2_id_persons_id_fk",
           "tableFrom": "relationships_partnership",
           "tableTo": "persons",
-          "columnsFrom": [
-            "person2_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["person2_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1318,12 +1242,8 @@
           "name": "event_participants_event_id_events_id_fk",
           "tableFrom": "event_participants",
           "tableTo": "events",
-          "columnsFrom": [
-            "event_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1331,12 +1251,8 @@
           "name": "event_participants_person_id_persons_id_fk",
           "tableFrom": "event_participants",
           "tableTo": "persons",
-          "columnsFrom": [
-            "person_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["person_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1520,12 +1436,8 @@
           "name": "events_family_id_families_id_fk",
           "tableFrom": "events",
           "tableTo": "families",
-          "columnsFrom": [
-            "family_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["family_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1533,12 +1445,8 @@
           "name": "events_place_id_places_id_fk",
           "tableFrom": "events",
           "tableTo": "places",
-          "columnsFrom": [
-            "place_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["place_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1629,12 +1537,8 @@
           "name": "stories_family_id_families_id_fk",
           "tableFrom": "stories",
           "tableTo": "families",
-          "columnsFrom": [
-            "family_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["family_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1642,12 +1546,8 @@
           "name": "stories_author_id_users_id_fk",
           "tableFrom": "stories",
           "tableTo": "users",
-          "columnsFrom": [
-            "author_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["author_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1710,12 +1610,8 @@
           "name": "story_event_story_id_stories_id_fk",
           "tableFrom": "story_event",
           "tableTo": "stories",
-          "columnsFrom": [
-            "story_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["story_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1723,12 +1619,8 @@
           "name": "story_event_event_id_events_id_fk",
           "tableFrom": "story_event",
           "tableTo": "events",
-          "columnsFrom": [
-            "event_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1806,12 +1698,8 @@
           "name": "story_person_story_id_stories_id_fk",
           "tableFrom": "story_person",
           "tableTo": "stories",
-          "columnsFrom": [
-            "story_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["story_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1819,12 +1707,8 @@
           "name": "story_person_person_id_persons_id_fk",
           "tableFrom": "story_person",
           "tableTo": "persons",
-          "columnsFrom": [
-            "person_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["person_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1887,12 +1771,8 @@
           "name": "story_place_story_id_stories_id_fk",
           "tableFrom": "story_place",
           "tableTo": "stories",
-          "columnsFrom": [
-            "story_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["story_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1900,12 +1780,8 @@
           "name": "story_place_place_id_places_id_fk",
           "tableFrom": "story_place",
           "tableTo": "places",
-          "columnsFrom": [
-            "place_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["place_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2044,12 +1920,8 @@
           "name": "media_family_id_families_id_fk",
           "tableFrom": "media",
           "tableTo": "families",
-          "columnsFrom": [
-            "family_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["family_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2057,12 +1929,8 @@
           "name": "media_uploaded_by_users_id_fk",
           "tableFrom": "media",
           "tableTo": "users",
-          "columnsFrom": [
-            "uploaded_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["uploaded_by"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -2140,12 +2008,8 @@
           "name": "media_event_media_id_media_id_fk",
           "tableFrom": "media_event",
           "tableTo": "media",
-          "columnsFrom": [
-            "media_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["media_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2153,12 +2017,8 @@
           "name": "media_event_event_id_events_id_fk",
           "tableFrom": "media_event",
           "tableTo": "events",
-          "columnsFrom": [
-            "event_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2236,12 +2096,8 @@
           "name": "media_person_media_id_media_id_fk",
           "tableFrom": "media_person",
           "tableTo": "media",
-          "columnsFrom": [
-            "media_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["media_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2249,12 +2105,8 @@
           "name": "media_person_person_id_persons_id_fk",
           "tableFrom": "media_person",
           "tableTo": "persons",
-          "columnsFrom": [
-            "person_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["person_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2317,12 +2169,8 @@
           "name": "media_place_media_id_media_id_fk",
           "tableFrom": "media_place",
           "tableTo": "media",
-          "columnsFrom": [
-            "media_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["media_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2330,12 +2178,8 @@
           "name": "media_place_place_id_places_id_fk",
           "tableFrom": "media_place",
           "tableTo": "places",
-          "columnsFrom": [
-            "place_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["place_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2398,12 +2242,8 @@
           "name": "media_story_media_id_media_id_fk",
           "tableFrom": "media_story",
           "tableTo": "media",
-          "columnsFrom": [
-            "media_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["media_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2411,12 +2251,8 @@
           "name": "media_story_story_id_stories_id_fk",
           "tableFrom": "media_story",
           "tableTo": "stories",
-          "columnsFrom": [
-            "story_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["story_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2432,58 +2268,32 @@
     "public.privacy_level": {
       "name": "privacy_level",
       "schema": "public",
-      "values": [
-        "private",
-        "family",
-        "public"
-      ]
+      "values": ["private", "family", "public"]
     },
     "public.family_role": {
       "name": "family_role",
       "schema": "public",
-      "values": [
-        "owner",
-        "editor",
-        "viewer"
-      ]
+      "values": ["owner", "editor", "viewer"]
     },
     "public.plan_tier": {
       "name": "plan_tier",
       "schema": "public",
-      "values": [
-        "free"
-      ]
+      "values": ["free"]
     },
     "public.gender": {
       "name": "gender",
       "schema": "public",
-      "values": [
-        "male",
-        "female",
-        "unknown",
-        "other"
-      ]
+      "values": ["male", "female", "unknown", "other"]
     },
     "public.parent_role": {
       "name": "parent_role",
       "schema": "public",
-      "values": [
-        "biological",
-        "adoptive",
-        "step",
-        "unknown"
-      ]
+      "values": ["biological", "adoptive", "step", "unknown"]
     },
     "public.partnership_status": {
       "name": "partnership_status",
       "schema": "public",
-      "values": [
-        "married",
-        "divorced",
-        "widowed",
-        "partnered",
-        "separated"
-      ]
+      "values": ["married", "divorced", "widowed", "partnered", "separated"]
     },
     "public.event_type": {
       "name": "event_type",
@@ -2507,12 +2317,7 @@
     "public.media_kind": {
       "name": "media_kind",
       "schema": "public",
-      "values": [
-        "photo",
-        "video",
-        "audio",
-        "document"
-      ]
+      "values": ["photo", "video", "audio", "document"]
     }
   },
   "schemas": {},

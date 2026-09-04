@@ -19,6 +19,7 @@
 ## Локальная разработка
 
 ### Требования
+
 - Node.js 20+
 - pnpm 10+
 - Neon Postgres проект (или любой совместимый Postgres) — https://neon.tech
@@ -32,6 +33,7 @@ cp .env.example .env.local
 ```
 
 `AUTH_SECRET` сгенерировать командой:
+
 ```bash
 pnpm dlx auth secret
 ```
@@ -78,6 +80,7 @@ pnpm build   # требует настоящий DATABASE_URL — Next.js исп
 
 `pnpm test` (Vitest, 71 тестов). Приоритет — доменная логика и безопасность,
 не coverage:
+
 - `src/domain/family/access.test.ts` — авторизация (`requireFamilyAccess`, роли owner/editor/viewer)
 - `src/domain/shared/partial-date.test.ts` — форматирование/сравнение неполных дат, парсинг form-данных
 - `src/domain/relationship/relationship.service.test.ts` — валидация связей (self-reference, циклы)

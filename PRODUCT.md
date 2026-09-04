@@ -1,6 +1,7 @@
 # Product Requirements
 
 ## Core Scope
+
 Type: Root house SaaS (семейная родословная + архив) — root.house.
 Target: пользователь может собрать, визуализировать и сохранить историю своей
 семьи, а затем передать её следующим поколениям. Первые версии деплоятся на
@@ -10,6 +11,7 @@ Animation Level: subtle-medium — спокойный, «семейный» то
 Content Ready: no — реальные семейные данные вносятся пользователем после запуска.
 
 ## Sections Map
+
 - `/register`, `/login` — регистрация/вход (Auth.js v5, Credentials provider)
 - `/families` — список семей текущего пользователя + создание новой
 - `/families/[slug]` — dashboard семьи (после MVP — редирект/ссылка на tree)
@@ -21,7 +23,9 @@ Content Ready: no — реальные семейные данные внося�
 - `/families/[slug]/search` — поиск по имени/фамилии/девичьей фамилии/годам
 
 ## User Flow
+
 Основной вертикальный срез (целевой сценарий для проверки качества MVP):
+
 1. Регистрация
 2. Создание Family
 3. Добавление себя как Person
@@ -35,6 +39,7 @@ Content Ready: no — реальные семейные данные внося�
 11. Поиск человека через Search
 
 ## Technical Constraints
+
 - Images: next/image, sizes attribute, blur placeholder — всегда, без исключений
 - SEO: семантический HTML. JSON-LD (WebSite + Organization) — низкий приоритет,
   т.к. приложение в основном приватное/за аутентификацией
@@ -49,6 +54,7 @@ Content Ready: no — реальные семейные данные внося�
 - i18n: не реализовано — интерфейс на русском
 
 ## Out of Scope (v1) — сознательно отложено, но не заблокировано архитектурно
+
 AI-помощник, OCR, распознавание лиц, автоматический genealogy inference,
 DNA-данные, billing/subscriptions/Stripe (в схеме есть только заготовка
 `Family.planTier`), интерактивные карты (Place уже geo-ready полями
@@ -60,16 +66,18 @@ system, реальный GEDCOM import/export (структура полей э�
 таблица (пока `Media.documentMetadata jsonb`).
 
 ## Performance Budget
-- LCP:              < 2.5s
-- CLS:              0.00 (без layout shifts)
-- INP:              < 200ms
-- JS first load:    < 150KB gzipped
+
+- LCP: < 2.5s
+- CLS: 0.00 (без layout shifts)
+- INP: < 200ms
+- JS first load: < 150KB gzipped
 - Без render-blocking ресурсов
 - Без неоптимизированных изображений
 
 ## Roadmap (краткая ссылка — детали в docs/architecture.md)
-Все этапы 0-12 завершены — MVP полностью реализован и проверен вживую.
-0. Bootstrap + документация (готово)
+
+Все этапы 0-12 завершены — MVP полностью реализован и проверен вживую. 0. Bootstrap + документация (готово)
+
 1. Auth (готово)
 2. Family + FamilyMember + authorization (готово)
 3. Person CRUD + placeholder-person (готово)
