@@ -5,13 +5,14 @@ import type { FamilyGraph } from "./types";
  * (his wife), Eva (their daughter), Alexander's parents Viktor and Galina,
  * his sister Daria, Viktor's own parents Nikolai and Elizaveta plus Viktor's
  * siblings Nikolai Jr./Svetlana/Natalya, and Galina's own parents Nikolai
- * and Nadezhda Kozlovsky plus Galina's sister Nina. This is the ONLY real
- * data reused from the existing project data (people/relationships, never
- * layout code — tree-v2/tree-v3 remain untouched and are not imported
- * here); ids match the existing tree-v2/tree-v3 fixtures so this stays the
- * same canonical people, not new synthetic stand-ins. Broader family/
- * ancestor/divorce/remarriage scenarios beyond this core are covered by the
- * synthetic fixtures below, not by further expanding this real dataset.
+ * and Nadezhda Kozlovsky plus Galina's sisters Nina/Marina/Tatyana/Vera/
+ * Lyubov/Olga/Raisa/Lyudmila. This is the ONLY real data reused from the
+ * existing project data (people/relationships, never layout code —
+ * tree-v2/tree-v3 remain untouched and are not imported here); ids match
+ * the existing tree-v2/tree-v3 fixtures so this stays the same canonical
+ * people, not new synthetic stand-ins. Broader family/ancestor/divorce/
+ * remarriage scenarios beyond this core are covered by the synthetic
+ * fixtures below, not by further expanding this real dataset.
  */
 export const focusPersonId = "alexander-kupchik";
 const eleonoraId = "eleonora-kupchik";
@@ -27,6 +28,13 @@ const natalyaId = "natalya-kupchik";
 const nikolaiKozlovskyId = "nikolai-kozlovsky";
 const nadezhdaId = "nadezhda-kozlovskaya";
 const ninaId = "nina-kozlovskaya";
+const marinaId = "marina-kozlovskaya";
+const tatyanaId = "tatyana-kozlovskaya";
+const veraId = "vera-kozlovskaya";
+const lyubovId = "lyubov-kozlovskaya";
+const olgaId = "olga-kozlovskaya";
+const raisaId = "raisa-kozlovskaya";
+const lyudmilaId = "lyudmila-kozlovskaya";
 
 export const initialFamilyGraph: FamilyGraph = {
   persons: [
@@ -106,6 +114,48 @@ export const initialFamilyGraph: FamilyGraph = {
     {
       id: ninaId,
       firstName: "Нина",
+      lastName: "Козловская",
+      gender: "female",
+    },
+    {
+      id: marinaId,
+      firstName: "Марина",
+      lastName: "Козловская",
+      gender: "female",
+    },
+    {
+      id: tatyanaId,
+      firstName: "Татьяна",
+      lastName: "Козловская",
+      gender: "female",
+    },
+    {
+      id: veraId,
+      firstName: "Вера",
+      lastName: "Козловская",
+      gender: "female",
+    },
+    {
+      id: lyubovId,
+      firstName: "Любовь",
+      lastName: "Козловская",
+      gender: "female",
+    },
+    {
+      id: olgaId,
+      firstName: "Ольга",
+      lastName: "Козловская",
+      gender: "female",
+    },
+    {
+      id: raisaId,
+      firstName: "Раиса",
+      lastName: "Козловская",
+      gender: "female",
+    },
+    {
+      id: lyudmilaId,
+      firstName: "Людмила",
       lastName: "Козловская",
       gender: "female",
     },
@@ -246,6 +296,90 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: nadezhdaId,
       to: ninaId,
+    },
+    {
+      id: "nikolai-kozlovsky-marina-parent",
+      kind: "parent-child",
+      from: nikolaiKozlovskyId,
+      to: marinaId,
+    },
+    {
+      id: "nadezhda-marina-parent",
+      kind: "parent-child",
+      from: nadezhdaId,
+      to: marinaId,
+    },
+    {
+      id: "nikolai-kozlovsky-tatyana-parent",
+      kind: "parent-child",
+      from: nikolaiKozlovskyId,
+      to: tatyanaId,
+    },
+    {
+      id: "nadezhda-tatyana-parent",
+      kind: "parent-child",
+      from: nadezhdaId,
+      to: tatyanaId,
+    },
+    {
+      id: "nikolai-kozlovsky-vera-parent",
+      kind: "parent-child",
+      from: nikolaiKozlovskyId,
+      to: veraId,
+    },
+    {
+      id: "nadezhda-vera-parent",
+      kind: "parent-child",
+      from: nadezhdaId,
+      to: veraId,
+    },
+    {
+      id: "nikolai-kozlovsky-lyubov-parent",
+      kind: "parent-child",
+      from: nikolaiKozlovskyId,
+      to: lyubovId,
+    },
+    {
+      id: "nadezhda-lyubov-parent",
+      kind: "parent-child",
+      from: nadezhdaId,
+      to: lyubovId,
+    },
+    {
+      id: "nikolai-kozlovsky-olga-parent",
+      kind: "parent-child",
+      from: nikolaiKozlovskyId,
+      to: olgaId,
+    },
+    {
+      id: "nadezhda-olga-parent",
+      kind: "parent-child",
+      from: nadezhdaId,
+      to: olgaId,
+    },
+    {
+      id: "nikolai-kozlovsky-raisa-parent",
+      kind: "parent-child",
+      from: nikolaiKozlovskyId,
+      to: raisaId,
+    },
+    {
+      id: "nadezhda-raisa-parent",
+      kind: "parent-child",
+      from: nadezhdaId,
+      to: raisaId,
+    },
+    {
+      id: "nikolai-kozlovsky-lyudmila-parent",
+      kind: "parent-child",
+      from: nikolaiKozlovskyId,
+      to: lyudmilaId,
+    },
+    {
+      id: "nadezhda-lyudmila-parent",
+      kind: "parent-child",
+      from: nadezhdaId,
+      to: lyudmilaId,
     },
   ],
 };

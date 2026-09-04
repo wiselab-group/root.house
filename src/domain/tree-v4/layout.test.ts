@@ -28,10 +28,10 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Nikolai/Nadezhda Kozlovsky/Nina minimal core)", () => {
+describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Nikolai/Nadezhda Kozlovsky + Galina's 8 sisters minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    expect(result.persons).toHaveLength(14);
+    expect(result.persons).toHaveLength(21);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -261,32 +261,62 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     expect(kozlovskyCenterX).toBeGreaterThanOrEqual(galina.x);
   });
 
-  it("Nikolai/Nadezhda Kozlovsky's partnership is centered over their FULL sibling row (Galina + Nina), not just over Galina", () => {
+  it("Nikolai/Nadezhda Kozlovsky's partnership is centered over their FULL sibling row (Galina + all 8 sisters), not just over Galina", () => {
     // Same "parents centered over the full sibling row" rule as
-    // Nikolai/Elizaveta over Viktor's four children: Kozlovsky now has TWO
-    // children on this row (Galina + Nina), so their ideal center is the
-    // midpoint of that row, not directly above Galina alone.
+    // Nikolai/Elizaveta over Viktor's four children: Kozlovsky now has NINE
+    // children on this row (Galina + Nina/Marina/Tatyana/Vera/Lyubov/Olga/
+    // Raisa/Lyudmila), so their ideal center is the midpoint of the WHOLE
+    // row, not directly above Galina alone.
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
     const nadezhda = personById(result, "nadezhda-kozlovskaya");
-    const galina = personById(result, "galina-kupchik");
-    const nina = personById(result, "nina-kozlovskaya");
+    const sisterIds = [
+      "galina-kupchik",
+      "nina-kozlovskaya",
+      "marina-kozlovskaya",
+      "tatyana-kozlovskaya",
+      "vera-kozlovskaya",
+      "lyubov-kozlovskaya",
+      "olga-kozlovskaya",
+      "raisa-kozlovskaya",
+      "lyudmila-kozlovskaya",
+    ];
+    const sisterXs = sisterIds.map((id) => personById(result, id).x);
 
     const maternalCenterX = (nikolaiKozlovsky.x + nadezhda.x) / 2;
-    const siblingRowCenterX = (galina.x + nina.x) / 2;
+    const siblingRowCenterX =
+      (Math.min(...sisterXs) + Math.max(...sisterXs)) / 2;
     expect(maternalCenterX).toBeCloseTo(siblingRowCenterX, 5);
   });
 
-  it("Nina is adjacent to Galina (her full sister), not scattered far away searching for free space near the origin", () => {
-    // Same regression as Viktor's siblings: Nina has no children of her
-    // own, so treating her as an independent ancestor unit would default
-    // her ideal position to x=0 instead of anchoring her beside Galina via
-    // placeUnplacedSiblings.
+  it("all of Galina's sisters are adjacent to each other in one continuous row, not scattered far away searching for free space near the origin", () => {
+    // Same regression as Viktor's siblings: a childless sibling has no
+    // "pull" (preferredAncestorX finds nothing to average), so treating
+    // them as an independent ancestor unit would default their ideal
+    // position to x=0 instead of anchoring them beside the nearest already-
+    // placed blood sibling via placeUnplacedSiblings — this must still hold
+    // when there are EIGHT such siblings to place, not just one or three.
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     const galina = personById(result, "galina-kupchik");
-    const nina = personById(result, "nina-kozlovskaya");
-    expect(Math.abs(nina.x - galina.x)).toBeLessThan(CARD_WIDTH * 5);
-    expect(nina.y).toBe(galina.y);
+    const sisterIds = [
+      "nina-kozlovskaya",
+      "marina-kozlovskaya",
+      "tatyana-kozlovskaya",
+      "vera-kozlovskaya",
+      "lyubov-kozlovskaya",
+      "olga-kozlovskaya",
+      "raisa-kozlovskaya",
+      "lyudmila-kozlovskaya",
+    ];
+    const sisters = sisterIds.map((id) => personById(result, id));
+    for (const sister of sisters) {
+      expect(sister.y).toBe(galina.y);
+    }
+    // The whole row of 9 sisters (Galina + 8) spans at most
+    // 9 cards + 8 sibling gaps — nobody drifted off far past that.
+    const allXs = [galina.x, ...sisters.map((s) => s.x)];
+    const spread = Math.max(...allXs) - Math.min(...allXs);
+    expect(spread).toBeLessThanOrEqual(9 * CARD_WIDTH + 8 * SIBLING_GAP + 1);
   });
 
   it("Viktor and Galina stay at the standard spouse gap, never stretched apart for their own grandparents' sake", () => {
