@@ -50,9 +50,7 @@ class VercelBlobStorageService implements StorageService {
   }
 
   /** Used by the media route handler to stream a private blob's bytes back to an authorized request. */
-  async getStream(
-    storageKey: string,
-  ): Promise<{
+  async getStream(storageKey: string): Promise<{
     stream: ReadableStream<Uint8Array>;
     contentType: string | null;
   }> {

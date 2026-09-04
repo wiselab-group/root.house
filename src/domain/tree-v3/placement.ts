@@ -644,27 +644,71 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     const siblingIds = fullSiblingsOf(personId);
     const cache = new Map<string, number>();
     // Сиблинги personId'а должны начинаться от края ЕГО СОБСТВЕННОЙ карточки
-    // (+ супруга, если есть) — НЕ от края всего его поддерева потомков.
-    // measurePersonDescendantWidth(personId) включает ширину ВСЕХ детей
-    // personId'а (напр. Николай Купчик — его сын Виктор со своей семьёй даёт
-    // personWidth=1648px), но дети размещаются НИЖЕ (следующий Y) и никак не
-    // мешают сиблингам personId'а того же поколения — использование полного
-    // personWidth здесь просто раздувало зазор между personId и ЕГО первым
-    // сиблингом на сотни лишних px (см. историю бага: Михаил/Марина Купчик
-    // оказывались на 952px от Николая Купчика вместо ~200px). own half-span
-    // берём из branchesOf: CARD_WIDTH+SPOUSE_GAP, если personId в браке (та
-    // же формула, что и halfSpan в placeBranch/placeAncestorPairUndirected),
-    // иначе просто CARD_WIDTH.
+    // (+ супруга, ЕСЛИ супруг сидит на ТОЙ ЖЕ стороне, куда растёт ряд) — НЕ
+    // от края всего его поддерева потомков. measurePersonDescendantWidth(
+    // personId) включает ширину ВСЕХ детей personId'а (напр. Николай Купчик —
+    // его сын Виктор со своей семьёй даёт personWidth=1648px), но дети
+    // размещаются НИЖЕ (следующий Y) и никак не мешают сиблингам personId'а
+    // того же поколения — использование полного personWidth здесь просто
+    // раздувало зазор между personId и ЕГО первым сиблингом на сотни лишних
+    // px (см. историю бага: Михаил/Марина Купчик оказывались на 952px от
+    // Николая Купчика вместо ~200px).
+    //
+    // ВАЖНО: anchorX — это позиция САМОГО personId (его карточки), а НЕ
+    // центр его пары с супругом — husband-left/wife-right (§9) ставит их
+    // асимметрично (супруг СБОКУ, не "вокруг" personId). Раньше здесь
+    // безусловно резервировался СИММЕТРИЧНЫЙ блок CARD_WIDTH*2+SPOUSE_GAP
+    // вокруг anchorX в обе стороны — это верно только когда супруг сидит
+    // ИМЕННО на стороне роста ряда; когда супруг на ПРОТИВОПОЛОЖНОЙ стороне
+    // (напр. Александр растит сиблингов влево, а Элеонора стоит справа от
+    // него), этот блок ошибочно тратил лишние ~2×SPOUSE_GAP+CARD_WIDTH px в
+    // сторону роста, где супруга физически нет (см. историю бага: Дарья
+    // Купчик получала зазор 168px до Александра вместо ожидаемых
+    // 2×SPOUSE_GAP=64px — "сиблинги должны отстоять друг от друга вдвое
+    // больше, чем супруги"). Теперь используем РЕАЛЬНУЮ сторону супруга
+    // (та же формула, что и slotAnchorX/freeDirectionGrowsLeft): расширяем
+    // personOwnEdge под супруга ТОЛЬКО если он на стороне growLeft/right.
     const personBranches = branchesOf(graph, personId);
+    const partnershipBranch = personBranches.find(
+      (b): b is Extract<Branch, { type: "partnership" }> =>
+        b.type === "partnership",
+    );
+    const halfSpan = (CARD_WIDTH + SPOUSE_GAP) / 2;
+    let spouseOnGrowthSide = false;
+    if (personBranches.length === 1 && partnershipBranch) {
+      const spouse = graph.personById.get(partnershipBranch.spouseId)!;
+      const person = graph.personById.get(personId)!;
+      const personIsLeftOfSpouse = shouldBeLeft(
+        person.gender,
+        spouse.gender,
+        personId,
+        partnershipBranch.spouseId,
+      );
+      // growLeft=true растит ряд влево — супруг мешает ТОЛЬКО если он тоже
+      // слева от personId (т.е. personId справа от супруга, !personIsLeftOfSpouse).
+      spouseOnGrowthSide = growLeft
+        ? !personIsLeftOfSpouse
+        : personIsLeftOfSpouse;
+    }
+    // Край блока в сторону роста: если супруг на этой стороне — до ЕГО
+    // дальнего края (anchorX ± (2×halfSpan + CARD_WIDTH/2), т.к. супруг
+    // стоит в 2×halfSpan от personId, §9); иначе — до собственного края
+    // personId'а (anchorX ± CARD_WIDTH/2), супруг тут вообще не участвует.
+    const personOwnEdge = growLeft
+      ? anchorX -
+        (spouseOnGrowthSide ? 2 * halfSpan + CARD_WIDTH / 2 : CARD_WIDTH / 2)
+      : anchorX +
+        (spouseOnGrowthSide ? 2 * halfSpan + CARD_WIDTH / 2 : CARD_WIDTH / 2);
+    // personOwnWidth — полная ширина "домашнего" блока personId'а НА ЭТОЙ
+    // (growth) стороне, используется ниже только для симметричного
+    // minX/maxX seed (rowCenterX/outerEdgeX должны знать про супруга на
+    // ЛЮБОЙ стороне, не только growth — см. ниже).
     const personHasPartnership = personBranches.some(
       (b) => b.type === "partnership",
     );
     const personOwnWidth = personHasPartnership
       ? CARD_WIDTH * 2 + SPOUSE_GAP
       : CARD_WIDTH;
-    const personOwnEdge = growLeft
-      ? anchorX - personOwnWidth / 2
-      : anchorX + personOwnWidth / 2;
     const chainedEdge =
       siblingsStartEdgeX !== undefined
         ? growLeft

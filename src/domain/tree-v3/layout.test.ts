@@ -98,6 +98,19 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     // focus, §9) — i.e. to the left of Alexander, not beyond Eleonora.
     expect(daria.x).toBeLessThan(alexander.x);
     expect(daria.x).toBeLessThan(eleonora.x);
+
+    // Product requirement: sibling-to-sibling edge gap is exactly double the
+    // spouse-to-spouse edge gap (SIBLING_GAP === 2×SPOUSE_GAP by definition
+    // in subtree.ts) — Alexander himself is husband-left of Eleonora (not
+    // centered between his own card and hers), so the sibling row's start
+    // edge must be measured from Alexander's OWN card edge, not from a
+    // symmetric "card+spouse" block around him (that inflated the gap to
+    // 168px instead of 64px — see history in placeFixedAnchorSiblingRow).
+    const spouseEdgeGap =
+      eleonora.x - CARD_WIDTH / 2 - (alexander.x + CARD_WIDTH / 2);
+    const siblingEdgeGap =
+      alexander.x - CARD_WIDTH / 2 - (daria.x + CARD_WIDTH / 2);
+    expect(siblingEdgeGap).toBe(spouseEdgeGap * 2);
   });
 
   // Пропущено: fixture временно урезан пользователем — nikolai-ushkar/

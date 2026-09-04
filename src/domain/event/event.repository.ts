@@ -158,15 +158,13 @@ export async function createEvent(
     .returning({ id: events.id });
 
   if (data.participants.length > 0) {
-    await db
-      .insert(eventParticipants)
-      .values(
-        data.participants.map((p) => ({
-          eventId: row.id,
-          personId: p.personId,
-          role: p.role,
-        })),
-      );
+    await db.insert(eventParticipants).values(
+      data.participants.map((p) => ({
+        eventId: row.id,
+        personId: p.personId,
+        role: p.role,
+      })),
+    );
   }
 
   return row;
