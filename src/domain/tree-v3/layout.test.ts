@@ -277,6 +277,28 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     expect(marfa.x - vladimir.x).toBe(spouseHalfSpan * 2);
   });
 
+  it("places Elena Ushkar's husband Nikolai adjacent to her, husband-left/wife-right (§9)", () => {
+    // Nikolai Ushkar is Elena Ushkar's spouse — husband-left/wife-right
+    // (§9) must hold for this couple exactly like any other, with no
+    // overlaps against the rest of the row (Vladimir/Marfa's own row,
+    // Grigory/Elizaveta Krivusha).
+    const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
+    const byId = new Map(result.persons.map((p) => [p.id, p]));
+    const elenaUshkar = byId.get("elena-ushkar")!;
+    const nikolaiUshkar = byId.get("nikolai-ushkar")!;
+
+    expect(nikolaiUshkar.y).toBe(elenaUshkar.y);
+    expect(nikolaiUshkar.x).toBeLessThan(elenaUshkar.x);
+
+    const spouseHalfSpan = (CARD_WIDTH + SPOUSE_GAP) / 2;
+    expect(elenaUshkar.x - nikolaiUshkar.x).toBe(spouseHalfSpan * 2);
+
+    const positions = new Map(
+      result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
+    expect(detectOverlaps(positions)).toEqual([]);
+  });
+
   it("keeps Nikolai Sr./Elizaveta Kupchik's own spouse gap fixed even when their two independent great-grandparent couples collide (§9)", () => {
     // Vladimir+Marfa Kupchik (Nikolai Sr.'s own parents) and Grigory+
     // Elizaveta Krivusha (Elizaveta Kupchik's own parents) are two
@@ -343,10 +365,7 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     expect(junction).toBe(childrenCenter);
   });
 
-  // Пропущено: fixture временно урезан пользователем — nikolai-ushkar/
-  // elena-ushkar (Виктора paternal aunt's family) больше нет в графе. Вернуть
-  // .skip → обычный it, когда Ushkar-ветка снова появится в fixture.ts.
-  it.skip("the Ushkar branch (paternal aunt's family) does not collide with Evtukh/Kupchik/Kozlovsky/Kolesnikovich siblings when it gains children (§40)", () => {
+  it("the Ushkar branch (paternal aunt's family) does not collide with Evtukh/Kupchik/Kozlovsky/Kolesnikovich siblings when it gains children (§40)", () => {
     // Elena Ushkar (paternal aunt of focus, via Grigory Krivusha + Elizaveta
     // Krivusha) gains two new children — must not collide with any
     // neighboring branch, without any person-specific positioning code
