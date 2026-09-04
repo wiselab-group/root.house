@@ -114,17 +114,34 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
   });
 
   it("gives adjacent siblings WITHOUT a spouse the same edge gap as spouses (§11)", () => {
-    // Natalya, Svetlana and Nikolai Jr. Kupchik are Viktor's full siblings —
-    // none of them has a partner in the fixture, so they should read as one
+    // Nina, Marina and Tatyana Kozlovskaya are Galina's full siblings — none
+    // of them has a partner in the fixture, so they should read as one
     // tight family cluster (SPOUSE_GAP between each unpaired neighbor pair),
     // not spaced out with the wider SIBLING_GAP meant to separate distinct
-    // sub-families within a row. Viktor himself DOES have a spouse (Galina)
-    // — the pair immediately next to him (Nikolai Jr. ↔ Viktor) keeps the
-    // normal, wider SIBLING_GAP, since Viktor's own spouse already occupies
-    // his far side (§9).
+    // sub-families within a row.
     const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
     const byId = new Map(result.persons.map((p) => [p.id, p]));
-    const natalya = byId.get("natalya-kupchik")!;
+    const nina = byId.get("nina-kozlovskaya")!;
+    const marina = byId.get("marina-kozlovskaya")!;
+    const tatyana = byId.get("tatyana-kozlovskaya")!;
+
+    const edgeGap = (a: { x: number }, b: { x: number }) =>
+      b.x - CARD_WIDTH / 2 - (a.x + CARD_WIDTH / 2);
+
+    expect(edgeGap(nina, marina)).toBe(SPOUSE_GAP);
+    expect(edgeGap(marina, tatyana)).toBe(SPOUSE_GAP);
+  });
+
+  it("gives an unpaired sibling flanked by two PAIRED siblings the normal, wider sibling gap on both sides (§11)", () => {
+    // Nikolai Jr. Kupchik (Viktor's full sibling) has no spouse in the
+    // fixture, but BOTH of his row neighbors do (Svetlana ↔ Viktor
+    // Efimovich; Viktor ↔ Galina) — the tight SPOUSE_GAP clustering only
+    // applies between neighbors that are BOTH unpaired; once either side of
+    // a pair has its own spouse occupying space, the normal, wider
+    // SIBLING_GAP applies instead (§9's spouse-adjacency already accounts
+    // for that side).
+    const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
+    const byId = new Map(result.persons.map((p) => [p.id, p]));
     const svetlana = byId.get("svetlana-kupchik")!;
     const nikolaiJr = byId.get("nikolai-kupchik-jr")!;
     const viktor = byId.get("viktor-kupchik")!;
@@ -132,10 +149,7 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     const edgeGap = (a: { x: number }, b: { x: number }) =>
       b.x - CARD_WIDTH / 2 - (a.x + CARD_WIDTH / 2);
 
-    expect(edgeGap(natalya, svetlana)).toBe(SPOUSE_GAP);
-    expect(edgeGap(svetlana, nikolaiJr)).toBe(SPOUSE_GAP);
-    // Nikolai Jr. (unpaired) next to Viktor (has a spouse) — stays at the
-    // normal, wider sibling gap.
+    expect(edgeGap(svetlana, nikolaiJr)).toBe(SIBLING_GAP);
     expect(edgeGap(nikolaiJr, viktor)).toBe(SIBLING_GAP);
   });
 
@@ -292,6 +306,34 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
 
     const spouseHalfSpan = (CARD_WIDTH + SPOUSE_GAP) / 2;
     expect(elenaUshkar.x - nikolaiUshkar.x).toBe(spouseHalfSpan * 2);
+
+    const positions = new Map(
+      result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
+    expect(detectOverlaps(positions)).toEqual([]);
+  });
+
+  it("places Natalya's husband Vladimir Evtukh and Svetlana's husband Viktor Efimovich adjacent, husband-left/wife-right (§9)", () => {
+    // Natalya and Svetlana Kupchik (Viktor's full siblings) each gained a
+    // spouse — husband-left/wife-right (§9) must hold for both couples,
+    // with no overlaps against the rest of the row (their own siblings,
+    // Nikolai Jr./Viktor, and the great-grandparent rows above).
+    const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
+    const byId = new Map(result.persons.map((p) => [p.id, p]));
+    const natalya = byId.get("natalya-kupchik")!;
+    const vladimirEvtukh = byId.get("vladimir-evtukh")!;
+    const svetlana = byId.get("svetlana-kupchik")!;
+    const viktorEfimovich = byId.get("viktor-efimovich")!;
+
+    const spouseHalfSpan = (CARD_WIDTH + SPOUSE_GAP) / 2;
+
+    expect(vladimirEvtukh.y).toBe(natalya.y);
+    expect(vladimirEvtukh.x).toBeLessThan(natalya.x);
+    expect(natalya.x - vladimirEvtukh.x).toBe(spouseHalfSpan * 2);
+
+    expect(viktorEfimovich.y).toBe(svetlana.y);
+    expect(viktorEfimovich.x).toBeLessThan(svetlana.x);
+    expect(svetlana.x - viktorEfimovich.x).toBe(spouseHalfSpan * 2);
 
     const positions = new Map(
       result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),

@@ -41,6 +41,8 @@ const mikhailKupchikId = "mikhail-kupchik";
 const veraKupchikId = "vera-kupchik";
 const elenaUshkarId = "elena-ushkar";
 const nikolaiUshkarId = "nikolai-ushkar";
+const vladimirEvtukhId = "vladimir-evtukh";
+const viktorEfimovichId = "viktor-efimovich";
 
 export const initialFamilyGraph: FamilyGraph = {
   persons: [
@@ -222,6 +224,18 @@ export const initialFamilyGraph: FamilyGraph = {
       id: nikolaiUshkarId,
       firstName: "Николай",
       lastName: "Ушкар",
+      gender: "male",
+    },
+    {
+      id: vladimirEvtukhId,
+      firstName: "Владимир",
+      lastName: "Евтух",
+      gender: "male",
+    },
+    {
+      id: viktorEfimovichId,
+      firstName: "Виктор",
+      lastName: "Ефимович",
       gender: "male",
     },
   ],
@@ -525,6 +539,18 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "spouse",
       from: nikolaiUshkarId,
       to: elenaUshkarId,
+    },
+    {
+      id: "natalya-vladimir-evtukh-spouse",
+      kind: "spouse",
+      from: vladimirEvtukhId,
+      to: natalyaId,
+    },
+    {
+      id: "svetlana-viktor-efimovich-spouse",
+      kind: "spouse",
+      from: viktorEfimovichId,
+      to: svetlanaId,
     },
   ],
 };
