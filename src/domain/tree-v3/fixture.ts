@@ -35,6 +35,8 @@ const lyudmilaId = "lyudmila-kozlovskaya";
 const vladimirId = "vladimir-kupchik";
 const marfaId = "marfa-kupchik";
 const yustinId = "yustin-kupchik";
+const grigoryKrivushaId = "grigory-krivusha";
+const elizavetaKrivushaId = "elizaveta-krivusha";
 
 export const initialFamilyGraph: FamilyGraph = {
   persons: [
@@ -181,6 +183,18 @@ export const initialFamilyGraph: FamilyGraph = {
       firstName: "Юстин",
       lastName: "Купчик",
       gender: "male",
+    },
+    {
+      id: grigoryKrivushaId,
+      firstName: "Григорий",
+      lastName: "Кривуша",
+      gender: "male",
+    },
+    {
+      id: elizavetaKrivushaId,
+      firstName: "Елизавета",
+      lastName: "Кривуша",
+      gender: "female",
     },
   ],
   relationships: [
@@ -423,6 +437,24 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: yustinId,
       to: vladimirId,
+    },
+    {
+      id: "grigory-elizaveta-krivusha-spouse",
+      kind: "spouse",
+      from: grigoryKrivushaId,
+      to: elizavetaKrivushaId,
+    },
+    {
+      id: "grigory-elizaveta-kupchik-parent",
+      kind: "parent-child",
+      from: grigoryKrivushaId,
+      to: elizavetaId,
+    },
+    {
+      id: "elizaveta-krivusha-elizaveta-kupchik-parent",
+      kind: "parent-child",
+      from: elizavetaKrivushaId,
+      to: elizavetaId,
     },
   ],
 };
