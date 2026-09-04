@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { buildTreeV3Layout } from "./layout";
 import { detectOverlaps, CARD_HEIGHT } from "./collision";
-import { CARD_WIDTH } from "./subtree";
+import { CARD_WIDTH, SIBLING_GAP } from "./subtree";
 import { initialFamilyGraph, focusPersonId as realFocusId } from "./fixture";
 import type { FamilyGraph } from "./types";
 
@@ -111,6 +111,30 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     const siblingEdgeGap =
       alexander.x - CARD_WIDTH / 2 - (daria.x + CARD_WIDTH / 2);
     expect(siblingEdgeGap).toBe(spouseEdgeGap * 2);
+  });
+
+  it("gives two unrelated grandparent couples the same edge gap as full siblings (§11)", () => {
+    // Elizaveta Kupchik (paternal grandmother, Nikolai Kupchik Sr.'s wife)
+    // and Nikolai Kozlovsky (maternal grandfather, Nadezhda's husband) are
+    // the innermost members of two DIFFERENT families (Kupchik side vs.
+    // Kozlovsky side) that happen to land on the same generation row.
+    // Neither grandparent has siblings of their own, so their "home"
+    // positions (centered over Viktor/Galina respectively) physically
+    // coincide at x=0 — resolveGrandparentSymmetry pushes both apart to
+    // resolve that collision. Product requirement: this inter-family gap
+    // should read the same as the gap between full siblings (SIBLING_GAP),
+    // not just clear a bare anti-collision minimum (MIN_GAP+RESOLUTION_GAP
+    // = 20px, which used to land the pair only 48px apart edge-to-edge —
+    // see history in resolveGrandparentSymmetry).
+    const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
+    const byId = new Map(result.persons.map((p) => [p.id, p]));
+    const elizaveta = byId.get("elizaveta-kupchik")!;
+    const nikolaiKozlovsky = byId.get("nikolai-kozlovsky")!;
+
+    expect(elizaveta.y).toBe(nikolaiKozlovsky.y);
+    const edgeGap =
+      nikolaiKozlovsky.x - CARD_WIDTH / 2 - (elizaveta.x + CARD_WIDTH / 2);
+    expect(edgeGap).toBe(SIBLING_GAP);
   });
 
   // Пропущено: fixture временно урезан пользователем — nikolai-ushkar/

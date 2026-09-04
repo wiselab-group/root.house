@@ -1,5 +1,5 @@
 import type { NormalizedGraph } from "./types";
-import { CARD_WIDTH } from "./subtree";
+import { CARD_WIDTH, SIBLING_GAP } from "./subtree";
 import { GENERATION_GAP, type PlacedPosition } from "./placement";
 
 /** Высота карточки — используется вместе с CARD_WIDTH для bounding box (§23/§24). Совпадает по духу с card-geometry.ts во view-слое, но domain не импортирует оттуда (§ domain изолирован от React). */
@@ -342,7 +342,16 @@ export function resolveGrandparentSymmetry(
   const maternalLeftEdge =
     Math.min(...maternalPositions.map((p) => p.x)) - CARD_WIDTH / 2;
   const actualGap = maternalLeftEdge - paternalRightEdge;
-  const deficit = MIN_GAP + RESOLUTION_GAP - actualGap;
+  // Целевой зазор — SIBLING_GAP (§11), не голый MIN_GAP+RESOLUTION_GAP
+  // (20px, чисто анти-коллизионный порог): paternal- и maternal-пары —
+  // это ДВЕ РАЗНЫЕ семьи (родня Купчиков и родня Козловских), а не
+  // сиблинги внутри одной — они должны читаться как визуально ОТДЕЛЬНЫЕ
+  // группы, с тем же зазором, что и между родными сиблингами (Александр↔
+  // Дарья, §11 "между семьями должно быть такое же расстояние, как между
+  // сиблингами"), а не просто "не накладываются" (см. историю бага:
+  // Елизавета Купчик/Николай Козловский сходились на 48px — едва больше
+  // MIN_GAP+RESOLUTION_GAP — вместо 64px=SIBLING_GAP).
+  const deficit = SIBLING_GAP - actualGap;
   if (deficit <= 0) return; // уже достаточный зазор — ничего не трогаем.
 
   // §7/§8 — деды/бабки ДОЛЖНЫ оставаться на своей стороне относительно
