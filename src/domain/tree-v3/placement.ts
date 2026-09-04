@@ -9,6 +9,12 @@ import {
   shouldBeLeft,
   type Branch,
 } from "./subtree";
+import {
+  RowRegistry,
+  collectAncestorFrontier,
+  placeAncestorGeneration,
+  type FrontierEntry,
+} from "./ancestor-placement";
 
 /** Вертикальный шаг между поколениями (soft — §14: базовый интервал; конкретный y узла может быть скорректирован локально при разрешении коллизий). */
 export const GENERATION_GAP = 240;
@@ -49,21 +55,6 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
   const positionByPerson = new Map<string, PlacedPosition>();
   const junctionByPartnership = new Map<string, PlacedPosition>();
   const placedPersons = new Set<string>();
-  // Дальний край уже занятой территории на (y, side) — ключ `${y}|left`/
-  // `${y}|right`. Каждый independently-placed ancestor-row (Марфа+Кривуша —
-  // РАЗНЫЕ вызовы placeAncestorFork на одном Y и одной стороне, не связанные
-  // друг с другом в рамках ОДНОГО placeAncestorPairUndirected, где работает
-  // "chained"-параметр) сверяется с этим перед стартом и обновляет его после
-  // — без этого две независимые ветки предков на одной стороне (paternal
-  // ИЛИ maternal) могут столкнуться, если каждая знает только про СВОЙ
-  // прямой родительский подъём, но не про параллельный подъём от СОСЕДНЕЙ
-  // ветки того же дерева (см. историю бага: Марфа Купчик (родители Николая
-  // Купчика) и Григорий Кривуша (родители Елизаветы Купчик) — обе paternal
-  // half-plane, но из РАЗНЫХ, не связанных друг с другом вызовов
-  // placeAncestorFork). Единственный "safety net" уровня §25 в этой
-  // реализации — remaining архитектурная граница measure-then-place
-  // подхода задокументирована как known limitation в финальном отчёте.
-  const occupiedEdgeBySide = new Map<string, number>();
   // Partnership id'ы, для которых placeBranch УЖЕ отработал (карточки +
   // junction + дети) — предотвращает бесконечную взаимную рекурсию
   // A→placeDescendantBranches(B)→[та же партнёрка a-b]→placeBranch→
@@ -88,13 +79,41 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
   // не разместила (нет branches) — фолбэк на явный x=0 seed.
   setPosition(graph.focusPersonId, 0, 0);
 
-  // 2) Предки фокуса — вверх, papa-side влево, mama-side вправо (§7/§8/§9).
-  placeAncestorFork(
+  // 2) Предки фокуса — breadth-first по поколениям, одно поколение
+  // ЦЕЛИКОМ за раз (см. ancestor-placement.ts — заменяет старую
+  // depth-first fork-рекурсию, которая проходила paternal-линию до конца
+  // ПРЕЖДЕ чем maternal-линия вообще начинала размещаться, из-за чего
+  // паре несвязанных ветвей на одном ряду не с чем было сверяться друг с
+  // другом при первичном размещении — только post-hoc, см. историю
+  // проекта). ownerByPerson — карта "кто чей" (заполняется ПОБОЧНЫМ
+  // ЭФФЕКТОМ по мере размещения каждого кластера) для nudgeCluster —
+  // единственного узкого примитива локального сдвига, заменяющего
+  // collision.ts::cascadeShift целиком.
+  const registry = new RowRegistry();
+  const ownerByPerson = new Map<string, string>();
+  const placer = {
+    setPosition,
+    isPlaced: (personId: string) => placedPersons.has(personId),
+    placeDescendantBranches,
+    slotAnchorX,
+  };
+  let frontier: FrontierEntry[] = collectAncestorFrontier(
+    graph,
     graph.focusPersonId,
     positionByPerson.get(graph.focusPersonId)!.x,
     0,
-    "free",
   );
+  while (frontier.length > 0) {
+    frontier = placeAncestorGeneration(
+      frontier,
+      graph,
+      positionByPerson,
+      ownerByPerson,
+      registry,
+      placer,
+      GENERATION_GAP,
+    );
+  }
 
   // 3) Нормализация: сдвигаем ВСЮ раскладку так, чтобы фокус оказался ровно
   // на x=0 (§6/§28 — это жёсткое требование, но достигается пост-фактум
@@ -136,30 +155,6 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     if (placedPersons.has(personId)) return;
     placedPersons.add(personId);
     positionByPerson.set(personId, { x, y });
-  }
-
-  /** Дальний уже занятый край на (y, side) — Infinity/-Infinity (никогда не ограничивает), если сторона ещё не занята. */
-  function occupiedEdge(y: number, side: "left" | "right"): number {
-    const key = `${y}|${side}`;
-    const value = occupiedEdgeBySide.get(key);
-    if (value !== undefined) return value;
-    return side === "left" ? Infinity : -Infinity;
-  }
-
-  /** Расширяет занятую территорию на (y, side) до нового края, если он дальше уже зафиксированного (§25 — safety net против независимых веток на одной стороне, не связанных общим caller'ом). */
-  function extendOccupiedEdge(
-    y: number,
-    side: "left" | "right",
-    edgeX: number,
-  ): void {
-    const key = `${y}|${side}`;
-    const current = occupiedEdgeBySide.get(key);
-    if (
-      current === undefined ||
-      (side === "left" ? edgeX < current : edgeX > current)
-    ) {
-      occupiedEdgeBySide.set(key, edgeX);
-    }
   }
 
   /**
@@ -471,34 +466,6 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     return isPersonLeft ? slotCenter - halfSpan : slotCenter + halfSpan;
   }
 
-  /**
-   * Только для direction==="free" (сиблинги самого фокуса, §11) — если у
-   * personId ровно одно partnership-branch, супруг уже занял одну из сторон
-   * (husband-left/wife-right, §9) через slotAnchorX/placeBranch; сиблинги
-   * должны расти в СВОБОДНУЮ сторону, а не сталкиваться с уже размещённым
-   * супругом. Без ровно одного partnership (нет брака, либо ремарьяж с
-   * несколькими) — прежний дефолт "вправо" (нет одной явно занятой стороны).
-   */
-  function freeDirectionGrowsLeft(personId: string): boolean {
-    const branches = branchesOf(graph, personId);
-    const partnershipBranches = branches.filter(
-      (b): b is Extract<Branch, { type: "partnership" }> =>
-        b.type === "partnership",
-    );
-    if (partnershipBranches.length !== 1) return false;
-    const spouse = graph.personById.get(partnershipBranches[0].spouseId)!;
-    const person = graph.personById.get(personId)!;
-    // Если personId сам стоит слева от супруга (husband-left, §9) — супруг
-    // занял правую сторону, значит сиблинги растут ЕЩЁ левее (прочь от
-    // супруга). Если personId справа (wife-right) — сиблинги растут вправо.
-    return shouldBeLeft(
-      person.gender,
-      spouse.gender,
-      personId,
-      partnershipBranches[0].spouseId,
-    );
-  }
-
   /** true, если у personId нет НИ ОДНОГО partnership-branch (§16) — ни супруга, ни, соответственно, общих с супругом детей. Solo-дети (без второго родителя в этом графе) НЕ считаются partnership — они не создают собственную пару рядом с personId. */
   function hasNoPartnership(personId: string): boolean {
     return !branchesOf(graph, personId).some((b) => b.type === "partnership");
@@ -550,538 +517,5 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
       placeDescendantBranches(childIds[i], childCenterX, childY);
       cursor += width + (gaps[i] ?? 0);
     }
-  }
-
-  // ---------------------------------------------------------------------
-  // Ancestors — paternal (left) / maternal (right) fork (§7/§8/§9).
-  // ---------------------------------------------------------------------
-
-  /**
-   * Поднимает personId к его родителям (§7/§8/§9) — родительская ПАРА
-   * ВСЕГДА размещается рядом друг с другом (husband-left/wife-right,
-   * §9 — "супруги должны находиться всегда рядом, независимо сколько
-   * сиблингов", подтверждённое требование продукта: см. историю — линия
-   * partnership между физически далёкими супругами читалась как
-   * пересекающая несвязанные карточки сиблингов, что нарушает "линии-
-   * коннекторы никогда не пересекаются").
-   *
-   * Paternal/maternal (§7/§8) — направление, в которую растут ветки ВЫШЕ
-   * этой пары (её собственные родители и их предки), а НЕ то, в какую
-   * сторону расходится сама пара: husband (leftId) поднимается с
-   * direction="left" (его собственные предки будут левее), wife (rightId) —
-   * с direction="right" — см. placeAncestorPairUndirected, где
-   * direction="free" уже даёт именно это разбиение при первом вызове.
-   */
-  function placeAncestorFork(
-    personId: string,
-    anchorX: number,
-    anchorY: number,
-    direction: "left" | "right" | "free",
-  ): void {
-    placeAncestorPairUndirected(personId, anchorX, anchorY, direction);
-  }
-
-  /** Полные сиблинги personId (та же пара родителей) — без paternal/maternal фильтра, т.к. вызывается уже ВНУТРИ одной определённой стороны. */
-  function fullSiblingsOf(personId: string): string[] {
-    const person = graph.personById.get(personId);
-    if (!person || person.parentIds.length === 0) return [];
-    const referenceSet = new Set(person.parentIds);
-    const firstParentId = person.parentIds[0];
-    const branches = branchesOf(graph, firstParentId);
-    const seen = new Set<string>([personId]);
-    const result: string[] = [];
-    for (const branch of branches) {
-      for (const childId of branch.childrenIds) {
-        if (seen.has(childId)) continue;
-        const childParentIds = graph.personById.get(childId)?.parentIds ?? [];
-        const sameParents =
-          childParentIds.length === referenceSet.size &&
-          childParentIds.every((id) => referenceSet.has(id));
-        if (!sameParents) continue;
-        seen.add(childId);
-        result.push(childId);
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Недирекционный (`direction==="free"`) ИЛИ унаследованный (`"left"`/
-   * `"right"` — уже внутри одной half-plane выше по стеку, см.
-   * placeAncestorFork) случай подъёма на одно поколение: сиблинги персоны
-   * кладутся рядом с ней, родитель(и) центрируются над рядом.
-   *
-   * Направление роста КАЖДОГО ряда на этом шаге (и sibling-row самой
-   * personId, и — рекурсивно — sibling-row'ов её родителей aId/bId) должно
-   * согласовываться с direction, унаследованным от самого верхнего fork'а:
-   * если мы уже внутри paternal half-plane (direction="left"), твой сиблинг
-   * ДОЛЖЕН расти ещё левее — не "просто вправо от своей anchorX", иначе два
-   * физически независимых ряда на одном Y (papa-side и mama-side, либо два
-   * сиблинга разных предков papa-side) не знают друг о друге и могут
-   * столкнуться (см. историю бага: Марфа Купчик (papa-side) сходилась с
-   * Григорием Кривушей (papa-side тоже, но через другого предка Елизаветы
-   * Купчик) — оба независимо росли "вправо от своей anchorX"). При
-   * direction="free" (единственный родитель фокуса без paternal/maternal
-   * развилки, либо синтетический граф без чёткого papa/mama различия) —
-   * растим вправо по умолчанию (детерминированно, §43), без ограничения.
-   */
-  /**
-   * Раскладывает сиблингов `personId` (§11) ВОКРУГ его УЖЕ зафиксированной
-   * (не переизмеряемой) позиции `anchorX` — growLeft=true растит их влево,
-   * false — вправо. В отличие от placeSiblingRowOneSided (которая заново
-   * измеряет и позиционирует САМ `personId` как часть ряда, начиная от
-   * outerEdge), эта функция трактует anchorX как неприкосновенный якорь —
-   * нужно, когда personId уже является частью зафиксированной пары (couple),
-   * чья ширина в measurePersonDescendantWidth УЖЕ включает брак: повторное
-   * измерение через ту же функцию задвоило бы ширину брака (см. историю
-   * бага в вызывающем коде placeAncestorPairUndirected: pgf/pgm — дед и
-   * бабка — оказывались ровно CARD_WIDTH, а не CARD_WIDTH+SPOUSE_GAP, друг
-   * от друга). Возвращает и x середины всего ряда (personId + сиблинги —
-   * то, над чем в итоге центрируется родительская пара), и дальний (outer)
-   * край ряда — нужен вызывающему коду для "chained" размещения ВТОРОГО
-   * независимого ряда на этой же стороне сразу ЗА этим (см. историю бага:
-   * Марфа Купчик (ряд Николая Купчика) сталкивалась с Григорием Кривушей
-   * (ряд Елизаветы Купчик) — оба независимо росли от одной точки).
-   */
-  function placeFixedAnchorSiblingRow(
-    personId: string,
-    growLeft: boolean,
-    anchorX: number,
-    y: number,
-    /** Если задан — сиблинги стартуют ОТСЮДА (уже сдвинутый чужим рядом край, "chained"), а не от края собственной карточки personId (см. вызывающий код placeAncestorPairUndirected — leftId/rightId растят siblings подряд на одной стороне). personId САМ остаётся на anchorX независимо от этого параметра. */
-    siblingsStartEdgeX?: number,
-  ): { rowCenterX: number; outerEdgeX: number } {
-    const side: "left" | "right" = growLeft ? "left" : "right";
-    const siblingIds = fullSiblingsOf(personId);
-    const cache = new Map<string, number>();
-    // Сиблинги personId'а должны начинаться от края ЕГО СОБСТВЕННОЙ карточки
-    // (+ супруга, ЕСЛИ супруг сидит на ТОЙ ЖЕ стороне, куда растёт ряд) — НЕ
-    // от края всего его поддерева потомков. measurePersonDescendantWidth(
-    // personId) включает ширину ВСЕХ детей personId'а (напр. Николай Купчик —
-    // его сын Виктор со своей семьёй даёт personWidth=1648px), но дети
-    // размещаются НИЖЕ (следующий Y) и никак не мешают сиблингам personId'а
-    // того же поколения — использование полного personWidth здесь просто
-    // раздувало зазор между personId и ЕГО первым сиблингом на сотни лишних
-    // px (см. историю бага: Михаил/Марина Купчик оказывались на 952px от
-    // Николая Купчика вместо ~200px).
-    //
-    // ВАЖНО: anchorX — это позиция САМОГО personId (его карточки), а НЕ
-    // центр его пары с супругом — husband-left/wife-right (§9) ставит их
-    // асимметрично (супруг СБОКУ, не "вокруг" personId). Раньше здесь
-    // безусловно резервировался СИММЕТРИЧНЫЙ блок CARD_WIDTH*2+SPOUSE_GAP
-    // вокруг anchorX в обе стороны — это верно только когда супруг сидит
-    // ИМЕННО на стороне роста ряда; когда супруг на ПРОТИВОПОЛОЖНОЙ стороне
-    // (напр. Александр растит сиблингов влево, а Элеонора стоит справа от
-    // него), этот блок ошибочно тратил лишние ~2×SPOUSE_GAP+CARD_WIDTH px в
-    // сторону роста, где супруга физически нет (см. историю бага: Дарья
-    // Купчик получала зазор 168px до Александра вместо ожидаемых
-    // 2×SPOUSE_GAP=64px — "сиблинги должны отстоять друг от друга вдвое
-    // больше, чем супруги"). Теперь используем РЕАЛЬНУЮ сторону супруга
-    // (та же формула, что и slotAnchorX/freeDirectionGrowsLeft): расширяем
-    // personOwnEdge под супруга ТОЛЬКО если он на стороне growLeft/right.
-    const personBranches = branchesOf(graph, personId);
-    const partnershipBranch = personBranches.find(
-      (b): b is Extract<Branch, { type: "partnership" }> =>
-        b.type === "partnership",
-    );
-    const halfSpan = (CARD_WIDTH + SPOUSE_GAP) / 2;
-    let spouseOnGrowthSide = false;
-    if (personBranches.length === 1 && partnershipBranch) {
-      const spouse = graph.personById.get(partnershipBranch.spouseId)!;
-      const person = graph.personById.get(personId)!;
-      const personIsLeftOfSpouse = shouldBeLeft(
-        person.gender,
-        spouse.gender,
-        personId,
-        partnershipBranch.spouseId,
-      );
-      // growLeft=true растит ряд влево — супруг мешает ТОЛЬКО если он тоже
-      // слева от personId (т.е. personId справа от супруга, !personIsLeftOfSpouse).
-      spouseOnGrowthSide = growLeft
-        ? !personIsLeftOfSpouse
-        : personIsLeftOfSpouse;
-    }
-    // Край блока в сторону роста: если супруг на этой стороне — до ЕГО
-    // дальнего края (anchorX ± (2×halfSpan + CARD_WIDTH/2), т.к. супруг
-    // стоит в 2×halfSpan от personId, §9); иначе — до собственного края
-    // personId'а (anchorX ± CARD_WIDTH/2), супруг тут вообще не участвует.
-    const personOwnEdge = growLeft
-      ? anchorX -
-        (spouseOnGrowthSide ? 2 * halfSpan + CARD_WIDTH / 2 : CARD_WIDTH / 2)
-      : anchorX +
-        (spouseOnGrowthSide ? 2 * halfSpan + CARD_WIDTH / 2 : CARD_WIDTH / 2);
-    // personLeftEdge/personRightEdge — РЕАЛЬНЫЕ (асимметричные) края
-    // "домашнего" блока personId'а, независимо от направления роста (нужны
-    // ниже для minX/maxX seed → rowCenterX, на который центрируется
-    // родительская пара, §10). Если супруг есть — он стоит СТРОГО с одной
-    // стороны (husband-left/wife-right, §9), не "вокруг" personId
-    // симметрично — раньше здесь применялся симметричный
-    // CARD_WIDTH*2+SPOUSE_GAP блок вокруг anchorX В ОБЕ СТОРОНЫ (как для
-    // personOwnEdge выше, до фикса), что сдвигало rowCenterX (и, значит,
-    // центр родительской пары над рядом детей) на фантомные ~104px в
-    // сторону, где супруга физически нет (см. историю бага: родители
-    // Виктора — Николай Купчик ст. + Елизавета — оказывались на 388px
-    // левее реального центра своих 4 детей (Наталья..Виктор), т.к. Виктор
-    // (последний в ряду, с супругой Галиной справа) добавлял в minX/maxX
-    // seed лишний "виртуальный" запас под Галину на ЛЕВОЙ стороне тоже,
-    // хотя она физически справа).
-    let personLeftEdge = anchorX - CARD_WIDTH / 2;
-    let personRightEdge = anchorX + CARD_WIDTH / 2;
-    if (personBranches.length === 1 && partnershipBranch) {
-      const spouse = graph.personById.get(partnershipBranch.spouseId)!;
-      const person = graph.personById.get(personId)!;
-      const personIsLeftOfSpouse = shouldBeLeft(
-        person.gender,
-        spouse.gender,
-        personId,
-        partnershipBranch.spouseId,
-      );
-      if (personIsLeftOfSpouse) {
-        personRightEdge = anchorX + 2 * halfSpan + CARD_WIDTH / 2;
-      } else {
-        personLeftEdge = anchorX - 2 * halfSpan - CARD_WIDTH / 2;
-      }
-    }
-    const chainedEdge =
-      siblingsStartEdgeX !== undefined
-        ? growLeft
-          ? Math.min(siblingsStartEdgeX, personOwnEdge)
-          : Math.max(siblingsStartEdgeX, personOwnEdge)
-        : personOwnEdge;
-    // §25 safety net: clamp против ЛЮБОЙ независимой ветки, ранее занявшей
-    // территорию на этой (y, side) — не только против явно "chained" вызова
-    // с известным siblingsStartEdgeX (см. историю бага: Марфа Купчик и
-    // Григорий Кривуша — НИКАКОЙ общий caller не связывал их напрямую).
-    const globalEdge = occupiedEdge(y, side);
-    const startEdge = growLeft
-      ? Math.min(chainedEdge, globalEdge)
-      : Math.max(chainedEdge, globalEdge);
-    let cursor = startEdge;
-    // minX/maxX (и, в конце, outerEdgeX/extendOccupiedEdge) должны отражать
-    // РЕАЛЬНО занятую территорию НА ЭТОМ Y — т.е. ширину собственной карточки
-    // anchor'а (+ супруга), НЕ его полного поддерева потомков. personWidth
-    // (measurePersonDescendantWidth) включает детей anchor'а, но они стоят
-    // НИЖЕ (следующий Y) — резервировать под них место на ЭТОМ ряду через
-    // extendOccupiedEdge означало ошибочно "застолбить" на текущем Y гораздо
-    // больше пространства, чем anchor физически занимает, и когда сиблингов
-    // у anchor'а нет вовсе (самый частый случай для дедушек/бабушек без
-    // братьев/сестёр), outerEdgeX мог уехать на сотни px дальше своей
-    // настоящей карточки — а именно на этот occupiedEdge потом ориентируется
-    // ПРОТИВОПОЛОЖНАЯ (paternal/maternal) сторона того же Y при перекрёстном
-    // clamp'е (см. minHalfPlaneGap ниже в placeAncestorPairUndirected) — из-
-    // за раздутого края она зря отодвигалась в сторону, хотя реальной
-    // коллизии не было (см. историю бага: Николай Козловский/Надежда
-    // Козловская уезжали на x=200/400 вместо симметричных 0/208 вокруг
-    // Галины, хотя у Николая Купчика — единственной paternal-карточки на том
-    // же Y — не было даже сиблингов, чтобы оправдать такой отступ).
-    let minX = personLeftEdge;
-    let maxX = personRightEdge;
-    // ownCardMinX/ownCardMaxX — то же самое, но СТРОГО по картам детей
-    // (personId и его сиблингов), БЕЗ супругов — на это центрируется
-    // родительская пара (rowCenterX, §10 "родители должны быть отцентрированы
-    // с их детьми"). Родитель центрируется именно над рядом СВОИХ детей, а не
-    // над "всем физически занятым пространством" — супруг ребёнка (напр.
-    // Галина, жена Виктора) не входит в расчёт центра, даже стоя вплотную
-    // (см. историю бага: minX/maxX выше уже включают Галину для outerEdgeX/
-    // occupiedEdge — это верно для коллизий, но НЕ для центрирования: раньше
-    // единый minX/maxX использовался для ОБОИХ назначений, и родители Виктора
-    // — Николай Купчик ст. + Елизавета — оказывались на ~400px в стороне от
-    // реального центра своих 4 детей).
-    let ownCardMinX = anchorX - CARD_WIDTH / 2;
-    let ownCardMaxX = anchorX + CARD_WIDTH / 2;
-    // prevId — сосед, от которого растёт текущий шаг цикла: сам personId на
-    // первой итерации, дальше — предыдущий уже размещённый сиблинг. Нужен,
-    // чтобы каждая ПАРА соседей в ряду получала свой собственный gap
-    // (siblingGapBetween, §11) — не единый SIBLING_GAP на весь ряд.
-    let prevId = personId;
-    for (const siblingId of siblingIds) {
-      const width = measurePersonDescendantWidth(graph, siblingId, cache);
-      // Этот сиблинг мог УЖЕ быть размещён РАНЬШЕ другим вызовом этой же
-      // функции — placeFixedAnchorSiblingRow вызывается ДВАЖДЫ на одного и
-      // того же personId: один раз "снизу" (от уровня ребёнка personId'а —
-      // реально кладёт карточки сиблингов на экран) и один раз "изнутри"
-      // placeAncestorPairUndirected(personId,...) (нужен только чтобы
-      // получить rowCenterX для центрирования РОДИТЕЛЕЙ personId'а). Второй
-      // вызов НЕ должен заново симулировать cursor-математику поверх уже
-      // занятого occupiedEdge (который первый вызов уже продвинул) — это
-      // считало бы позиции "ещё раз, начиная от края первого прохода",
-      // унося фантомный ownCardMinX/ownCardMaxX на сотни/тысячи px дальше
-      // реальных карточек (см. историю бага: rowCenterX для родителей
-      // Виктора получался -880 вместо истинного центра его 4 детей -552,
-      // т.к. второй проход стартовал от -968 — левого края уже размещённой
-      // Натальи из ПЕРВОГО прохода — вместо родного края Виктора -312).
-      // Вместо пересчёта — просто читаем уже сохранённую реальную позицию.
-      const alreadyPlacedPos = placedPersons.has(siblingId)
-        ? positionByPerson.get(siblingId)
-        : undefined;
-      let centerX: number;
-      let siblingOwnX: number;
-      if (alreadyPlacedPos) {
-        siblingOwnX = alreadyPlacedPos.x;
-        centerX = siblingOwnX;
-        cursor = growLeft ? siblingOwnX - width / 2 : siblingOwnX + width / 2;
-      } else {
-        const gap = siblingGapBetween(prevId, siblingId);
-        cursor += growLeft ? -(gap + width) : gap + width;
-        centerX = growLeft ? cursor + width / 2 : cursor - width / 2;
-        siblingOwnX = slotAnchorX(siblingId, centerX);
-        setPosition(siblingId, siblingOwnX, y);
-        placeDescendantBranches(siblingId, centerX, y);
-      }
-      minX = Math.min(minX, centerX - width / 2);
-      maxX = Math.max(maxX, centerX + width / 2);
-      ownCardMinX = Math.min(ownCardMinX, siblingOwnX - CARD_WIDTH / 2);
-      ownCardMaxX = Math.max(ownCardMaxX, siblingOwnX + CARD_WIDTH / 2);
-      prevId = siblingId;
-    }
-    const outerEdgeX = growLeft ? minX : maxX;
-    extendOccupiedEdge(y, side, outerEdgeX);
-    return { rowCenterX: (ownCardMinX + ownCardMaxX) / 2, outerEdgeX };
-  }
-
-  function placeAncestorPairUndirected(
-    personId: string,
-    anchorX: number,
-    anchorY: number,
-    direction: "left" | "right" | "free",
-  ): void {
-    const person = graph.personById.get(personId)!;
-    const parentIds = person.parentIds;
-    const primaryParentId = parentIds[0];
-    // direction==="free" — только у самого фокуса (единственный вызов без
-    // унаследованной paternal/maternal стороны, см. вызов в placeGraph). Раньше
-    // здесь был жёсткий дефолт "расти вправо", который игнорировал супруга
-    // фокуса — если у фокуса есть партнёрство (муж слева/жена справа, §9),
-    // его сиблинги должны расти в СВОБОДНУЮ сторону (противоположную супругу),
-    // а не в ту же, куда уже встал супруг: рост "вправо" при живущей там
-    // Элеоноре приземлял сиблинга (Дарью) ЗА её карточкой — читалось как
-    // "сестра фокуса стоит рядом с его женой", а не рядом с самим фокусом
-    // (см. историю бага: Дарья Купчик оказывалась на x=396, ПОСЛЕ Элеоноры
-    // на x=208, вместо места слева от Александра на x=0).
-    const growLeft =
-      direction === "left" ||
-      (direction === "free" && freeDirectionGrowsLeft(personId));
-
-    const { rowCenterX } = placeFixedAnchorSiblingRow(
-      personId,
-      growLeft,
-      anchorX,
-      anchorY,
-    );
-
-    const parentUnitY = anchorY - GENERATION_GAP;
-    if (parentIds.length === 2) {
-      const [aId, bId] = parentIds;
-      if (!placedPersons.has(aId) && !placedPersons.has(bId)) {
-        const a = graph.personById.get(aId)!;
-        const b = graph.personById.get(bId)!;
-        const isALeft = shouldBeLeft(a.gender, b.gender, aId, bId);
-        const [leftId, rightId] = isALeft ? [aId, bId] : [bId, aId];
-
-        // Внутри УЖЕ направленной half-plane (direction !== "free") — оба
-        // родителя и ИХ sibling-row'ы растут в ТУ ЖЕ сторону, что и вся
-        // ветка (не переоткрываем paternal/maternal развилку на этом
-        // уровне — та развилка бывает РОВНО ОДИН раз, у самого фокуса).
-        // При direction="free" — прежнее поведение (aId влево, bId вправо
-        // от rowCenterX), т.к. здесь ничто ещё не ограничивает стороны.
-        const leftSide = direction === "free" ? "left" : direction;
-        const rightSide = direction === "free" ? "right" : direction;
-        // При leftSide===rightSide (уже внутри одной half-plane) два ряда
-        // ДОЛЖНЫ идти ПОДРЯД друг за другом на этой же стороне — второй
-        // получает outerEdge, оставленный первым, а не тот же rowCenterX
-        // (иначе оба ряда стартуют из одной точки и накладываются, см.
-        // историю бага: Николай Купчик и Елизавета Купчик — оба "papa-side",
-        // но независимые предковые линии — оба росли "влево от rowCenterX").
-        const chained = leftSide === rightSide;
-
-        // leftId и rightId — ЧЕТА (пара), не два независимых "sibling-row
-        // root'а": оба состоят в ОДНОМ partnership друг с другом. Ставим их
-        // СНАЧАЛА как couple (halfSpan друг от друга, §9), и уже ОТ КРАЯ
-        // этой пары растим отдельно СВОИХ сиблингов (дядья/тёти персоны,
-        // если есть) наружу через placeSiblingRowOneSided. Если использовать
-        // placeSiblingRowOneSided НА САМОЙ паре (как раньше), каждый из
-        // leftId/rightId меряется через measurePersonDescendantWidth,
-        // который УЖЕ включает ширину их ОБЩЕГО брака (супруг+дети) — оба
-        // получают ОДИНАКОВЫЙ 384px слот за один и тот же брак, и пара
-        // накладывается сама на себя (см. историю бага: pgf/pgm — дед и
-        // бабка по отцовской линии — оказывались ровно CARD_WIDTH, а не
-        // CARD_WIDTH+SPOUSE_GAP, друг от друга).
-        const halfSpan = (CARD_WIDTH + SPOUSE_GAP) / 2;
-        const leftAlreadyPlaced = placedPersons.has(leftId);
-        const rightAlreadyPlaced = placedPersons.has(rightId);
-
-        // Чета (leftId/rightId — родители personId'а) центрируется РОВНО
-        // над своим ребёнком (rowCenterX ± halfSpan) — БЕЗ клампа против
-        // occupiedEdge чужой, никак не связанной пары на том же Y/стороне.
-        //
-        // Раньше здесь стоял clamp против occupiedEdge(parentUnitY, side) —
-        // задуман для СИБЛИНГОВ personId'а (дядья/тёти, растущие НАРУЖУ от
-        // уже размещённой четы, см. leftGrowLeft/rightGrowLeft ниже), но по
-        // ошибке применялся и к САМОЙ чете. personId — ЖЕНА в паре (напр.
-        // Елизавета Купчик, rightId с точки зрения ЕЁ РОДИТЕЛЕЙ выше по
-        // дереву) НЕ имеет отношения к occupiedEdge, который уже застолбили
-        // родители её МУЖА (Николай ст. → Владимир+Марфа) — это ДВЕ разные,
-        // никак не связанные родословные линии, просто совпавшие по Y и
-        // общему paternal half-plane. Clamp сдвигал родителей жены (Григорий
-        // +Елизавета Кривуша) ЗА пределы уже занятого мужниной линией края —
-        // в итоге они вставали ЛЕВЕЕ родителей мужа, читаясь как "родители
-        // Елизаветы — со стороны Николая", хотя должны расти строго над
-        // САМОЙ Елизаветой (см. историю бага). Потенциальное физическое
-        // пересечение двух независимо центрированных пар на одном Y (редкий
-        // случай — CARD_WIDTH+SPOUSE_GAP её самой узкий) разрешается ОТДЕЛЬНО
-        // после полного placeGraph тем же generic-механизмом, что и для
-        // дедушек/бабушек фокуса (см. collision.ts::resolveGrandparentSymmetry,
-        // §25 — hard no-overlap constraint важнее локальной оптимизации).
-        const coupleCenterX = rowCenterX;
-
-        // Перекрёстный (paternal↔maternal) конфликт на этом Y больше НЕ
-        // разрешается здесь точечным clamp'ом одной из двух пар — это давало
-        // асимметрию по построению (какая из двух пар накладывает clamp,
-        // зависело от порядка direction="left"/"right", т.е. ВСЕГДА двигалась
-        // только одна сторона, а другая оставалась идеально центрированной
-        // над своим ребёнком — читалось как "у одних дедушек с бабушками линия
-        // прямая, у других — сломанная", хотя отношения симметричны, см.
-        // историю бага и product feedback: "дерево Виктора и Галины должны
-        // быть симметричными"). Вместо этого обе пары остаются здесь
-        // центрированными РОВНО над своим ребёнком (rowCenterX ± halfSpan,
-        // без клампа) — потенциальное пересечение с противоположной half-
-        // plane на этом же Y разрешается ОДНИМ симметричным проходом ПОСЛЕ
-        // полного placeGraph (см. collision.ts::resolveGrandparentSymmetry) —
-        // раздвигает ОБЕ пары поровну от их анкеров, если они физически
-        // пересекаются, так что итоговое смещение (если оно вообще нужно)
-        // одинаково по величине и противоположно по знаку для paternal и
-        // maternal стороны.
-        if (!leftAlreadyPlaced)
-          setPosition(leftId, coupleCenterX - halfSpan, parentUnitY);
-        if (!rightAlreadyPlaced)
-          setPosition(rightId, coupleCenterX + halfSpan, parentUnitY);
-        if (direction === "left") {
-          extendOccupiedEdge(
-            parentUnitY,
-            "left",
-            coupleCenterX - halfSpan - CARD_WIDTH / 2,
-          );
-        }
-        if (direction === "right") {
-          extendOccupiedEdge(
-            parentUnitY,
-            "right",
-            coupleCenterX + halfSpan + CARD_WIDTH / 2,
-          );
-        }
-
-        // Каждая сторона растит СВОИХ сиблингов (дядья/тёти персоны, если
-        // есть) НАРУЖУ от уже зафиксированной пары — через тот же
-        // placeFixedAnchorSiblingRow, который использует anchor КАК ЕСТЬ (не
-        // переизмеряет его через measurePersonDescendantWidth, который уже
-        // посчитал бы их общий брак ВТОРОЙ раз — см. историю бага выше).
-        //
-        // leftId (муж пары) растит своих сиблингов (дядья/тёти personId'а по
-        // его отцу) "дальше в сторону унаследованного direction" — при
-        // chained===true (уже внутри ОДНОЙ half-plane, напр. maternal) это
-        // означает ЕЩЁ дальше в ТУ ЖЕ сторону (deeper into maternal
-        // territory), не назад к paternal — см. историю бага: сиблинги
-        // Николая Козловского (maternal branch) раньше жёстко получали
-        // growLeft=true независимо от direction и улетали в paternal-
-        // территорию. При direction==="free" (chained=false, самый верхний
-        // fork у фокуса) — прежнее поведение: leftId растит влево
-        // (paternal/maternal развилка).
-        const leftGrowLeft = chained ? growLeft : true;
-        // rightId (жена пары) растит СВОИХ сиблингов (напр. Елена Ушкар —
-        // сиблинг Елизаветы Купчик) В СТОРОНУ, СВОБОДНУЮ ОТ leftId (своего
-        // супруга) — тот же принцип "сиблинги растут прочь от супруга", что
-        // и freeDirectionGrowsLeft для фокуса (§9), а не безусловно "в ту
-        // же сторону, что и весь chained-кластер". При chained===true
-        // (leftId и rightId уже оба на одной half-plane, напр. Николай
-        // ст.+Елизавета — оба paternal) rightId растит СВОИХ сиблингов
-        // ПРОТИВОПОЛОЖНО growLeft (т.е. в сторону "от мужа") — иначе ряд
-        // Елены Ушкар рос бы ЗА спину Николая ст., глубже в paternal
-        // территорию, перемешиваясь с его собственными сиблингами
-        // (product decision: "помести Елену справа от Елизаветы"). При
-        // direction==="free" (chained=false, самый верхний fork у фокуса) —
-        // прежнее поведение: rightId растит вправо (paternal/maternal
-        // развилка, объективно "прочь от" leftId, растущего влево).
-        const rightGrowLeft = chained ? !growLeft : false;
-        if (!leftAlreadyPlaced) {
-          placeFixedAnchorSiblingRow(
-            leftId,
-            leftGrowLeft,
-            positionByPerson.get(leftId)!.x,
-            parentUnitY,
-          );
-        }
-        if (!rightAlreadyPlaced) {
-          // rightId растит СВОИХ сиблингов ПРОТИВОПОЛОЖНО leftId (прочь от
-          // супруга, см. rightGrowLeft выше) — их ряды растут В РАЗНЫЕ
-          // стороны от rightId'а, а не подряд друг за другом на одной, так
-          // что leftOuterEdge (край УЖЕ размещённого ряда leftId, на
-          // ПРОТИВОПОЛОЖНОЙ стороне) сюда не подставляется — ряд rightId'а
-          // всегда стартует от собственного края rightId'а.
-          placeFixedAnchorSiblingRow(
-            rightId,
-            rightGrowLeft,
-            positionByPerson.get(rightId)!.x,
-            parentUnitY,
-          );
-        }
-
-        const partnershipId = findSharedPartnershipId(aId, bId);
-        if (partnershipId)
-          junctionByPartnership.set(partnershipId, {
-            x: coupleCenterX,
-            y: parentUnitY,
-          });
-
-        // ПРИМЕЧАНИЕ: placeFixedAnchorSiblingRow (вызванный выше для
-        // leftId/rightId) УЖЕ спускается в placeDescendantBranches для
-        // каждого сиблинга внутри своего собственного цикла — повторный
-        // проход здесь был бы избыточным ВТОРЫМ вызовом на тех же людей
-        // (в отличие от placeSiblingRowOneSided в диспетчере diverging-fork
-        // выше по файлу, который НАМЕРЕННО только резервирует позиции без
-        // спуска в branches — см. "ФАЗА 1"/"ФАЗА 2" — здесь такого
-        // разделения нет и не нужно). Повторный вызов приводил к тому, что
-        // Елена Ушкар (сиблинг Елизаветы Купчик) посещалась
-        // placeDescendantBranches несколько раз с разными personX за один
-        // прогон, и её супруг (Николай Ушкар) в итоге вычислялся
-        // относительно НЕ последней её реальной позиции (см. историю бага).
-        placeAncestorFork(
-          leftId,
-          positionByPerson.get(leftId)!.x,
-          parentUnitY,
-          leftSide,
-        );
-        // ПРИМЕЧАНИЕ: rightId's собственный sibling-row (Елена Ушкар,
-        // сиблинг Елизаветы) УЖЕ размещён выше (placeFixedAnchorSiblingRow с
-        // rightGrowLeft) — этот вызов placeAncestorFork только продолжает
-        // подъём к ЕЁ СОБСТВЕННЫМ родителям (Григорий+Елизавета Кривуша),
-        // используя rightSide как обычно (её родители по-прежнему растут в
-        // общую paternal-сторону — сиблинг-ряд был исключением, а ancestor-
-        // рекурсия нет).
-        placeAncestorFork(
-          rightId,
-          positionByPerson.get(rightId)!.x,
-          parentUnitY,
-          rightSide,
-        );
-      }
-    } else if (parentIds.length === 1 && !placedPersons.has(primaryParentId)) {
-      setPosition(primaryParentId, rowCenterX, parentUnitY);
-      placeAncestorFork(primaryParentId, rowCenterX, parentUnitY, direction);
-    }
-  }
-
-  function findSharedPartnershipId(aId: string, bId: string): string | null {
-    const a = graph.personById.get(aId);
-    for (const partnershipId of a?.partnershipIds ?? []) {
-      const partnership = graph.partnershipById.get(partnershipId)!;
-      if (
-        (partnership.leftPersonId === aId &&
-          partnership.rightPersonId === bId) ||
-        (partnership.leftPersonId === bId && partnership.rightPersonId === aId)
-      ) {
-        return partnershipId;
-      }
-    }
-    return null;
   }
 }
