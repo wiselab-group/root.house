@@ -28,10 +28,10 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir/Marfa + Yustin (solo) + Nikolai/Nadezhda Kozlovsky + Galina's 8 sisters minimal core)", () => {
+describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Galina's 8 sisters minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    expect(result.persons).toHaveLength(24);
+    expect(result.persons).toHaveLength(26);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -213,13 +213,50 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     expect(vladimir.x).toBeLessThan(marfa.x);
   });
 
-  it("Vladimir and Marfa's partnership is centered exactly above Nikolai Kupchik Sr. (their only recorded child in this graph)", () => {
+  it("Vladimir/Marfa and Grigory/Elizaveta Krivusha (both Nikolai Kupchik Sr.'s side, one generation further up) are pulled off-center from their own children by equal, opposite amounts (symmetric kink, not one-straight-one-kinked)", () => {
+    // Vladimir/Marfa (pulled toward Nikolai) and Grigory/Elizaveta Krivusha
+    // (pulled toward Elizaveta, Nikolai's wife) are BOTH labeled "paternal"
+    // branch here — they're two independent couples that happen to land on
+    // the same generation row, one generation above Nikolai/Elizaveta. Same
+    // situation as Nikolai/Elizaveta Kupchik vs Nikolai/Nadezhda Kozlovsky:
+    // Nikolai and Elizaveta stay at the standard SPOUSE_GAP, so their two
+    // respective parent couples can't both center exactly above their own
+    // child without overlapping. The shortfall is split evenly rather than
+    // one couple keeping a perfect center while the other absorbs it all.
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     const nikolai = personById(result, "nikolai-kupchik");
+    const elizaveta = personById(result, "elizaveta-kupchik");
     const vladimir = personById(result, "vladimir-kupchik");
     const marfa = personById(result, "marfa-kupchik");
-    const centerX = (vladimir.x + marfa.x) / 2;
-    expect(centerX).toBeCloseTo(nikolai.x, 5);
+    const grigory = personById(result, "grigory-krivusha");
+    const elizavetaKrivusha = personById(result, "elizaveta-krivusha");
+
+    const vladimirMarfaCenterX = (vladimir.x + marfa.x) / 2;
+    const krivushaCenterX = (grigory.x + elizavetaKrivusha.x) / 2;
+    const vladimirMarfaOffset = vladimirMarfaCenterX - nikolai.x;
+    const krivushaOffset = krivushaCenterX - elizaveta.x;
+
+    expect(Math.abs(vladimirMarfaOffset)).toBeGreaterThan(1);
+    expect(Math.abs(krivushaOffset)).toBeGreaterThan(1);
+    expect(vladimirMarfaOffset).toBeCloseTo(-krivushaOffset, 5);
+  });
+
+  it("Grigory (husband) is left of Elizaveta Krivusha (wife)", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const grigory = personById(result, "grigory-krivusha");
+    const elizavetaKrivusha = personById(result, "elizaveta-krivusha");
+    expect(grigory.x).toBeLessThan(elizavetaKrivusha.x);
+  });
+
+  it("Grigory/Elizaveta Krivusha are above Elizaveta Kupchik, at the same generation as Vladimir/Marfa", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const elizaveta = personById(result, "elizaveta-kupchik");
+    const grigory = personById(result, "grigory-krivusha");
+    const elizavetaKrivusha = personById(result, "elizaveta-krivusha");
+    const vladimir = personById(result, "vladimir-kupchik");
+    expect(grigory.y).toBeLessThan(elizaveta.y);
+    expect(elizavetaKrivusha.y).toBeLessThan(elizaveta.y);
+    expect(grigory.y).toBe(vladimir.y);
   });
 
   it("Yustin (Vladimir's father, recorded as a SOLO parent — no mother in this graph) is above Vladimir, one generation further up", () => {

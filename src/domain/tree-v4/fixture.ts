@@ -7,9 +7,10 @@ import type { FamilyGraph } from "./types";
  * siblings Nikolai Jr./Svetlana/Natalya, Nikolai (Sr.)'s own parents
  * Vladimir and Marfa, Vladimir's own father Yustin (a SOLO parent — no
  * recorded mother/spouse for Yustin in this data, exercising the
- * SoloParent path with real data), and Galina's own parents Nikolai and
- * Nadezhda Kozlovsky plus Galina's sisters Nina/Marina/Tatyana/Vera/Lyubov/
- * Olga/Raisa/Lyudmila. This is the ONLY real data reused from the existing
+ * SoloParent path with real data), Elizaveta's own parents Grigory and
+ * Elizaveta Krivusha, and Galina's own parents Nikolai and Nadezhda
+ * Kozlovsky plus Galina's sisters Nina/Marina/Tatyana/Vera/Lyubov/Olga/
+ * Raisa/Lyudmila. This is the ONLY real data reused from the existing
  * project data (people/relationships, never layout code — tree-v2/tree-v3
  * remain untouched and are not imported here); ids match the existing
  * tree-v2/tree-v3 fixtures so this stays the same canonical people, not new
@@ -31,6 +32,8 @@ const natalyaId = "natalya-kupchik";
 const vladimirId = "vladimir-kupchik";
 const marfaId = "marfa-kupchik";
 const yustinId = "yustin-kupchik";
+const grigoryKrivushaId = "grigory-krivusha";
+const elizavetaKrivushaId = "elizaveta-krivusha";
 const nikolaiKozlovskyId = "nikolai-kozlovsky";
 const nadezhdaId = "nadezhda-kozlovskaya";
 const ninaId = "nina-kozlovskaya";
@@ -122,6 +125,18 @@ export const initialFamilyGraph: FamilyGraph = {
       firstName: "Юстин",
       lastName: "Купчик",
       gender: "male",
+    },
+    {
+      id: grigoryKrivushaId,
+      firstName: "Григорий",
+      lastName: "Кривуша",
+      gender: "male",
+    },
+    {
+      id: elizavetaKrivushaId,
+      firstName: "Елизавета",
+      lastName: "Кривуша",
+      gender: "female",
     },
     {
       id: nikolaiKozlovskyId,
@@ -314,6 +329,25 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: yustinId,
       to: vladimirId,
+    },
+    {
+      id: "grigory-elizaveta-krivusha-spouse",
+      kind: "spouse",
+      from: grigoryKrivushaId,
+      to: elizavetaKrivushaId,
+      status: "married",
+    },
+    {
+      id: "grigory-elizaveta-kupchik-parent",
+      kind: "parent-child",
+      from: grigoryKrivushaId,
+      to: elizavetaId,
+    },
+    {
+      id: "elizaveta-krivusha-elizaveta-kupchik-parent",
+      kind: "parent-child",
+      from: elizavetaKrivushaId,
+      to: elizavetaId,
     },
     {
       id: "nikolai-kozlovsky-nadezhda-spouse",
