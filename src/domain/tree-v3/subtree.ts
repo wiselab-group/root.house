@@ -25,6 +25,32 @@ export const REMARRIAGE_GAP = 56;
 export const INTER_FAMILY_GAP = SPOUSE_GAP * 2;
 
 /**
+ * Husband-left/wife-right (§9): male ранжируется раньше (слева), female —
+ * позже (справа), unknown — посередине. Если оба ранга совпадают (оба
+ * unknown, либо один и тот же gender — валидный, хоть и редкий случай),
+ * применяется детерминированный tie-break по сравнению id (§43 —
+ * детерминизм: один и тот же граф всегда даёт одну и ту же раскладку).
+ *
+ * Единая реализация — раньше существовало ДВЕ побайтово идентичные копии
+ * этой логики (placement.ts::shouldBeLeft и graph.ts::orderSpouses),
+ * случайно не разошедшиеся, но ничем не защищённые от расхождения при
+ * будущей правке одной копии без другой.
+ */
+export function shouldBeLeft(
+  personGender: "male" | "female" | "unknown",
+  spouseGender: "male" | "female" | "unknown",
+  personId: string,
+  spouseId: string,
+): boolean {
+  const rank = (g: "male" | "female" | "unknown") =>
+    g === "male" ? 0 : g === "unknown" ? 1 : 2;
+  const pr = rank(personGender);
+  const sr = rank(spouseGender);
+  if (pr !== sr) return pr < sr;
+  return personId <= spouseId;
+}
+
+/**
  * Каждый узел обхода — конкретный человек (ровно одна карточка, §17). Его
  * "под-ветки" — партнёрства (0..N) и/или "solo"-дети без партнёрства.
  */

@@ -6,6 +6,7 @@ import type {
   Person,
   SoloParent,
 } from "./types";
+import { shouldBeLeft } from "./subtree";
 
 /**
  * tree-v3 — построение NormalizedGraph из "сырого" FamilyGraph (§31).
@@ -122,14 +123,11 @@ export function normalizeGraph(
   };
 }
 
-/** Husband-first (male < unknown < female) — стабильный tie-break для двух unknown/same-gender пар: по id (§43 детерминизм). */
+/** Husband-first (§9) — тонкая обёртка над общей subtree.ts::shouldBeLeft (единственная реализация husband-left/wife-right ranking+tie-break во всём tree-v3, см. её комментарий). */
 function orderSpouses(a: Person, b: Person): [string, string] {
-  const rank = (g: Person["gender"]) =>
-    g === "male" ? 0 : g === "unknown" ? 1 : 2;
-  const ra = rank(a.gender);
-  const rb = rank(b.gender);
-  if (ra !== rb) return ra < rb ? [a.id, b.id] : [b.id, a.id];
-  return a.id <= b.id ? [a.id, b.id] : [b.id, a.id];
+  return shouldBeLeft(a.gender, b.gender, a.id, b.id)
+    ? [a.id, b.id]
+    : [b.id, a.id];
 }
 
 function pushMulti<K, V>(map: Map<K, V[]>, key: K, value: V): void {

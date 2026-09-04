@@ -6,6 +6,7 @@ import {
   SPOUSE_GAP,
   branchesOf,
   measurePersonDescendantWidth,
+  shouldBeLeft,
   type Branch,
 } from "./subtree";
 
@@ -496,21 +497,6 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
       personId,
       partnershipBranches[0].spouseId,
     );
-  }
-
-  /** husband-left/wife-right (§9): male слева. Если оба unknown/same gender — детерминированный tie-break по id (§43). */
-  function shouldBeLeft(
-    personGender: "male" | "female" | "unknown",
-    spouseGender: "male" | "female" | "unknown",
-    personId: string,
-    spouseId: string,
-  ): boolean {
-    const rank = (g: "male" | "female" | "unknown") =>
-      g === "male" ? 0 : g === "unknown" ? 1 : 2;
-    const pr = rank(personGender);
-    const sr = rank(spouseGender);
-    if (pr !== sr) return pr < sr;
-    return personId <= spouseId;
   }
 
   /** true, если у personId нет НИ ОДНОГО partnership-branch (§16) — ни супруга, ни, соответственно, общих с супругом детей. Solo-дети (без второго родителя в этом графе) НЕ считаются partnership — они не создают собственную пару рядом с personId. */
