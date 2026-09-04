@@ -386,15 +386,85 @@ export function resolveGrandparentSymmetry(
 
   if (deficit <= 0 && minShiftForOwnChildBound <= 0) return; // уже достаточный зазор И обе пары на своей стороне — ничего не трогаем.
 
+  // §10 — родители (Николай ст.+Елизавета и т.п.) ДОЛЖНЫ оставаться
+  // отцентрированы над своими детьми (полным sibling-row'ом — Наталья/
+  // Светлана/Николай мл./Виктор, а не только над одним ребёнком) — это
+  // жёсткое требование, которое симметричный сдвиг ОБЕИХ пар может
+  // сломать, если сдвигаться нужно только ОДНОЙ стороне.
+  //
+  // Симметричный сдвиг (раньше — безусловно ОБЕИХ пар на shiftEach)
+  // оправдан ТОЛЬКО когда КАЖДАЯ пара сама по себе стоит "дома"
+  // (центрирована над СВОИМ рядом детей, никем не сдвинута заранее) —
+  // тогда коллизия строго симметрична (обе пары одинаково стремятся друг к
+  // другу от x=0), и её разрешение поровну не портит ничью центровку (см.
+  // историю бага и product feedback: "отношения равноценные, линии не
+  // должны быть разными" — Виктор/Галина ДОЛЖНЫ читаться одинаково). Но
+  // когда деды/бабки уже смещены СВОИМИ сиблингами (напр. paternal-пара —
+  // Николай ст.+Елизавета — уже стоит ровно над своими 4 детьми, включая
+  // Наталью/Светлану/Николая мл., см. §11), они узнаваемо "дома" и сдвигать
+  // их дальше НЕЛЬЗЯ — нарушение (own-child bound ИЛИ недостаточный зазор)
+  // целиком принадлежит ДРУГОЙ стороне (Николай Козловский/Надежда), и
+  // сдвигать нужно ТОЛЬКО её (см. историю бага: Николай ст.+Елизавета
+  // съезжали с точного центра над своими 4 детьми на 112px влево, хотя их
+  // сторона была абсолютно корректна сама по себе).
+  // "У родителя есть полные сиблинги" ⇒ его дед/бабка (paternal/maternal
+  // grandparentIds) УЖЕ жёстко центрированы над РЯДОМ из нескольких детей
+  // (не только над одним) — эта позиция "пинится" §10 и НЕ должна сдвигаться
+  // здесь. Если сиблингов нет — дед/бабка стоят "дома" (просто centered над
+  // единственным ребёнком, halfSpan) и МОГУТ подвинуться без потери
+  // какого-либо centering-инварианта.
+  const paternalPinned = hasFullSiblings(graph, paternalParent.id);
+  const maternalPinned = hasFullSiblings(graph, maternalParent.id);
   const shiftEach = Math.max(deficit / 2, minShiftForOwnChildBound);
-  for (const id of paternalGrandparentIds) {
-    const pos = positionByPerson.get(id);
-    if (pos) pos.x -= shiftEach;
+  // Обе стороны "дома" (никто не запинен) — прежний симметричный сдвиг
+  // ОБЕИХ пар поровну (§ product feedback: "отношения равноценные, линии не
+  // должны быть разными"). Ровно одна сторона запинена — сдвигаем ТОЛЬКО
+  // незапиненную на ПОЛНУЮ величину (2×shiftEach: она одна закрывает весь
+  // дефицит/own-child bound, которые раньше делились пополам между двумя
+  // сторонами, см. историю бага выше). Обе запинены (редкий случай — обе
+  // стороны centering-важные) — сдвигать некого без поломки §10 обеим,
+  // оставляем как есть (assertNoOverlaps в layout.ts поймает реальную
+  // коллизию, если она есть).
+  if (!paternalPinned && !maternalPinned) {
+    for (const id of paternalGrandparentIds) {
+      const pos = positionByPerson.get(id);
+      if (pos) pos.x -= shiftEach;
+    }
+    for (const id of maternalGrandparentIds) {
+      const pos = positionByPerson.get(id);
+      if (pos) pos.x += shiftEach;
+    }
+  } else if (!paternalPinned) {
+    for (const id of paternalGrandparentIds) {
+      const pos = positionByPerson.get(id);
+      if (pos) pos.x -= shiftEach * 2;
+    }
+  } else if (!maternalPinned) {
+    for (const id of maternalGrandparentIds) {
+      const pos = positionByPerson.get(id);
+      if (pos) pos.x += shiftEach * 2;
+    }
   }
-  for (const id of maternalGrandparentIds) {
-    const pos = positionByPerson.get(id);
-    if (pos) pos.x += shiftEach;
+}
+
+/** true, если personId — один из НЕСКОЛЬКИХ детей от ОДНОЙ И ТОЙ ЖЕ родительской пары (т.е. у него есть хотя бы один полный сиблинг, §11) — ищет общий Partnership его родителей и проверяет childrenIds.length > 1. Один родитель или нет общего Partnership (SoloParent-случай) ⇒ false (эта функция не заглядывает в SoloParent — родительская пара без зафиксированного брака здесь не встречается для реальных grandparent-кейсов). */
+function hasFullSiblings(graph: NormalizedGraph, personId: string): boolean {
+  const person = graph.personById.get(personId);
+  if (!person || person.parentIds.length !== 2) return false;
+  const [aId, bId] = person.parentIds;
+  const a = graph.personById.get(aId);
+  for (const partnershipId of a?.partnershipIds ?? []) {
+    const partnership = graph.partnershipById.get(partnershipId);
+    if (!partnership) continue;
+    const members = new Set([
+      partnership.leftPersonId,
+      partnership.rightPersonId,
+    ]);
+    if (members.has(aId) && members.has(bId)) {
+      return partnership.childrenIds.length > 1;
+    }
   }
+  return false;
 }
 
 /**

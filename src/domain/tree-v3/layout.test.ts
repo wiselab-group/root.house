@@ -187,6 +187,33 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     expect(elizaveta.x).toBeLessThan(viktor.x);
   });
 
+  it("keeps a grandparent-couple exactly centered on their own children even when the OTHER couple needs to shift for the gap (§10)", () => {
+    // Nikolai Sr. + Elizaveta Kupchik are centered over ALL FOUR of their
+    // children (Natalya, Svetlana, Nikolai Jr., Viktor) — that position is
+    // pinned by §10 and must not move just because the maternal couple
+    // (Nikolai Kozlovsky + Nadezhda) needs to shift right to keep
+    // Nikolai Kozlovsky on Galina's (his own child's) side (§7/§8). Product
+    // requirement: only the side that actually needs to move should move —
+    // resolveGrandparentSymmetry used to shift BOTH couples equally even
+    // when only one side had a real violation, pulling Nikolai Sr. +
+    // Elizaveta 112px off-center from their 4 kids (see history in
+    // resolveGrandparentSymmetry).
+    const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
+    const byId = new Map(result.persons.map((p) => [p.id, p]));
+    const nikolaiSr = byId.get("nikolai-kupchik")!;
+    const elizaveta = byId.get("elizaveta-kupchik")!;
+    const natalya = byId.get("natalya-kupchik")!;
+    const svetlana = byId.get("svetlana-kupchik")!;
+    const nikolaiJr = byId.get("nikolai-kupchik-jr")!;
+    const viktor = byId.get("viktor-kupchik")!;
+
+    const junction = (nikolaiSr.x + elizaveta.x) / 2;
+    const childrenXs = [natalya.x, svetlana.x, nikolaiJr.x, viktor.x];
+    const childrenCenter =
+      (Math.min(...childrenXs) + Math.max(...childrenXs)) / 2;
+    expect(junction).toBe(childrenCenter);
+  });
+
   // Пропущено: fixture временно урезан пользователем — nikolai-ushkar/
   // elena-ushkar (Виктора paternal aunt's family) больше нет в графе. Вернуть
   // .skip → обычный it, когда Ushkar-ветка снова появится в fixture.ts.
