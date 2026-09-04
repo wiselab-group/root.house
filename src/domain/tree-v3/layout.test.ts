@@ -66,6 +66,26 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     expect(nikolaiKozlovsky.x).toBeGreaterThan(galina.x); // maternal ancestors grow further right
   });
 
+  it("places the focus person's own full sibling next to the focus, not past the focus's spouse (§11)", () => {
+    // Daria Kupchik is Alexander's full sibling (same parents: Viktor +
+    // Galina). Product requirement: a full sibling reads as "next to the
+    // focus person" — the old default (direction==="free" always grows
+    // sibling rows rightward) landed Daria past Eleonora (focus's spouse,
+    // who sits on the right per husband-left/wife-right, §9), which reads as
+    // "the sister stands next to the wife" instead of next to Alexander.
+    const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
+    const byId = new Map(result.persons.map((p) => [p.id, p]));
+    const alexander = byId.get(realFocusId)!;
+    const eleonora = byId.get("eleonora-kupchik")!;
+    const daria = byId.get("daria-kupchik")!;
+
+    expect(daria.y).toBe(alexander.y);
+    // Daria sits on the opposite side from the spouse (spouse is right of
+    // focus, §9) — i.e. to the left of Alexander, not beyond Eleonora.
+    expect(daria.x).toBeLessThan(alexander.x);
+    expect(daria.x).toBeLessThan(eleonora.x);
+  });
+
   // Пропущено: fixture временно урезан пользователем — nikolai-ushkar/
   // elena-ushkar (Виктора paternal aunt's family) больше нет в графе. Вернуть
   // .skip → обычный it, когда Ushkar-ветка снова появится в fixture.ts.

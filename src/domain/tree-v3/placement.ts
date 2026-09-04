@@ -413,6 +413,28 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     return isPersonLeft ? slotCenter - halfSpan : slotCenter + halfSpan;
   }
 
+  /**
+   * Только для direction==="free" (сиблинги самого фокуса, §11) — если у
+   * personId ровно одно partnership-branch, супруг уже занял одну из сторон
+   * (husband-left/wife-right, §9) через slotAnchorX/placeBranch; сиблинги
+   * должны расти в СВОБОДНУЮ сторону, а не сталкиваться с уже размещённым
+   * супругом. Без ровно одного partnership (нет брака, либо ремарьяж с
+   * несколькими) — прежний дефолт "вправо" (нет одной явно занятой стороны).
+   */
+  function freeDirectionGrowsLeft(personId: string): boolean {
+    const branches = branchesOf(graph, personId);
+    const partnershipBranches = branches.filter(
+      (b): b is Extract<Branch, { type: "partnership" }> => b.type === "partnership",
+    );
+    if (partnershipBranches.length !== 1) return false;
+    const spouse = graph.personById.get(partnershipBranches[0].spouseId)!;
+    const person = graph.personById.get(personId)!;
+    // Если personId сам стоит слева от супруга (husband-left, §9) — супруг
+    // занял правую сторону, значит сиблинги растут ЕЩЁ левее (прочь от
+    // супруга). Если personId справа (wife-right) — сиблинги растут вправо.
+    return shouldBeLeft(person.gender, spouse.gender, personId, partnershipBranches[0].spouseId);
+  }
+
   /** husband-left/wife-right (§9): male слева. Если оба unknown/same gender — детерминированный tie-break по id (§43). */
   function shouldBeLeft(
     personGender: "male" | "female" | "unknown",
@@ -618,7 +640,17 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     const person = graph.personById.get(personId)!;
     const parentIds = person.parentIds;
     const primaryParentId = parentIds[0];
-    const growLeft = direction === "left";
+    // direction==="free" — только у самого фокуса (единственный вызов без
+    // унаследованной paternal/maternal стороны, см. вызов в placeGraph). Раньше
+    // здесь был жёсткий дефолт "расти вправо", который игнорировал супруга
+    // фокуса — если у фокуса есть партнёрство (муж слева/жена справа, §9),
+    // его сиблинги должны расти в СВОБОДНУЮ сторону (противоположную супругу),
+    // а не в ту же, куда уже встал супруг: рост "вправо" при живущей там
+    // Элеоноре приземлял сиблинга (Дарью) ЗА её карточкой — читалось как
+    // "сестра фокуса стоит рядом с его женой", а не рядом с самим фокусом
+    // (см. историю бага: Дарья Купчик оказывалась на x=396, ПОСЛЕ Элеоноры
+    // на x=208, вместо места слева от Александра на x=0).
+    const growLeft = direction === "left" || (direction === "free" && freeDirectionGrowsLeft(personId));
 
     const { rowCenterX } = placeFixedAnchorSiblingRow(personId, growLeft, anchorX, anchorY);
 

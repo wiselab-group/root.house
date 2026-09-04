@@ -20,6 +20,7 @@ const nikolaiKupchikId = "nikolai-kupchik";
 const elizavetaId = "elizaveta-kupchik";
 const nikolaiKozlovskyId = "nikolai-kozlovsky";
 const nadezhdaId = "nadezhda-kozlovskaya";
+const dariaId = "daria-kupchik";
 
 export const initialFamilyGraph: FamilyGraph = {
   persons: [
@@ -75,6 +76,12 @@ export const initialFamilyGraph: FamilyGraph = {
       id: nadezhdaId,
       firstName: "Надежда",
       lastName: "Козловская",
+      gender: "female",
+    },
+    {
+      id: dariaId,
+      firstName: "Дарья",
+      lastName: "Купчик",
       gender: "female",
     },
   ],
@@ -150,6 +157,18 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: nadezhdaId,
       to: galinaId,
+    },
+    {
+      id: "viktor-daria-parent",
+      kind: "parent-child",
+      from: viktorId,
+      to: dariaId,
+    },
+    {
+      id: "galina-daria-parent",
+      kind: "parent-child",
+      from: galinaId,
+      to: dariaId,
     },
   ],
 };
