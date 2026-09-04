@@ -28,10 +28,10 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Nikolai/Nadezhda Kozlovsky minimal core)", () => {
+describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Nikolai/Nadezhda Kozlovsky/Nina minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    expect(result.persons).toHaveLength(13);
+    expect(result.persons).toHaveLength(14);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -248,16 +248,45 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // Nikolai/Elizaveta Kupchik now center over FOUR children (Viktor +
     // Nikolai Jr. + Svetlana + Natalya), so their ideal center is pulled
     // well to the left of Viktor himself — Kozlovsky (Galina's parents,
-    // only one recorded child) has no such wide row to center over, so it
-    // is not expected to be pulled by a comparable amount anymore. What
-    // still must hold: Kozlovsky stays right of Galina (correct maternal
-    // side), and the two great-grandparent clusters don't overlap.
+    // now two recorded children: Galina + Nina) does not have as wide a
+    // row to center over, so it is not expected to be pulled by a
+    // comparable amount anymore. What still must hold: Kozlovsky stays
+    // right of Galina (correct maternal side), and the two great-
+    // grandparent clusters don't overlap.
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     const galina = personById(result, "galina-kupchik");
     const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
     const nadezhda = personById(result, "nadezhda-kozlovskaya");
     const kozlovskyCenterX = (nikolaiKozlovsky.x + nadezhda.x) / 2;
     expect(kozlovskyCenterX).toBeGreaterThanOrEqual(galina.x);
+  });
+
+  it("Nikolai/Nadezhda Kozlovsky's partnership is centered over their FULL sibling row (Galina + Nina), not just over Galina", () => {
+    // Same "parents centered over the full sibling row" rule as
+    // Nikolai/Elizaveta over Viktor's four children: Kozlovsky now has TWO
+    // children on this row (Galina + Nina), so their ideal center is the
+    // midpoint of that row, not directly above Galina alone.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
+    const nadezhda = personById(result, "nadezhda-kozlovskaya");
+    const galina = personById(result, "galina-kupchik");
+    const nina = personById(result, "nina-kozlovskaya");
+
+    const maternalCenterX = (nikolaiKozlovsky.x + nadezhda.x) / 2;
+    const siblingRowCenterX = (galina.x + nina.x) / 2;
+    expect(maternalCenterX).toBeCloseTo(siblingRowCenterX, 5);
+  });
+
+  it("Nina is adjacent to Galina (her full sister), not scattered far away searching for free space near the origin", () => {
+    // Same regression as Viktor's siblings: Nina has no children of her
+    // own, so treating her as an independent ancestor unit would default
+    // her ideal position to x=0 instead of anchoring her beside Galina via
+    // placeUnplacedSiblings.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const galina = personById(result, "galina-kupchik");
+    const nina = personById(result, "nina-kozlovskaya");
+    expect(Math.abs(nina.x - galina.x)).toBeLessThan(CARD_WIDTH * 5);
+    expect(nina.y).toBe(galina.y);
   });
 
   it("Viktor and Galina stay at the standard spouse gap, never stretched apart for their own grandparents' sake", () => {

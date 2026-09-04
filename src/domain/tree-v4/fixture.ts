@@ -5,13 +5,13 @@ import type { FamilyGraph } from "./types";
  * (his wife), Eva (their daughter), Alexander's parents Viktor and Galina,
  * his sister Daria, Viktor's own parents Nikolai and Elizaveta plus Viktor's
  * siblings Nikolai Jr./Svetlana/Natalya, and Galina's own parents Nikolai
- * and Nadezhda Kozlovsky. This is the ONLY real data reused from the
- * existing project data (people/relationships, never layout code —
- * tree-v2/tree-v3 remain untouched and are not imported here); ids match
- * the existing tree-v2/tree-v3 fixtures so this stays the same canonical
- * people, not new synthetic stand-ins. Broader family/ancestor/divorce/
- * remarriage scenarios beyond this core are covered by the synthetic
- * fixtures below, not by further expanding this real dataset.
+ * and Nadezhda Kozlovsky plus Galina's sister Nina. This is the ONLY real
+ * data reused from the existing project data (people/relationships, never
+ * layout code — tree-v2/tree-v3 remain untouched and are not imported
+ * here); ids match the existing tree-v2/tree-v3 fixtures so this stays the
+ * same canonical people, not new synthetic stand-ins. Broader family/
+ * ancestor/divorce/remarriage scenarios beyond this core are covered by the
+ * synthetic fixtures below, not by further expanding this real dataset.
  */
 export const focusPersonId = "alexander-kupchik";
 const eleonoraId = "eleonora-kupchik";
@@ -26,6 +26,7 @@ const svetlanaId = "svetlana-kupchik";
 const natalyaId = "natalya-kupchik";
 const nikolaiKozlovskyId = "nikolai-kozlovsky";
 const nadezhdaId = "nadezhda-kozlovskaya";
+const ninaId = "nina-kozlovskaya";
 
 export const initialFamilyGraph: FamilyGraph = {
   persons: [
@@ -99,6 +100,12 @@ export const initialFamilyGraph: FamilyGraph = {
     {
       id: nadezhdaId,
       firstName: "Надежда",
+      lastName: "Козловская",
+      gender: "female",
+    },
+    {
+      id: ninaId,
+      firstName: "Нина",
       lastName: "Козловская",
       gender: "female",
     },
@@ -227,6 +234,18 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: nadezhdaId,
       to: galinaId,
+    },
+    {
+      id: "nikolai-kozlovsky-nina-parent",
+      kind: "parent-child",
+      from: nikolaiKozlovskyId,
+      to: ninaId,
+    },
+    {
+      id: "nadezhda-nina-parent",
+      kind: "parent-child",
+      from: nadezhdaId,
+      to: ninaId,
     },
   ],
 };
