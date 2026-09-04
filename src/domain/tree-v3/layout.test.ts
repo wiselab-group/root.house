@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { buildTreeV3Layout } from "./layout";
 import { detectOverlaps, CARD_HEIGHT } from "./collision";
-import { CARD_WIDTH, SIBLING_GAP } from "./subtree";
+import { CARD_WIDTH, SIBLING_GAP, SPOUSE_GAP } from "./subtree";
 import { initialFamilyGraph, focusPersonId as realFocusId } from "./fixture";
 import type { FamilyGraph } from "./types";
 
@@ -111,6 +111,32 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     const siblingEdgeGap =
       alexander.x - CARD_WIDTH / 2 - (daria.x + CARD_WIDTH / 2);
     expect(siblingEdgeGap).toBe(spouseEdgeGap * 2);
+  });
+
+  it("gives adjacent siblings WITHOUT a spouse the same edge gap as spouses (§11)", () => {
+    // Natalya, Svetlana and Nikolai Jr. Kupchik are Viktor's full siblings —
+    // none of them has a partner in the fixture, so they should read as one
+    // tight family cluster (SPOUSE_GAP between each unpaired neighbor pair),
+    // not spaced out with the wider SIBLING_GAP meant to separate distinct
+    // sub-families within a row. Viktor himself DOES have a spouse (Galina)
+    // — the pair immediately next to him (Nikolai Jr. ↔ Viktor) keeps the
+    // normal, wider SIBLING_GAP, since Viktor's own spouse already occupies
+    // his far side (§9).
+    const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
+    const byId = new Map(result.persons.map((p) => [p.id, p]));
+    const natalya = byId.get("natalya-kupchik")!;
+    const svetlana = byId.get("svetlana-kupchik")!;
+    const nikolaiJr = byId.get("nikolai-kupchik-jr")!;
+    const viktor = byId.get("viktor-kupchik")!;
+
+    const edgeGap = (a: { x: number }, b: { x: number }) =>
+      b.x - CARD_WIDTH / 2 - (a.x + CARD_WIDTH / 2);
+
+    expect(edgeGap(natalya, svetlana)).toBe(SPOUSE_GAP);
+    expect(edgeGap(svetlana, nikolaiJr)).toBe(SPOUSE_GAP);
+    // Nikolai Jr. (unpaired) next to Viktor (has a spouse) — stays at the
+    // normal, wider sibling gap.
+    expect(edgeGap(nikolaiJr, viktor)).toBe(SIBLING_GAP);
   });
 
   it("gives two unrelated grandparent couples AT LEAST the same edge gap as full siblings (§11)", () => {

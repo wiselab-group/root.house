@@ -513,7 +513,29 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     return personId <= spouseId;
   }
 
-  /** Раскладывает список детей (уникализированных) в ряд, центрированный на centerX, на y + GENERATION_GAP (§10) — каждый занимает measurePersonDescendantWidth. */
+  /** true, если у personId нет НИ ОДНОГО partnership-branch (§16) — ни супруга, ни, соответственно, общих с супругом детей. Solo-дети (без второго родителя в этом графе) НЕ считаются partnership — они не создают собственную пару рядом с personId. */
+  function hasNoPartnership(personId: string): boolean {
+    return !branchesOf(graph, personId).some((b) => b.type === "partnership");
+  }
+
+  /**
+   * Зазор МЕЖДУ ДВУМЯ конкретными соседними сиблингами в ряду (§11) — узкий
+   * SPOUSE_GAP, если у ОБОИХ нет собственного партнёрства (ни у одного нет
+   * супруга рядом, "занимающего" его дальнюю сторону), иначе обычный
+   * SIBLING_GAP. Product requirement: сиблинги без пары должны читаться как
+   * единая плотная семейная группа (как если бы они сами были парой) — если
+   * ХОТЯ БЫ У ОДНОГО из двух соседей есть супруг (который уже стоит рядом с
+   * НИМ отдельной карточкой), возвращаемся к обычному SIBLING_GAP: иначе
+   * узкий зазор читался бы как "эта пара сиблингов тоже семья", хотя рядом
+   * уже есть настоящая пара.
+   */
+  function siblingGapBetween(idA: string, idB: string): number {
+    return hasNoPartnership(idA) && hasNoPartnership(idB)
+      ? SPOUSE_GAP
+      : SIBLING_GAP;
+  }
+
+  /** Раскладывает список детей (уникализированных) в ряд, центрированный на centerX, на y + GENERATION_GAP (§10) — каждый занимает measurePersonDescendantWidth. Зазор МЕЖДУ соседями — siblingGapBetween (узкий SPOUSE_GAP, если оба без пары, иначе SIBLING_GAP, §11). */
   function placeChildrenRow(
     childrenIds: string[],
     centerX: number,
@@ -526,9 +548,12 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     const widths = childIds.map((id) =>
       measurePersonDescendantWidth(graph, id, cache),
     );
+    const gaps = childIds
+      .slice(1)
+      .map((id, i) => siblingGapBetween(childIds[i], id));
     const totalWidth =
       widths.reduce((sum, w) => sum + w, 0) +
-      SIBLING_GAP * Math.max(0, childIds.length - 1);
+      gaps.reduce((sum, g) => sum + g, 0);
 
     let cursor = centerX - totalWidth / 2;
     const childY = y + GENERATION_GAP;
@@ -537,7 +562,7 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
       const childCenterX = cursor + width / 2;
       setPosition(childIds[i], slotAnchorX(childIds[i], childCenterX), childY);
       placeDescendantBranches(childIds[i], childCenterX, childY);
-      cursor += width + SIBLING_GAP;
+      cursor += width + (gaps[i] ?? 0);
     }
   }
 
@@ -743,14 +768,21 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     // же Y — не было даже сиблингов, чтобы оправдать такой отступ).
     let minX = anchorX - personOwnWidth / 2;
     let maxX = anchorX + personOwnWidth / 2;
+    // prevId — сосед, от которого растёт текущий шаг цикла: сам personId на
+    // первой итерации, дальше — предыдущий уже размещённый сиблинг. Нужен,
+    // чтобы каждая ПАРА соседей в ряду получала свой собственный gap
+    // (siblingGapBetween, §11) — не единый SIBLING_GAP на весь ряд.
+    let prevId = personId;
     for (const siblingId of siblingIds) {
       const width = measurePersonDescendantWidth(graph, siblingId, cache);
-      cursor += growLeft ? -(SIBLING_GAP + width) : SIBLING_GAP + width;
+      const gap = siblingGapBetween(prevId, siblingId);
+      cursor += growLeft ? -(gap + width) : gap + width;
       const centerX = growLeft ? cursor + width / 2 : cursor - width / 2;
       setPosition(siblingId, slotAnchorX(siblingId, centerX), y);
       placeDescendantBranches(siblingId, centerX, y);
       minX = Math.min(minX, centerX - width / 2);
       maxX = Math.max(maxX, centerX + width / 2);
+      prevId = siblingId;
     }
     const outerEdgeX = growLeft ? minX : maxX;
     extendOccupiedEdge(y, side, outerEdgeX);
