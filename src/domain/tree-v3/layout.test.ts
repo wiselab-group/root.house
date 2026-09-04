@@ -244,6 +244,45 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     expect(krivushaJunction).toBeGreaterThan(vladimirMarfaJunction);
   });
 
+  it("keeps Nikolai Sr./Elizaveta Kupchik's own spouse gap fixed even when their two independent great-grandparent couples collide (§9)", () => {
+    // Vladimir+Marfa Kupchik (Nikolai Sr.'s own parents) and Grigory+
+    // Elizaveta Krivusha (Elizaveta Kupchik's own parents) are two
+    // UNRELATED ancestor couples that happen to land on the same Y/half-
+    // plane, one generation ABOVE Nikolai Sr./Elizaveta Kupchik (who are
+    // themselves married to EACH OTHER, not independent branches). Product
+    // decision: their collision must be resolved by pushing the two
+    // great-grandparent couples apart (accepting a kink in the connector
+    // line at that one level) — NOT by stretching Nikolai Sr./Elizaveta's
+    // own fixed SPOUSE_GAP (see history: an earlier attempt cascaded the
+    // shift down through each spouse's side independently and blew their
+    // gap from 208px to 448px, "верни расстояние между Николаем и
+    // Елизаветой").
+    const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
+    const byId = new Map(result.persons.map((p) => [p.id, p]));
+    const nikolaiSrKupchik = byId.get("nikolai-kupchik")!;
+    const elizavetaKupchik = byId.get("elizaveta-kupchik")!;
+    const marfa = byId.get("marfa-kupchik")!;
+    const grigoryKrivusha = byId.get("grigory-krivusha")!;
+
+    const spouseHalfSpan = (CARD_WIDTH + SPOUSE_GAP) / 2;
+    expect(elizavetaKupchik.x - nikolaiSrKupchik.x).toBe(spouseHalfSpan * 2);
+
+    // The two great-grandparent couples must not collide — SIBLING_GAP
+    // edge-to-edge between Marfa (paternal-side inner card) and Grigory
+    // (maternal-side inner card).
+    const marfaRightEdge = marfa.x + CARD_WIDTH / 2;
+    const grigoryLeftEdge = grigoryKrivusha.x - CARD_WIDTH / 2;
+    expect(grigoryLeftEdge - marfaRightEdge).toBeGreaterThanOrEqual(
+      SIBLING_GAP,
+    );
+
+    // Both great-grandparent couples stay on their own side of their own
+    // child (§7/§8) — Vladimir+Marfa strictly left of Nikolai Sr., Grigory+
+    // Elizaveta Krivusha strictly right of Elizaveta Kupchik.
+    expect(marfa.x).toBeLessThan(nikolaiSrKupchik.x);
+    expect(grigoryKrivusha.x).toBeGreaterThan(elizavetaKupchik.x);
+  });
+
   // Пропущено: fixture временно урезан пользователем — nikolai-ushkar/
   // elena-ushkar (Виктора paternal aunt's family) больше нет в графе. Вернуть
   // .skip → обычный it, когда Ushkar-ветка снова появится в fixture.ts.

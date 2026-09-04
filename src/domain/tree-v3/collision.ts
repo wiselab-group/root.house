@@ -303,30 +303,155 @@ export function resolveGrandparentSymmetry(
   const focusGeneration =
     graph.personById.get(graph.focusPersonId)?.generation ?? 0;
   const parentGeneration = focusGeneration - 1;
-  const grandparentGeneration = focusGeneration - 2;
 
-  // paternalParent/maternalParent — "Виктор"/"Галина" (родители фокуса,
-  // generation===parentGeneration) — их СОБСТВЕННЫЕ родители (grandparent-
-  // couple) сравниваются попарно.
-  const paternalParent = [...graph.personById.values()].find(
-    (p) => p.generation === parentGeneration && p.branch === "paternal",
-  );
-  const maternalParent = [...graph.personById.values()].find(
-    (p) => p.generation === parentGeneration && p.branch === "maternal",
-  );
-  if (!paternalParent || !maternalParent) return;
+  // §7/§8/§10/§11, обобщено на ЛЮБУЮ глубину предков (раньше — только ровно
+  // grandparentGeneration = focusGeneration−2, т.е. буквально бабушки/дедушки
+  // фокуса). Инвариант "прямая линия родитель→ребёнок" обязателен на КАЖДОМ
+  // уровне предков — прабабушки/прадедушки и глубже сталкиваются с той же
+  // paternal/maternal-коллизией (две независимо выросшие ветки совпадают по Y
+  // и половине), но раньше эта коллизия долетала до resolveResidualOverlaps —
+  // общего single-pass sweep'а без cascade к потомкам (см. edges.ts/
+  // layout.ts — junction пересчитывается от ФАКТИЧЕСКИХ позиций родителей,
+  // но их ребёнок оставался на старом месте) — линия к ребёнку ломалась (см.
+  // историю бага: Владимир+Марфа vs Григорий+Елизавета Кривуша, prababушки/
+  // прадедушки Александра — resolveResidualOverlaps сдвигал Кривушей вправо,
+  // но Елизавета Купчик (их дочь) оставалась на месте, junction съезжал от
+  // её X). Идём от caмого глубокого поколения предков ВВЕРХ (потомки уже
+  // разрешены раньше — каждый следующий уровень строится на уже
+  // скорректированных позициях предыдущего).
+  let deepestGeneration = parentGeneration;
+  for (const p of graph.personById.values()) {
+    if (p.generation < deepestGeneration) deepestGeneration = p.generation;
+  }
 
-  const paternalGrandparentIds = paternalParent.parentIds.filter(
-    (id) => graph.personById.get(id)?.generation === grandparentGeneration,
-  );
-  const maternalGrandparentIds = maternalParent.parentIds.filter(
-    (id) => graph.personById.get(id)?.generation === grandparentGeneration,
-  );
-  if (
-    paternalGrandparentIds.length !== 2 ||
-    maternalGrandparentIds.length !== 2
-  )
-    return;
+  for (
+    let childGeneration = parentGeneration;
+    childGeneration > deepestGeneration;
+    childGeneration--
+  ) {
+    resolveAncestorCoupleCollisionsAtGeneration(
+      positionByPerson,
+      graph,
+      childGeneration,
+    );
+  }
+}
+
+/**
+ * Одно поколение предков "childGeneration − 1" — родители всех людей
+ * generation===childGeneration — попарно сравниваются на предмет коллизии.
+ *
+ * Раньше здесь искалась РОВНО одна paternal-персона и РОВНО одна
+ * maternal-персона на childGeneration (buквально Виктор/Галина —
+ * родители фокуса) — работало только для ПЕРВОГО уровня предков. Глубже
+ * (прабабушки/прадедушки и дальше) на одном childGeneration может быть
+ * НЕСКОЛЬКО людей с одной и той же branch-меткой (напр. и Николай ст., и
+ * Елизавета Купчик — оба "paternal", т.к. branch наследуется от одной и той
+ * же стороны Александра, а не от "чей это конкретно родитель") — старый
+ * paternal-vs-maternal поиск такую пару вообще не находил, коллизия между
+ * их РОДИТЕЛЯМИ (Владимир+Марфа vs Григорий+Елизавета Кривуша) долетала до
+ * общего resolveResidualOverlaps без cascade к потомку (см. историю бага).
+ *
+ * Обобщение: берём КАЖДОГО человека на childGeneration с РОВНО двумя
+ * placed-родителями на childGeneration−1, группируем по Y их родительской
+ * пары, сортируем группу по X и сравниваем ТОЛЬКО соседние (по X) пары —
+ * коллизия физически возможна только между соседями, не через одну.
+ */
+function resolveAncestorCoupleCollisionsAtGeneration(
+  positionByPerson: Map<string, PlacedPosition>,
+  graph: NormalizedGraph,
+  childGeneration: number,
+): void {
+  const grandparentGeneration = childGeneration - 1;
+
+  interface Couple {
+    childId: string;
+    grandparentIds: [string, string];
+    y: number;
+    leftId: string;
+    rightId: string;
+  }
+
+  const couples: Couple[] = [];
+  for (const person of graph.personById.values()) {
+    if (person.generation !== childGeneration) continue;
+    const grandparentIds = person.parentIds.filter(
+      (id) => graph.personById.get(id)?.generation === grandparentGeneration,
+    );
+    if (grandparentIds.length !== 2) continue;
+    const [aId, bId] = grandparentIds;
+    const aPos = positionByPerson.get(aId);
+    const bPos = positionByPerson.get(bId);
+    if (!aPos || !bPos || aPos.y !== bPos.y) continue;
+    const [leftId, rightId] = aPos.x <= bPos.x ? [aId, bId] : [bId, aId];
+    couples.push({
+      childId: person.id,
+      grandparentIds: [aId, bId],
+      y: aPos.y,
+      leftId,
+      rightId,
+    });
+  }
+  if (couples.length < 2) return;
+
+  // Дедупликация по grandparentIds — если у ОДНОЙ пары предков несколько
+  // детей на childGeneration (полные сиблинги, напр. Наталья/Светлана/
+  // Николай мл./Виктор — все 4 ребёнка Николая ст.+Елизаветы), она попадает
+  // в couples 4 раза (по разу на ребёнка) — сравнивать эту пару САМУ С СОБОЙ
+  // (соседние в отсортированном списке дети одной и той же родительской
+  // четы) бессмысленно (grandparentIds совпадают, actualGap строго
+  // отрицательный/нулевой — в лучшем случае no-op, в худшем — лишние
+  // itераций). Оставляем ПЕРВОГО встреченного ребёнка на pair — этого
+  // достаточно, т.к. hasFullSiblings/паттерн центрирования уже гарантирует,
+  // что позиция пары не зависит от того, какой именно ребёнок выбран
+  // "представителем".
+  const seenGrandparentKey = new Set<string>();
+  const dedupedCouples = couples.filter((c) => {
+    const key = [...c.grandparentIds].sort().join("|");
+    if (seenGrandparentKey.has(key)) return false;
+    seenGrandparentKey.add(key);
+    return true;
+  });
+  if (dedupedCouples.length < 2) return;
+
+  const byY = new Map<number, Couple[]>();
+  for (const couple of dedupedCouples) {
+    if (!byY.has(couple.y)) byY.set(couple.y, []);
+    byY.get(couple.y)!.push(couple);
+  }
+
+  for (const group of byY.values()) {
+    group.sort(
+      (a, b) =>
+        positionByPerson.get(a.leftId)!.x - positionByPerson.get(b.leftId)!.x,
+    );
+    for (let i = 0; i < group.length - 1; i++) {
+      resolveAdjacentAncestorCouples(
+        positionByPerson,
+        graph,
+        group[i],
+        group[i + 1],
+      );
+    }
+  }
+}
+
+function resolveAdjacentAncestorCouples(
+  positionByPerson: Map<string, PlacedPosition>,
+  graph: NormalizedGraph,
+  paternal: {
+    childId: string;
+    grandparentIds: [string, string];
+  },
+  maternal: {
+    childId: string;
+    grandparentIds: [string, string];
+  },
+): void {
+  const paternalParent = graph.personById.get(paternal.childId)!;
+  const maternalParent = graph.personById.get(maternal.childId)!;
+  const paternalGrandparentIds = paternal.grandparentIds;
+  const maternalGrandparentIds = maternal.grandparentIds;
 
   const paternalPositions = paternalGrandparentIds
     .map((id) => positionByPerson.get(id))
@@ -386,6 +511,32 @@ export function resolveGrandparentSymmetry(
 
   if (deficit <= 0 && minShiftForOwnChildBound <= 0) return; // уже достаточный зазор И обе пары на своей стороне — ничего не трогаем.
 
+  // §9 — если paternalParent и maternalParent САМИ являются супругами друг
+  // друга (не просто "два разных couple'а на одном Y", а буквально ОДНА
+  // пара — напр. Николай ст.+Елизавета Купчик), их взаимный зазор ФИКСИРОВАН
+  // (SPOUSE_GAP, §9 "супруги всегда рядом") и НЕ подлежит растяжению даже
+  // ради разведения их родителей (product decision: "верни расстояние между
+  // Николаем и Елизаветой" — раздвигать саму пару ЗАПРЕЩЕНО, даже если это
+  // означает, что линия к прабабушкам/прадедушкам получит небольшой излом
+  // именно в этой одной точке — "излом линий это норм" для ЭТОГО конкретного
+  // случая, в отличие от paternal-vs-maternal коллизии НЕСВЯЗАННЫХ веток
+  // (там обе стороны свободны двигаться, см. основную ветку ниже). Сдвигаем
+  // ТОЛЬКО сами grandparent-пары — раздвигаем их от центра их собственного
+  // (неподвижного) ребёнка — не трогая ни paternalParent, ни maternalParent,
+  // ни что-либо ниже них.
+  if (arePartners(graph, paternalParent.id, maternalParent.id)) {
+    const shiftEachForKink = Math.max(deficit / 2, minShiftForOwnChildBound);
+    for (const id of paternalGrandparentIds) {
+      const pos = positionByPerson.get(id);
+      if (pos) pos.x -= shiftEachForKink;
+    }
+    for (const id of maternalGrandparentIds) {
+      const pos = positionByPerson.get(id);
+      if (pos) pos.x += shiftEachForKink;
+    }
+    return;
+  }
+
   // §10 — родители (Николай ст.+Елизавета и т.п.) ДОЛЖНЫ оставаться
   // отцентрированы над своими детьми (полным sibling-row'ом — Наталья/
   // Светлана/Николай мл./Виктор, а не только над одним ребёнком) — это
@@ -425,26 +576,169 @@ export function resolveGrandparentSymmetry(
   // стороны centering-важные) — сдвигать некого без поломки §10 обеим,
   // оставляем как есть (assertNoOverlaps в layout.ts поймает реальную
   // коллизию, если она есть).
+  //
+  // §ЛИНИЯ-НА-КАЖДОМ-УРОВНЕ: сдвинуть саму пару НЕДОСТАТОЧНО — её ребёнок
+  // (paternalParent/maternalParent) должен сдвинуться НА ТУ ЖЕ дельту, иначе
+  // junction (пересчитывается в layout.ts от фактических X родителей) съедет
+  // от X ребёнка и линия сломается (см. историю бага выше). Сдвигаем ВМЕСТЕ
+  // с парой весь уже размещённый "подвешенный" на ней блок — сам ребёнок,
+  // его супруг(а) (если есть) и вся его sibling-row (если есть, §11) — т.е.
+  // ВСЁ, что placeAncestorFork/placeFixedAnchorSiblingRow уже поставили
+  // относительно этого ребёнка на его собственном Y, включая всё, что ниже
+  // (потомки этого Y уже центрированы относительно родителя своей branch'и
+  // на предыдущих итерациях этого же цикла/passes — двигаем их ЦЕЛИКОМ как
+  // жёсткий блок, не пересчитывая внутреннюю геометрию).
+  // stopId — граница BFS в cascadeShift: paternalParent и maternalParent
+  // МОГУТ сами оказаться супругами друг друга (напр. Николай ст.+Елизавета
+  // Купчик — ИМЕННО такая пара, а не просто "два разных couple'а на одном
+  // Y") — без границы cascadeShift(paternalParent, −shiftEach) перепрыгивал
+  // бы ЧЕРЕЗ супружескую связь на maternalParent и сдвигал его тоже, а
+  // следом cascadeShift(maternalParent, +shiftEach) сдвигал бы его ЕЩЁ РАЗ
+  // в обратную сторону — суммарно ноль, оба ребёнка оставались на месте, и
+  // junction продолжал съезжать от их X (см. историю бага: Николай
+  // ст./Елизавета Купчик не двигались вовсе, хотя их родители — Владимир+
+  // Марфа/Григорий+Елизавета Кривуша — уже разъехались).
   if (!paternalPinned && !maternalPinned) {
+    cascadeShift(
+      positionByPerson,
+      graph,
+      paternalParent.id,
+      -shiftEach,
+      maternalParent.id,
+    );
     for (const id of paternalGrandparentIds) {
       const pos = positionByPerson.get(id);
       if (pos) pos.x -= shiftEach;
     }
+    cascadeShift(
+      positionByPerson,
+      graph,
+      maternalParent.id,
+      shiftEach,
+      paternalParent.id,
+    );
     for (const id of maternalGrandparentIds) {
       const pos = positionByPerson.get(id);
       if (pos) pos.x += shiftEach;
     }
   } else if (!paternalPinned) {
+    cascadeShift(
+      positionByPerson,
+      graph,
+      paternalParent.id,
+      -shiftEach * 2,
+      maternalParent.id,
+    );
     for (const id of paternalGrandparentIds) {
       const pos = positionByPerson.get(id);
       if (pos) pos.x -= shiftEach * 2;
     }
   } else if (!maternalPinned) {
+    cascadeShift(
+      positionByPerson,
+      graph,
+      maternalParent.id,
+      shiftEach * 2,
+      paternalParent.id,
+    );
     for (const id of maternalGrandparentIds) {
       const pos = positionByPerson.get(id);
       if (pos) pos.x += shiftEach * 2;
     }
   }
+}
+
+/**
+ * Жёстко (rigid — вся внутренняя геометрия сохраняется 1:1) сдвигает на
+ * `delta` весь блок, "подвешенный" на persionId со стороны фокуса: самого
+ * personId, его супруга(ов) (partnershipIds) и ВСЕХ его потомков, уже
+ * размещённых в positionByPerson (рекурсивно через children реальных
+ * relationships, а не measure-oriented branchesOf — нужны именно уже
+ * РАЗМЕЩЁННЫЕ карточки, а не теоретическая структура). Не трогает предков
+ * personId (родителей и выше) — та сторона уже сдвинута отдельно вызывающим
+ * кодом (resolveAncestorCoupleCollisionsAtGeneration сдвигает пару предков
+ * сама).
+ *
+ * Обходит personId "вниз" через childrenIds его partnership'ов/solo-записей
+ * — то же направление, что и placement.ts (§17 — одна карточка на
+ * человека), но здесь работаем от уже посчитанного graph, а не строим
+ * заново: собираем reverse-map parentId→childrenIds один раз на вызов
+ * (дёшево — размер графа тот же порядок, что и сам layout, §42 — n² уже
+ * приемлем в этом файле).
+ */
+function cascadeShift(
+  positionByPerson: Map<string, PlacedPosition>,
+  graph: NormalizedGraph,
+  personId: string,
+  delta: number,
+  /**
+   * Граница обхода — id, который BFS не смеет ПОСЕТИТЬ (и, значит, не может
+   * уйти дальше через него). Нужен, когда caller сдвигает ДВЕ стороны ОДНОЙ
+   * супружеской пары раздельными вызовами (напр. paternalParent и
+   * maternalParent сами женаты друг на друге) — без stopId первый вызов
+   * перепрыгивал бы через spouse-связь на вторую сторону и сдвигал бы её
+   * тоже, а второй вызов сдвигал бы ЕЁ ЖЕ ещё раз в обратную сторону,
+   * суммарно взаимно гася оба сдвига (см. историю бага: Николай ст./
+   * Елизавета Купчик оставались на месте, хотя их родители разъехались).
+   */
+  stopId?: string,
+): void {
+  if (delta === 0) return;
+
+  const childrenIdsByParent = new Map<string, string[]>();
+  for (const person of graph.personById.values()) {
+    for (const parentId of person.parentIds) {
+      if (!childrenIdsByParent.has(parentId))
+        childrenIdsByParent.set(parentId, []);
+      childrenIdsByParent.get(parentId)!.push(person.id);
+    }
+  }
+
+  const visited = new Set<string>();
+  const queue = [personId];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    if (id === stopId) continue;
+    if (visited.has(id)) continue;
+    visited.add(id);
+
+    const pos = positionByPerson.get(id);
+    if (pos) pos.x += delta;
+
+    const person = graph.personById.get(id);
+    for (const partnershipId of person?.partnershipIds ?? []) {
+      const partnership = graph.partnershipById.get(partnershipId);
+      if (!partnership) continue;
+      const spouseId =
+        partnership.leftPersonId === id
+          ? partnership.rightPersonId
+          : partnership.leftPersonId;
+      queue.push(spouseId);
+    }
+    for (const childId of childrenIdsByParent.get(id) ?? []) {
+      queue.push(childId);
+    }
+  }
+}
+
+/** true, если aId и bId состоят в ОБЩЕМ partnership друг с другом (женаты/в паре) — используется, чтобы отличить "две разные независимые ветки предков, совпавшие по Y" (свободно двигаются в разные стороны) от "paternalParent и maternalParent — буквально одна и та же супружеская пара" (их взаимный зазор фиксирован §9, двигать нельзя, см. resolveAdjacentAncestorCouples). */
+function arePartners(
+  graph: NormalizedGraph,
+  aId: string,
+  bId: string,
+): boolean {
+  const a = graph.personById.get(aId);
+  for (const partnershipId of a?.partnershipIds ?? []) {
+    const partnership = graph.partnershipById.get(partnershipId);
+    if (!partnership) continue;
+    if (
+      (partnership.leftPersonId === aId && partnership.rightPersonId === bId) ||
+      (partnership.leftPersonId === bId && partnership.rightPersonId === aId)
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /** true, если personId — один из НЕСКОЛЬКИХ детей от ОДНОЙ И ТОЙ ЖЕ родительской пары (т.е. у него есть хотя бы один полный сиблинг, §11) — ищет общий Partnership его родителей и проверяет childrenIds.length > 1. Один родитель или нет общего Partnership (SoloParent-случай) ⇒ false (эта функция не заглядывает в SoloParent — родительская пара без зафиксированного брака здесь не встречается для реальных grandparent-кейсов). */
