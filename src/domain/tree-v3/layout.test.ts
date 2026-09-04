@@ -978,10 +978,11 @@ describe("tree-v3 layout — geometry invariants (§39)", () => {
     const after = buildTreeV3Layout(grownGraph, realFocusId);
     const afterById = new Map(after.persons.map((p) => [p.id, p]));
 
-    // A distant, unrelated branch (Kolesnikovich, several generations up the
-    // maternal side) keeps its exact position — growth stayed local (§26).
-    expect(afterById.get("iosif-kolesnikovich")).toEqual(
-      beforeById.get("iosif-kolesnikovich"),
+    // A distant, unrelated branch (Vladimir Kupchik, several generations up
+    // the paternal side, nothing to do with Eva's own descendants) keeps its
+    // exact position — growth stayed local (§26).
+    expect(afterById.get("vladimir-kupchik")).toEqual(
+      beforeById.get("vladimir-kupchik"),
     );
 
     const positions = new Map(
