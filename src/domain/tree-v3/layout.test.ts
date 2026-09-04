@@ -341,6 +341,34 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     expect(detectOverlaps(positions)).toEqual([]);
   });
 
+  it("centers Vladimir Evtukh+Natalya's junction over their 2 children, Egor and Anastasiya (§10)", () => {
+    // Egor and Anastasiya Evtukh are Vladimir Evtukh + Natalya Kupchik's
+    // children — one generation below the real fixture's previous deepest
+    // descendant row (Alexander's own children). The couple's junction must
+    // land exactly at the center of their two children, same as every
+    // other parent-couple in the tree (§10).
+    const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
+    const byId = new Map(result.persons.map((p) => [p.id, p]));
+    const vladimirEvtukh = byId.get("vladimir-evtukh")!;
+    const natalya = byId.get("natalya-kupchik")!;
+    const egor = byId.get("egor-evtukh")!;
+    const anastasiya = byId.get("anastasiya-evtukh")!;
+
+    expect(egor.y).toBe(anastasiya.y);
+    expect(egor.y).toBeGreaterThan(vladimirEvtukh.y);
+
+    const junction = (vladimirEvtukh.x + natalya.x) / 2;
+    const childrenXs = [egor.x, anastasiya.x];
+    const childrenCenter =
+      (Math.min(...childrenXs) + Math.max(...childrenXs)) / 2;
+    expect(junction).toBe(childrenCenter);
+
+    const positions = new Map(
+      result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
+    expect(detectOverlaps(positions)).toEqual([]);
+  });
+
   it("keeps Nikolai Sr./Elizaveta Kupchik's own spouse gap fixed even when their two independent great-grandparent couples collide (§9)", () => {
     // Vladimir+Marfa Kupchik (Nikolai Sr.'s own parents) and Grigory+
     // Elizaveta Krivusha (Elizaveta Kupchik's own parents) are two
