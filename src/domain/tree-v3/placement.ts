@@ -724,16 +724,38 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
         (spouseOnGrowthSide ? 2 * halfSpan + CARD_WIDTH / 2 : CARD_WIDTH / 2)
       : anchorX +
         (spouseOnGrowthSide ? 2 * halfSpan + CARD_WIDTH / 2 : CARD_WIDTH / 2);
-    // personOwnWidth — полная ширина "домашнего" блока personId'а НА ЭТОЙ
-    // (growth) стороне, используется ниже только для симметричного
-    // minX/maxX seed (rowCenterX/outerEdgeX должны знать про супруга на
-    // ЛЮБОЙ стороне, не только growth — см. ниже).
-    const personHasPartnership = personBranches.some(
-      (b) => b.type === "partnership",
-    );
-    const personOwnWidth = personHasPartnership
-      ? CARD_WIDTH * 2 + SPOUSE_GAP
-      : CARD_WIDTH;
+    // personLeftEdge/personRightEdge — РЕАЛЬНЫЕ (асимметричные) края
+    // "домашнего" блока personId'а, независимо от направления роста (нужны
+    // ниже для minX/maxX seed → rowCenterX, на который центрируется
+    // родительская пара, §10). Если супруг есть — он стоит СТРОГО с одной
+    // стороны (husband-left/wife-right, §9), не "вокруг" personId
+    // симметрично — раньше здесь применялся симметричный
+    // CARD_WIDTH*2+SPOUSE_GAP блок вокруг anchorX В ОБЕ СТОРОНЫ (как для
+    // personOwnEdge выше, до фикса), что сдвигало rowCenterX (и, значит,
+    // центр родительской пары над рядом детей) на фантомные ~104px в
+    // сторону, где супруга физически нет (см. историю бага: родители
+    // Виктора — Николай Купчик ст. + Елизавета — оказывались на 388px
+    // левее реального центра своих 4 детей (Наталья..Виктор), т.к. Виктор
+    // (последний в ряду, с супругой Галиной справа) добавлял в minX/maxX
+    // seed лишний "виртуальный" запас под Галину на ЛЕВОЙ стороне тоже,
+    // хотя она физически справа).
+    let personLeftEdge = anchorX - CARD_WIDTH / 2;
+    let personRightEdge = anchorX + CARD_WIDTH / 2;
+    if (personBranches.length === 1 && partnershipBranch) {
+      const spouse = graph.personById.get(partnershipBranch.spouseId)!;
+      const person = graph.personById.get(personId)!;
+      const personIsLeftOfSpouse = shouldBeLeft(
+        person.gender,
+        spouse.gender,
+        personId,
+        partnershipBranch.spouseId,
+      );
+      if (personIsLeftOfSpouse) {
+        personRightEdge = anchorX + 2 * halfSpan + CARD_WIDTH / 2;
+      } else {
+        personLeftEdge = anchorX - 2 * halfSpan - CARD_WIDTH / 2;
+      }
+    }
     const chainedEdge =
       siblingsStartEdgeX !== undefined
         ? growLeft
@@ -766,8 +788,21 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     // Козловская уезжали на x=200/400 вместо симметричных 0/208 вокруг
     // Галины, хотя у Николая Купчика — единственной paternal-карточки на том
     // же Y — не было даже сиблингов, чтобы оправдать такой отступ).
-    let minX = anchorX - personOwnWidth / 2;
-    let maxX = anchorX + personOwnWidth / 2;
+    let minX = personLeftEdge;
+    let maxX = personRightEdge;
+    // ownCardMinX/ownCardMaxX — то же самое, но СТРОГО по картам детей
+    // (personId и его сиблингов), БЕЗ супругов — на это центрируется
+    // родительская пара (rowCenterX, §10 "родители должны быть отцентрированы
+    // с их детьми"). Родитель центрируется именно над рядом СВОИХ детей, а не
+    // над "всем физически занятым пространством" — супруг ребёнка (напр.
+    // Галина, жена Виктора) не входит в расчёт центра, даже стоя вплотную
+    // (см. историю бага: minX/maxX выше уже включают Галину для outerEdgeX/
+    // occupiedEdge — это верно для коллизий, но НЕ для центрирования: раньше
+    // единый minX/maxX использовался для ОБОИХ назначений, и родители Виктора
+    // — Николай Купчик ст. + Елизавета — оказывались на ~400px в стороне от
+    // реального центра своих 4 детей).
+    let ownCardMinX = anchorX - CARD_WIDTH / 2;
+    let ownCardMaxX = anchorX + CARD_WIDTH / 2;
     // prevId — сосед, от которого растёт текущий шаг цикла: сам personId на
     // первой итерации, дальше — предыдущий уже размещённый сиблинг. Нужен,
     // чтобы каждая ПАРА соседей в ряду получала свой собственный gap
@@ -775,18 +810,47 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     let prevId = personId;
     for (const siblingId of siblingIds) {
       const width = measurePersonDescendantWidth(graph, siblingId, cache);
-      const gap = siblingGapBetween(prevId, siblingId);
-      cursor += growLeft ? -(gap + width) : gap + width;
-      const centerX = growLeft ? cursor + width / 2 : cursor - width / 2;
-      setPosition(siblingId, slotAnchorX(siblingId, centerX), y);
-      placeDescendantBranches(siblingId, centerX, y);
+      // Этот сиблинг мог УЖЕ быть размещён РАНЬШЕ другим вызовом этой же
+      // функции — placeFixedAnchorSiblingRow вызывается ДВАЖДЫ на одного и
+      // того же personId: один раз "снизу" (от уровня ребёнка personId'а —
+      // реально кладёт карточки сиблингов на экран) и один раз "изнутри"
+      // placeAncestorPairUndirected(personId,...) (нужен только чтобы
+      // получить rowCenterX для центрирования РОДИТЕЛЕЙ personId'а). Второй
+      // вызов НЕ должен заново симулировать cursor-математику поверх уже
+      // занятого occupiedEdge (который первый вызов уже продвинул) — это
+      // считало бы позиции "ещё раз, начиная от края первого прохода",
+      // унося фантомный ownCardMinX/ownCardMaxX на сотни/тысячи px дальше
+      // реальных карточек (см. историю бага: rowCenterX для родителей
+      // Виктора получался -880 вместо истинного центра его 4 детей -552,
+      // т.к. второй проход стартовал от -968 — левого края уже размещённой
+      // Натальи из ПЕРВОГО прохода — вместо родного края Виктора -312).
+      // Вместо пересчёта — просто читаем уже сохранённую реальную позицию.
+      const alreadyPlacedPos = placedPersons.has(siblingId)
+        ? positionByPerson.get(siblingId)
+        : undefined;
+      let centerX: number;
+      let siblingOwnX: number;
+      if (alreadyPlacedPos) {
+        siblingOwnX = alreadyPlacedPos.x;
+        centerX = siblingOwnX;
+        cursor = growLeft ? siblingOwnX - width / 2 : siblingOwnX + width / 2;
+      } else {
+        const gap = siblingGapBetween(prevId, siblingId);
+        cursor += growLeft ? -(gap + width) : gap + width;
+        centerX = growLeft ? cursor + width / 2 : cursor - width / 2;
+        siblingOwnX = slotAnchorX(siblingId, centerX);
+        setPosition(siblingId, siblingOwnX, y);
+        placeDescendantBranches(siblingId, centerX, y);
+      }
       minX = Math.min(minX, centerX - width / 2);
       maxX = Math.max(maxX, centerX + width / 2);
+      ownCardMinX = Math.min(ownCardMinX, siblingOwnX - CARD_WIDTH / 2);
+      ownCardMaxX = Math.max(ownCardMaxX, siblingOwnX + CARD_WIDTH / 2);
       prevId = siblingId;
     }
     const outerEdgeX = growLeft ? minX : maxX;
     extendOccupiedEdge(y, side, outerEdgeX);
-    return { rowCenterX: (minX + maxX) / 2, outerEdgeX };
+    return { rowCenterX: (ownCardMinX + ownCardMaxX) / 2, outerEdgeX };
   }
 
   function placeAncestorPairUndirected(

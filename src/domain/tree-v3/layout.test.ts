@@ -476,6 +476,54 @@ describe("tree-v3 layout — synthetic cases (§41)", () => {
     expect(detectOverlaps(positions)).toEqual([]);
     expect(positions.get("b")!.x).toBe(0); // focus stays centered (§6)
   });
+
+  it("CASE I — grandparents center on their own children's cards, not the child-with-a-spouse's whole block (§10)", () => {
+    // p1+p2 have 4 children: a, c, d (no spouse) and b (has a spouse, s,
+    // and is the ancestor path up to focus). Product requirement: p1+p2
+    // must be centered over their 4 children's OWN cards — b's spouse s
+    // should NOT skew that center toward b's side, even though s's card
+    // physically sits right next to b.
+    const graph: FamilyGraph = {
+      persons: ["p1", "p2", "a", "b", "c", "d", "s", "focus"].map((id) =>
+        personOf(id, {
+          gender: id === "p1" ? "male" : id === "p2" ? "female" : undefined,
+        }),
+      ),
+      relationships: [
+        spouse("p1-p2", "p1", "p2"),
+        parentChild("p1-a", "p1", "a"),
+        parentChild("p2-a", "p2", "a"),
+        parentChild("p1-b", "p1", "b"),
+        parentChild("p2-b", "p2", "b"),
+        parentChild("p1-c", "p1", "c"),
+        parentChild("p2-c", "p2", "c"),
+        parentChild("p1-d", "p1", "d"),
+        parentChild("p2-d", "p2", "d"),
+        spouse("b-s", "b", "s"),
+        parentChild("b-focus", "b", "focus"),
+        parentChild("s-focus", "s", "focus"),
+      ],
+    };
+    const result = buildTreeV3Layout(graph, "focus");
+    const byId = new Map(result.persons.map((p) => [p.id, p]));
+    const p1 = byId.get("p1")!;
+    const p2 = byId.get("p2")!;
+    const a = byId.get("a")!;
+    const b = byId.get("b")!;
+    const c = byId.get("c")!;
+    const d = byId.get("d")!;
+
+    const junction = (p1.x + p2.x) / 2;
+    const childrenXs = [a.x, b.x, c.x, d.x];
+    const childrenCenter =
+      (Math.min(...childrenXs) + Math.max(...childrenXs)) / 2;
+    expect(junction).toBe(childrenCenter);
+
+    const positions = new Map(
+      result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
+    expect(detectOverlaps(positions)).toEqual([]);
+  });
 });
 
 describe("tree-v3 layout — geometry invariants (§39)", () => {
