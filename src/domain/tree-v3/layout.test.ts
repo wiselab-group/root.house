@@ -244,6 +244,39 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     expect(krivushaJunction).toBeGreaterThan(vladimirMarfaJunction);
   });
 
+  it("grows a chained wife's own full sibling AWAY from her husband, not deeper into his territory (§9/§11)", () => {
+    // Elena Ushkar is Elizaveta Kupchik's full sibling (same parents:
+    // Grigory + Elizaveta Krivusha). Elizaveta is chained into the SAME
+    // paternal half-plane as her husband Nikolai Sr. (both descend through
+    // Viktor's paternal line) — the naive rule "sibling rows grow further
+    // into the inherited half-plane direction" would put Elena further LEFT
+    // than Elizaveta, behind her own husband Nikolai Sr. and mixed in with
+    // HIS siblings (Mikhail/Vera) — and, via the shared-edge chaining that
+    // used to exist, corrupt Nikolai Sr./Elizaveta's own fixed spouse gap
+    // in the process (see history: Vladimir/Marfa's gap blew from 208px to
+    // 376px as a side effect). Product requirement: a person's own sibling
+    // row always grows AWAY from their own spouse (same principle as
+    // freeDirectionGrowsLeft for the focus person, §9) — Elena must land to
+    // the RIGHT of Elizaveta, not mixed into Nikolai Sr.'s row.
+    const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
+    const byId = new Map(result.persons.map((p) => [p.id, p]));
+    const nikolaiSrKupchik = byId.get("nikolai-kupchik")!;
+    const elizavetaKupchik = byId.get("elizaveta-kupchik")!;
+    const elenaUshkar = byId.get("elena-ushkar")!;
+    const vladimir = byId.get("vladimir-kupchik")!;
+    const marfa = byId.get("marfa-kupchik")!;
+
+    expect(elenaUshkar.x).toBeGreaterThan(elizavetaKupchik.x);
+    expect(elenaUshkar.x).toBeGreaterThan(nikolaiSrKupchik.x);
+
+    // Nikolai Sr./Elizaveta's own spouse gap stays at its normal fixed
+    // span — Elena's row growing away from Vladimir/Marfa's row must not
+    // corrupt it via any shared-edge chaining.
+    const spouseHalfSpan = (CARD_WIDTH + SPOUSE_GAP) / 2;
+    expect(elizavetaKupchik.x - nikolaiSrKupchik.x).toBe(spouseHalfSpan * 2);
+    expect(marfa.x - vladimir.x).toBe(spouseHalfSpan * 2);
+  });
+
   it("keeps Nikolai Sr./Elizaveta Kupchik's own spouse gap fixed even when their two independent great-grandparent couples collide (§9)", () => {
     // Vladimir+Marfa Kupchik (Nikolai Sr.'s own parents) and Grigory+
     // Elizaveta Krivusha (Elizaveta Kupchik's own parents) are two

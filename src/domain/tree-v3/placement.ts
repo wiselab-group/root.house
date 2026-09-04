@@ -990,43 +990,52 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
         // переизмеряет его через measurePersonDescendantWidth, который уже
         // посчитал бы их общий брак ВТОРОЙ раз — см. историю бага выше).
         //
-        // "Наружу" здесь ВСЕГДА означает "дальше в сторону унаследованного
-        // direction" (leftSide/rightSide), а НЕ "leftId обязательно влево,
-        // rightId обязательно вправо" — при chained===true (уже внутри ОДНОЙ
-        // half-plane, напр. maternal) leftId (муж пары) и rightId (жена)
-        // могут ОБА физически стоять справа от x=0, и сиблинги ОБОИХ должны
-        // расти ЕЩЁ правее (deeper into maternal territory), не влево — см.
-        // историю бага: сиблинги Николая Козловского (Юзик/Даниил/Алексей,
-        // maternal branch) раньше жёстко получали growLeft=true независимо
-        // от direction и улетали в paternal-территорию (x=-5056, левее даже
-        // Григория Кривуши) — читалось как "перепутанные семьи Козловских и
-        // Купчиков", хотя связи в данных были верны. При direction==="free"
-        // (chained=false, самый верхний fork у фокуса) — прежнее поведение:
-        // leftId растит влево, rightId вправо (paternal/maternal развилка).
+        // leftId (муж пары) растит своих сиблингов (дядья/тёти personId'а по
+        // его отцу) "дальше в сторону унаследованного direction" — при
+        // chained===true (уже внутри ОДНОЙ half-plane, напр. maternal) это
+        // означает ЕЩЁ дальше в ТУ ЖЕ сторону (deeper into maternal
+        // territory), не назад к paternal — см. историю бага: сиблинги
+        // Николая Козловского (maternal branch) раньше жёстко получали
+        // growLeft=true независимо от direction и улетали в paternal-
+        // территорию. При direction==="free" (chained=false, самый верхний
+        // fork у фокуса) — прежнее поведение: leftId растит влево
+        // (paternal/maternal развилка).
         const leftGrowLeft = chained ? growLeft : true;
-        const rightGrowLeft = chained ? growLeft : false;
-        let leftOuterEdge: number | undefined;
+        // rightId (жена пары) растит СВОИХ сиблингов (напр. Елена Ушкар —
+        // сиблинг Елизаветы Купчик) В СТОРОНУ, СВОБОДНУЮ ОТ leftId (своего
+        // супруга) — тот же принцип "сиблинги растут прочь от супруга", что
+        // и freeDirectionGrowsLeft для фокуса (§9), а не безусловно "в ту
+        // же сторону, что и весь chained-кластер". При chained===true
+        // (leftId и rightId уже оба на одной half-plane, напр. Николай
+        // ст.+Елизавета — оба paternal) rightId растит СВОИХ сиблингов
+        // ПРОТИВОПОЛОЖНО growLeft (т.е. в сторону "от мужа") — иначе ряд
+        // Елены Ушкар рос бы ЗА спину Николая ст., глубже в paternal
+        // территорию, перемешиваясь с его собственными сиблингами
+        // (product decision: "помести Елену справа от Елизаветы"). При
+        // direction==="free" (chained=false, самый верхний fork у фокуса) —
+        // прежнее поведение: rightId растит вправо (paternal/maternal
+        // развилка, объективно "прочь от" leftId, растущего влево).
+        const rightGrowLeft = chained ? !growLeft : false;
         if (!leftAlreadyPlaced) {
-          leftOuterEdge = placeFixedAnchorSiblingRow(
+          placeFixedAnchorSiblingRow(
             leftId,
             leftGrowLeft,
             positionByPerson.get(leftId)!.x,
             parentUnitY,
-          ).outerEdgeX;
+          );
         }
         if (!rightAlreadyPlaced) {
-          // chained (leftSide===rightSide, унаследованный direction общий
-          // для leftId и rightId) — rightId'ов ряд сиблингов стартует ЗА
-          // leftOuterEdge (дальше в ТУ ЖЕ сторону), не от собственного края
-          // rightId (см. историю бага: два независимых ряда на одной
-          // стороне пересекались). При direction="free" (chained=false) —
-          // rightId растит вправо от своей обычной позиции, как раньше.
+          // rightId растит СВОИХ сиблингов ПРОТИВОПОЛОЖНО leftId (прочь от
+          // супруга, см. rightGrowLeft выше) — их ряды растут В РАЗНЫЕ
+          // стороны от rightId'а, а не подряд друг за другом на одной, так
+          // что leftOuterEdge (край УЖЕ размещённого ряда leftId, на
+          // ПРОТИВОПОЛОЖНОЙ стороне) сюда не подставляется — ряд rightId'а
+          // всегда стартует от собственного края rightId'а.
           placeFixedAnchorSiblingRow(
             rightId,
             rightGrowLeft,
             positionByPerson.get(rightId)!.x,
             parentUnitY,
-            chained ? leftOuterEdge : undefined,
           );
         }
 
@@ -1055,6 +1064,13 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
           parentUnitY,
           leftSide,
         );
+        // ПРИМЕЧАНИЕ: rightId's собственный sibling-row (Елена Ушкар,
+        // сиблинг Елизаветы) УЖЕ размещён выше (placeFixedAnchorSiblingRow с
+        // rightGrowLeft) — этот вызов placeAncestorFork только продолжает
+        // подъём к ЕЁ СОБСТВЕННЫМ родителям (Григорий+Елизавета Кривуша),
+        // используя rightSide как обычно (её родители по-прежнему растут в
+        // общую paternal-сторону — сиблинг-ряд был исключением, а ancestor-
+        // рекурсия нет).
         placeAncestorFork(
           rightId,
           positionByPerson.get(rightId)!.x,
