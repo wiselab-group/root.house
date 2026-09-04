@@ -113,6 +113,10 @@ export function buildEdgesFromPositions(
   // обоих партнёров, а не зафиксированная domain-координата — при drag
   // одного из супругов сама T-образная точка съезжает вместе с ним, и линия
   // к детям остаётся корректной серединой, а не "застывает" на старом месте.
+  // y тоже усредняется (не берётся от одного leftCenter) — иначе при вертикальном
+  // drag одного из партнёров пунктирная линия наклоняется, а trunk-junction
+  // остаётся на исходном Y и отрывается от пунктира (репро: подвинуть карточку
+  // по вертикали — сплошная линия к детям смещалась относительно пунктира).
   const junctionByPartnershipId = new Map<string, { x: number; y: number }>();
   for (const p of relationInfo.partnerships) {
     const leftCenter = centerById.get(p.leftPersonId);
@@ -120,7 +124,7 @@ export function buildEdgesFromPositions(
     if (!leftCenter || !rightCenter) continue;
     junctionByPartnershipId.set(p.id, {
       x: (leftCenter.x + rightCenter.x) / 2,
-      y: leftCenter.y,
+      y: (leftCenter.y + rightCenter.y) / 2,
     });
   }
 
