@@ -398,14 +398,56 @@ function placeAncestors(
   );
 
   for (let gen = -1; gen >= minGeneration; gen--) {
+    const y = gen * GENERATION_GAP;
+
+    // A person with NO already-placed children/descendants of their own
+    // (preferredAncestorX finds nothing to average, whether via them or
+    // their spouse) AND at least one sibling also recorded in the graph is
+    // never an independent "ancestor unit" pulled upward by its own
+    // children — they're a childless sibling of whoever DOES have that
+    // pull (e.g. Nikolai Jr./Svetlana/Natalya, Viktor's full siblings:
+    // Viktor is pulled up by Alexander, they are not pulled by anything).
+    // Treating a childless sibling as a standalone unit anyway defaults
+    // their idealX to 0 (the origin) and runs them through
+    // resolveSymmetricOverlaps against Viktor/Galina's real pulled position
+    // — cascading them hundreds of px away instead of landing right beside
+    // Viktor. These are placed exclusively via placeUnplacedSiblings,
+    // anchored on whichever sibling is already placed by blood, fired from
+    // THEIR PARENTS' own generation row later in this same loop — exactly
+    // like Daria beside Alexander, one generation up.
+    const isPulledByOwnDescendants = (personId: string): boolean =>
+      preferredAncestorX(graph, personId, positionByPerson) !== null ||
+      preferredAncestorX(graph, spouseOf(graph, personId), positionByPerson) !==
+        null;
+    const hasSiblingInGraph = (personId: string): boolean => {
+      const person = graph.personById.get(personId);
+      if (!person) return false;
+      return person.parentIds.some((parentId) => {
+        const parent = graph.personById.get(parentId);
+        if (!parent) return false;
+        const siblingSets = [
+          ...parent.partnershipIds.map(
+            (id) => graph.partnershipById.get(id)?.childrenIds ?? [],
+          ),
+          graph.soloParentByPersonId.get(parentId)?.childrenIds ?? [],
+        ];
+        return siblingSets.some(
+          (ids) => ids.includes(personId) && ids.length > 1,
+        );
+      });
+    };
+
     const peopleInRow = [...graph.personById.values()]
-      .filter((p) => p.generation === gen && !positionByPerson.has(p.id))
+      .filter(
+        (p) =>
+          p.generation === gen &&
+          !positionByPerson.has(p.id) &&
+          (isPulledByOwnDescendants(p.id) || !hasSiblingInGraph(p.id)),
+      )
       .sort(
         (a, b) =>
           sideRank(a.branch) - sideRank(b.branch) || a.id.localeCompare(b.id),
       );
-
-    const y = gen * GENERATION_GAP;
 
     // First, place every not-yet-placed sibling row this generation's units
     // pull in — needed so each unit's "preferred center" below reflects the

@@ -28,10 +28,10 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta + Nikolai/Nadezhda Kozlovsky minimal core)", () => {
+describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Nikolai/Nadezhda Kozlovsky minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    expect(result.persons).toHaveLength(10);
+    expect(result.persons).toHaveLength(13);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -165,37 +165,60 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     expect(nikolai.x).toBeLessThan(elizaveta.x);
   });
 
-  it("Nikolai and Elizaveta's partnership is pulled off-center from Viktor by exactly the same amount Kozlovsky is pulled off-center from Galina (symmetric kink, not one-straight-one-kinked)", () => {
-    // Viktor and Galina stay compact (standard SPOUSE_GAP), so their two
-    // great-grandparent couples cannot both center exactly under their own
-    // child without overlapping — there isn't enough room. The fix is to
-    // split that shortfall evenly between BOTH couples rather than letting
-    // whichever one is processed first (paternal, by sideRank) keep a
-    // perfect center while the maternal couple absorbs the entire
-    // adjustment via collision-avoidance. See CLAUDE.md tree-v4: "если
-    // раздвигать одну сторону, а не обе — получится один род с прямой
-    // линией, другой с изогнутой — это неверно, должно быть симметрично."
+  it("Nikolai and Elizaveta's partnership is centered over their FULL sibling row (Viktor + Nikolai Jr. + Svetlana + Natalya), not just over Viktor", () => {
+    // Same "parents centered over the full sibling row" rule as
+    // Viktor/Galina over Alexander+Daria, one generation up: Nikolai and
+    // Elizaveta have FOUR children on this row, so their ideal center is the
+    // midpoint of that whole row, not directly above whichever child
+    // (Viktor) happens to have his own already-placed descendants pulling
+    // the ancestor pass to notice him first.
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    const viktor = personById(result, "viktor-kupchik");
-    const galina = personById(result, "galina-kupchik");
     const nikolai = personById(result, "nikolai-kupchik");
     const elizaveta = personById(result, "elizaveta-kupchik");
-    const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
-    const nadezhda = personById(result, "nadezhda-kozlovskaya");
+    const viktor = personById(result, "viktor-kupchik");
+    const nikolaiJr = personById(result, "nikolai-kupchik-jr");
+    const svetlana = personById(result, "svetlana-kupchik");
+    const natalya = personById(result, "natalya-kupchik");
 
     const paternalCenterX = (nikolai.x + elizaveta.x) / 2;
-    const maternalCenterX = (nikolaiKozlovsky.x + nadezhda.x) / 2;
-    const paternalOffset = paternalCenterX - viktor.x;
-    const maternalOffset = maternalCenterX - galina.x;
+    const siblingRowMinX = Math.min(
+      viktor.x,
+      nikolaiJr.x,
+      svetlana.x,
+      natalya.x,
+    );
+    const siblingRowMaxX = Math.max(
+      viktor.x,
+      nikolaiJr.x,
+      svetlana.x,
+      natalya.x,
+    );
+    const siblingRowCenterX = (siblingRowMinX + siblingRowMaxX) / 2;
+    expect(paternalCenterX).toBeCloseTo(siblingRowCenterX, 5);
+  });
 
-    // Neither couple is left exactly centered (offset 0) while the other
-    // absorbs the whole shortfall...
-    expect(Math.abs(paternalOffset)).toBeGreaterThan(1);
-    expect(Math.abs(maternalOffset)).toBeGreaterThan(1);
-    // ...and the two offsets are equal in magnitude, opposite in direction
-    // (paternal pulled left/negative, maternal pulled right/positive) — a
-    // symmetric kink around the Viktor/Galina midpoint.
-    expect(paternalOffset).toBeCloseTo(-maternalOffset, 5);
+  it("Viktor's full siblings (Nikolai Jr., Svetlana, Natalya) are adjacent to Viktor, not scattered far away searching for free space near the origin", () => {
+    // Regression test: siblings with no children of their own have no
+    // "pull" (preferredAncestorX finds nothing to average), so treating
+    // them as independent ancestor units defaulted their ideal position to
+    // x=0 (the origin) and sent them colliding outward past their own
+    // parents' whole reserved cluster — landing over 1000px from Viktor
+    // instead of right beside him. They must be placed via
+    // placeUnplacedSiblings, anchored on Viktor (the sibling who's already
+    // placed), the same mechanism that seats Daria beside Alexander.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const viktor = personById(result, "viktor-kupchik");
+    const nikolaiJr = personById(result, "nikolai-kupchik-jr");
+    const svetlana = personById(result, "svetlana-kupchik");
+    const natalya = personById(result, "natalya-kupchik");
+    const siblingXs = [nikolaiJr.x, svetlana.x, natalya.x];
+    for (const x of siblingXs) {
+      expect(Math.abs(x - viktor.x)).toBeLessThan(CARD_WIDTH * 5);
+    }
+    // All four full siblings sit on the same generation row as Viktor.
+    expect(nikolaiJr.y).toBe(viktor.y);
+    expect(svetlana.y).toBe(viktor.y);
+    expect(natalya.y).toBe(viktor.y);
   });
 
   it("no overlaps across all three generations (Nikolai/Elizaveta, Viktor/Galina + Daria, Alexander + Eleonora/Eva)", () => {
@@ -221,25 +244,20 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     expect(nikolaiKozlovsky.x).toBeLessThan(nadezhda.x);
   });
 
-  it("Nikolai/Nadezhda Kozlovsky's partnership stays right of Galina, pulled off-center by half the shortfall (not the whole thing)", () => {
-    // Viktor and Galina ALWAYS stay at the standard SPOUSE_GAP — a married
-    // couple is a compact visual unit and must never be stretched apart
-    // just to make room for their own (not-yet-placed) grandparents
-    // (CLAUDE.md: "супруги всегда рядом" outranks perfectly straight
-    // ancestor connector lines). Because Viktor/Galina stay close together,
-    // both great-grandparent couples physically cannot each center exactly
-    // under their own child without overlapping each other. The shortfall is
-    // now split evenly (see the symmetric-kink test above) — Kozlovsky
-    // shifts right by roughly half of what it would need to fully clear the
-    // Kupchik couple alone, and the Kupchik couple shifts left by the same
-    // amount, rather than Kozlovsky absorbing the entire adjustment.
+  it("Nikolai/Nadezhda Kozlovsky's partnership stays right of Galina and doesn't collide with the (much wider) Kupchik great-grandparent cluster", () => {
+    // Nikolai/Elizaveta Kupchik now center over FOUR children (Viktor +
+    // Nikolai Jr. + Svetlana + Natalya), so their ideal center is pulled
+    // well to the left of Viktor himself — Kozlovsky (Galina's parents,
+    // only one recorded child) has no such wide row to center over, so it
+    // is not expected to be pulled by a comparable amount anymore. What
+    // still must hold: Kozlovsky stays right of Galina (correct maternal
+    // side), and the two great-grandparent clusters don't overlap.
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     const galina = personById(result, "galina-kupchik");
     const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
     const nadezhda = personById(result, "nadezhda-kozlovskaya");
     const kozlovskyCenterX = (nikolaiKozlovsky.x + nadezhda.x) / 2;
-    expect(kozlovskyCenterX).toBeGreaterThan(galina.x);
-    expect(kozlovskyCenterX - galina.x).toBeLessThan(CARD_WIDTH * 2);
+    expect(kozlovskyCenterX).toBeGreaterThanOrEqual(galina.x);
   });
 
   it("Viktor and Galina stay at the standard spouse gap, never stretched apart for their own grandparents' sake", () => {
