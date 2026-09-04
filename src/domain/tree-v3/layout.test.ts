@@ -149,7 +149,15 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     const edgeGap = (a: { x: number }, b: { x: number }) =>
       b.x - CARD_WIDTH / 2 - (a.x + CARD_WIDTH / 2);
 
-    expect(edgeGap(svetlana, nikolaiJr)).toBe(SIBLING_GAP);
+    // Svetlana ↔ Nikolai Jr.: AT LEAST SIBLING_GAP — Svetlana's own
+    // descendant subtree (her children Olga/Yuriy, unpaired, needing
+    // 2×CARD_WIDTH+SIBLING_GAP) is wider than her own couple-card footprint
+    // (CARD_WIDTH×2+SPOUSE_GAP with Viktor Efimovich), so her whole subtree
+    // — including her own card — gets pushed further out than the bare
+    // sibling formula alone would place her.
+    expect(edgeGap(svetlana, nikolaiJr)).toBeGreaterThanOrEqual(SIBLING_GAP);
+    // Nikolai Jr. ↔ Viktor: exactly SIBLING_GAP — Viktor's own subtree
+    // isn't wider than his couple footprint, so nothing pushes this gap out.
     expect(edgeGap(nikolaiJr, viktor)).toBe(SIBLING_GAP);
   });
 
@@ -359,6 +367,33 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
 
     const junction = (vladimirEvtukh.x + natalya.x) / 2;
     const childrenXs = [egor.x, anastasiya.x];
+    const childrenCenter =
+      (Math.min(...childrenXs) + Math.max(...childrenXs)) / 2;
+    expect(junction).toBe(childrenCenter);
+
+    const positions = new Map(
+      result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
+    expect(detectOverlaps(positions)).toEqual([]);
+  });
+
+  it("centers Viktor Efimovich+Svetlana's junction over their 2 children, Olga and Yuriy (§10)", () => {
+    // Olga and Yuriy Efimovich are Viktor Efimovich + Svetlana Kupchik's
+    // children — same generation as Egor/Anastasiya Evtukh, a sibling
+    // sub-branch. The couple's junction must land exactly at the center of
+    // their two children (§10), same as every other parent-couple.
+    const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
+    const byId = new Map(result.persons.map((p) => [p.id, p]));
+    const viktorEfimovich = byId.get("viktor-efimovich")!;
+    const svetlana = byId.get("svetlana-kupchik")!;
+    const olga = byId.get("olga-efimovich")!;
+    const yuriy = byId.get("yuriy-efimovich")!;
+
+    expect(olga.y).toBe(yuriy.y);
+    expect(olga.y).toBeGreaterThan(viktorEfimovich.y);
+
+    const junction = (viktorEfimovich.x + svetlana.x) / 2;
+    const childrenXs = [olga.x, yuriy.x];
     const childrenCenter =
       (Math.min(...childrenXs) + Math.max(...childrenXs)) / 2;
     expect(junction).toBe(childrenCenter);

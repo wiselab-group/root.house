@@ -45,6 +45,8 @@ const vladimirEvtukhId = "vladimir-evtukh";
 const viktorEfimovichId = "viktor-efimovich";
 const egorEvtukhId = "egor-evtukh";
 const anastasiyaEvtukhId = "anastasiya-evtukh";
+const olgaEfimovichId = "olga-efimovich";
+const yuriyEfimovichId = "yuriy-efimovich";
 
 export const initialFamilyGraph: FamilyGraph = {
   persons: [
@@ -251,6 +253,18 @@ export const initialFamilyGraph: FamilyGraph = {
       firstName: "Анастасия",
       lastName: "Евтух",
       gender: "female",
+    },
+    {
+      id: olgaEfimovichId,
+      firstName: "Ольга",
+      lastName: "Ефимович",
+      gender: "female",
+    },
+    {
+      id: yuriyEfimovichId,
+      firstName: "Юрий",
+      lastName: "Ефимович",
+      gender: "male",
     },
   ],
   relationships: [
@@ -589,6 +603,30 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: natalyaId,
       to: anastasiyaEvtukhId,
+    },
+    {
+      id: "viktor-efimovich-olga-parent",
+      kind: "parent-child",
+      from: viktorEfimovichId,
+      to: olgaEfimovichId,
+    },
+    {
+      id: "svetlana-olga-parent",
+      kind: "parent-child",
+      from: svetlanaId,
+      to: olgaEfimovichId,
+    },
+    {
+      id: "viktor-efimovich-yuriy-parent",
+      kind: "parent-child",
+      from: viktorEfimovichId,
+      to: yuriyEfimovichId,
+    },
+    {
+      id: "svetlana-yuriy-parent",
+      kind: "parent-child",
+      from: svetlanaId,
+      to: yuriyEfimovichId,
     },
   ],
 };
