@@ -1,4 +1,9 @@
-import type { FamilyGraph, LaidOutPartnership, LaidOutPerson, TreeLayoutResult } from "./types";
+import type {
+  FamilyGraph,
+  LaidOutPartnership,
+  LaidOutPerson,
+  TreeLayoutResult,
+} from "./types";
 import { normalizeGraph } from "./graph";
 import { placeGraph } from "./placement";
 import { buildEdgeSpecs } from "./edges";
@@ -10,7 +15,11 @@ import {
 } from "./collision";
 
 export { buildEdgeSpecs };
-export type { EdgeSpecs, PartnershipEdgeSpec, ParentChildEdgeSpec } from "./edges";
+export type {
+  EdgeSpecs,
+  PartnershipEdgeSpec,
+  ParentChildEdgeSpec,
+} from "./edges";
 export type { NormalizedGraph } from "./types";
 
 /**
@@ -65,7 +74,10 @@ export function buildTreeV3Layout(
     const leftPos = positionByPerson.get(partnership.leftPersonId);
     const rightPos = positionByPerson.get(partnership.rightPersonId);
     if (!leftPos || !rightPos) continue;
-    junctionByPartnership.set(partnershipId, { x: (leftPos.x + rightPos.x) / 2, y: leftPos.y });
+    junctionByPartnership.set(partnershipId, {
+      x: (leftPos.x + rightPos.x) / 2,
+      y: leftPos.y,
+    });
   }
 
   // §23 — постфактум геометрическая валидация, не "визуальная интуиция".
@@ -73,15 +85,21 @@ export function buildTreeV3Layout(
   // инвариант зелёным на реальных данных и на каждом synthetic-кейсе.
   assertNoOverlaps(positionByPerson, normalized);
 
-  const persons: LaidOutPerson[] = [...normalized.personById.values()].map((p) => {
-    const pos = positionByPerson.get(p.id);
-    if (!pos) {
-      throw new Error(`buildTreeV3Layout: person "${p.id}" was not placed (unsupported graph shape) — §32`);
-    }
-    return { ...p, x: pos.x, y: pos.y };
-  });
+  const persons: LaidOutPerson[] = [...normalized.personById.values()].map(
+    (p) => {
+      const pos = positionByPerson.get(p.id);
+      if (!pos) {
+        throw new Error(
+          `buildTreeV3Layout: person "${p.id}" was not placed (unsupported graph shape) — §32`,
+        );
+      }
+      return { ...p, x: pos.x, y: pos.y };
+    },
+  );
 
-  const partnerships: LaidOutPartnership[] = [...normalized.partnershipById.values()].map((p) => {
+  const partnerships: LaidOutPartnership[] = [
+    ...normalized.partnershipById.values(),
+  ].map((p) => {
     const junction = junctionByPartnership.get(p.id);
     return { ...p, x: junction?.x ?? 0, y: junction?.y ?? 0 };
   });

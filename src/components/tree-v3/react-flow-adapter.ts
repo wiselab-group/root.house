@@ -17,9 +17,11 @@ import type { PersonFlowNode } from "./person-node";
  * исходных domain-координатах, иначе линии отставали бы от карточки при
  * drag.
  */
-export function buildReactFlowGraph(
-  layout: TreeLayoutResult,
-): { nodes: PersonFlowNode[]; edges: Edge[]; relationInfo: RelationInfo } {
+export function buildReactFlowGraph(layout: TreeLayoutResult): {
+  nodes: PersonFlowNode[];
+  edges: Edge[];
+  relationInfo: RelationInfo;
+} {
   // buildTreeV3Layout возвращает координаты ЦЕНТРА каждой карточки (удобно
   // для центрирования пар/детей в самом layout-алгоритме) — а xyflow ожидает
   // position как левый верхний угол. Конвертируем один раз здесь; вся
@@ -31,7 +33,9 @@ export function buildReactFlowGraph(
     data: { person: p, isFocus: p.id === layout.focusPersonId },
   }));
 
-  const centerById = new Map(layout.persons.map((p) => [p.id, { x: p.x, y: p.y }]));
+  const centerById = new Map(
+    layout.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+  );
   const relationInfo = buildRelationInfo(layout);
   const edges = buildEdgesFromPositions(centerById, relationInfo);
 
@@ -85,29 +89,31 @@ export function buildEdgesFromPositions(
   centerById: Map<string, { x: number; y: number }>,
   relationInfo: RelationInfo,
 ): Edge[] {
-  const partnershipEdges: Edge[] = relationInfo.partnerships.flatMap((partnership) => {
-    const leftCenter = centerById.get(partnership.leftPersonId);
-    const rightCenter = centerById.get(partnership.rightPersonId);
-    if (!leftCenter || !rightCenter) return [];
-    return [
-      {
-        id: partnership.id,
-        type: "partnership",
-        source: partnership.leftPersonId,
-        target: partnership.rightPersonId,
-        sourceHandle: "right",
-        targetHandle: "left",
-        // Линия рисуется между внутренними краями карточек, не от handle-
-        // геометрии xyflow (см. person-node.tsx комментарий).
-        data: {
-          leftX: leftCenter.x + CARD_HALF_WIDTH,
-          leftY: leftCenter.y,
-          rightX: rightCenter.x - CARD_HALF_WIDTH,
-          rightY: rightCenter.y,
+  const partnershipEdges: Edge[] = relationInfo.partnerships.flatMap(
+    (partnership) => {
+      const leftCenter = centerById.get(partnership.leftPersonId);
+      const rightCenter = centerById.get(partnership.rightPersonId);
+      if (!leftCenter || !rightCenter) return [];
+      return [
+        {
+          id: partnership.id,
+          type: "partnership",
+          source: partnership.leftPersonId,
+          target: partnership.rightPersonId,
+          sourceHandle: "right",
+          targetHandle: "left",
+          // Линия рисуется между внутренними краями карточек, не от handle-
+          // геометрии xyflow (см. person-node.tsx комментарий).
+          data: {
+            leftX: leftCenter.x + CARD_HALF_WIDTH,
+            leftY: leftCenter.y,
+            rightX: rightCenter.x - CARD_HALF_WIDTH,
+            rightY: rightCenter.y,
+          },
         },
-      },
-    ];
-  });
+      ];
+    },
+  );
 
   // Junction — середина между текущими (возможно, перетащенными) позициями
   // обоих партнёров, а не зафиксированная domain-координата — при drag
@@ -139,8 +145,12 @@ export function buildEdgesFromPositions(
 
     let unionCenter: { x: number; y: number } | undefined;
     if (parentIds.length === 2) {
-      const partnershipId = relationInfo.partnershipIdByPair.get(pairKey(parentIds[0], parentIds[1]));
-      unionCenter = partnershipId ? junctionByPartnershipId.get(partnershipId) : undefined;
+      const partnershipId = relationInfo.partnershipIdByPair.get(
+        pairKey(parentIds[0], parentIds[1]),
+      );
+      unionCenter = partnershipId
+        ? junctionByPartnershipId.get(partnershipId)
+        : undefined;
     }
     if (!unionCenter) {
       // Solo parent (второй родитель не в графе, §32) — union это сам родитель.

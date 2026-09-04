@@ -29,7 +29,10 @@ export async function findMembership(
   database: FamilyDb = defaultDb as unknown as FamilyDb,
 ): Promise<FamilyMemberRow | null> {
   const member = await database.query.familyMembers.findFirst({
-    where: and(eq(familyMembers.familyId, familyId), eq(familyMembers.userId, userId)),
+    where: and(
+      eq(familyMembers.familyId, familyId),
+      eq(familyMembers.userId, userId),
+    ),
   });
   return member ?? null;
 }
@@ -38,7 +41,9 @@ export async function familyExists(
   familyId: string,
   database: FamilyDb = defaultDb as unknown as FamilyDb,
 ): Promise<boolean> {
-  const row = await database.query.families?.findFirst({ where: eq(families.id, familyId) });
+  const row = await database.query.families?.findFirst({
+    where: eq(families.id, familyId),
+  });
   return row != null;
 }
 
@@ -57,5 +62,10 @@ export async function setDefaultFocusPerson(
   await defaultDb
     .update(familyMembers)
     .set({ defaultFocusPersonId: personId })
-    .where(and(eq(familyMembers.familyId, familyId), eq(familyMembers.userId, userId)));
+    .where(
+      and(
+        eq(familyMembers.familyId, familyId),
+        eq(familyMembers.userId, userId),
+      ),
+    );
 }

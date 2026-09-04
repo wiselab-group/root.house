@@ -16,10 +16,12 @@ import { getFamilyIdBySlug } from "@/domain/family/family.service";
  * with requireFamilyAccess(familyId, userId, minRole) before reading/writing
  * anything.
  */
-export const resolveFamilyIdBySlug = cache(async (slug: string): Promise<string> => {
-  const familyId = await getFamilyIdBySlug(slug);
-  if (!familyId) {
-    notFound();
-  }
-  return familyId;
-});
+export const resolveFamilyIdBySlug = cache(
+  async (slug: string): Promise<string> => {
+    const familyId = await getFamilyIdBySlug(slug);
+    if (!familyId) {
+      notFound();
+    }
+    return familyId;
+  },
+);

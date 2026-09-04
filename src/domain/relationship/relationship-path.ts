@@ -122,7 +122,9 @@ function labelForDirectLineage(depth: number): BloodRelationLabel {
   return "grandparent"; // depth >= 2 — "great-" prefixes are a UI-string concern, not this label's job
 }
 
-function reverseDirectLineageLabel(label: BloodRelationLabel): BloodRelationLabel {
+function reverseDirectLineageLabel(
+  label: BloodRelationLabel,
+): BloodRelationLabel {
   if (label === "parent") return "child";
   if (label === "grandparent") return "grandchild";
   return label;
@@ -148,7 +150,9 @@ function labelForCollateralRelation(
     // One side is a direct sibling-line descendant one extra generation down
     // from the common ancestor while the other is not — this is the
     // aunt/uncle <-> niece/nephew relationship (or "great-" variants, a UI concern).
-    return depthA < depthB ? { label: "aunt_or_uncle", removed } : { label: "niece_or_nephew", removed };
+    return depthA < depthB
+      ? { label: "aunt_or_uncle", removed }
+      : { label: "niece_or_nephew", removed };
   }
 
   // Both at least 2 generations from the common ancestor: cousins.

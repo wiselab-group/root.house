@@ -57,7 +57,11 @@ export async function createStoryAction(
   return {};
 }
 
-export async function deleteStoryAction(familyId: string, personId: string, storyId: string): Promise<void> {
+export async function deleteStoryAction(
+  familyId: string,
+  personId: string,
+  storyId: string,
+): Promise<void> {
   const session = await auth();
   if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
 

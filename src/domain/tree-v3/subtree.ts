@@ -36,7 +36,12 @@ export function unitKeyId(unit: PersonUnit): string {
 
 /** Одна под-ветка человека: либо конкретный Partnership (супруг + общие дети), либо "solo" (собственные дети без зафиксированной пары). */
 export type Branch =
-  | { type: "partnership"; partnershipId: string; spouseId: string; childrenIds: string[] }
+  | {
+      type: "partnership";
+      partnershipId: string;
+      spouseId: string;
+      childrenIds: string[];
+    }
   | { type: "solo"; childrenIds: string[] };
 
 export function branchesOf(graph: NormalizedGraph, personId: string): Branch[] {
@@ -45,7 +50,9 @@ export function branchesOf(graph: NormalizedGraph, personId: string): Branch[] {
   for (const partnershipId of person?.partnershipIds ?? []) {
     const partnership = graph.partnershipById.get(partnershipId)!;
     const spouseId =
-      partnership.leftPersonId === personId ? partnership.rightPersonId : partnership.leftPersonId;
+      partnership.leftPersonId === personId
+        ? partnership.rightPersonId
+        : partnership.leftPersonId;
     branches.push({
       type: "partnership",
       partnershipId,
@@ -86,9 +93,12 @@ export function measurePersonDescendantWidth(
     return CARD_WIDTH;
   }
 
-  const branchWidths = branches.map((branch) => measureBranchWidth(graph, branch, cache));
+  const branchWidths = branches.map((branch) =>
+    measureBranchWidth(graph, branch, cache),
+  );
   const total =
-    branchWidths.reduce((sum, w) => sum + w, 0) + REMARRIAGE_GAP * Math.max(0, branches.length - 1);
+    branchWidths.reduce((sum, w) => sum + w, 0) +
+    REMARRIAGE_GAP * Math.max(0, branches.length - 1);
 
   const width = Math.max(CARD_WIDTH, total);
   cache.set(personId, width);
@@ -96,7 +106,11 @@ export function measurePersonDescendantWidth(
 }
 
 /** Ширина одной под-ветки (partnership или solo): own unit width (1 или 2 карточки) ИЛИ ширина суммы детей, что больше. */
-function measureBranchWidth(graph: NormalizedGraph, branch: Branch, cache: Map<string, number>): number {
+function measureBranchWidth(
+  graph: NormalizedGraph,
+  branch: Branch,
+  cache: Map<string, number>,
+): number {
   const ownWidth =
     branch.type === "partnership" ? CARD_WIDTH * 2 + SPOUSE_GAP : CARD_WIDTH;
 
@@ -107,7 +121,8 @@ function measureBranchWidth(graph: NormalizedGraph, branch: Branch, cache: Map<s
     measurePersonDescendantWidth(graph, childId, cache),
   );
   const childrenTotal =
-    childWidths.reduce((sum, w) => sum + w, 0) + SIBLING_GAP * Math.max(0, childKeys.length - 1);
+    childWidths.reduce((sum, w) => sum + w, 0) +
+    SIBLING_GAP * Math.max(0, childKeys.length - 1);
 
   return Math.max(ownWidth, childrenTotal);
 }

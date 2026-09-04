@@ -9,7 +9,12 @@ const datePrecisionSchema = z.enum(["exact", "year_only", "decade", "unknown"]);
  */
 export const partialDateInputSchema = z
   .object({
-    year: z.coerce.number().int().min(1, "Год должен быть положительным").max(2100).optional(),
+    year: z.coerce
+      .number()
+      .int()
+      .min(1, "Год должен быть положительным")
+      .max(2100)
+      .optional(),
     month: z.coerce.number().int().min(1).max(12).optional(),
     day: z.coerce.number().int().min(1).max(31).optional(),
     precision: datePrecisionSchema.optional(),
@@ -38,7 +43,13 @@ export const createPersonSchema = z.object({
   // fields, so deathPlaceId/deathCause is simply absent from what's submitted.
   birthPlaceId: z.string().uuid().optional().nullable().or(z.literal("")),
   deathPlaceId: z.string().uuid().optional().nullable().or(z.literal("")),
-  deathCause: z.string().trim().max(500).optional().nullable().or(z.literal("")),
+  deathCause: z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .nullable()
+    .or(z.literal("")),
 });
 
 export type CreatePersonInput = z.infer<typeof createPersonSchema>;
@@ -52,4 +63,6 @@ export const createPlaceholderPersonSchema = z.object({
   gender: genderSchema.default("unknown"),
 });
 
-export type CreatePlaceholderPersonInput = z.infer<typeof createPlaceholderPersonSchema>;
+export type CreatePlaceholderPersonInput = z.infer<
+  typeof createPlaceholderPersonSchema
+>;

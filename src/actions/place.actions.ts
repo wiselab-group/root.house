@@ -50,7 +50,10 @@ export async function createPlaceAction(
   return {};
 }
 
-export async function deletePlaceAction(familyId: string, placeId: string): Promise<void> {
+export async function deletePlaceAction(
+  familyId: string,
+  placeId: string,
+): Promise<void> {
   const session = await auth();
   if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
 

@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { XIcon } from "lucide-react";
-import { removeParentChildAction, removePartnershipAction } from "@/actions/relationship.actions";
+import {
+  removeParentChildAction,
+  removePartnershipAction,
+} from "@/actions/relationship.actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -65,15 +68,24 @@ export function RemoveRelationshipButton({
         <DialogHeader>
           <DialogTitle>Убрать связь с {relativeName}?</DialogTitle>
           <DialogDescription>
-            Сам человек останется в семье — удаляется только эта связь. Действие можно повторить в
-            обратную сторону, добавив связь заново.
+            Сам человек останется в семье — удаляется только эта связь. Действие
+            можно повторить в обратную сторону, добавив связь заново.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={isPending}
+          >
             Отмена
           </Button>
-          <Button variant="destructive" onClick={handleConfirm} disabled={isPending} aria-busy={isPending}>
+          <Button
+            variant="destructive"
+            onClick={handleConfirm}
+            disabled={isPending}
+            aria-busy={isPending}
+          >
             {isPending ? "Убираем…" : "Убрать связь"}
           </Button>
         </DialogFooter>

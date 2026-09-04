@@ -24,7 +24,8 @@ const lora = Lora({
 
 export const metadata: Metadata = {
   title: "Root house",
-  description: "Семейный архив: родословная, дерево, профили, события и фотографии одной семьи.",
+  description:
+    "Семейный архив: родословная, дерево, профили, события и фотографии одной семьи.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

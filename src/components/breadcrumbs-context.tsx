@@ -21,7 +21,11 @@ const BreadcrumbsContext = createContext<BreadcrumbsContextValue | null>(null);
  * child page to write into a parent layout's already-rendered markup.
  * SetBreadcrumbs below is the write side; AppHeader reads via useBreadcrumbs.
  */
-export function BreadcrumbsProvider({ children }: { children: React.ReactNode }) {
+export function BreadcrumbsProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [items, setItems] = useState<BreadcrumbItem[]>([]);
   return (
     <BreadcrumbsContext.Provider value={{ items, setItems }}>
@@ -33,7 +37,9 @@ export function BreadcrumbsProvider({ children }: { children: React.ReactNode })
 export function useBreadcrumbs(): BreadcrumbItem[] {
   const context = useContext(BreadcrumbsContext);
   if (!context) {
-    throw new Error("useBreadcrumbs() must be used within a BreadcrumbsProvider");
+    throw new Error(
+      "useBreadcrumbs() must be used within a BreadcrumbsProvider",
+    );
   }
   return context.items;
 }

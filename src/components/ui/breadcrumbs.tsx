@@ -18,15 +18,24 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
   if (items.length === 0) return null;
 
   return (
-    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center text-sm text-muted-foreground">
+    <nav
+      aria-label="Breadcrumb"
+      className="flex min-w-0 items-center text-sm text-muted-foreground"
+    >
       <ol className="flex min-w-0 flex-wrap items-center gap-1">
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
           return (
-            <li key={`${item.label}-${index}`} className="flex items-center gap-1">
+            <li
+              key={`${item.label}-${index}`}
+              className="flex items-center gap-1"
+            >
               {index > 0 && <ChevronRightIcon className="size-3.5 shrink-0" />}
               {item.href && !isLast ? (
-                <Link href={item.href} className="truncate hover:text-foreground hover:underline">
+                <Link
+                  href={item.href}
+                  className="truncate hover:text-foreground hover:underline"
+                >
                   {item.label}
                 </Link>
               ) : (

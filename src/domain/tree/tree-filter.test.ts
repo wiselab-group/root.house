@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildFocusTreeLayout, type PersonNode } from "./tree-layout.builder";
-import { applyFilter, isEmptyFilter, matchesFilter, type PersonFilter } from "./tree-filter";
+import {
+  applyFilter,
+  isEmptyFilter,
+  matchesFilter,
+  type PersonFilter,
+} from "./tree-filter";
 
 function person(id: string, overrides: Partial<PersonNode> = {}): PersonNode {
   return {
@@ -38,15 +43,23 @@ describe("matchesFilter", () => {
 
   it("filters by religion", () => {
     const filter: PersonFilter = { religion: ["orthodox"] };
-    expect(matchesFilter(person("a", { religion: "orthodox" }), filter)).toBe(true);
-    expect(matchesFilter(person("b", { religion: "catholic" }), filter)).toBe(false);
+    expect(matchesFilter(person("a", { religion: "orthodox" }), filter)).toBe(
+      true,
+    );
+    expect(matchesFilter(person("b", { religion: "catholic" }), filter)).toBe(
+      false,
+    );
     expect(matchesFilter(person("c", { religion: null }), filter)).toBe(false);
   });
 
   it("filters by nationality", () => {
     const filter: PersonFilter = { nationality: ["russian", "ukrainian"] };
-    expect(matchesFilter(person("a", { nationality: "russian" }), filter)).toBe(true);
-    expect(matchesFilter(person("b", { nationality: "german" }), filter)).toBe(false);
+    expect(matchesFilter(person("a", { nationality: "russian" }), filter)).toBe(
+      true,
+    );
+    expect(matchesFilter(person("b", { nationality: "german" }), filter)).toBe(
+      false,
+    );
   });
 
   it("filters by gender", () => {
@@ -77,8 +90,18 @@ describe("matchesFilter", () => {
 
   it("ANDs multiple criteria together", () => {
     const filter: PersonFilter = { gender: ["male"], religion: ["orthodox"] };
-    expect(matchesFilter(person("a", { gender: "male", religion: "orthodox" }), filter)).toBe(true);
-    expect(matchesFilter(person("b", { gender: "male", religion: "catholic" }), filter)).toBe(false);
+    expect(
+      matchesFilter(
+        person("a", { gender: "male", religion: "orthodox" }),
+        filter,
+      ),
+    ).toBe(true);
+    expect(
+      matchesFilter(
+        person("b", { gender: "male", religion: "catholic" }),
+        filter,
+      ),
+    ).toBe(false);
   });
 });
 
@@ -93,18 +116,28 @@ describe("applyFilter — highlight mode (default)", () => {
       { parentId: "alice", childId: "carol" },
       { parentId: "bob", childId: "carol" },
     ],
-    partnershipEdges: [{ person1Id: "alice", person2Id: "bob", isCurrent: true }],
+    partnershipEdges: [
+      { person1Id: "alice", person2Id: "bob", isCurrent: true },
+    ],
     focusPersonId: "carol",
   });
 
   it("keeps every node in the graph — structure is never destroyed", () => {
-    const filtered = applyFilter(graph, { religion: ["orthodox"] }, "highlight");
+    const filtered = applyFilter(
+      graph,
+      { religion: ["orthodox"] },
+      "highlight",
+    );
     expect(filtered.nodes).toHaveLength(graph.nodes.length);
     expect(filtered.edges).toHaveLength(graph.edges.length);
   });
 
   it("marks only matching people in matchedIds", () => {
-    const filtered = applyFilter(graph, { religion: ["orthodox"] }, "highlight");
+    const filtered = applyFilter(
+      graph,
+      { religion: ["orthodox"] },
+      "highlight",
+    );
     expect(filtered.matchedIds.has("alice")).toBe(true);
     expect(filtered.matchedIds.has("bob")).toBe(false);
     expect(filtered.matchedIds.has("carol")).toBe(false);
@@ -147,7 +180,9 @@ describe("applyFilter — hide mode", () => {
       { parentId: "alice", childId: "carol" },
       { parentId: "bob", childId: "carol" },
     ],
-    partnershipEdges: [{ person1Id: "alice", person2Id: "bob", isCurrent: true }],
+    partnershipEdges: [
+      { person1Id: "alice", person2Id: "bob", isCurrent: true },
+    ],
     focusPersonId: "carol",
   });
 
@@ -162,7 +197,11 @@ describe("applyFilter — hide mode", () => {
   });
 
   it("keeps an edge only when both endpoints survive the filter", () => {
-    const filtered = applyFilter(graph, { religion: ["orthodox", "catholic"] }, "hide");
+    const filtered = applyFilter(
+      graph,
+      { religion: ["orthodox", "catholic"] },
+      "hide",
+    );
     expect(filtered.nodes.map((n) => n.id).sort()).toEqual(["alice", "bob"]);
     expect(filtered.edges).toHaveLength(1);
     expect(filtered.edges[0].kind).toBe("partnership");

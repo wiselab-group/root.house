@@ -18,8 +18,12 @@ export class EmailAlreadyRegisteredError extends Error {
  * EmailAlreadyRegisteredError if the email is taken — callers (the register
  * server action) turn this into a user-facing form error rather than a 500.
  */
-export async function registerUser(input: RegisterInput): Promise<{ id: string }> {
-  const existing = await db.query.users.findFirst({ where: eq(users.email, input.email) });
+export async function registerUser(
+  input: RegisterInput,
+): Promise<{ id: string }> {
+  const existing = await db.query.users.findFirst({
+    where: eq(users.email, input.email),
+  });
   if (existing) {
     throw new EmailAlreadyRegisteredError();
   }
@@ -45,6 +49,9 @@ export async function registerUser(input: RegisterInput): Promise<{ id: string }
  * blindly.
  */
 export async function userExists(userId: string): Promise<boolean> {
-  const row = await db.query.users.findFirst({ where: eq(users.id, userId), columns: { id: true } });
+  const row = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { id: true },
+  });
   return row != null;
 }

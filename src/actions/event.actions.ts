@@ -64,7 +64,11 @@ export async function createEventAction(
   return {};
 }
 
-export async function deleteEventAction(familyId: string, personId: string, eventId: string): Promise<void> {
+export async function deleteEventAction(
+  familyId: string,
+  personId: string,
+  eventId: string,
+): Promise<void> {
   const session = await auth();
   if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
 

@@ -24,7 +24,9 @@ function parseFilterParam(raw: string | undefined): PersonFilter {
   if (!raw) return {};
   try {
     const parsed = JSON.parse(raw);
-    return typeof parsed === "object" && parsed !== null ? (parsed as PersonFilter) : {};
+    return typeof parsed === "object" && parsed !== null
+      ? (parsed as PersonFilter)
+      : {};
   } catch {
     return {};
   }
@@ -78,15 +80,26 @@ export default async function FamilyTreePage({
   // people.some(...) guards both sources against a stale/foreign id (a
   // deleted person, or a default saved before a person was removed).
   const focusPersonId =
-    (typeof focus === "string" && people.some((p) => p.id === focus) ? focus : null) ??
-    (member.defaultFocusPersonId && people.some((p) => p.id === member.defaultFocusPersonId)
+    (typeof focus === "string" && people.some((p) => p.id === focus)
+      ? focus
+      : null) ??
+    (member.defaultFocusPersonId &&
+    people.some((p) => p.id === member.defaultFocusPersonId)
       ? member.defaultFocusPersonId
       : null) ??
     people[0].id;
 
-  const filter = parseFilterParam(typeof filterParam === "string" ? filterParam : undefined);
-  const traceAId = typeof traceA === "string" && people.some((p) => p.id === traceA) ? traceA : null;
-  const traceBId = typeof traceB === "string" && people.some((p) => p.id === traceB) ? traceB : null;
+  const filter = parseFilterParam(
+    typeof filterParam === "string" ? filterParam : undefined,
+  );
+  const traceAId =
+    typeof traceA === "string" && people.some((p) => p.id === traceA)
+      ? traceA
+      : null;
+  const traceBId =
+    typeof traceB === "string" && people.some((p) => p.id === traceB)
+      ? traceB
+      : null;
 
   const [layoutGraph, traceOutcome] = await Promise.all([
     getFocusTreeLayout(familyId, focusPersonId, {
@@ -98,7 +111,9 @@ export default async function FamilyTreePage({
       descendantGenerations: Infinity,
       filter: isEmptyFilter(filter) ? undefined : filter,
     }),
-    traceAId && traceBId ? findRelationshipPathFor(traceAId, traceBId, familyId) : Promise.resolve(null),
+    traceAId && traceBId
+      ? findRelationshipPathFor(traceAId, traceBId, familyId)
+      : Promise.resolve(null),
   ]);
 
   const tracedGraph = applyRelationshipTrace(layoutGraph, traceOutcome);
@@ -120,7 +135,8 @@ export default async function FamilyTreePage({
         familySlug={slug}
         graph={tracedGraph}
         highlight={{
-          filterMatchedIds: "matchedIds" in layoutGraph ? layoutGraph.matchedIds : undefined,
+          filterMatchedIds:
+            "matchedIds" in layoutGraph ? layoutGraph.matchedIds : undefined,
           // Only pass trace sets when a trace is actually active (both A and B
           // picked) — an always-present-but-empty Set would make every node
           // read as "trace active, just not on it" and dim the whole tree by
@@ -129,8 +145,22 @@ export default async function FamilyTreePage({
           tracePersonIds: traceOutcome ? tracedGraph.tracePersonIds : undefined,
           traceEdgeIds: traceOutcome ? tracedGraph.traceEdgeIds : undefined,
         }}
-        traceA={traceAId ? { id: traceAId, name: personDisplayName(peopleById.get(traceAId)!) } : null}
-        traceB={traceBId ? { id: traceBId, name: personDisplayName(peopleById.get(traceBId)!) } : null}
+        traceA={
+          traceAId
+            ? {
+                id: traceAId,
+                name: personDisplayName(peopleById.get(traceAId)!),
+              }
+            : null
+        }
+        traceB={
+          traceBId
+            ? {
+                id: traceBId,
+                name: personDisplayName(peopleById.get(traceBId)!),
+              }
+            : null
+        }
         traceOutcome={traceOutcome}
         filter={filter}
       />

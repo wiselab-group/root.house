@@ -18,20 +18,29 @@ export function deriveSiblings(
   personId: string,
   edges: ParentChildEdge[],
 ): Array<{ personId: string; sharedParentCount: number }> {
-  const parentsOfPerson = edges.filter((e) => e.childId === personId).map((e) => e.parentId);
+  const parentsOfPerson = edges
+    .filter((e) => e.childId === personId)
+    .map((e) => e.parentId);
   if (parentsOfPerson.length === 0) return [];
 
   const sharedParentCountByChild = new Map<string, number>();
   for (const parentId of parentsOfPerson) {
-    const childrenOfThisParent = edges.filter((e) => e.parentId === parentId).map((e) => e.childId);
+    const childrenOfThisParent = edges
+      .filter((e) => e.parentId === parentId)
+      .map((e) => e.childId);
     for (const childId of childrenOfThisParent) {
       if (childId === personId) continue;
-      sharedParentCountByChild.set(childId, (sharedParentCountByChild.get(childId) ?? 0) + 1);
+      sharedParentCountByChild.set(
+        childId,
+        (sharedParentCountByChild.get(childId) ?? 0) + 1,
+      );
     }
   }
 
-  return [...sharedParentCountByChild.entries()].map(([id, sharedParentCount]) => ({
-    personId: id,
-    sharedParentCount,
-  }));
+  return [...sharedParentCountByChild.entries()].map(
+    ([id, sharedParentCount]) => ({
+      personId: id,
+      sharedParentCount,
+    }),
+  );
 }

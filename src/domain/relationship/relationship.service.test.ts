@@ -1,16 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { RelationshipValidationError, validateParentChild, validatePartnership } from "./relationship.service";
+import {
+  RelationshipValidationError,
+  validateParentChild,
+  validatePartnership,
+} from "./relationship.service";
 
 const FAMILY_ID = "family-1";
 
 /** Fake personExists: every id in `existingIds` "exists"; everything else doesn't. */
 function fakePersonExists(existingIds: string[]) {
-  return async (personId: string) => (existingIds.includes(personId) ? { id: personId } : null);
+  return async (personId: string) =>
+    existingIds.includes(personId) ? { id: personId } : null;
 }
 
 /** Fake isAncestorOf driven by an explicit adjacency map: ancestorMap[x] = direct ancestors of x. */
 function fakeIsAncestorOf(ancestorMap: Record<string, string[]>) {
-  return async (candidateAncestorId: string, personId: string): Promise<boolean> => {
+  return async (
+    candidateAncestorId: string,
+    personId: string,
+  ): Promise<boolean> => {
     const visited = new Set<string>();
     const queue = [...(ancestorMap[personId] ?? [])];
     while (queue.length > 0) {
@@ -30,7 +38,10 @@ describe("validateParentChild", () => {
       validateParentChild(
         FAMILY_ID,
         { parentId: "p1", childId: "p1" },
-        { personExists: fakePersonExists(["p1"]), isAncestorOf: fakeIsAncestorOf({}) },
+        {
+          personExists: fakePersonExists(["p1"]),
+          isAncestorOf: fakeIsAncestorOf({}),
+        },
       ),
     ).rejects.toThrow(RelationshipValidationError);
   });
@@ -40,7 +51,10 @@ describe("validateParentChild", () => {
       validateParentChild(
         FAMILY_ID,
         { parentId: "p1", childId: "ghost" },
-        { personExists: fakePersonExists(["p1"]), isAncestorOf: fakeIsAncestorOf({}) },
+        {
+          personExists: fakePersonExists(["p1"]),
+          isAncestorOf: fakeIsAncestorOf({}),
+        },
       ),
     ).rejects.toThrow(RelationshipValidationError);
   });
@@ -53,7 +67,10 @@ describe("validateParentChild", () => {
       validateParentChild(
         FAMILY_ID,
         { parentId: "p2", childId: "p1" },
-        { personExists: fakePersonExists(["p1", "p2"]), isAncestorOf: fakeIsAncestorOf(ancestorMap) },
+        {
+          personExists: fakePersonExists(["p1", "p2"]),
+          isAncestorOf: fakeIsAncestorOf(ancestorMap),
+        },
       ),
     ).rejects.toThrow(/цикл/);
   });
@@ -79,7 +96,12 @@ describe("validateParentChild", () => {
         FAMILY_ID,
         { parentId: "great-grandparent", childId: "grandparent" },
         {
-          personExists: fakePersonExists(["great-grandparent", "grandparent", "parent", "child"]),
+          personExists: fakePersonExists([
+            "great-grandparent",
+            "grandparent",
+            "parent",
+            "child",
+          ]),
           isAncestorOf: fakeIsAncestorOf(ancestorMap),
         },
       ),

@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 /** Same email format the server actually enforces — checked here only to
  *  decide whether the password step can be reached, never as the source of
  *  truth (loginAction re-validates with the same schema regardless). */
-const isValidEmail = (value: string) => credentialsSchema.shape.email.safeParse(value).success;
+const isValidEmail = (value: string) =>
+  credentialsSchema.shape.email.safeParse(value).success;
 
 const initialState: LoginFormState = {};
 
@@ -26,7 +27,12 @@ function FieldError({ children }: { children: React.ReactNode }) {
 function SubmitButton({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" className="w-full" disabled={pending} aria-busy={pending}>
+    <Button
+      type="submit"
+      className="w-full"
+      disabled={pending}
+      aria-busy={pending}
+    >
       {pending ? "Входим…" : children}
     </Button>
   );

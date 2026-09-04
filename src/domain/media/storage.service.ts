@@ -21,7 +21,10 @@ export interface UploadResult {
 export interface StorageService {
   upload(input: UploadInput): Promise<UploadResult>;
   delete(storageKey: string): Promise<void>;
-  getSignedUrl(storageKey: string, opts?: { expiresInSeconds?: number }): Promise<string>;
+  getSignedUrl(
+    storageKey: string,
+    opts?: { expiresInSeconds?: number },
+  ): Promise<string>;
   /** Identifies which provider implementation this is — stored on Media.storageProvider. */
   readonly providerName: string;
 }

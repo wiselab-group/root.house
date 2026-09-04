@@ -11,7 +11,13 @@ import { Button } from "@/components/ui/button";
  * or Vercel Blob's client-token flow (which only supports public blobs —
  * see the route handler's doc comment for why that's a non-starter here).
  */
-export function PhotoUploadForm({ familyId, personId }: { familyId: string; personId: string }) {
+export function PhotoUploadForm({
+  familyId,
+  personId,
+}: {
+  familyId: string;
+  personId: string;
+}) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -30,7 +36,10 @@ export function PhotoUploadForm({ familyId, personId }: { familyId: string; pers
       formData.set("personId", personId);
       formData.set("file", file);
 
-      const response = await fetch("/api/media/upload", { method: "POST", body: formData });
+      const response = await fetch("/api/media/upload", {
+        method: "POST",
+        body: formData,
+      });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error ?? "Не удалось загрузить фото");
@@ -38,7 +47,9 @@ export function PhotoUploadForm({ familyId, personId }: { familyId: string; pers
 
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось загрузить фото");
+      setError(
+        err instanceof Error ? err.message : "Не удалось загрузить фото",
+      );
     } finally {
       setIsUploading(false);
       if (inputRef.current) inputRef.current.value = "";

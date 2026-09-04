@@ -1,4 +1,14 @@
-import { pgTable, text, timestamp, uuid, smallint, boolean, index, uniqueIndex, pgEnum } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  smallint,
+  boolean,
+  index,
+  uniqueIndex,
+  pgEnum,
+} from "drizzle-orm/pg-core";
 import { families } from "./family";
 import { places } from "./place";
 import { users } from "./auth";
@@ -62,8 +72,12 @@ export const persons = pgTable(
     deathDatePrecision: text("death_date_precision"),
     deathDateApproximate: boolean("death_date_approximate"),
 
-    birthPlaceId: uuid("birth_place_id").references(() => places.id, { onDelete: "set null" }),
-    deathPlaceId: uuid("death_place_id").references(() => places.id, { onDelete: "set null" }),
+    birthPlaceId: uuid("birth_place_id").references(() => places.id, {
+      onDelete: "set null",
+    }),
+    deathPlaceId: uuid("death_place_id").references(() => places.id, {
+      onDelete: "set null",
+    }),
 
     deathCause: text("death_cause"),
 
@@ -83,7 +97,11 @@ export const persons = pgTable(
   },
   (table) => [
     index("persons_family_idx").on(table.familyId),
-    index("persons_family_name_idx").on(table.familyId, table.lastName, table.firstName),
+    index("persons_family_name_idx").on(
+      table.familyId,
+      table.lastName,
+      table.firstName,
+    ),
     // Composite, not a bare unique(slug) — the same slug ("alexander") is
     // expected to recur across different families; only collisions within
     // one family matter (see domain/person/slug.ts::ensureUniquePersonSlug).

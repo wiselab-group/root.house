@@ -10,7 +10,9 @@ async function main() {
 
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    throw new Error("DATABASE_URL is not set. Copy .env.example to .env.local first.");
+    throw new Error(
+      "DATABASE_URL is not set. Copy .env.example to .env.local first.",
+    );
   }
 
   const sql = neon(connectionString);

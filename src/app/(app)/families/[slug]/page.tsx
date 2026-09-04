@@ -4,7 +4,9 @@ import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 
-export default async function FamilyDashboardPage({ params }: PageProps<"/families/[slug]">) {
+export default async function FamilyDashboardPage({
+  params,
+}: PageProps<"/families/[slug]">) {
   const { slug } = await params;
   const familyId = await resolveFamilyIdBySlug(slug);
   const family = await getFamilySummary(familyId);
@@ -18,7 +20,9 @@ export default async function FamilyDashboardPage({ params }: PageProps<"/famili
         ]}
       />
       <div className="flex flex-col gap-1">
-        <h1 className="font-heading text-2xl font-medium">{family?.name ?? slug}</h1>
+        <h1 className="font-heading text-2xl font-medium">
+          {family?.name ?? slug}
+        </h1>
         {family?.description && (
           <p className="text-muted-foreground">{family.description}</p>
         )}

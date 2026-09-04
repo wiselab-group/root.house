@@ -2,7 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
-import { getEvent, getParticipantsWithNames } from "@/domain/event/event.service";
+import {
+  getEvent,
+  getParticipantsWithNames,
+} from "@/domain/event/event.service";
 import { getPlace } from "@/domain/place/place.service";
 import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 import { formatPartialDate } from "@/domain/shared/partial-date";
@@ -38,7 +41,12 @@ export default async function EventDetailsPage({
     { label: "Мои семьи", href: "/families" },
     { label: family?.name ?? slug, href: `/families/${slug}` },
     ...(subject?.slug
-      ? [{ label: subject.name, href: `/families/${slug}/people/${subject.slug}` }]
+      ? [
+          {
+            label: subject.name,
+            href: `/families/${slug}/people/${subject.slug}`,
+          },
+        ]
       : [{ label: "Люди", href: `/families/${slug}/people` }]),
     { label: event.title },
   ];
@@ -48,7 +56,9 @@ export default async function EventDetailsPage({
       <SetBreadcrumbs items={breadcrumbItems} />
       <div>
         <Badge variant="secondary">{EVENT_TYPE_LABELS[event.type]}</Badge>
-        <h1 className="font-heading mt-2 text-3xl font-medium">{event.title}</h1>
+        <h1 className="font-heading mt-2 text-3xl font-medium">
+          {event.title}
+        </h1>
         <p className="text-muted-foreground">
           {formatPartialDate(event.date)}
           {event.endDate && ` — ${formatPartialDate(event.endDate)}`}
@@ -61,7 +71,9 @@ export default async function EventDetailsPage({
           <CardHeader>
             <CardTitle>Описание</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm whitespace-pre-wrap">{event.description}</CardContent>
+          <CardContent className="text-sm whitespace-pre-wrap">
+            {event.description}
+          </CardContent>
         </Card>
       )}
 
@@ -75,9 +87,15 @@ export default async function EventDetailsPage({
           ) : (
             <ul className="flex flex-col gap-2">
               {participants.map((p) => (
-                <li key={p.personId} className="flex items-center justify-between text-sm">
+                <li
+                  key={p.personId}
+                  className="flex items-center justify-between text-sm"
+                >
                   {p.slug ? (
-                    <Link href={`/families/${slug}/people/${p.slug}`} className="hover:underline">
+                    <Link
+                      href={`/families/${slug}/people/${p.slug}`}
+                      className="hover:underline"
+                    >
                       {p.name}
                     </Link>
                   ) : (

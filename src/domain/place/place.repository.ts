@@ -23,14 +23,19 @@ function toRecord(row: typeof places.$inferSelect): PlaceRecord {
 }
 
 /** Fetches a Place scoped to a family in the same query — same IDOR-safe pattern as getPersonById. */
-export async function getPlaceById(placeId: string, familyId: string): Promise<PlaceRecord | null> {
+export async function getPlaceById(
+  placeId: string,
+  familyId: string,
+): Promise<PlaceRecord | null> {
   const row = await db.query.places.findFirst({
     where: and(eq(places.id, placeId), eq(places.familyId, familyId)),
   });
   return row ? toRecord(row) : null;
 }
 
-export async function listPlacesByFamily(familyId: string): Promise<PlaceRecord[]> {
+export async function listPlacesByFamily(
+  familyId: string,
+): Promise<PlaceRecord[]> {
   const rows = await db.query.places.findMany({
     where: eq(places.familyId, familyId),
     orderBy: [asc(places.name)],
@@ -46,7 +51,9 @@ export interface CreatePlaceData {
   region?: string | null;
 }
 
-export async function createPlace(data: CreatePlaceData): Promise<{ id: string }> {
+export async function createPlace(
+  data: CreatePlaceData,
+): Promise<{ id: string }> {
   const [row] = await db
     .insert(places)
     .values({
@@ -60,7 +67,10 @@ export async function createPlace(data: CreatePlaceData): Promise<{ id: string }
   return row;
 }
 
-export async function deletePlace(placeId: string, familyId: string): Promise<boolean> {
+export async function deletePlace(
+  placeId: string,
+  familyId: string,
+): Promise<boolean> {
   const result = await db
     .delete(places)
     .where(and(eq(places.id, placeId), eq(places.familyId, familyId)))

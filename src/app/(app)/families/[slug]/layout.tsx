@@ -60,7 +60,10 @@ export default async function FamilyLayout({
         familySlug: family.slug,
         role: member.role,
         defaultFocusPerson: defaultFocusPerson
-          ? { id: defaultFocusPerson.id, name: personDisplayName(defaultFocusPerson) }
+          ? {
+              id: defaultFocusPerson.id,
+              name: personDisplayName(defaultFocusPerson),
+            }
           : null,
       }}
     >
@@ -70,10 +73,18 @@ export default async function FamilyLayout({
           not just the dashboard itself. */}
       <SetFamilyNav
         items={[
-          { href: `/families/${slug}/tree`, icon: "tree", label: "Семейное дерево" },
+          {
+            href: `/families/${slug}/tree`,
+            icon: "tree",
+            label: "Семейное дерево",
+          },
           { href: `/families/${slug}/people`, icon: "people", label: "Люди" },
           { href: `/families/${slug}/places`, icon: "places", label: "Места" },
-          { href: `/families/${slug}/settings`, icon: "settings", label: "Настройки" },
+          {
+            href: `/families/${slug}/settings`,
+            icon: "settings",
+            label: "Настройки",
+          },
         ]}
       />
       {children}

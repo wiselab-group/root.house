@@ -1,9 +1,26 @@
-import { pgTable, text, timestamp, uuid, smallint, boolean, index, uniqueIndex, check, pgEnum } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  smallint,
+  boolean,
+  index,
+  uniqueIndex,
+  check,
+  pgEnum,
+} from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { families } from "./family";
 import { persons } from "./person";
 
-export const parentRoleEnum = pgEnum("parent_role", ["biological", "adoptive", "step", "foster", "unknown"]);
+export const parentRoleEnum = pgEnum("parent_role", [
+  "biological",
+  "adoptive",
+  "step",
+  "foster",
+  "unknown",
+]);
 export const partnershipStatusEnum = pgEnum("partnership_status", [
   "married",
   "divorced",
@@ -39,7 +56,10 @@ export const relationshipsParentChild = pgTable(
     uniqueIndex("parent_child_unique").on(table.parentId, table.childId),
     index("parent_child_child_idx").on(table.childId), // "who are my parents" — ancestors
     index("parent_child_parent_idx").on(table.parentId), // "who are my children" — descendants
-    check("parent_child_no_self_reference", sql`${table.parentId} <> ${table.childId}`),
+    check(
+      "parent_child_no_self_reference",
+      sql`${table.parentId} <> ${table.childId}`,
+    ),
   ],
 );
 
@@ -83,6 +103,9 @@ export const relationshipsPartnership = pgTable(
   (table) => [
     index("partnership_person1_idx").on(table.person1Id),
     index("partnership_person2_idx").on(table.person2Id),
-    check("partnership_no_self_reference", sql`${table.person1Id} <> ${table.person2Id}`),
+    check(
+      "partnership_no_self_reference",
+      sql`${table.person1Id} <> ${table.person2Id}`,
+    ),
   ],
 );

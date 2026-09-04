@@ -6,7 +6,9 @@ import { listPlaces } from "@/domain/place/place.service";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 
-export default async function NewPersonPage({ params }: PageProps<"/families/[slug]/people/new">) {
+export default async function NewPersonPage({
+  params,
+}: PageProps<"/families/[slug]/people/new">) {
   const { slug } = await params;
   const familyId = await resolveFamilyIdBySlug(slug);
   const [places, family] = await Promise.all([

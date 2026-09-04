@@ -7,7 +7,10 @@ import {
   type RelationshipLabel,
   type RelationshipPathResult,
 } from "./relationship-path";
-import type { ParentChildRecord, PartnershipRecord } from "./relationship.repository";
+import type {
+  ParentChildRecord,
+  PartnershipRecord,
+} from "./relationship.repository";
 
 /**
  * genealogy-algorithms.ts — the core traversal/query API over a GenealogyGraph.
@@ -46,7 +49,10 @@ export interface SiblingOf {
 }
 
 /** Direct parents of `personId`, with the role each parent has (biological/adoptive/step/foster/unknown). */
-export function getParents(graph: GenealogyGraph, personId: string): ParentOf[] {
+export function getParents(
+  graph: GenealogyGraph,
+  personId: string,
+): ParentOf[] {
   const edges = graph.parentEdgesOf.get(personId) ?? [];
   return edges
     .map((edge) => {
@@ -57,7 +63,10 @@ export function getParents(graph: GenealogyGraph, personId: string): ParentOf[] 
 }
 
 /** Direct children of `personId`, with the role `personId` has for each. */
-export function getChildren(graph: GenealogyGraph, personId: string): ChildOf[] {
+export function getChildren(
+  graph: GenealogyGraph,
+  personId: string,
+): ChildOf[] {
   const edges = graph.childEdgesOf.get(personId) ?? [];
   return edges
     .map((edge) => {
@@ -68,11 +77,15 @@ export function getChildren(graph: GenealogyGraph, personId: string): ChildOf[] 
 }
 
 /** Every partner `personId` has ever had (current or past — see partnership.status/isCurrent to distinguish). */
-export function getPartners(graph: GenealogyGraph, personId: string): PartnerOf[] {
+export function getPartners(
+  graph: GenealogyGraph,
+  personId: string,
+): PartnerOf[] {
   const edges = graph.partnershipEdgesOf.get(personId) ?? [];
   return edges
     .map((edge) => {
-      const otherId = edge.person1Id === personId ? edge.person2Id : edge.person1Id;
+      const otherId =
+        edge.person1Id === personId ? edge.person2Id : edge.person1Id;
       const other = graph.personsById.get(otherId);
       return other ? { person: other, partnership: edge } : null;
     })
@@ -85,8 +98,14 @@ export function getPartners(graph: GenealogyGraph, personId: string): PartnerOf[
  * exact pure algorithm over the graph's parent_child edges rather than
  * re-deriving the logic.
  */
-export function getSiblings(graph: GenealogyGraph, personId: string): SiblingOf[] {
-  const allEdges = [...graph.parentEdgesOf.values(), ...graph.childEdgesOf.values()]
+export function getSiblings(
+  graph: GenealogyGraph,
+  personId: string,
+): SiblingOf[] {
+  const allEdges = [
+    ...graph.parentEdgesOf.values(),
+    ...graph.childEdgesOf.values(),
+  ]
     .flat()
     .map((e) => ({ parentId: e.parentId, childId: e.childId }));
   // parentEdgesOf and childEdgesOf both reference the same underlying rows
@@ -108,7 +127,11 @@ export function getSiblings(graph: GenealogyGraph, personId: string): SiblingOf[
  * expand, Relationship Trace) already have the full family graph loaded and
  * shouldn't round-trip to the database on every UI interaction.
  */
-function ancestorDepths(graph: GenealogyGraph, personId: string, maxGenerations: number): Map<string, number> {
+function ancestorDepths(
+  graph: GenealogyGraph,
+  personId: string,
+  maxGenerations: number,
+): Map<string, number> {
   const depths = new Map<string, number>();
   let frontier = [personId];
   for (let depth = 1; depth <= maxGenerations && frontier.length > 0; depth++) {
@@ -126,7 +149,11 @@ function ancestorDepths(graph: GenealogyGraph, personId: string, maxGenerations:
   return depths;
 }
 
-function descendantDepths(graph: GenealogyGraph, personId: string, maxGenerations: number): Map<string, number> {
+function descendantDepths(
+  graph: GenealogyGraph,
+  personId: string,
+  maxGenerations: number,
+): Map<string, number> {
   const depths = new Map<string, number>();
   let frontier = [personId];
   for (let depth = 1; depth <= maxGenerations && frontier.length > 0; depth++) {
@@ -161,7 +188,11 @@ export function getAncestors(
   personId: string,
   options: AncestorDescendantOptions = {},
 ): GenerationalRelative[] {
-  const depths = ancestorDepths(graph, personId, options.maxGenerations ?? DEFAULT_MAX_GENERATIONS);
+  const depths = ancestorDepths(
+    graph,
+    personId,
+    options.maxGenerations ?? DEFAULT_MAX_GENERATIONS,
+  );
   return [...depths.entries()]
     .map(([id, generationsAway]) => {
       const person = graph.personsById.get(id);
@@ -176,7 +207,11 @@ export function getDescendants(
   personId: string,
   options: AncestorDescendantOptions = {},
 ): GenerationalRelative[] {
-  const depths = descendantDepths(graph, personId, options.maxGenerations ?? DEFAULT_MAX_GENERATIONS);
+  const depths = descendantDepths(
+    graph,
+    personId,
+    options.maxGenerations ?? DEFAULT_MAX_GENERATIONS,
+  );
   return [...depths.entries()]
     .map(([id, generationsAway]) => {
       const person = graph.personsById.get(id);
@@ -272,7 +307,8 @@ export interface RelationshipPathFound {
   relationship: RelationshipPathResult;
 }
 
-export type RelationshipPathOutcome = RelationshipPathFound | RelationshipPathNotFound;
+export type RelationshipPathOutcome =
+  RelationshipPathFound | RelationshipPathNotFound;
 
 /**
  * findRelationshipPath — the product's central function (plan §4): "how is A
@@ -311,10 +347,23 @@ export function findRelationshipPath(
   const maxGenerations = options.maxGenerations ?? DEFAULT_MAX_GENERATIONS;
   const ancestorsA = ancestorDepths(graph, personAId, maxGenerations);
   const ancestorsB = ancestorDepths(graph, personBId, maxGenerations);
-  const relationship = computeRelationshipPath(personAId, personBId, ancestorsA, ancestorsB);
+  const relationship = computeRelationshipPath(
+    personAId,
+    personBId,
+    ancestorsA,
+    ancestorsB,
+  );
 
   if (relationship.label === "same person") {
-    return { status: "found", personAId, personBId, personIds: [personAId], steps: [], commonAncestorId: personAId, relationship };
+    return {
+      status: "found",
+      personAId,
+      personBId,
+      personIds: [personAId],
+      steps: [],
+      commonAncestorId: personAId,
+      relationship,
+    };
   }
 
   if (relationship.commonAncestorId !== null) {
@@ -335,7 +384,9 @@ export function findRelationshipPath(
       const goingUp = i < upFromA.length - 1;
       // Going up: toId is fromId's parent, so the stored edge is (parent=toId, child=fromId).
       // Going down: fromId is toId's parent, so the stored edge is (parent=fromId, child=toId).
-      const edge = goingUp ? findParentEdge(graph, toId, fromId) : findParentEdge(graph, fromId, toId);
+      const edge = goingUp
+        ? findParentEdge(graph, toId, fromId)
+        : findParentEdge(graph, fromId, toId);
       steps.push({
         fromId,
         toId,
@@ -345,7 +396,15 @@ export function findRelationshipPath(
       });
     }
 
-    return { status: "found", personAId, personBId, personIds, steps, commonAncestorId, relationship };
+    return {
+      status: "found",
+      personAId,
+      personBId,
+      personIds,
+      steps,
+      commonAncestorId,
+      relationship,
+    };
   }
 
   // No shared ancestor: fall back to the mixed-graph BFS for spouse / in-law paths.
@@ -355,7 +414,9 @@ export function findRelationshipPath(
   }
 
   const steps = mixedPathSteps(graph, mixedPath);
-  const partnershipHops = steps.filter((s) => s.edgeKind === "partnership").length;
+  const partnershipHops = steps.filter(
+    (s) => s.edgeKind === "partnership",
+  ).length;
 
   if (mixedPath.length === 2 && partnershipHops === 1) {
     return {
@@ -374,7 +435,15 @@ export function findRelationshipPath(
   // their partner and re-run the pure-blood classifier from there — e.g.
   // "my wife" <-> "my mother": swap wife for me, then me<->mother is "child",
   // so the UI can render "мать супруга(и)" from inLawBlood: "child".
-  const inLawBlood = classifyInLaw(graph, personAId, personBId, mixedPath, ancestorsA, ancestorsB, maxGenerations);
+  const inLawBlood = classifyInLaw(
+    graph,
+    personAId,
+    personBId,
+    mixedPath,
+    ancestorsA,
+    ancestorsB,
+    maxGenerations,
+  );
 
   return {
     status: "found",
@@ -395,7 +464,11 @@ export function findRelationshipPath(
  * empty, so it doesn't need to special-case "shorter blood path exists" —
  * there isn't one by the time this runs.
  */
-function shortestMixedPath(graph: GenealogyGraph, fromId: string, toId: string): string[] | null {
+function shortestMixedPath(
+  graph: GenealogyGraph,
+  fromId: string,
+  toId: string,
+): string[] | null {
   if (fromId === toId) return [fromId];
 
   const visited = new Set([fromId]);
@@ -408,7 +481,9 @@ function shortestMixedPath(graph: GenealogyGraph, fromId: string, toId: string):
       const neighbors = [
         ...(graph.parentEdgesOf.get(id) ?? []).map((e) => e.parentId),
         ...(graph.childEdgesOf.get(id) ?? []).map((e) => e.childId),
-        ...(graph.partnershipEdgesOf.get(id) ?? []).map((e) => (e.person1Id === id ? e.person2Id : e.person1Id)),
+        ...(graph.partnershipEdgesOf.get(id) ?? []).map((e) =>
+          e.person1Id === id ? e.person2Id : e.person1Id,
+        ),
       ];
       for (const neighborId of neighbors) {
         if (visited.has(neighborId)) continue;
@@ -433,19 +508,34 @@ function shortestMixedPath(graph: GenealogyGraph, fromId: string, toId: string):
 }
 
 /** Converts a mixed BFS path (person ids) into typed steps, tagging each hop's edge kind/direction. */
-function mixedPathSteps(graph: GenealogyGraph, personIds: string[]): RelationshipPathStep[] {
+function mixedPathSteps(
+  graph: GenealogyGraph,
+  personIds: string[],
+): RelationshipPathStep[] {
   const steps: RelationshipPathStep[] = [];
   for (let i = 0; i < personIds.length - 1; i++) {
     const fromId = personIds[i];
     const toId = personIds[i + 1];
     const asParentEdge = findParentEdge(graph, toId, fromId); // toId is fromId's parent
     if (asParentEdge) {
-      steps.push({ fromId, toId, edgeKind: "parent_child", direction: "up", parentRole: asParentEdge.parentRole });
+      steps.push({
+        fromId,
+        toId,
+        edgeKind: "parent_child",
+        direction: "up",
+        parentRole: asParentEdge.parentRole,
+      });
       continue;
     }
     const asChildEdge = findParentEdge(graph, fromId, toId); // fromId is toId's parent
     if (asChildEdge) {
-      steps.push({ fromId, toId, edgeKind: "parent_child", direction: "down", parentRole: asChildEdge.parentRole });
+      steps.push({
+        fromId,
+        toId,
+        edgeKind: "parent_child",
+        direction: "down",
+        parentRole: asChildEdge.parentRole,
+      });
       continue;
     }
     steps.push({ fromId, toId, edgeKind: "partnership" });
@@ -475,7 +565,9 @@ function classifyInLaw(
     if (i === mixedPath.length - 1) return false;
     const next = mixedPath[i + 1];
     return (graph.partnershipEdgesOf.get(id) ?? []).some(
-      (e) => (e.person1Id === id && e.person2Id === next) || (e.person2Id === id && e.person1Id === next),
+      (e) =>
+        (e.person1Id === id && e.person2Id === next) ||
+        (e.person2Id === id && e.person1Id === next),
     );
   });
   if (partnershipIndex === -1) return undefined;
@@ -490,13 +582,23 @@ function classifyInLaw(
     // Swap A for their partner at mixedPath[1], classify partner<->B directly.
     const swappedId = mixedPath[1];
     const swappedAncestors = ancestorDepths(graph, swappedId, maxGenerations);
-    return asInLawBlood(computeRelationshipPath(swappedId, personBId, swappedAncestors, ancestorsB).label);
+    return asInLawBlood(
+      computeRelationshipPath(
+        swappedId,
+        personBId,
+        swappedAncestors,
+        ancestorsB,
+      ).label,
+    );
   }
 
   // Swap B for their partner at the second-to-last position, classify A<->partner.
   const swappedId = mixedPath[mixedPath.length - 2];
   const swappedAncestors = ancestorDepths(graph, swappedId, maxGenerations);
-  return asInLawBlood(computeRelationshipPath(personAId, swappedId, ancestorsA, swappedAncestors).label);
+  return asInLawBlood(
+    computeRelationshipPath(personAId, swappedId, ancestorsA, swappedAncestors)
+      .label,
+  );
 }
 
 /**
@@ -507,16 +609,29 @@ function classifyInLaw(
  * down, treating "same person"/"unrelated" (not real blood-relation shapes
  * an in-law phrasing can use) the same as "no swap found".
  */
-function asInLawBlood(label: RelationshipLabel): BloodRelationLabel | undefined {
-  if (label === "unrelated" || label === "same person" || label === "spouse" || label === "in_law") {
+function asInLawBlood(
+  label: RelationshipLabel,
+): BloodRelationLabel | undefined {
+  if (
+    label === "unrelated" ||
+    label === "same person" ||
+    label === "spouse" ||
+    label === "in_law"
+  ) {
     return undefined;
   }
   return label;
 }
 
 /** Direct parent_child edge from `parentId` to `childId`, if one exists. */
-function findParentEdge(graph: GenealogyGraph, parentId: string, childId: string): ParentChildRecord | undefined {
-  return (graph.childEdgesOf.get(parentId) ?? []).find((e) => e.childId === childId);
+function findParentEdge(
+  graph: GenealogyGraph,
+  parentId: string,
+  childId: string,
+): ParentChildRecord | undefined {
+  return (graph.childEdgesOf.get(parentId) ?? []).find(
+    (e) => e.childId === childId,
+  );
 }
 
 /**
@@ -529,7 +644,11 @@ function findParentEdge(graph: GenealogyGraph, parentId: string, childId: string
  * happen given ancestorId came from the depth maps, but guards against
  * inconsistent data instead of throwing).
  */
-function ancestorChain(graph: GenealogyGraph, personId: string, ancestorId: string): string[] {
+function ancestorChain(
+  graph: GenealogyGraph,
+  personId: string,
+  ancestorId: string,
+): string[] {
   if (personId === ancestorId) return [personId];
 
   const depths = ancestorDepths(graph, personId, DEFAULT_MAX_GENERATIONS);
@@ -545,7 +664,11 @@ function ancestorChain(graph: GenealogyGraph, personId: string, ancestorId: stri
     const remaining = targetDepth - depth;
     const next = parents.find((p) => {
       if (p.person.id === ancestorId) return remaining === 0;
-      const parentDepths = ancestorDepths(graph, p.person.id, DEFAULT_MAX_GENERATIONS);
+      const parentDepths = ancestorDepths(
+        graph,
+        p.person.id,
+        DEFAULT_MAX_GENERATIONS,
+      );
       return parentDepths.get(ancestorId) === remaining;
     });
     if (!next) return chain; // inconsistent data — return what we have rather than throwing

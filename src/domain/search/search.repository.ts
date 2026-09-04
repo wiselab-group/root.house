@@ -136,7 +136,7 @@ export async function searchPersonsByNameSubstring(
       AND (
         ${trimmed} = ''
         OR (coalesce(first_name, '') || ' ' || coalesce(last_name, '') || ' ' || coalesce(maiden_name, '') || ' ' || coalesce(nickname, ''))
-           ILIKE ${'%' + trimmed + '%'}
+           ILIKE ${"%" + trimmed + "%"}
       )
     ORDER BY last_name NULLS LAST, first_name NULLS LAST
     LIMIT ${limit}

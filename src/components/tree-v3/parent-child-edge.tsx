@@ -31,5 +31,11 @@ export function ParentChildEdge({ data }: EdgeProps) {
     { x: childX, y: endY },
   ];
 
-  return <BaseEdge path={roundedOrthogonalPath(points)} className="stroke-border" style={{ strokeWidth: 2 }} />;
+  return (
+    <BaseEdge
+      path={roundedOrthogonalPath(points)}
+      className="stroke-border"
+      style={{ strokeWidth: 2 }}
+    />
+  );
 }

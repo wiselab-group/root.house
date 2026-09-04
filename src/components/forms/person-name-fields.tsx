@@ -8,23 +8,43 @@ export function PersonNameFields({ person }: { person?: PersonRecord | null }) {
     <div className="grid grid-cols-2 gap-4">
       <div className="flex flex-col gap-2">
         <Label htmlFor="firstName">Имя</Label>
-        <Input id="firstName" name="firstName" defaultValue={person?.firstName ?? ""} />
+        <Input
+          id="firstName"
+          name="firstName"
+          defaultValue={person?.firstName ?? ""}
+        />
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="lastName">Фамилия</Label>
-        <Input id="lastName" name="lastName" defaultValue={person?.lastName ?? ""} />
+        <Input
+          id="lastName"
+          name="lastName"
+          defaultValue={person?.lastName ?? ""}
+        />
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="middleName">Отчество</Label>
-        <Input id="middleName" name="middleName" defaultValue={person?.middleName ?? ""} />
+        <Input
+          id="middleName"
+          name="middleName"
+          defaultValue={person?.middleName ?? ""}
+        />
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="maidenName">Девичья фамилия</Label>
-        <Input id="maidenName" name="maidenName" defaultValue={person?.maidenName ?? ""} />
+        <Input
+          id="maidenName"
+          name="maidenName"
+          defaultValue={person?.maidenName ?? ""}
+        />
       </div>
       <div className="flex flex-col gap-2 col-span-2">
         <Label htmlFor="nickname">Прозвище</Label>
-        <Input id="nickname" name="nickname" defaultValue={person?.nickname ?? ""} />
+        <Input
+          id="nickname"
+          name="nickname"
+          defaultValue={person?.nickname ?? ""}
+        />
       </div>
     </div>
   );

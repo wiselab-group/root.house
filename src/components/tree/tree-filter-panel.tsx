@@ -1,13 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { PersonFilter } from "@/domain/tree/tree-filter";
 
-const GENDER_OPTIONS: Array<{ value: NonNullable<PersonFilter["gender"]>[number]; label: string }> = [
+const GENDER_OPTIONS: Array<{
+  value: NonNullable<PersonFilter["gender"]>[number];
+  label: string;
+}> = [
   { value: "male", label: "Мужской" },
   { value: "female", label: "Женский" },
   { value: "unknown", label: "Неизвестен" },
@@ -38,7 +48,9 @@ export function TreeFilterPanel({
 
   function toggleGender(value: NonNullable<PersonFilter["gender"]>[number]) {
     const current = draft.gender ?? [];
-    const next = current.includes(value) ? current.filter((g) => g !== value) : [...current, value];
+    const next = current.includes(value)
+      ? current.filter((g) => g !== value)
+      : [...current, value];
     setDraft({ ...draft, gender: next.length > 0 ? next : undefined });
   }
 
@@ -47,7 +59,10 @@ export function TreeFilterPanel({
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Фильтр по дереву</DialogTitle>
-          <DialogDescription>Совпадающие люди выделяются, остальные остаются на дереве приглушёнными.</DialogDescription>
+          <DialogDescription>
+            Совпадающие люди выделяются, остальные остаются на дереве
+            приглушёнными.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
@@ -59,7 +74,9 @@ export function TreeFilterPanel({
                   key={option.value}
                   type="button"
                   size="sm"
-                  variant={draft.gender?.includes(option.value) ? "default" : "outline"}
+                  variant={
+                    draft.gender?.includes(option.value) ? "default" : "outline"
+                  }
                   onClick={() => toggleGender(option.value)}
                 >
                   {option.label}
@@ -76,13 +93,27 @@ export function TreeFilterPanel({
                 type="number"
                 placeholder="от"
                 value={draft.birthYearFrom ?? ""}
-                onChange={(e) => setDraft({ ...draft, birthYearFrom: e.target.value ? Number(e.target.value) : undefined })}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    birthYearFrom: e.target.value
+                      ? Number(e.target.value)
+                      : undefined,
+                  })
+                }
               />
               <Input
                 type="number"
                 placeholder="до"
                 value={draft.birthYearTo ?? ""}
-                onChange={(e) => setDraft({ ...draft, birthYearTo: e.target.value ? Number(e.target.value) : undefined })}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    birthYearTo: e.target.value
+                      ? Number(e.target.value)
+                      : undefined,
+                  })
+                }
               />
             </div>
           </div>
@@ -94,7 +125,12 @@ export function TreeFilterPanel({
                 type="button"
                 variant={draft.isLiving === true ? "default" : "outline"}
                 size="sm"
-                onClick={() => setDraft({ ...draft, isLiving: draft.isLiving === true ? undefined : true })}
+                onClick={() =>
+                  setDraft({
+                    ...draft,
+                    isLiving: draft.isLiving === true ? undefined : true,
+                  })
+                }
               >
                 Живые
               </Button>
@@ -102,7 +138,12 @@ export function TreeFilterPanel({
                 type="button"
                 variant={draft.isLiving === false ? "default" : "outline"}
                 size="sm"
-                onClick={() => setDraft({ ...draft, isLiving: draft.isLiving === false ? undefined : false })}
+                onClick={() =>
+                  setDraft({
+                    ...draft,
+                    isLiving: draft.isLiving === false ? undefined : false,
+                  })
+                }
               >
                 Умершие
               </Button>
@@ -111,10 +152,24 @@ export function TreeFilterPanel({
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => { setDraft({}); onApply({}); onOpenChange(false); }}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setDraft({});
+              onApply({});
+              onOpenChange(false);
+            }}
+          >
             Сбросить
           </Button>
-          <Button onClick={() => { onApply(draft); onOpenChange(false); }}>Применить</Button>
+          <Button
+            onClick={() => {
+              onApply(draft);
+              onOpenChange(false);
+            }}
+          >
+            Применить
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

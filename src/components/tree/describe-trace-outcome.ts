@@ -6,17 +6,27 @@ import type { RelationshipPathOutcome } from "@/domain/relationship/genealogy-al
  * keep that file under the 150-line component limit — this is pure display
  * formatting, no genealogy logic of its own.
  */
-export function describeTraceOutcome(outcome: RelationshipPathOutcome | null): string | null {
+export function describeTraceOutcome(
+  outcome: RelationshipPathOutcome | null,
+): string | null {
   if (!outcome) return null;
   if (outcome.status !== "found") {
-    return outcome.status === "insufficient_data" ? "Недостаточно данных" : "Родство не найдено";
+    return outcome.status === "insufficient_data"
+      ? "Недостаточно данных"
+      : "Родство не найдено";
   }
-  if (outcome.relationship.label === "same person") return "Один и тот же человек";
+  if (outcome.relationship.label === "same person")
+    return "Один и тот же человек";
   if (outcome.relationship.label === "in_law") {
-    const bloodLabel = outcome.relationship.inLawBlood ? IN_LAW_BLOOD_LABELS[outcome.relationship.inLawBlood] : null;
+    const bloodLabel = outcome.relationship.inLawBlood
+      ? IN_LAW_BLOOD_LABELS[outcome.relationship.inLawBlood]
+      : null;
     return bloodLabel ? `${bloodLabel} супруга/супруги` : "Родство через брак";
   }
-  return RELATIONSHIP_LABELS[outcome.relationship.label] ?? outcome.relationship.label;
+  return (
+    RELATIONSHIP_LABELS[outcome.relationship.label] ??
+    outcome.relationship.label
+  );
 }
 
 const RELATIONSHIP_LABELS: Record<string, string> = {

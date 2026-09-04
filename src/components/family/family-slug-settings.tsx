@@ -1,8 +1,16 @@
 "use client";
 
-import { useActionState, useEffect, useState, useSyncExternalStore } from "react";
+import {
+  useActionState,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useFormStatus } from "react-dom";
-import { updateFamilySlugAction, type UpdateFamilySlugFormState } from "@/actions/family.actions";
+import {
+  updateFamilySlugAction,
+  type UpdateFamilySlugFormState,
+} from "@/actions/family.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,13 +50,21 @@ function SlugEditForm({
       </Label>
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted-foreground">/families/</span>
-        <Input id="slug" name="slug" defaultValue={slug} className="max-w-48" required />
+        <Input
+          id="slug"
+          name="slug"
+          defaultValue={slug}
+          className="max-w-48"
+          required
+        />
         <SaveButton />
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
           Отмена
         </Button>
       </div>
-      {state.fieldErrors?.slug && <p className="text-sm text-destructive">{state.fieldErrors.slug}</p>}
+      {state.fieldErrors?.slug && (
+        <p className="text-sm text-destructive">{state.fieldErrors.slug}</p>
+      )}
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
     </form>
   );
@@ -95,7 +111,11 @@ export function FamilySlugSettings({
 
   if (role === "owner" && editing) {
     return (
-      <SlugEditForm familyId={familyId} slug={slug} onCancel={() => setEditing(false)} />
+      <SlugEditForm
+        familyId={familyId}
+        slug={slug}
+        onCancel={() => setEditing(false)}
+      />
     );
   }
 
@@ -106,7 +126,12 @@ export function FamilySlugSettings({
         {copied ? "Скопировано" : "Копировать"}
       </Button>
       {role === "owner" && (
-        <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(true)}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setEditing(true)}
+        >
           Изменить
         </Button>
       )}

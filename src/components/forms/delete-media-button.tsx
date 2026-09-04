@@ -29,7 +29,9 @@ export function DeleteMediaButton({
       aria-label="Удалить фото"
       disabled={isPending}
       className="rounded-full shadow-sm"
-      onClick={() => startTransition(() => deleteMediaAction(familyId, personId, mediaId))}
+      onClick={() =>
+        startTransition(() => deleteMediaAction(familyId, personId, mediaId))
+      }
     >
       <XIcon />
     </Button>

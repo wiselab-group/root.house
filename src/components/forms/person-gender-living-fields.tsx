@@ -43,7 +43,10 @@ export function PersonGenderLivingFields({
           checked={isLiving}
           onCheckedChange={onIsLivingChange}
         />
-        <Label htmlFor="isLiving" className="cursor-pointer text-sm font-normal">
+        <Label
+          htmlFor="isLiving"
+          className="cursor-pointer text-sm font-normal"
+        >
           Жив(а)
         </Label>
       </div>

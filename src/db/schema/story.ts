@@ -1,4 +1,11 @@
-import { pgTable, text, timestamp, uuid, index, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  index,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { families } from "./family";
 import { users } from "./auth";
 import { privacyLevelEnum } from "./privacy";
@@ -54,7 +61,9 @@ export const storyEvent = pgTable(
       .notNull()
       .references(() => events.id, { onDelete: "cascade" }),
   },
-  (table) => [uniqueIndex("story_event_unique").on(table.storyId, table.eventId)],
+  (table) => [
+    uniqueIndex("story_event_unique").on(table.storyId, table.eventId),
+  ],
 );
 
 export const storyPlace = pgTable(
@@ -68,5 +77,7 @@ export const storyPlace = pgTable(
       .notNull()
       .references(() => places.id, { onDelete: "cascade" }),
   },
-  (table) => [uniqueIndex("story_place_unique").on(table.storyId, table.placeId)],
+  (table) => [
+    uniqueIndex("story_place_unique").on(table.storyId, table.placeId),
+  ],
 );

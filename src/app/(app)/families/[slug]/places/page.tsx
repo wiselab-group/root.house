@@ -2,14 +2,22 @@ import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { listPlaces } from "@/domain/place/place.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { CreatePlaceForm } from "@/components/forms/create-place-form";
 import { DeletePlaceButton } from "@/components/forms/delete-place-button";
 import { CollapsibleForm } from "@/components/forms/collapsible-form";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 
-export default async function PlacesPage({ params }: PageProps<"/families/[slug]/places">) {
+export default async function PlacesPage({
+  params,
+}: PageProps<"/families/[slug]/places">) {
   const { slug } = await params;
   const session = await auth();
   if (!session?.user) return null;
@@ -34,7 +42,8 @@ export default async function PlacesPage({ params }: PageProps<"/families/[slug]
       <div>
         <h1 className="font-heading text-2xl font-medium">Места</h1>
         <p className="text-muted-foreground">
-          Места рождения, проживания и других событий — используются при заполнении профилей и событий.
+          Места рождения, проживания и других событий — используются при
+          заполнении профилей и событий.
         </p>
       </div>
 
@@ -53,13 +62,22 @@ export default async function PlacesPage({ params }: PageProps<"/families/[slug]
                 <CardHeader>
                   <CardTitle>{place.name}</CardTitle>
                   {(place.region || place.country) && (
-                    <CardDescription>{[place.region, place.country].filter(Boolean).join(", ")}</CardDescription>
+                    <CardDescription>
+                      {[place.region, place.country].filter(Boolean).join(", ")}
+                    </CardDescription>
                   )}
                 </CardHeader>
                 {(place.description || canEdit) && (
                   <CardContent className="flex flex-col gap-2">
-                    {place.description && <p className="text-sm">{place.description}</p>}
-                    {canEdit && <DeletePlaceButton familyId={familyId} placeId={place.id} />}
+                    {place.description && (
+                      <p className="text-sm">{place.description}</p>
+                    )}
+                    {canEdit && (
+                      <DeletePlaceButton
+                        familyId={familyId}
+                        placeId={place.id}
+                      />
+                    )}
                   </CardContent>
                 )}
               </Card>

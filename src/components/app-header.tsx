@@ -5,7 +5,10 @@ import Link from "next/link";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { BrandMark } from "@/components/brand-mark";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
-import { MobileHeaderToggle, MobileHeaderPanel } from "@/components/mobile-header-panel";
+import {
+  MobileHeaderToggle,
+  MobileHeaderPanel,
+} from "@/components/mobile-header-panel";
 import { useBreadcrumbs } from "@/components/breadcrumbs-context";
 import { useFamilyNav } from "@/components/family-nav-context";
 
@@ -16,7 +19,11 @@ import { useFamilyNav } from "@/components/family-nav-context";
  * expands the header in place behind MobileHeaderToggle (see that file) —
  * the same principle as staging.spon.to's mobile nav.
  */
-export function AppHeader({ userEmail }: { userEmail: string | null | undefined }) {
+export function AppHeader({
+  userEmail,
+}: {
+  userEmail: string | null | undefined;
+}) {
   const breadcrumbs = useBreadcrumbs();
   const navItems = useFamilyNav();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -49,7 +56,10 @@ export function AppHeader({ userEmail }: { userEmail: string | null | undefined 
           </Link>
           {breadcrumbs.length > 0 && (
             <>
-              <span aria-hidden className="hidden h-4 w-px shrink-0 bg-border md:block" />
+              <span
+                aria-hidden
+                className="hidden h-4 w-px shrink-0 bg-border md:block"
+              />
               <div className="hidden min-w-0 md:block">
                 <Breadcrumbs items={breadcrumbs} />
               </div>
@@ -57,7 +67,9 @@ export function AppHeader({ userEmail }: { userEmail: string | null | undefined 
           )}
         </div>
         <div className="hidden shrink-0 items-center gap-3 md:flex">
-          {userEmail && <span className="text-sm text-muted-foreground">{userEmail}</span>}
+          {userEmail && (
+            <span className="text-sm text-muted-foreground">{userEmail}</span>
+          )}
           <SignOutButton />
         </div>
         <MobileHeaderToggle open={menuOpen} onOpenChange={setMenuOpen} />

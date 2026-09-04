@@ -8,5 +8,7 @@ import { FamilySlugSettings } from "@/components/family/family-slug-settings";
  *  itself can stay a plain Server Component. */
 export function FamilySettingsSlugRow() {
   const { familyId, familySlug, role } = useFamily();
-  return <FamilySlugSettings familyId={familyId} slug={familySlug} role={role} />;
+  return (
+    <FamilySlugSettings familyId={familyId} slug={familySlug} role={role} />
+  );
 }

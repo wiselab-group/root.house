@@ -23,7 +23,10 @@ function toRecord(row: typeof stories.$inferSelect): StoryRecord {
 }
 
 /** Fetches a Story scoped to a family in the same query — same IDOR-safe pattern as getPersonById. */
-export async function getStoryById(storyId: string, familyId: string): Promise<StoryRecord | null> {
+export async function getStoryById(
+  storyId: string,
+  familyId: string,
+): Promise<StoryRecord | null> {
   const row = await db.query.stories.findFirst({
     where: and(eq(stories.id, storyId), eq(stories.familyId, familyId)),
   });
@@ -31,18 +34,25 @@ export async function getStoryById(storyId: string, familyId: string): Promise<S
 }
 
 /** All stories linked to a given Person, newest first. */
-export async function getStoriesForPerson(personId: string, familyId: string): Promise<StoryRecord[]> {
+export async function getStoriesForPerson(
+  personId: string,
+  familyId: string,
+): Promise<StoryRecord[]> {
   const rows = await db
     .select({ story: stories })
     .from(storyPerson)
     .innerJoin(stories, eq(storyPerson.storyId, stories.id))
-    .where(and(eq(storyPerson.personId, personId), eq(stories.familyId, familyId)))
+    .where(
+      and(eq(storyPerson.personId, personId), eq(stories.familyId, familyId)),
+    )
     .orderBy(desc(stories.createdAt));
 
   return rows.map((r) => toRecord(r.story));
 }
 
-export async function listStoriesByFamily(familyId: string): Promise<StoryRecord[]> {
+export async function listStoriesByFamily(
+  familyId: string,
+): Promise<StoryRecord[]> {
   const rows = await db.query.stories.findMany({
     where: eq(stories.familyId, familyId),
     orderBy: [desc(stories.createdAt)],
@@ -59,7 +69,9 @@ export interface CreateStoryData {
   personIds: string[];
 }
 
-export async function createStory(data: CreateStoryData): Promise<{ id: string }> {
+export async function createStory(
+  data: CreateStoryData,
+): Promise<{ id: string }> {
   const [row] = await db
     .insert(stories)
     .values({
@@ -71,13 +83,20 @@ export async function createStory(data: CreateStoryData): Promise<{ id: string }
     .returning({ id: stories.id });
 
   if (data.personIds.length > 0) {
-    await db.insert(storyPerson).values(data.personIds.map((personId) => ({ storyId: row.id, personId })));
+    await db
+      .insert(storyPerson)
+      .values(
+        data.personIds.map((personId) => ({ storyId: row.id, personId })),
+      );
   }
 
   return row;
 }
 
-export async function deleteStory(storyId: string, familyId: string): Promise<boolean> {
+export async function deleteStory(
+  storyId: string,
+  familyId: string,
+): Promise<boolean> {
   const result = await db
     .delete(stories)
     .where(and(eq(stories.id, storyId), eq(stories.familyId, familyId)))

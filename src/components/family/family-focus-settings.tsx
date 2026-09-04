@@ -27,7 +27,10 @@ export function FamilyFocusSettings({
     setValue(next);
     setError(null);
     startTransition(async () => {
-      const result = await updateDefaultFocusPersonAction(familyId, next?.id ?? null);
+      const result = await updateDefaultFocusPersonAction(
+        familyId,
+        next?.id ?? null,
+      );
       if (!result.ok) {
         setError(result.error);
         // Roll back to the last known-saved value — an id that failed to

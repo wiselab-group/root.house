@@ -2,7 +2,10 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { addRelativeAction, type RelationshipFormState } from "@/actions/relationship.actions";
+import {
+  addRelativeAction,
+  type RelationshipFormState,
+} from "@/actions/relationship.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,13 +42,18 @@ export function AddRelativeForm({
   candidates: PersonRecord[];
   label: string;
 }) {
-  const [mode, setMode] = useState<"existing" | "new">(candidates.length > 0 ? "existing" : "new");
+  const [mode, setMode] = useState<"existing" | "new">(
+    candidates.length > 0 ? "existing" : "new",
+  );
   const boundAction = (state: RelationshipFormState, formData: FormData) =>
     addRelativeAction(familyId, personId, kind, state, formData);
   const [state, formAction] = useActionState(boundAction, initialState);
 
   return (
-    <form action={formAction} className="flex flex-col gap-3 rounded-md border border-border p-3">
+    <form
+      action={formAction}
+      className="flex flex-col gap-3 rounded-md border border-border p-3"
+    >
       <p className="text-sm font-medium">{label}</p>
 
       <div className="flex gap-3 text-sm">
@@ -60,7 +68,12 @@ export function AddRelativeForm({
           Уже есть в семье
         </label>
         <label className="flex items-center gap-1.5">
-          <input type="radio" name="mode" checked={mode === "new"} onChange={() => setMode("new")} />
+          <input
+            type="radio"
+            name="mode"
+            checked={mode === "new"}
+            onChange={() => setMode("new")}
+          />
           Новый человек
         </label>
       </div>
@@ -75,7 +88,9 @@ export function AddRelativeForm({
           {candidates.map((candidate) => (
             <option key={candidate.id} value={candidate.id}>
               {personDisplayName(candidate)}
-              {candidate.birthDate?.year ? ` (${candidate.birthDate.year})` : ""}
+              {candidate.birthDate?.year
+                ? ` (${candidate.birthDate.year})`
+                : ""}
             </option>
           ))}
         </select>
@@ -83,13 +98,19 @@ export function AddRelativeForm({
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1">
-              <Label htmlFor={`${kind}-newFirstName`} className="text-xs text-muted-foreground">
+              <Label
+                htmlFor={`${kind}-newFirstName`}
+                className="text-xs text-muted-foreground"
+              >
                 Имя
               </Label>
               <Input id={`${kind}-newFirstName`} name="newFirstName" />
             </div>
             <div className="flex flex-col gap-1">
-              <Label htmlFor={`${kind}-newLastName`} className="text-xs text-muted-foreground">
+              <Label
+                htmlFor={`${kind}-newLastName`}
+                className="text-xs text-muted-foreground"
+              >
                 Фамилия
               </Label>
               <Input id={`${kind}-newLastName`} name="newLastName" />

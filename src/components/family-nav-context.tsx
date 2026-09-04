@@ -1,7 +1,13 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { Network, Users, MapPin, Settings, type LucideIcon } from "lucide-react";
+import {
+  Network,
+  Users,
+  MapPin,
+  Settings,
+  type LucideIcon,
+} from "lucide-react";
 
 /**
  * Icon components (functions) can't cross the Server->Client Component prop
@@ -49,7 +55,9 @@ const FamilyNavContext = createContext<FamilyNavContextValue | null>(null);
 export function FamilyNavProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<FamilyNavItem[]>([]);
   return (
-    <FamilyNavContext.Provider value={{ items, setItems }}>{children}</FamilyNavContext.Provider>
+    <FamilyNavContext.Provider value={{ items, setItems }}>
+      {children}
+    </FamilyNavContext.Provider>
   );
 }
 

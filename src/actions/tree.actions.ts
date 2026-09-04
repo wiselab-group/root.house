@@ -2,7 +2,10 @@
 
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
-import { searchPeopleForPicker, type PersonSearchResult } from "@/domain/search/search.service";
+import {
+  searchPeopleForPicker,
+  type PersonSearchResult,
+} from "@/domain/search/search.service";
 
 /**
  * Read-only lookup used by the tree toolbar's Relationship Trace person

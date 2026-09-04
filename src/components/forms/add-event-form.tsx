@@ -2,7 +2,10 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { createEventAction, type EventFormState } from "@/actions/event.actions";
+import {
+  createEventAction,
+  type EventFormState,
+} from "@/actions/event.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,7 +39,10 @@ export function AddEventForm({
   const [showRange, setShowRange] = useState(false);
 
   return (
-    <form action={formAction} className="flex flex-col gap-3 rounded-md border border-border p-3">
+    <form
+      action={formAction}
+      className="flex flex-col gap-3 rounded-md border border-border p-3"
+    >
       <p className="text-sm font-medium">Добавить событие</p>
 
       <div className="grid grid-cols-2 gap-3">
@@ -76,7 +82,9 @@ export function AddEventForm({
         />
         Есть дата окончания (например, военная служба)
       </label>
-      {showRange && <PersonDateFields prefix="endDate" legend="Дата окончания" />}
+      {showRange && (
+        <PersonDateFields prefix="endDate" legend="Дата окончания" />
+      )}
 
       <PlaceSelect id="placeId" name="placeId" label="Место" places={places} />
 

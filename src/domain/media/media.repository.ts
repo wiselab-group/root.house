@@ -37,7 +37,10 @@ function toRecord(row: typeof media.$inferSelect): MediaRecord {
 }
 
 /** Fetches Media scoped to a family in the same query — same IDOR-safe pattern as getPersonById. */
-export async function getMediaById(mediaId: string, familyId: string): Promise<MediaRecord | null> {
+export async function getMediaById(
+  mediaId: string,
+  familyId: string,
+): Promise<MediaRecord | null> {
   const row = await db.query.media.findFirst({
     where: and(eq(media.id, mediaId), eq(media.familyId, familyId)),
   });
@@ -45,12 +48,17 @@ export async function getMediaById(mediaId: string, familyId: string): Promise<M
 }
 
 /** All Media linked to a given Person, newest first — the raw material for a Person's photo gallery. */
-export async function getMediaForPerson(personId: string, familyId: string): Promise<MediaRecord[]> {
+export async function getMediaForPerson(
+  personId: string,
+  familyId: string,
+): Promise<MediaRecord[]> {
   const rows = await db
     .select({ media })
     .from(mediaPerson)
     .innerJoin(media, eq(mediaPerson.mediaId, media.id))
-    .where(and(eq(mediaPerson.personId, personId), eq(media.familyId, familyId)))
+    .where(
+      and(eq(mediaPerson.personId, personId), eq(media.familyId, familyId)),
+    )
     .orderBy(media.createdAt);
 
   return rows.map((r) => toRecord(r.media)).reverse();
@@ -72,7 +80,9 @@ export interface CreateMediaData {
   personIds: string[];
 }
 
-export async function createMedia(data: CreateMediaData): Promise<{ id: string }> {
+export async function createMedia(
+  data: CreateMediaData,
+): Promise<{ id: string }> {
   const [row] = await db
     .insert(media)
     .values({
@@ -91,13 +101,20 @@ export async function createMedia(data: CreateMediaData): Promise<{ id: string }
     .returning({ id: media.id });
 
   if (data.personIds.length > 0) {
-    await db.insert(mediaPerson).values(data.personIds.map((personId) => ({ mediaId: row.id, personId })));
+    await db
+      .insert(mediaPerson)
+      .values(
+        data.personIds.map((personId) => ({ mediaId: row.id, personId })),
+      );
   }
 
   return row;
 }
 
-export async function deleteMediaRow(mediaId: string, familyId: string): Promise<boolean> {
+export async function deleteMediaRow(
+  mediaId: string,
+  familyId: string,
+): Promise<boolean> {
   const result = await db
     .delete(media)
     .where(and(eq(media.id, mediaId), eq(media.familyId, familyId)))

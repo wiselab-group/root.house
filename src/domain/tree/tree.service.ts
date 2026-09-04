@@ -7,7 +7,12 @@ import { eq } from "drizzle-orm";
 import { listPersonsByFamily } from "@/domain/person/person.repository";
 import { buildFocusTreeLayout, type PersonNode } from "./tree-layout.builder";
 import type { TreeLayoutGraph } from "./tree-layout.builder";
-import { applyFilter, type FilterMode, type FilteredTreeLayoutGraph, type PersonFilter } from "./tree-filter";
+import {
+  applyFilter,
+  type FilterMode,
+  type FilteredTreeLayoutGraph,
+  type PersonFilter,
+} from "./tree-filter";
 
 export interface GetFocusTreeLayoutOptions {
   /** Generations of ancestors to include above focusPersonId (plan §8 "expand ancestors"). Defaults to buildFocusTreeLayout's own default (2). */

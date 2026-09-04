@@ -57,7 +57,9 @@ describe("ensureUniqueSlug", () => {
 
   it("appends an incrementing suffix until a free slug is found", async () => {
     const taken = new Set(["kupchik", "kupchik-2", "kupchik-3"]);
-    const result = await ensureUniqueSlug("kupchik", async (candidate) => taken.has(candidate));
+    const result = await ensureUniqueSlug("kupchik", async (candidate) =>
+      taken.has(candidate),
+    );
     expect(result).toBe("kupchik-4");
   });
 });

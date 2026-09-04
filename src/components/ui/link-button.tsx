@@ -12,6 +12,14 @@ import { Button } from "./button";
 export function LinkButton({
   href,
   ...buttonProps
-}: ComponentProps<typeof Button> & { href: ComponentProps<typeof Link>["href"] }) {
-  return <Button nativeButton={false} render={<Link href={href} />} {...buttonProps} />;
+}: ComponentProps<typeof Button> & {
+  href: ComponentProps<typeof Link>["href"];
+}) {
+  return (
+    <Button
+      nativeButton={false}
+      render={<Link href={href} />}
+      {...buttonProps}
+    />
+  );
 }

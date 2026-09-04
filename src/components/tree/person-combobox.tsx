@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { Combobox } from "@base-ui/react/combobox";
 import { SearchIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -71,8 +78,11 @@ export function PersonCombobox({
   // changed, or field cleared back to the initial empty list) — keep it
   // pinned as an item so Combobox can still render it as the selected value.
   const items = useMemo(() => {
-    const visible = excludeId ? results.filter((person) => person.id !== excludeId) : results;
-    if (!localValue || visible.some((person) => person.id === localValue.id)) return visible;
+    const visible = excludeId
+      ? results.filter((person) => person.id !== excludeId)
+      : results;
+    if (!localValue || visible.some((person) => person.id === localValue.id))
+      return visible;
     return [
       ...visible,
       {
@@ -130,14 +140,20 @@ export function PersonCombobox({
       // onValueChange/Combobox.Clear below), and in the gap base-ui's own
       // resync fires a second time and wipes the whole field back to empty
       // instead of leaving the one-character-shorter edit in place.
-      value={localValue && query === localValue.name ? (items.find((person) => person.id === localValue.id) ?? null) : null}
+      value={
+        localValue && query === localValue.name
+          ? (items.find((person) => person.id === localValue.id) ?? null)
+          : null
+      }
       // Controlled explicitly (rather than left to base-ui's own inputValue
       // state) so the displayed text is driven only by `query`, never by
       // base-ui's own selected-value resync.
       inputValue={query}
       itemToStringLabel={(person) => personDisplayName(person)}
       onValueChange={(person) => {
-        const next = person ? { id: person.id, name: personDisplayName(person) } : null;
+        const next = person
+          ? { id: person.id, name: personDisplayName(person) }
+          : null;
         setLocalValue(next);
         onChange(next);
         setQuery(next ? next.name : "");
@@ -181,7 +197,10 @@ export function PersonCombobox({
       </div>
 
       <Combobox.Portal>
-        <Combobox.Positioner className="isolate z-50 outline-none" sideOffset={4}>
+        <Combobox.Positioner
+          className="isolate z-50 outline-none"
+          sideOffset={4}
+        >
           <Combobox.Popup
             className={cn(
               "w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none",
@@ -209,17 +228,22 @@ export function PersonCombobox({
                   >
                     <span className="font-medium">
                       {personDisplayName(person)}
-                      {person.maidenName && person.maidenName !== person.lastName && (
-                        // Search matches on maidenName too (see searchPersonsByNameSubstring) —
-                        // without this, a hit found only via the maiden name looks like an
-                        // unexplained/wrong result since personDisplayName never shows it.
-                        <span className="font-normal text-muted-foreground"> ({person.maidenName})</span>
-                      )}
+                      {person.maidenName &&
+                        person.maidenName !== person.lastName && (
+                          // Search matches on maidenName too (see searchPersonsByNameSubstring) —
+                          // without this, a hit found only via the maiden name looks like an
+                          // unexplained/wrong result since personDisplayName never shows it.
+                          <span className="font-normal text-muted-foreground">
+                            {" "}
+                            ({person.maidenName})
+                          </span>
+                        )}
                     </span>
                     {(person.birthDate || person.deathDate) && (
                       <span className="text-xs text-muted-foreground">
                         {formatPartialDate(person.birthDate)}
-                        {person.deathDate && ` — ${formatPartialDate(person.deathDate)}`}
+                        {person.deathDate &&
+                          ` — ${formatPartialDate(person.deathDate)}`}
                       </span>
                     )}
                   </Combobox.Item>

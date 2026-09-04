@@ -13,8 +13,20 @@ import type { FamilyGraph } from "./types";
  * Kozlovsky/Kolesnikovich, §40) и синтетического (§41, кейсы A–H).
  */
 
-function personOf(id: string, overrides: Partial<{ firstName: string; lastName: string; gender: "male" | "female" | "unknown" }> = {}) {
-  return { id, firstName: overrides.firstName ?? id, lastName: overrides.lastName ?? "", gender: overrides.gender ?? "unknown" as const };
+function personOf(
+  id: string,
+  overrides: Partial<{
+    firstName: string;
+    lastName: string;
+    gender: "male" | "female" | "unknown";
+  }> = {},
+) {
+  return {
+    id,
+    firstName: overrides.firstName ?? id,
+    lastName: overrides.lastName ?? "",
+    gender: overrides.gender ?? ("unknown" as const),
+  };
 }
 
 function spouse(id: string, from: string, to: string) {
@@ -33,7 +45,9 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
 
   it("produces zero geometric overlaps on the real fixture", () => {
     const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
-    const positions = new Map(result.persons.map((p) => [p.id, { x: p.x, y: p.y }]));
+    const positions = new Map(
+      result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
     expect(detectOverlaps(positions)).toEqual([]);
   });
 
@@ -103,15 +117,33 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
       ],
       relationships: [
         ...initialFamilyGraph.relationships,
-        parentChild("nikolai-ushkar-new1-parent", "nikolai-ushkar", "ushkar-new-child-1"),
-        parentChild("elena-ushkar-new1-parent", "elena-ushkar", "ushkar-new-child-1"),
-        parentChild("nikolai-ushkar-new2-parent", "nikolai-ushkar", "ushkar-new-child-2"),
-        parentChild("elena-ushkar-new2-parent", "elena-ushkar", "ushkar-new-child-2"),
+        parentChild(
+          "nikolai-ushkar-new1-parent",
+          "nikolai-ushkar",
+          "ushkar-new-child-1",
+        ),
+        parentChild(
+          "elena-ushkar-new1-parent",
+          "elena-ushkar",
+          "ushkar-new-child-1",
+        ),
+        parentChild(
+          "nikolai-ushkar-new2-parent",
+          "nikolai-ushkar",
+          "ushkar-new-child-2",
+        ),
+        parentChild(
+          "elena-ushkar-new2-parent",
+          "elena-ushkar",
+          "ushkar-new-child-2",
+        ),
       ],
     };
 
     const result = buildTreeV3Layout(grownGraph, realFocusId);
-    const positions = new Map(result.persons.map((p) => [p.id, { x: p.x, y: p.y }]));
+    const positions = new Map(
+      result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
     expect(detectOverlaps(positions)).toEqual([]);
     expect(result.persons).toHaveLength(grownGraph.persons.length);
   });
@@ -138,7 +170,9 @@ describe("tree-v3 layout — synthetic cases (§41)", () => {
       ],
     };
     const result = buildTreeV3Layout(graph, "a");
-    const positions = new Map(result.persons.map((p) => [p.id, { x: p.x, y: p.y }]));
+    const positions = new Map(
+      result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
     expect(detectOverlaps(positions)).toEqual([]);
 
     const a = positions.get("a")!;
@@ -160,7 +194,9 @@ describe("tree-v3 layout — synthetic cases (§41)", () => {
       ],
     };
     const result = buildTreeV3Layout(graph, "a");
-    const positions = new Map(result.persons.map((p) => [p.id, { x: p.x, y: p.y }]));
+    const positions = new Map(
+      result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
     expect(detectOverlaps(positions)).toEqual([]);
     // Strictly increasing y per generation.
     expect(positions.get("c")!.y).toBeGreaterThan(positions.get("a")!.y);
@@ -170,7 +206,9 @@ describe("tree-v3 layout — synthetic cases (§41)", () => {
 
   it("CASE C — paternal/maternal grandparents converge on focus", () => {
     const graph: FamilyGraph = {
-      persons: ["pgf", "pgm", "father", "mgf", "mgm", "mother", "focus"].map((id) => personOf(id)),
+      persons: ["pgf", "pgm", "father", "mgf", "mgm", "mother", "focus"].map(
+        (id) => personOf(id),
+      ),
       relationships: [
         spouse("pgf-pgm", "pgf", "pgm"),
         parentChild("pgf-father", "pgf", "father"),
@@ -184,7 +222,9 @@ describe("tree-v3 layout — synthetic cases (§41)", () => {
       ],
     };
     const result = buildTreeV3Layout(graph, "focus");
-    const positions = new Map(result.persons.map((p) => [p.id, { x: p.x, y: p.y }]));
+    const positions = new Map(
+      result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
     expect(detectOverlaps(positions)).toEqual([]);
     // father+mother (focus's own parents) sit adjacent — spouses always
     // stay together (§9/§16); paternal/maternal (§7/§8) governs where
@@ -211,18 +251,26 @@ describe("tree-v3 layout — synthetic cases (§41)", () => {
   it("CASE D — divorce: A+B → C (partnership preserved, child still linked)", () => {
     const graph: FamilyGraph = {
       persons: ["a", "b", "c"].map((id) => personOf(id)),
-      relationships: [spouse("a-b", "a", "b"), parentChild("a-c", "a", "c"), parentChild("b-c", "b", "c")],
+      relationships: [
+        spouse("a-b", "a", "b"),
+        parentChild("a-c", "a", "c"),
+        parentChild("b-c", "b", "c"),
+      ],
     };
     const result = buildTreeV3Layout(graph, "a");
     expect(result.persons.map((p) => p.id).sort()).toEqual(["a", "b", "c"]);
     expect(result.partnerships).toHaveLength(1);
-    const positions = new Map(result.persons.map((p) => [p.id, { x: p.x, y: p.y }]));
+    const positions = new Map(
+      result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
     expect(detectOverlaps(positions)).toEqual([]);
   });
 
   it("CASE E — remarriage: A+B → C, A+D → E (A appears exactly once)", () => {
     const graph: FamilyGraph = {
-      persons: ["a", "b", "c", "d", "e"].map((id) => personOf(id, { gender: id === "a" ? "male" : "female" })),
+      persons: ["a", "b", "c", "d", "e"].map((id) =>
+        personOf(id, { gender: id === "a" ? "male" : "female" }),
+      ),
       relationships: [
         spouse("a-b", "a", "b"),
         parentChild("a-c", "a", "c"),
@@ -236,7 +284,9 @@ describe("tree-v3 layout — synthetic cases (§41)", () => {
     // §17 — exactly one node per person.
     expect(result.persons.filter((p) => p.id === "a")).toHaveLength(1);
     expect(result.partnerships).toHaveLength(2);
-    const positions = new Map(result.persons.map((p) => [p.id, { x: p.x, y: p.y }]));
+    const positions = new Map(
+      result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
     expect(detectOverlaps(positions)).toEqual([]);
     // C and E are visually distinguishable — different x (different partnership branches).
     expect(positions.get("c")!.x).not.toBe(positions.get("e")!.x);
@@ -245,7 +295,14 @@ describe("tree-v3 layout — synthetic cases (§41)", () => {
   it("CASE F — both remarry: A+B→C, A+D→E, B+F→G", () => {
     const graph: FamilyGraph = {
       persons: ["a", "b", "c", "d", "e", "f", "g"].map((id) =>
-        personOf(id, { gender: id === "a" || id === "f" ? "male" : id === "b" || id === "d" ? "female" : "unknown" }),
+        personOf(id, {
+          gender:
+            id === "a" || id === "f"
+              ? "male"
+              : id === "b" || id === "d"
+                ? "female"
+                : "unknown",
+        }),
       ),
       relationships: [
         spouse("a-b", "a", "b"),
@@ -262,13 +319,17 @@ describe("tree-v3 layout — synthetic cases (§41)", () => {
     const result = buildTreeV3Layout(graph, "a");
     expect(result.persons.filter((p) => p.id === "a")).toHaveLength(1);
     expect(result.persons.filter((p) => p.id === "b")).toHaveLength(1);
-    const positions = new Map(result.persons.map((p) => [p.id, { x: p.x, y: p.y }]));
+    const positions = new Map(
+      result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
     expect(detectOverlaps(positions)).toEqual([]);
   });
 
   it("CASE G — large subtree: A+B→C,D,E; C+F→G,H; G+I→J,K,L", () => {
     const graph: FamilyGraph = {
-      persons: ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"].map((id) => personOf(id)),
+      persons: ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"].map(
+        (id) => personOf(id),
+      ),
       relationships: [
         spouse("a-b", "a", "b"),
         parentChild("a-c", "a", "c"),
@@ -292,7 +353,9 @@ describe("tree-v3 layout — synthetic cases (§41)", () => {
       ],
     };
     const result = buildTreeV3Layout(graph, "a");
-    const positions = new Map(result.persons.map((p) => [p.id, { x: p.x, y: p.y }]));
+    const positions = new Map(
+      result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
     expect(detectOverlaps(positions)).toEqual([]);
     // D and E (siblings of large-subtree branch C) must not be crushed —
     // still present with valid, distinct positions.
@@ -303,7 +366,9 @@ describe("tree-v3 layout — synthetic cases (§41)", () => {
 
   it("CASE H — sibling with large family expands without destroying B/C positioning", () => {
     const graph: FamilyGraph = {
-      persons: ["p1", "p2", "a", "b", "c", "d", "e", "f"].map((id) => personOf(id)),
+      persons: ["p1", "p2", "a", "b", "c", "d", "e", "f"].map((id) =>
+        personOf(id),
+      ),
       relationships: [
         spouse("p1-p2", "p1", "p2"),
         parentChild("p1-a", "p1", "a"),
@@ -318,7 +383,9 @@ describe("tree-v3 layout — synthetic cases (§41)", () => {
       ],
     };
     const result = buildTreeV3Layout(graph, "b");
-    const positions = new Map(result.persons.map((p) => [p.id, { x: p.x, y: p.y }]));
+    const positions = new Map(
+      result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
     expect(detectOverlaps(positions)).toEqual([]);
     expect(positions.get("b")!.x).toBe(0); // focus stays centered (§6)
   });
@@ -412,7 +479,10 @@ describe("tree-v3 layout — geometry invariants (§39)", () => {
     const beforeById = new Map(before.persons.map((p) => [p.id, p]));
 
     const grownGraph: FamilyGraph = {
-      persons: [...initialFamilyGraph.persons, personOf("new-descendant", { firstName: "New" })],
+      persons: [
+        ...initialFamilyGraph.persons,
+        personOf("new-descendant", { firstName: "New" }),
+      ],
       relationships: [
         ...initialFamilyGraph.relationships,
         parentChild("eva-new-parent", "eva-kupchik", "new-descendant"),
@@ -423,9 +493,13 @@ describe("tree-v3 layout — geometry invariants (§39)", () => {
 
     // A distant, unrelated branch (Kolesnikovich, several generations up the
     // maternal side) keeps its exact position — growth stayed local (§26).
-    expect(afterById.get("iosif-kolesnikovich")).toEqual(beforeById.get("iosif-kolesnikovich"));
+    expect(afterById.get("iosif-kolesnikovich")).toEqual(
+      beforeById.get("iosif-kolesnikovich"),
+    );
 
-    const positions = new Map(after.persons.map((p) => [p.id, { x: p.x, y: p.y }]));
+    const positions = new Map(
+      after.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
     expect(detectOverlaps(positions)).toEqual([]);
   });
 });

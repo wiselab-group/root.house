@@ -1,0 +1,15 @@
+# Harness/tooling config — not project source, and some paths here are
+# read-only to the agent sandbox by design.
+.claude/
+.agents/
+
+# Standard build/dependency output.
+node_modules/
+.next/
+.pnp
+.pnp.*
+coverage/
+out/
+build/
+
+pnpm-lock.yaml

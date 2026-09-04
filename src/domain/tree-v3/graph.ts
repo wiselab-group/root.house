@@ -75,7 +75,10 @@ export function normalizeGraph(
     // (не теряем связь, просто не можем нарисовать "junction" двух супругов).
     for (const parentId of parentIds) {
       if (!soloParentByPersonId.has(parentId)) {
-        soloParentByPersonId.set(parentId, { personId: parentId, childrenIds: [] });
+        soloParentByPersonId.set(parentId, {
+          personId: parentId,
+          childrenIds: [],
+        });
       }
       const solo = soloParentByPersonId.get(parentId)!;
       if (!solo.childrenIds.includes(childId)) solo.childrenIds.push(childId);
@@ -93,7 +96,11 @@ export function normalizeGraph(
 
   // --- Branch: paternal/maternal направление (§7/§8) — по тому, через отца
   // или мать фокуса пролегает путь до этого человека. Мягкая подсказка. ---
-  const branchByPerson = computeBranches(focusPersonId, parentIdsByChild, rawPersonById);
+  const branchByPerson = computeBranches(
+    focusPersonId,
+    parentIdsByChild,
+    rawPersonById,
+  );
 
   const personById = new Map<string, NormalizedPerson>();
   for (const p of graph.persons) {
@@ -117,7 +124,8 @@ export function normalizeGraph(
 
 /** Husband-first (male < unknown < female) — стабильный tie-break для двух unknown/same-gender пар: по id (§43 детерминизм). */
 function orderSpouses(a: Person, b: Person): [string, string] {
-  const rank = (g: Person["gender"]) => (g === "male" ? 0 : g === "unknown" ? 1 : 2);
+  const rank = (g: Person["gender"]) =>
+    g === "male" ? 0 : g === "unknown" ? 1 : 2;
   const ra = rank(a.gender);
   const rb = rank(b.gender);
   if (ra !== rb) return ra < rb ? [a.id, b.id] : [b.id, a.id];
@@ -141,7 +149,10 @@ function findPartnershipFor(
   const candidates = partnershipIdsByPerson.get(first) ?? [];
   for (const candidateId of candidates) {
     const partnership = partnershipById.get(candidateId)!;
-    const members = new Set([partnership.leftPersonId, partnership.rightPersonId]);
+    const members = new Set([
+      partnership.leftPersonId,
+      partnership.rightPersonId,
+    ]);
     if (rest.every((id) => members.has(id)) && members.has(first)) {
       return candidateId;
     }
@@ -207,13 +218,17 @@ function computeBranches(
   parentIdsByChild: Map<string, string[]>,
   personById: Map<string, Person>,
 ): Map<string, "focus" | "paternal" | "maternal" | "descendant" | "unknown"> {
-  const branch = new Map<string, "focus" | "paternal" | "maternal" | "descendant" | "unknown">();
+  const branch = new Map<
+    string,
+    "focus" | "paternal" | "maternal" | "descendant" | "unknown"
+  >();
   branch.set(focusPersonId, "focus");
 
   // childIdsByParent — обратный индекс для распространения вниз к descendant/дядям-тётям.
   const childIdsByParent = new Map<string, string[]>();
   for (const [childId, parentIds] of parentIdsByChild) {
-    for (const parentId of parentIds) pushMulti(childIdsByParent, parentId, childId);
+    for (const parentId of parentIds)
+      pushMulti(childIdsByParent, parentId, childId);
   }
 
   // 1) Прямые потомки фокуса → "descendant" (BFS вниз).
@@ -242,7 +257,8 @@ function computeBranches(
   const focusParents = parentIdsByChild.get(focusPersonId) ?? [];
   focusParents.forEach((parentId, index) => {
     const person = personById.get(parentId);
-    const positionalSide: "paternal" | "maternal" = index === 0 ? "paternal" : "maternal";
+    const positionalSide: "paternal" | "maternal" =
+      index === 0 ? "paternal" : "maternal";
     const side: "paternal" | "maternal" =
       person?.gender === "female"
         ? "maternal"
@@ -265,7 +281,9 @@ function computeBranches(
     // бы всю материнскую сторону как отцовскую (см. историю бага: floodBranch
     // добирался до galina-kupchik/nikolai-kozlovsky через
     // parentIdsByChild.get(darya) внутри "вверх"-шага).
-    const queue: { id: string; canAscend: boolean }[] = [{ id: startId, canAscend: true }];
+    const queue: { id: string; canAscend: boolean }[] = [
+      { id: startId, canAscend: true },
+    ];
     while (queue.length > 0) {
       const { id, canAscend } = queue.shift()!;
       if (branch.has(id)) continue;

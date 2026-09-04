@@ -3,7 +3,9 @@ import { deriveSiblings, type ParentChildEdge } from "./sibling-derivation";
 
 describe("deriveSiblings", () => {
   it("returns nothing for a person with no recorded parents", () => {
-    const edges: ParentChildEdge[] = [{ parentId: "mother", childId: "other-child" }];
+    const edges: ParentChildEdge[] = [
+      { parentId: "mother", childId: "other-child" },
+    ];
     expect(deriveSiblings("orphan", edges)).toEqual([]);
   });
 
@@ -53,7 +55,9 @@ describe("deriveSiblings", () => {
       { parentId: "father", childId: "bob" }, // full sibling of alice
       { parentId: "mother", childId: "carol" }, // half-sibling of alice (shares mother only)
     ];
-    const result = deriveSiblings("alice", edges).sort((a, b) => a.personId.localeCompare(b.personId));
+    const result = deriveSiblings("alice", edges).sort((a, b) =>
+      a.personId.localeCompare(b.personId),
+    );
     expect(result).toEqual([
       { personId: "bob", sharedParentCount: 2 },
       { personId: "carol", sharedParentCount: 1 },

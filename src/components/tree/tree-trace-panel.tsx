@@ -1,7 +1,14 @@
 "use client";
 
 import { ArrowDownIcon, ArrowRightIcon } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PersonCombobox } from "./person-combobox";
@@ -42,7 +49,10 @@ export function TreeTracePanel({
   traceA: { id: string; name: string } | null;
   traceB: { id: string; name: string } | null;
   traceLabel: string | null;
-  onSelectSlot: (slot: "traceA" | "traceB", person: { id: string; name: string } | null) => void;
+  onSelectSlot: (
+    slot: "traceA" | "traceB",
+    person: { id: string; name: string } | null,
+  ) => void;
   onReset: () => void;
 }) {
   return (
@@ -50,7 +60,10 @@ export function TreeTracePanel({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Сравнить родство</DialogTitle>
-          <DialogDescription>Выберите двух людей, чтобы увидеть, как они связаны, и подсветить путь на дереве.</DialogDescription>
+          <DialogDescription>
+            Выберите двух людей, чтобы увидеть, как они связаны, и подсветить
+            путь на дереве.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -62,7 +75,10 @@ export function TreeTracePanel({
             excludeId={traceB?.id}
             className="sm:flex-1"
           />
-          <ArrowDownIcon aria-hidden className="size-4 shrink-0 self-center text-muted-foreground sm:hidden" />
+          <ArrowDownIcon
+            aria-hidden
+            className="size-4 shrink-0 self-center text-muted-foreground sm:hidden"
+          />
           <ArrowRightIcon
             aria-hidden
             className="hidden size-4 shrink-0 self-end text-muted-foreground sm:block sm:mb-2.5"
@@ -94,7 +110,10 @@ export function TreeTracePanel({
           >
             Сбросить
           </Button>
-          <Button disabled={!traceA || !traceB} onClick={() => onOpenChange(false)}>
+          <Button
+            disabled={!traceA || !traceB}
+            onClick={() => onOpenChange(false)}
+          >
             Показать
           </Button>
         </DialogFooter>

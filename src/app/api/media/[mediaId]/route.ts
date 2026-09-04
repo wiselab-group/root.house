@@ -27,7 +27,10 @@ export async function GET(
   const { mediaId } = await params;
   const familyId = new URL(request.url).searchParams.get("familyId");
   if (!familyId) {
-    return NextResponse.json({ error: "Missing familyId query param" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Missing familyId query param" },
+      { status: 400 },
+    );
   }
 
   try {

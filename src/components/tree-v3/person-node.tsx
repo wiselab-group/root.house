@@ -41,15 +41,47 @@ export function PersonNode({ data }: NodeProps<PersonFlowNode>) {
         isFocus ? "border-primary ring-2 ring-primary/30" : "border-border",
       )}
     >
-      <Handle type="target" id="top" position={Position.Top} className="opacity-0!" />
-      <Handle type="source" id="bottom" position={Position.Bottom} className="opacity-0!" />
-      <Handle type="source" id="left" position={Position.Left} className="opacity-0!" />
-      <Handle type="target" id="left" position={Position.Left} className="opacity-0!" />
-      <Handle type="source" id="right" position={Position.Right} className="opacity-0!" />
-      <Handle type="target" id="right" position={Position.Right} className="opacity-0!" />
+      <Handle
+        type="target"
+        id="top"
+        position={Position.Top}
+        className="opacity-0!"
+      />
+      <Handle
+        type="source"
+        id="bottom"
+        position={Position.Bottom}
+        className="opacity-0!"
+      />
+      <Handle
+        type="source"
+        id="left"
+        position={Position.Left}
+        className="opacity-0!"
+      />
+      <Handle
+        type="target"
+        id="left"
+        position={Position.Left}
+        className="opacity-0!"
+      />
+      <Handle
+        type="source"
+        id="right"
+        position={Position.Right}
+        className="opacity-0!"
+      />
+      <Handle
+        type="target"
+        id="right"
+        position={Position.Right}
+        className="opacity-0!"
+      />
       <span>{name}</span>
       {person.branch !== "unknown" && (
-        <span className="text-xs text-muted-foreground">{branchLabel(person.branch)}</span>
+        <span className="text-xs text-muted-foreground">
+          {branchLabel(person.branch)}
+        </span>
       )}
     </div>
   );

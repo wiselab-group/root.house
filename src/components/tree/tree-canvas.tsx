@@ -14,7 +14,10 @@ import {
 import "@xyflow/react/dist/style.css";
 import { updateDefaultFocusPersonAction } from "@/actions/family.actions";
 import type { TreeLayoutGraph } from "@/domain/tree/tree-layout.builder";
-import { toReactFlow, type TreeHighlightState } from "./adapters/xyflow-adapter";
+import {
+  toReactFlow,
+  type TreeHighlightState,
+} from "./adapters/xyflow-adapter";
 import { PersonNode } from "./person-node";
 import { RelationshipEdge } from "./relationship-edge";
 import { UnionChildEdge } from "./union-child-edge";
@@ -50,9 +53,13 @@ function InitialFocusViewport({ focusNode }: { focusNode: Node | undefined }) {
     // the real box put the focus card visibly off-center vertically.
     const width = focusNode.measured?.width ?? focusNode.width ?? 0;
     const height = focusNode.measured?.height ?? focusNode.height ?? 0;
-    setCenter(focusNode.position.x + width / 2, focusNode.position.y + height / 2, {
-      zoom: 0.85,
-    });
+    setCenter(
+      focusNode.position.x + width / 2,
+      focusNode.position.y + height / 2,
+      {
+        zoom: 0.85,
+      },
+    );
     // Re-centers whenever the focus person itself changes (URL ?focus=...
     // navigation) — NOT on every node reposition (card style toggle,
     // filter/trace highlight), which would fight the user's own pan/zoom
@@ -107,7 +114,8 @@ export function TreeCanvas({
   );
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
-    () => toReactFlow(graph, familyId, familySlug, cardStyle, highlight, setFocus),
+    () =>
+      toReactFlow(graph, familyId, familySlug, cardStyle, highlight, setFocus),
     [graph, familyId, familySlug, cardStyle, highlight, setFocus],
   );
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -176,7 +184,11 @@ export function TreeCanvas({
       >
         <InitialFocusViewport focusNode={focusNode} />
         <Background gap={24} />
-        <TreeCardStyleControl cardStyle={cardStyle} setCardStyle={setCardStyle} showZoom={!isCoarsePointer} />
+        <TreeCardStyleControl
+          cardStyle={cardStyle}
+          setCardStyle={setCardStyle}
+          showZoom={!isCoarsePointer}
+        />
         {/* Minimap needs room to read as a map, not a smudge — skip it below
             md where the canvas itself is already cramped (plan §6/§13), and
             skip it on any touch/coarse-pointer device regardless of width:
@@ -184,7 +196,11 @@ export function TreeCanvas({
             phone, and a tiny floating minimap there is more clutter than a
             map. pointer-fine (mouse/trackpad) is the actual "desktop"
             signal, not viewport width alone. */}
-        <MiniMap pannable zoomable className="hidden bg-card! md:pointer-fine:block" />
+        <MiniMap
+          pannable
+          zoomable
+          className="hidden bg-card! md:pointer-fine:block"
+        />
       </ReactFlow>
     </div>
   );

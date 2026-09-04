@@ -18,7 +18,11 @@ export function classifySearchQuery(rawQuery: string): ClassifiedQuery {
     const [, fromStr, toStr] = rangeMatch;
     const yearFrom = Number(fromStr);
     const yearTo = Number(toStr);
-    return { kind: "year_range", yearFrom: Math.min(yearFrom, yearTo), yearTo: Math.max(yearFrom, yearTo) };
+    return {
+      kind: "year_range",
+      yearFrom: Math.min(yearFrom, yearTo),
+      yearTo: Math.max(yearFrom, yearTo),
+    };
   }
 
   if (YEAR_QUERY_PATTERN.test(trimmed)) {

@@ -19,11 +19,18 @@ export type { PersonSearchResult };
  * interface search.service.ts exposes stays "one query string in, results
  * out" even as the underlying implementation grows more filters.
  */
-export async function searchPeople(familyId: string, query: string): Promise<PersonSearchResult[]> {
+export async function searchPeople(
+  familyId: string,
+  query: string,
+): Promise<PersonSearchResult[]> {
   const classified = classifySearchQuery(query);
 
   if (classified.kind === "year_range") {
-    return searchPersonsByYear(familyId, classified.yearFrom, classified.yearTo);
+    return searchPersonsByYear(
+      familyId,
+      classified.yearFrom,
+      classified.yearTo,
+    );
   }
 
   if (classified.text.length === 0) return [];
@@ -38,6 +45,9 @@ export async function searchPeople(familyId: string, query: string): Promise<Per
  * typo-tolerant pg_trgm ranking — a single letter should surface every name
  * containing it, which similarity scoring does not do for short queries.
  */
-export async function searchPeopleForPicker(familyId: string, query: string): Promise<PersonSearchResult[]> {
+export async function searchPeopleForPicker(
+  familyId: string,
+  query: string,
+): Promise<PersonSearchResult[]> {
   return searchPersonsByNameSubstring(familyId, query);
 }

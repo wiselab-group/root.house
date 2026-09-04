@@ -2,7 +2,10 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { createPlaceAction, type PlaceFormState } from "@/actions/place.actions";
+import {
+  createPlaceAction,
+  type PlaceFormState,
+} from "@/actions/place.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +26,10 @@ export function CreatePlaceForm({ familyId }: { familyId: string }) {
   const [state, formAction] = useActionState(boundAction, initialState);
 
   return (
-    <form action={formAction} className="flex flex-col gap-3 rounded-md border border-border p-3">
+    <form
+      action={formAction}
+      className="flex flex-col gap-3 rounded-md border border-border p-3"
+    >
       <p className="text-sm font-medium">Добавить место</p>
 
       <div className="flex flex-col gap-1">
@@ -31,7 +37,9 @@ export function CreatePlaceForm({ familyId }: { familyId: string }) {
           Название
         </Label>
         <Input id="name" name="name" placeholder="Таллин" required />
-        {state.fieldErrors?.name && <p className="text-sm text-destructive">{state.fieldErrors.name}</p>}
+        {state.fieldErrors?.name && (
+          <p className="text-sm text-destructive">{state.fieldErrors.name}</p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3">

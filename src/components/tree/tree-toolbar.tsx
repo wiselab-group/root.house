@@ -86,12 +86,20 @@ export function TreeToolbar({
     router.push(`${pathname}?${params.toString()}`);
   }, [pathname, router, searchParams]);
 
-  const traceLabel = useMemo(() => describeTraceOutcome(traceOutcome), [traceOutcome]);
+  const traceLabel = useMemo(
+    () => describeTraceOutcome(traceOutcome),
+    [traceOutcome],
+  );
   const isTraceActive = Boolean(traceA || traceB);
 
   return (
     <>
-      <TreeCanvas graph={graph} familyId={familyId} familySlug={familySlug} highlight={highlight} />
+      <TreeCanvas
+        graph={graph}
+        familyId={familyId}
+        familySlug={familySlug}
+        highlight={highlight}
+      />
 
       <Button
         variant={isTraceActive ? "default" : "outline"}

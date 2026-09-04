@@ -58,7 +58,10 @@ export function RelationshipEdge({
       <BaseEdge
         id={id}
         path={path}
-        style={{ strokeWidth: isOnTracePath ? 3 : 2, stroke: isOnTracePath ? TRACE_COLOR : "var(--border)" }}
+        style={{
+          strokeWidth: isOnTracePath ? 3 : 2,
+          stroke: isOnTracePath ? TRACE_COLOR : "var(--border)",
+        }}
       />
     );
   }
@@ -112,7 +115,9 @@ function PartnershipEdgeLine({
 
   const y = sourceNode.internals.positionAbsolute.y + sourceHeight / 2;
   const x1 = sourceIsLeft ? sourceLeft + sourceWidth : sourceLeft;
-  const x2 = sourceIsLeft ? targetLeft : targetLeft + (targetNode.measured?.width ?? targetNode.width ?? 0);
+  const x2 = sourceIsLeft
+    ? targetLeft
+    : targetLeft + (targetNode.measured?.width ?? targetNode.width ?? 0);
   // Both cards are the same cardStyle/height in practice, but average the
   // two just in case a future layout ever mixes sizes within a row.
   const yTarget = targetNode.internals.positionAbsolute.y + targetHeight / 2;
@@ -146,7 +151,11 @@ function PartnershipEdgeLine({
       <BaseEdge
         id={id}
         path={`M${midX},${midY} L${plainX},${plainY}`}
-        style={{ strokeWidth: 1.5, stroke: "var(--muted-foreground)", ...dashStyle }}
+        style={{
+          strokeWidth: 1.5,
+          stroke: "var(--muted-foreground)",
+          ...dashStyle,
+        }}
       />
     );
   }

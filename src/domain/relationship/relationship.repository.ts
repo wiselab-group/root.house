@@ -1,7 +1,14 @@
 import { and, eq, or } from "drizzle-orm";
 import { db } from "@/db/client";
-import { relationshipsParentChild, relationshipsPartnership } from "@/db/schema";
-import { fromColumns, toColumns, type PartialDate } from "@/domain/shared/partial-date";
+import {
+  relationshipsParentChild,
+  relationshipsPartnership,
+} from "@/db/schema";
+import {
+  fromColumns,
+  toColumns,
+  type PartialDate,
+} from "@/domain/shared/partial-date";
 import { deriveSiblings } from "./sibling-derivation";
 
 export interface ParentChildRecord {
@@ -24,22 +31,36 @@ export interface PartnershipRecord {
 }
 
 /** All parent_child rows where `personId` is the child — i.e. their direct parents. */
-export async function getParentsOf(personId: string, familyId: string): Promise<ParentChildRecord[]> {
+export async function getParentsOf(
+  personId: string,
+  familyId: string,
+): Promise<ParentChildRecord[]> {
   const rows = await db.query.relationshipsParentChild.findMany({
-    where: and(eq(relationshipsParentChild.childId, personId), eq(relationshipsParentChild.familyId, familyId)),
+    where: and(
+      eq(relationshipsParentChild.childId, personId),
+      eq(relationshipsParentChild.familyId, familyId),
+    ),
   });
   return rows;
 }
 
 /** All parent_child rows where `personId` is the parent — i.e. their direct children. */
-export async function getChildrenOf(personId: string, familyId: string): Promise<ParentChildRecord[]> {
+export async function getChildrenOf(
+  personId: string,
+  familyId: string,
+): Promise<ParentChildRecord[]> {
   const rows = await db.query.relationshipsParentChild.findMany({
-    where: and(eq(relationshipsParentChild.parentId, personId), eq(relationshipsParentChild.familyId, familyId)),
+    where: and(
+      eq(relationshipsParentChild.parentId, personId),
+      eq(relationshipsParentChild.familyId, familyId),
+    ),
   });
   return rows;
 }
 
-function toPartnershipRecord(row: typeof relationshipsPartnership.$inferSelect): PartnershipRecord {
+function toPartnershipRecord(
+  row: typeof relationshipsPartnership.$inferSelect,
+): PartnershipRecord {
   return {
     id: row.id,
     familyId: row.familyId,
@@ -64,11 +85,17 @@ function toPartnershipRecord(row: typeof relationshipsPartnership.$inferSelect):
   };
 }
 
-export async function getPartnershipsOf(personId: string, familyId: string): Promise<PartnershipRecord[]> {
+export async function getPartnershipsOf(
+  personId: string,
+  familyId: string,
+): Promise<PartnershipRecord[]> {
   const rows = await db.query.relationshipsPartnership.findMany({
     where: and(
       eq(relationshipsPartnership.familyId, familyId),
-      or(eq(relationshipsPartnership.person1Id, personId), eq(relationshipsPartnership.person2Id, personId)),
+      or(
+        eq(relationshipsPartnership.person1Id, personId),
+        eq(relationshipsPartnership.person2Id, personId),
+      ),
     ),
   });
   return rows.map(toPartnershipRecord);
@@ -96,7 +123,9 @@ export async function getSiblingsOf(
  * GenealogyGraph (genealogy-graph.ts) for traversal-heavy operations like
  * findRelationshipPath, where per-person queries would mean one CTE per hop.
  */
-export async function getAllParentChildEdges(familyId: string): Promise<ParentChildRecord[]> {
+export async function getAllParentChildEdges(
+  familyId: string,
+): Promise<ParentChildRecord[]> {
   const rows = await db.query.relationshipsParentChild.findMany({
     where: eq(relationshipsParentChild.familyId, familyId),
   });
@@ -104,7 +133,9 @@ export async function getAllParentChildEdges(familyId: string): Promise<ParentCh
 }
 
 /** Every partnership row in a family — see getAllParentChildEdges's doc for why. */
-export async function getAllPartnershipEdges(familyId: string): Promise<PartnershipRecord[]> {
+export async function getAllPartnershipEdges(
+  familyId: string,
+): Promise<PartnershipRecord[]> {
   const rows = await db.query.relationshipsPartnership.findMany({
     where: eq(relationshipsPartnership.familyId, familyId),
   });
@@ -164,18 +195,34 @@ export async function insertPartnership(input: {
   return row;
 }
 
-export async function deleteParentChild(id: string, familyId: string): Promise<boolean> {
+export async function deleteParentChild(
+  id: string,
+  familyId: string,
+): Promise<boolean> {
   const result = await db
     .delete(relationshipsParentChild)
-    .where(and(eq(relationshipsParentChild.id, id), eq(relationshipsParentChild.familyId, familyId)))
+    .where(
+      and(
+        eq(relationshipsParentChild.id, id),
+        eq(relationshipsParentChild.familyId, familyId),
+      ),
+    )
     .returning({ id: relationshipsParentChild.id });
   return result.length > 0;
 }
 
-export async function deletePartnership(id: string, familyId: string): Promise<boolean> {
+export async function deletePartnership(
+  id: string,
+  familyId: string,
+): Promise<boolean> {
   const result = await db
     .delete(relationshipsPartnership)
-    .where(and(eq(relationshipsPartnership.id, id), eq(relationshipsPartnership.familyId, familyId)))
+    .where(
+      and(
+        eq(relationshipsPartnership.id, id),
+        eq(relationshipsPartnership.familyId, familyId),
+      ),
+    )
     .returning({ id: relationshipsPartnership.id });
   return result.length > 0;
 }

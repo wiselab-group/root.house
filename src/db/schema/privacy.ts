@@ -5,4 +5,8 @@ import { pgEnum } from "drizzle-orm/pg-core";
  * 'family' at the application layer (never 'public') — see person/event/media/
  * story table definitions for the per-column default.
  */
-export const privacyLevelEnum = pgEnum("privacy_level", ["private", "family", "public"]);
+export const privacyLevelEnum = pgEnum("privacy_level", [
+  "private",
+  "family",
+  "public",
+]);

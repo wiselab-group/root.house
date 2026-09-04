@@ -2,7 +2,12 @@
  * Russian plural declension for count-dependent nouns (1 человек / 2 человека
  * / 5 человек). Pure — no framework deps, per CLAUDE.md domain rules.
  */
-export function pluralizeRu(count: number, one: string, few: string, many: string): string {
+export function pluralizeRu(
+  count: number,
+  one: string,
+  few: string,
+  many: string,
+): string {
   const mod10 = count % 10;
   const mod100 = count % 100;
 

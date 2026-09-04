@@ -42,16 +42,25 @@ export async function PersonFamilyPanel({
   const peopleById = new Map(allPeople.map((p) => [p.id, p]));
   const otherPeople = allPeople.filter((p) => p.id !== personId);
 
-  const toItem = (relatedPersonId: string, relationshipId: string): RelativeItem | null => {
+  const toItem = (
+    relatedPersonId: string,
+    relationshipId: string,
+  ): RelativeItem | null => {
     const person = peopleById.get(relatedPersonId);
     if (!person) return null;
     return { ...person, relationshipId };
   };
 
-  const parents = family.parents.map((r) => toItem(r.parentId, r.id)).filter((p) => p != null);
-  const children = family.children.map((r) => toItem(r.childId, r.id)).filter((p) => p != null);
+  const parents = family.parents
+    .map((r) => toItem(r.parentId, r.id))
+    .filter((p) => p != null);
+  const children = family.children
+    .map((r) => toItem(r.childId, r.id))
+    .filter((p) => p != null);
   const spouses = family.partnerships
-    .map((r) => toItem(r.person1Id === personId ? r.person2Id : r.person1Id, r.id))
+    .map((r) =>
+      toItem(r.person1Id === personId ? r.person2Id : r.person1Id, r.id),
+    )
     .filter((p) => p != null);
   const siblings = family.siblings
     .map((s) => peopleById.get(s.personId))
@@ -154,13 +163,18 @@ function RelativeGroup({
 }) {
   return (
     <div>
-      <h3 className="mb-2 text-sm font-medium text-muted-foreground">{title}</h3>
+      <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+        {title}
+      </h3>
       {people.length === 0 ? (
         <p className="text-sm text-muted-foreground">—</p>
       ) : (
         <ul className="flex flex-wrap gap-2">
           {people.map((person) => (
-            <li key={person.id} className="flex items-center gap-1 rounded-full border border-border pl-3 pr-1 py-1">
+            <li
+              key={person.id}
+              className="flex items-center gap-1 rounded-full border border-border pl-3 pr-1 py-1"
+            >
               <Link
                 href={`/families/${familySlug}/people/${person.slug}`}
                 className="text-sm hover:underline"

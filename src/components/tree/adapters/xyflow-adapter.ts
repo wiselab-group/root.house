@@ -85,7 +85,10 @@ export interface UnionChildEdgeData extends Record<string, unknown> {
 }
 
 export type PersonFlowNode = Node<PersonNodeData, "person">;
-export type RelationshipFlowEdge = Edge<RelationshipEdgeData, "parentChild" | "partnership">;
+export type RelationshipFlowEdge = Edge<
+  RelationshipEdgeData,
+  "parentChild" | "partnership"
+>;
 export type UnionChildFlowEdge = Edge<UnionChildEdgeData, "unionChild">;
 export type TreeFlowEdge = RelationshipFlowEdge | UnionChildFlowEdge;
 
@@ -161,8 +164,12 @@ function toFlowNode(
       isFocus: node.isFocus,
       generation: node.generation,
       cardStyle,
-      isFilterMatch: highlight.filterMatchedIds ? highlight.filterMatchedIds.has(node.id) : undefined,
-      isOnTracePath: highlight.tracePersonIds ? highlight.tracePersonIds.has(node.id) : undefined,
+      isFilterMatch: highlight.filterMatchedIds
+        ? highlight.filterMatchedIds.has(node.id)
+        : undefined,
+      isOnTracePath: highlight.tracePersonIds
+        ? highlight.tracePersonIds.has(node.id)
+        : undefined,
       // Focusing the already-focused person would be a no-op navigation —
       // omitting the callback entirely (rather than passing one that no-ops)
       // lets the popover hide "сделать фокус-персоной" for that one card.
@@ -193,7 +200,10 @@ function findUnionParentPairs(
   const partnershipEdgeByPair = new Map<string, string>();
   for (const edge of graph.edges) {
     if (edge.kind === "partnership") {
-      partnershipEdgeByPair.set(partnerPairKey(edge.source, edge.target), edge.id);
+      partnershipEdgeByPair.set(
+        partnerPairKey(edge.source, edge.target),
+        edge.id,
+      );
     }
   }
 
@@ -245,7 +255,9 @@ function toFlowEdges(
         targetHandle: "top",
         data: {
           isCurrent: true,
-          isOnTracePath: highlight.traceEdgeIds ? highlight.traceEdgeIds.has(edge.id) : undefined,
+          isOnTracePath: highlight.traceEdgeIds
+            ? highlight.traceEdgeIds.has(edge.id)
+            : undefined,
         },
       });
       continue;
@@ -258,10 +270,14 @@ function toFlowEdges(
     // false/undefined here, but PartnershipEdgeLine still needs to know
     // which single partner to color half the dashed line for, so that half
     // doesn't look disconnected from the accent-colored trunk it feeds.
-    const partneredUnion = [...unionByChild.values()].find((u) => u.partnershipEdgeId === edge.id);
+    const partneredUnion = [...unionByChild.values()].find(
+      (u) => u.partnershipEdgeId === edge.id,
+    );
     const tracedPartnerId =
       partneredUnion && highlight.tracePersonIds
-        ? partneredUnion.parentIds.find((id) => highlight.tracePersonIds!.has(id))
+        ? partneredUnion.parentIds.find((id) =>
+            highlight.tracePersonIds!.has(id),
+          )
         : undefined;
 
     // Partnership edges connect sideways (spouses sit next to each other at
@@ -277,7 +293,9 @@ function toFlowEdges(
       target: edge.target,
       data: {
         isCurrent: edge.isCurrent ?? true,
-        isOnTracePath: highlight.traceEdgeIds ? highlight.traceEdgeIds.has(edge.id) : undefined,
+        isOnTracePath: highlight.traceEdgeIds
+          ? highlight.traceEdgeIds.has(edge.id)
+          : undefined,
         tracedPartnerId,
       },
     });
@@ -334,13 +352,22 @@ export function toReactFlow(
     // needs the same elevation — it's still an accent-colored stroke that
     // can otherwise end up under a plain crossing line.
     const isPartiallyTraced =
-      edge.type === "partnership" && "tracedPartnerId" in (edge.data ?? {}) && edge.data?.tracedPartnerId != null;
+      edge.type === "partnership" &&
+      "tracedPartnerId" in (edge.data ?? {}) &&
+      edge.data?.tracedPartnerId != null;
     return isFullyTraced || isPartiallyTraced ? { ...edge, zIndex: 1 } : edge;
   });
 
   return {
     nodes: graph.nodes.map((node) =>
-      toFlowNode(node, familyId, familySlug, cardStyle, highlight, onFocusPerson),
+      toFlowNode(
+        node,
+        familyId,
+        familySlug,
+        cardStyle,
+        highlight,
+        onFocusPerson,
+      ),
     ),
     edges: elevatedEdges,
   };

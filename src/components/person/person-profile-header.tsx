@@ -30,9 +30,15 @@ export function PersonProfileHeader({
   return (
     <div className="flex items-start justify-between gap-4">
       <div className="flex items-center gap-4">
-        <PersonAvatar person={person} familyId={familyId} className="size-20! text-xl" />
+        <PersonAvatar
+          person={person}
+          familyId={familyId}
+          className="size-20! text-xl"
+        />
         <div>
-          <h1 className="font-heading text-3xl font-medium">{personDisplayName(person)}</h1>
+          <h1 className="font-heading text-3xl font-medium">
+            {personDisplayName(person)}
+          </h1>
           <p className="text-muted-foreground">
             {formatPartialDate(person.birthDate)}
             {birthPlace && `, ${birthPlace.name}`}

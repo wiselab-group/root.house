@@ -39,20 +39,31 @@ export function DeletePersonButton({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="destructive" size="sm" />}>Удалить</DialogTrigger>
+      <DialogTrigger render={<Button variant="destructive" size="sm" />}>
+        Удалить
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Удалить {personName}?</DialogTitle>
           <DialogDescription>
-            Это действие нельзя отменить. Все связи с родственниками, события и привязанные фото
-            для этого человека также будут удалены.
+            Это действие нельзя отменить. Все связи с родственниками, события и
+            привязанные фото для этого человека также будут удалены.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={isPending}>
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={isPending}
+          >
             Отмена
           </Button>
-          <Button variant="destructive" onClick={handleConfirm} disabled={isPending} aria-busy={isPending}>
+          <Button
+            variant="destructive"
+            onClick={handleConfirm}
+            disabled={isPending}
+            aria-busy={isPending}
+          >
             {isPending ? "Удаляем…" : "Удалить"}
           </Button>
         </DialogFooter>

@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { getFamilySlugById } from "@/domain/family/family.service";
-import { addPerson, addPlaceholderPerson, getPersonSlugById } from "@/domain/person/person.service";
+import {
+  addPerson,
+  addPlaceholderPerson,
+  getPersonSlugById,
+} from "@/domain/person/person.service";
 import {
   addParentChild,
   addPartnership,
@@ -37,12 +41,16 @@ async function resolveOtherPersonId(
   }
 
   const isPlaceholder = formData.get("isPlaceholder") === "on";
-  const firstName = (formData.get("newFirstName") as string | null)?.trim() || undefined;
-  const lastName = (formData.get("newLastName") as string | null)?.trim() || undefined;
+  const firstName =
+    (formData.get("newFirstName") as string | null)?.trim() || undefined;
+  const lastName =
+    (formData.get("newLastName") as string | null)?.trim() || undefined;
 
   if (isPlaceholder) {
     const placeholder = await addPlaceholderPerson(familyId, userId, {
-      label: firstName ? `${firstName}${lastName ? ` ${lastName}` : ""}` : undefined,
+      label: firstName
+        ? `${firstName}${lastName ? ` ${lastName}` : ""}`
+        : undefined,
     });
     return placeholder.id;
   }
@@ -64,15 +72,31 @@ export async function addRelativeAction(
   await requireFamilyAccess(familyId, session.user.id, "editor");
 
   try {
-    const otherPersonId = await resolveOtherPersonId(familyId, session.user.id, formData);
-    const parentRole = (formData.get("parentRole") as ParentRole | null) ?? undefined;
+    const otherPersonId = await resolveOtherPersonId(
+      familyId,
+      session.user.id,
+      formData,
+    );
+    const parentRole =
+      (formData.get("parentRole") as ParentRole | null) ?? undefined;
 
     if (kind === "parent") {
-      await addParentChild(familyId, { parentId: otherPersonId, childId: personId, parentRole });
+      await addParentChild(familyId, {
+        parentId: otherPersonId,
+        childId: personId,
+        parentRole,
+      });
     } else if (kind === "child") {
-      await addParentChild(familyId, { parentId: personId, childId: otherPersonId, parentRole });
+      await addParentChild(familyId, {
+        parentId: personId,
+        childId: otherPersonId,
+        parentRole,
+      });
     } else {
-      await addPartnership(familyId, { person1Id: personId, person2Id: otherPersonId });
+      await addPartnership(familyId, {
+        person1Id: personId,
+        person2Id: otherPersonId,
+      });
     }
   } catch (error) {
     if (error instanceof RelationshipValidationError) {

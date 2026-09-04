@@ -22,7 +22,9 @@ export function FamilyProvider({
   value: FamilyContextValue;
   children: React.ReactNode;
 }) {
-  return <FamilyContext.Provider value={value}>{children}</FamilyContext.Provider>;
+  return (
+    <FamilyContext.Provider value={value}>{children}</FamilyContext.Provider>
+  );
 }
 
 /** Access the current family's id/name/the caller's role from any client component beneath FamilyProvider. */

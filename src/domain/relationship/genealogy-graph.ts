@@ -1,5 +1,8 @@
 import type { PersonRecord } from "@/domain/person/person.repository";
-import type { ParentChildRecord, PartnershipRecord } from "./relationship.repository";
+import type {
+  ParentChildRecord,
+  PartnershipRecord,
+} from "./relationship.repository";
 
 /**
  * GenealogyGraph — an in-memory, library-agnostic adjacency structure over a
@@ -62,6 +65,9 @@ export function buildGenealogyGraph(
   return { personsById, parentEdgesOf, childEdgesOf, partnershipEdgesOf };
 }
 
-export function getPerson(graph: GenealogyGraph, personId: string): PersonRecord | null {
+export function getPerson(
+  graph: GenealogyGraph,
+  personId: string,
+): PersonRecord | null {
   return graph.personsById.get(personId) ?? null;
 }

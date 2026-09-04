@@ -5,7 +5,10 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { getFamilySlugById } from "@/domain/family/family.service";
-import { createPersonSchema, createPlaceholderPersonSchema } from "@/lib/validation/person";
+import {
+  createPersonSchema,
+  createPlaceholderPersonSchema,
+} from "@/lib/validation/person";
 import {
   addPerson,
   addPlaceholderPerson,
@@ -111,7 +114,10 @@ export async function createPlaceholderPersonAction(
   return {};
 }
 
-export async function deletePersonAction(familyId: string, personId: string): Promise<void> {
+export async function deletePersonAction(
+  familyId: string,
+  personId: string,
+): Promise<void> {
   const session = await auth();
   if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
 

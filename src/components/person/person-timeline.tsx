@@ -47,8 +47,12 @@ export async function PersonTimeline({
                   className="flex flex-col gap-0.5 hover:opacity-80"
                 >
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{EVENT_TYPE_LABELS[event.type]}</Badge>
-                    <span className="text-xs text-muted-foreground">{formatPartialDate(event.date)}</span>
+                    <Badge variant="secondary">
+                      {EVENT_TYPE_LABELS[event.type]}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {formatPartialDate(event.date)}
+                    </span>
                   </div>
                   <span className="text-sm font-medium">{event.title}</span>
                   {event.placeId && placeNameById.has(event.placeId) && (
@@ -64,7 +68,11 @@ export async function PersonTimeline({
 
         {canEdit && (
           <CollapsibleForm triggerLabel="Добавить событие">
-            <AddEventForm familyId={familyId} personId={personId} places={places} />
+            <AddEventForm
+              familyId={familyId}
+              personId={personId}
+              places={places}
+            />
           </CollapsibleForm>
         )}
       </CardContent>

@@ -5,7 +5,11 @@ import { AppHeader } from "@/components/app-header";
 import { BreadcrumbsProvider } from "@/components/breadcrumbs-context";
 import { FamilyNavProvider } from "@/components/family-nav-context";
 
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const session = await auth();
 
   if (!session?.user) {

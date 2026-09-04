@@ -70,13 +70,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!parsed.success) return null;
 
         const { email, password } = parsed.data;
-        const user = await db.query.users.findFirst({ where: eq(users.email, email) });
+        const user = await db.query.users.findFirst({
+          where: eq(users.email, email),
+        });
         if (!user?.passwordHash) return null;
 
         const passwordMatches = await compare(password, user.passwordHash);
         if (!passwordMatches) return null;
 
-        return { id: user.id, email: user.email, name: user.name, image: user.image };
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+        };
       },
     }),
   ],

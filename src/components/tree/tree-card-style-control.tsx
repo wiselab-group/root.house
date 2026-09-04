@@ -30,8 +30,14 @@ export function TreeCardStyleControl({
       className="pointer-coarse:[&_.react-flow\_\_controls-button]:size-11! pointer-coarse:[&_.react-flow\_\_controls-button_svg]:max-h-5! pointer-coarse:[&_.react-flow\_\_controls-button_svg]:max-w-5!"
     >
       <ControlButton
-        onClick={() => setCardStyle(cardStyle === "compact" ? "portrait" : "compact")}
-        title={cardStyle === "compact" ? "Показывать карточки с крупным фото" : "Показывать компактные карточки"}
+        onClick={() =>
+          setCardStyle(cardStyle === "compact" ? "portrait" : "compact")
+        }
+        title={
+          cardStyle === "compact"
+            ? "Показывать карточки с крупным фото"
+            : "Показывать компактные карточки"
+        }
         aria-pressed={cardStyle === "portrait"}
       >
         {/* Icon shows the shape of the card you'll SWITCH TO, not the

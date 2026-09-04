@@ -2,7 +2,10 @@
 
 import { AuthError } from "next-auth";
 import { registerSchema, credentialsSchema } from "@/lib/validation/auth";
-import { registerUser, EmailAlreadyRegisteredError } from "@/domain/auth/auth.service";
+import {
+  registerUser,
+  EmailAlreadyRegisteredError,
+} from "@/domain/auth/auth.service";
 import { signIn, signOut } from "@/lib/auth";
 
 export interface RegisterFormState {

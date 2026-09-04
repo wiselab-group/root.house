@@ -15,5 +15,8 @@ export async function GET(): Promise<Response> {
   await signOut({ redirectTo: "/login?error=stale-session" });
   // signOut() with redirectTo throws a NEXT_REDIRECT internally and never
   // reaches here in practice, but TypeScript wants every path to return.
-  return new Response(null, { status: 302, headers: { Location: "/login?error=stale-session" } });
+  return new Response(null, {
+    status: 302,
+    headers: { Location: "/login?error=stale-session" },
+  });
 }

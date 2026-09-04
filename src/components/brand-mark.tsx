@@ -23,7 +23,7 @@ export function BrandMark({
       <span
         className={cn(
           "flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary",
-          glyphClassName
+          glyphClassName,
         )}
       >
         <HomeIcon className={cn("size-4.5", iconClassName)} />

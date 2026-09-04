@@ -1,7 +1,11 @@
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { persons } from "@/db/schema";
-import { fromColumns, toColumns, type PartialDate } from "@/domain/shared/partial-date";
+import {
+  fromColumns,
+  toColumns,
+  type PartialDate,
+} from "@/domain/shared/partial-date";
 
 export interface PersonRecord {
   id: string;
@@ -73,7 +77,10 @@ function toRecord(row: typeof persons.$inferSelect): PersonRecord {
  * `WHERE id = :id AND family_id = :familyId` together, so a foreign id
  * simply returns null instead of "found, but rejected after the fact".
  */
-export async function getPersonById(personId: string, familyId: string): Promise<PersonRecord | null> {
+export async function getPersonById(
+  personId: string,
+  familyId: string,
+): Promise<PersonRecord | null> {
   const row = await db.query.persons.findFirst({
     where: and(eq(persons.id, personId), eq(persons.familyId, familyId)),
   });
@@ -86,7 +93,10 @@ export async function getPersonById(personId: string, familyId: string): Promise
  * instead of the primary key. A person's slug is unique only within its
  * family (see db/schema/person.ts), so familyId must always accompany it.
  */
-export async function getPersonBySlug(slug: string, familyId: string): Promise<PersonRecord | null> {
+export async function getPersonBySlug(
+  slug: string,
+  familyId: string,
+): Promise<PersonRecord | null> {
   const row = await db.query.persons.findFirst({
     where: and(eq(persons.slug, slug), eq(persons.familyId, familyId)),
   });
@@ -108,7 +118,9 @@ export async function isPersonSlugTaken(
   return row.id !== excludePersonId;
 }
 
-export async function listPersonsByFamily(familyId: string): Promise<PersonRecord[]> {
+export async function listPersonsByFamily(
+  familyId: string,
+): Promise<PersonRecord[]> {
   const rows = await db.query.persons.findMany({
     where: eq(persons.familyId, familyId),
     orderBy: [asc(persons.lastName), asc(persons.firstName)],
@@ -138,7 +150,9 @@ export interface CreatePersonData {
   deathCause?: string | null;
 }
 
-export async function createPerson(data: CreatePersonData): Promise<{ id: string }> {
+export async function createPerson(
+  data: CreatePersonData,
+): Promise<{ id: string }> {
   const birthCols = toColumns(data.birthDate ?? null);
   const deathCols = toColumns(data.deathDate ?? null);
 
@@ -235,7 +249,11 @@ export async function updatePerson(
 
 /** Changes a Person's slug — caller (person.service.ts) must have already
  *  verified the new slug is valid and free within the family. */
-export async function updatePersonSlug(personId: string, familyId: string, slug: string): Promise<boolean> {
+export async function updatePersonSlug(
+  personId: string,
+  familyId: string,
+  slug: string,
+): Promise<boolean> {
   const result = await db
     .update(persons)
     .set({ slug, updatedAt: new Date() })
@@ -244,7 +262,10 @@ export async function updatePersonSlug(personId: string, familyId: string, slug:
   return result.length > 0;
 }
 
-export async function deletePerson(personId: string, familyId: string): Promise<boolean> {
+export async function deletePerson(
+  personId: string,
+  familyId: string,
+): Promise<boolean> {
   const result = await db
     .delete(persons)
     .where(and(eq(persons.id, personId), eq(persons.familyId, familyId)))
@@ -265,7 +286,8 @@ export async function setProfilePhoto(
 ): Promise<boolean> {
   if (mediaId !== null) {
     const media = await db.query.media.findFirst({
-      where: (m, { and: sqlAnd, eq: sqlEq }) => sqlAnd(sqlEq(m.id, mediaId), sqlEq(m.familyId, familyId)),
+      where: (m, { and: sqlAnd, eq: sqlEq }) =>
+        sqlAnd(sqlEq(m.id, mediaId), sqlEq(m.familyId, familyId)),
     });
     if (!media) return false;
   }

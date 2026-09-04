@@ -7,7 +7,10 @@
  * rules, collision suffixing) live in domain/shared/slugify.ts — this file
  * only adds family-specific concerns (the reserved-route-segment list).
  */
-import { isValidSlugFormat as isValidSlugFormatBase, slugifyBase } from "@/domain/shared/slugify";
+import {
+  isValidSlugFormat as isValidSlugFormatBase,
+  slugifyBase,
+} from "@/domain/shared/slugify";
 
 export {
   SLUG_PATTERN,

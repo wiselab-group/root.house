@@ -1,8 +1,17 @@
-import { getPersonById, listPersonsByFamily } from "@/domain/person/person.repository";
+import {
+  getPersonById,
+  listPersonsByFamily,
+} from "@/domain/person/person.repository";
 import { getAncestorDepths, isAncestorOf } from "./graph.service";
-import { computeRelationshipPath, type RelationshipPathResult } from "./relationship-path";
+import {
+  computeRelationshipPath,
+  type RelationshipPathResult,
+} from "./relationship-path";
 import { buildGenealogyGraph } from "./genealogy-graph";
-import { findRelationshipPath, type RelationshipPathOutcome } from "./genealogy-algorithms";
+import {
+  findRelationshipPath,
+  type RelationshipPathOutcome,
+} from "./genealogy-algorithms";
 import {
   deleteParentChild,
   deletePartnership,
@@ -26,14 +35,22 @@ export class RelationshipValidationError extends Error {
   }
 }
 
-export type ParentRole = "biological" | "adoptive" | "step" | "foster" | "unknown";
+export type ParentRole =
+  "biological" | "adoptive" | "step" | "foster" | "unknown";
 
 /** Minimal shape of a Person lookup this service needs — injectable so
  *  validateParentChild is unit-testable without a live database. */
-export type PersonExistsFn = (personId: string, familyId: string) => Promise<{ id: string } | null>;
+export type PersonExistsFn = (
+  personId: string,
+  familyId: string,
+) => Promise<{ id: string } | null>;
 
 /** Injectable ancestor-check — see PersonExistsFn. */
-export type IsAncestorOfFn = (candidateAncestorId: string, personId: string, familyId: string) => Promise<boolean>;
+export type IsAncestorOfFn = (
+  candidateAncestorId: string,
+  personId: string,
+  familyId: string,
+) => Promise<boolean>;
 
 /**
  * Pure validation for a proposed parent -> child edge: no DB writes, just the
@@ -47,7 +64,9 @@ export async function validateParentChild(
   deps: { personExists: PersonExistsFn; isAncestorOf: IsAncestorOfFn },
 ): Promise<void> {
   if (input.parentId === input.childId) {
-    throw new RelationshipValidationError("Человек не может быть своим собственным родителем.");
+    throw new RelationshipValidationError(
+      "Человек не может быть своим собственным родителем.",
+    );
   }
 
   const [parent, child] = await Promise.all([
@@ -55,12 +74,18 @@ export async function validateParentChild(
     deps.personExists(input.childId, familyId),
   ]);
   if (!parent || !child) {
-    throw new RelationshipValidationError("Один из людей не найден в этой семье.");
+    throw new RelationshipValidationError(
+      "Один из людей не найден в этой семье.",
+    );
   }
 
   // Would inserting parent->child make `parentId` a descendant of `childId`?
   // If childId is already an ancestor of parentId, this edge closes a cycle.
-  const wouldCreateCycle = await deps.isAncestorOf(input.childId, input.parentId, familyId);
+  const wouldCreateCycle = await deps.isAncestorOf(
+    input.childId,
+    input.parentId,
+    familyId,
+  );
   if (wouldCreateCycle) {
     throw new RelationshipValidationError(
       "Эта связь создала бы цикл в родословной (человек не может быть предком самого себя).",
@@ -110,7 +135,9 @@ export async function validatePartnership(
   deps: { personExists: PersonExistsFn },
 ): Promise<void> {
   if (input.person1Id === input.person2Id) {
-    throw new RelationshipValidationError("Человек не может состоять в партнёрстве сам с собой.");
+    throw new RelationshipValidationError(
+      "Человек не может состоять в партнёрстве сам с собой.",
+    );
   }
 
   const [person1, person2] = await Promise.all([
@@ -118,7 +145,9 @@ export async function validatePartnership(
     deps.personExists(input.person2Id, familyId),
   ]);
   if (!person1 || !person2) {
-    throw new RelationshipValidationError("Один из людей не найден в этой семье.");
+    throw new RelationshipValidationError(
+      "Один из людей не найден в этой семье.",
+    );
   }
 }
 
@@ -135,11 +164,17 @@ export async function addPartnership(
   return insertPartnership({ familyId, ...input });
 }
 
-export async function removeParentChild(id: string, familyId: string): Promise<boolean> {
+export async function removeParentChild(
+  id: string,
+  familyId: string,
+): Promise<boolean> {
   return deleteParentChild(id, familyId);
 }
 
-export async function removePartnership(id: string, familyId: string): Promise<boolean> {
+export async function removePartnership(
+  id: string,
+  familyId: string,
+): Promise<boolean> {
   return deletePartnership(id, familyId);
 }
 
@@ -151,7 +186,10 @@ export interface FamilyOfPerson {
 }
 
 /** Everything needed to render a Person's "Family" panel in one call. */
-export async function getFamilyOf(personId: string, familyId: string): Promise<FamilyOfPerson> {
+export async function getFamilyOf(
+  personId: string,
+  familyId: string,
+): Promise<FamilyOfPerson> {
   const [parents, children, partnerships, siblings] = await Promise.all([
     getParentsOf(personId, familyId),
     getChildrenOf(personId, familyId),
@@ -199,6 +237,10 @@ export async function findRelationshipPathFor(
     getAllParentChildEdges(familyId),
     getAllPartnershipEdges(familyId),
   ]);
-  const graph = buildGenealogyGraph(persons, parentChildEdges, partnershipEdges);
+  const graph = buildGenealogyGraph(
+    persons,
+    parentChildEdges,
+    partnershipEdges,
+  );
   return findRelationshipPath(graph, personAId, personBId);
 }

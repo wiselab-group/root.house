@@ -9,5 +9,7 @@ import { focusPersonId, initialFamilyGraph } from "@/domain/tree-v3/fixture";
  * Не связана ни с production-роутом /families/[slug]/tree, ни с /dev/tree-v2.
  */
 export default function TreeV3DevPage() {
-  return <TreeCanvas graph={initialFamilyGraph} focusPersonId={focusPersonId} />;
+  return (
+    <TreeCanvas graph={initialFamilyGraph} focusPersonId={focusPersonId} />
+  );
 }

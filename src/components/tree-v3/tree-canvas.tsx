@@ -16,7 +16,10 @@ import type { FamilyGraph } from "@/domain/tree-v3/types";
 import { PersonNode, type PersonFlowNode } from "./person-node";
 import { PartnershipEdge } from "./partnership-edge";
 import { ParentChildEdge } from "./parent-child-edge";
-import { buildReactFlowGraph, buildEdgesFromPositions } from "./react-flow-adapter";
+import {
+  buildReactFlowGraph,
+  buildEdgesFromPositions,
+} from "./react-flow-adapter";
 import { CARD_HALF_WIDTH, CARD_HALF_HEIGHT } from "./card-geometry";
 
 const nodeTypes: NodeTypes = { person: PersonNode };
@@ -40,8 +43,20 @@ const edgeTypes: EdgeTypes = {
  * graph/focusPersonId когда-нибудь станут динамическими (сейчас — нет, но
  * компонент общий, не должен молча копить стейт чужого графа).
  */
-export function TreeCanvas({ graph, focusPersonId }: { graph: FamilyGraph; focusPersonId: string }) {
-  return <TreeCanvasInner key={focusPersonId} graph={graph} focusPersonId={focusPersonId} />;
+export function TreeCanvas({
+  graph,
+  focusPersonId,
+}: {
+  graph: FamilyGraph;
+  focusPersonId: string;
+}) {
+  return (
+    <TreeCanvasInner
+      key={focusPersonId}
+      graph={graph}
+      focusPersonId={focusPersonId}
+    />
+  );
 }
 
 /**
@@ -52,7 +67,13 @@ export function TreeCanvas({ graph, focusPersonId }: { graph: FamilyGraph; focus
  * каждом onNodesChange, так что линии всегда следуют за карточкой во время
  * drag, а не остаются на исходном domain-месте.
  */
-function TreeCanvasInner({ graph, focusPersonId }: { graph: FamilyGraph; focusPersonId: string }) {
+function TreeCanvasInner({
+  graph,
+  focusPersonId,
+}: {
+  graph: FamilyGraph;
+  focusPersonId: string;
+}) {
   const initial = useMemo(() => {
     const layout = buildTreeV3Layout(graph, focusPersonId);
     return buildReactFlowGraph(layout);
@@ -62,7 +83,13 @@ function TreeCanvasInner({ graph, focusPersonId }: { graph: FamilyGraph; focusPe
 
   const edges = useMemo(() => {
     const centerById = new Map(
-      nodes.map((n) => [n.id, { x: n.position.x + CARD_HALF_WIDTH, y: n.position.y + CARD_HALF_HEIGHT }]),
+      nodes.map((n) => [
+        n.id,
+        {
+          x: n.position.x + CARD_HALF_WIDTH,
+          y: n.position.y + CARD_HALF_HEIGHT,
+        },
+      ]),
     );
     return buildEdgesFromPositions(centerById, initial.relationInfo);
   }, [nodes, initial.relationInfo]);

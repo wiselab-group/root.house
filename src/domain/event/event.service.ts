@@ -46,11 +46,17 @@ export async function addEvent(data: CreateEventData): Promise<{ id: string }> {
   return createEvent(data);
 }
 
-export async function getEvent(eventId: string, familyId: string): Promise<EventRecord | null> {
+export async function getEvent(
+  eventId: string,
+  familyId: string,
+): Promise<EventRecord | null> {
   return getEventById(eventId, familyId);
 }
 
-export async function removeEvent(eventId: string, familyId: string): Promise<boolean> {
+export async function removeEvent(
+  eventId: string,
+  familyId: string,
+): Promise<boolean> {
   return deleteEvent(eventId, familyId);
 }
 
@@ -64,7 +70,10 @@ export async function getParticipants(eventId: string, familyId: string) {
  * comparePartialDates' Infinity-for-unknown behavior) rather than being
  * dropped — an event worth recording is worth showing even if undated.
  */
-export async function getPersonTimeline(personId: string, familyId: string): Promise<EventRecord[]> {
+export async function getPersonTimeline(
+  personId: string,
+  familyId: string,
+): Promise<EventRecord[]> {
   const events = await getEventsForPerson(personId, familyId);
   return [...events].sort((a, b) => comparePartialDates(a.date, b.date));
 }

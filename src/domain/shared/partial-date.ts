@@ -51,7 +51,13 @@ export function fromColumns(columns: PartialDateColumns): PartialDate | null {
 
 export function toColumns(date: PartialDate | null): PartialDateColumns {
   if (!date) {
-    return { year: null, month: null, day: null, precision: null, approximate: null };
+    return {
+      year: null,
+      month: null,
+      day: null,
+      precision: null,
+      approximate: null,
+    };
   }
   return {
     year: date.year,
@@ -63,13 +69,26 @@ export function toColumns(date: PartialDate | null): PartialDateColumns {
 }
 
 const MONTH_NAMES = [
-  "января", "февраля", "марта", "апреля", "мая", "июня",
-  "июля", "августа", "сентября", "октября", "ноября", "декабря",
+  "января",
+  "февраля",
+  "марта",
+  "апреля",
+  "мая",
+  "июня",
+  "июля",
+  "августа",
+  "сентября",
+  "октября",
+  "ноября",
+  "декабря",
 ];
 
 /** Human-readable Russian formatting used across Person/Event UI. */
-export function formatPartialDate(date: PartialDate | null | undefined): string {
-  if (!date || date.precision === "unknown" || date.year === null) return "неизвестно";
+export function formatPartialDate(
+  date: PartialDate | null | undefined,
+): string {
+  if (!date || date.precision === "unknown" || date.year === null)
+    return "неизвестно";
 
   const approxPrefix = date.isApproximate ? "около " : "";
 
@@ -100,7 +119,10 @@ export function toSortableValue(date: PartialDate | null | undefined): number {
   return date.year * 10000 + month * 100 + day;
 }
 
-export function comparePartialDates(a: PartialDate | null, b: PartialDate | null): number {
+export function comparePartialDates(
+  a: PartialDate | null,
+  b: PartialDate | null,
+): number {
   return toSortableValue(a) - toSortableValue(b);
 }
 
@@ -113,7 +135,10 @@ export function comparePartialDates(a: PartialDate | null, b: PartialDate | null
  * the date was actually filled in (day present -> exact, else month present
  * -> exact, else year-only).
  */
-export function partialDateFromFormData(formData: FormData, prefix: string): PartialDate | undefined {
+export function partialDateFromFormData(
+  formData: FormData,
+  prefix: string,
+): PartialDate | undefined {
   const yearRaw = formData.get(`${prefix}Year`);
   if (!yearRaw || yearRaw === "") return undefined;
 

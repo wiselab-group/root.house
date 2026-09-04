@@ -1,4 +1,8 @@
-import type { TreeLayoutGraph, LayoutNode, PersonNode } from "./tree-layout.builder";
+import type {
+  TreeLayoutGraph,
+  LayoutNode,
+  PersonNode,
+} from "./tree-layout.builder";
 
 /**
  * tree-filter.ts — Filter/Focus layer (plan §7-8). Operates on an already-
@@ -45,17 +49,45 @@ export function isEmptyFilter(filter: PersonFilter): boolean {
  * together; an unset criterion never excludes anyone (e.g. no `gender` set
  * means gender isn't checked at all, not "must be unknown").
  */
-export function matchesFilter(person: PersonNode, filter: PersonFilter): boolean {
+export function matchesFilter(
+  person: PersonNode,
+  filter: PersonFilter,
+): boolean {
   if (filter.gender && !filter.gender.includes(person.gender)) return false;
-  if (filter.religion && (!person.religion || !filter.religion.includes(person.religion))) return false;
-  if (filter.nationality && (!person.nationality || !filter.nationality.includes(person.nationality))) return false;
-  if (filter.isLiving !== undefined && person.isLiving !== filter.isLiving) return false;
+  if (
+    filter.religion &&
+    (!person.religion || !filter.religion.includes(person.religion))
+  )
+    return false;
+  if (
+    filter.nationality &&
+    (!person.nationality || !filter.nationality.includes(person.nationality))
+  )
+    return false;
+  if (filter.isLiving !== undefined && person.isLiving !== filter.isLiving)
+    return false;
 
-  if (filter.birthYearFrom !== undefined && (person.birthYear === null || person.birthYear < filter.birthYearFrom)) return false;
-  if (filter.birthYearTo !== undefined && (person.birthYear === null || person.birthYear > filter.birthYearTo)) return false;
+  if (
+    filter.birthYearFrom !== undefined &&
+    (person.birthYear === null || person.birthYear < filter.birthYearFrom)
+  )
+    return false;
+  if (
+    filter.birthYearTo !== undefined &&
+    (person.birthYear === null || person.birthYear > filter.birthYearTo)
+  )
+    return false;
 
-  if (filter.deathYearFrom !== undefined && (person.deathYear === null || person.deathYear < filter.deathYearFrom)) return false;
-  if (filter.deathYearTo !== undefined && (person.deathYear === null || person.deathYear > filter.deathYearTo)) return false;
+  if (
+    filter.deathYearFrom !== undefined &&
+    (person.deathYear === null || person.deathYear < filter.deathYearFrom)
+  )
+    return false;
+  if (
+    filter.deathYearTo !== undefined &&
+    (person.deathYear === null || person.deathYear > filter.deathYearTo)
+  )
+    return false;
 
   return true;
 }
@@ -96,9 +128,13 @@ export function applyFilter(
     return { ...graph, matchedIds, mode };
   }
 
-  const visibleNodes: LayoutNode[] = graph.nodes.filter((n) => matchedIds.has(n.id));
+  const visibleNodes: LayoutNode[] = graph.nodes.filter((n) =>
+    matchedIds.has(n.id),
+  );
   const visibleIds = new Set(visibleNodes.map((n) => n.id));
-  const visibleEdges = graph.edges.filter((e) => visibleIds.has(e.source) && visibleIds.has(e.target));
+  const visibleEdges = graph.edges.filter(
+    (e) => visibleIds.has(e.source) && visibleIds.has(e.target),
+  );
 
   return {
     nodes: visibleNodes,

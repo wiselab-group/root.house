@@ -1,6 +1,10 @@
 import { ForbiddenError } from "./errors";
 import { roleSatisfies, type FamilyRole } from "./roles";
-import { findMembership, type FamilyDb, type FamilyMemberRow } from "./family.repository";
+import {
+  findMembership,
+  type FamilyDb,
+  type FamilyMemberRow,
+} from "./family.repository";
 
 /**
  * requireFamilyAccess — the ONE authorization checkpoint for every server

@@ -25,7 +25,10 @@ export function PersonDateFields({
       <legend className="text-sm font-medium mb-1">{legend}</legend>
       <div className="grid grid-cols-4 gap-2 items-end">
         <div className="flex flex-col gap-1">
-          <Label htmlFor={`${prefix}Day`} className="text-xs text-muted-foreground">
+          <Label
+            htmlFor={`${prefix}Day`}
+            className="text-xs text-muted-foreground"
+          >
             День
           </Label>
           <Input
@@ -38,7 +41,10 @@ export function PersonDateFields({
           />
         </div>
         <div className="flex flex-col gap-1">
-          <Label htmlFor={`${prefix}Month`} className="text-xs text-muted-foreground">
+          <Label
+            htmlFor={`${prefix}Month`}
+            className="text-xs text-muted-foreground"
+          >
             Месяц
           </Label>
           <Input
@@ -51,7 +57,10 @@ export function PersonDateFields({
           />
         </div>
         <div className="flex flex-col gap-1">
-          <Label htmlFor={`${prefix}Year`} className="text-xs text-muted-foreground">
+          <Label
+            htmlFor={`${prefix}Year`}
+            className="text-xs text-muted-foreground"
+          >
             Год
           </Label>
           <Input
@@ -63,7 +72,10 @@ export function PersonDateFields({
             defaultValue={date?.year ?? ""}
           />
         </div>
-        <label htmlFor={`${prefix}Approximate`} className="flex items-center gap-1.5 pb-2 text-xs text-muted-foreground">
+        <label
+          htmlFor={`${prefix}Approximate`}
+          className="flex items-center gap-1.5 pb-2 text-xs text-muted-foreground"
+        >
           <input
             id={`${prefix}Approximate`}
             name={`${prefix}Approximate`}

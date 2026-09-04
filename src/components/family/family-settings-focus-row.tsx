@@ -8,5 +8,10 @@ import { FamilyFocusSettings } from "@/components/family/family-focus-settings";
  *  can stay a plain Server Component. */
 export function FamilySettingsFocusRow() {
   const { familyId, defaultFocusPerson } = useFamily();
-  return <FamilyFocusSettings familyId={familyId} defaultFocusPerson={defaultFocusPerson} />;
+  return (
+    <FamilyFocusSettings
+      familyId={familyId}
+      defaultFocusPerson={defaultFocusPerson}
+    />
+  );
 }

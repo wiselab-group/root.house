@@ -6,7 +6,10 @@ import { MenuIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/ui/breadcrumbs";
 import { SignOutButton } from "@/components/auth/sign-out-button";
-import { resolveFamilyNavIcon, type FamilyNavItem } from "@/components/family-nav-context";
+import {
+  resolveFamilyNavIcon,
+  type FamilyNavItem,
+} from "@/components/family-nav-context";
 import { cn } from "@/lib/utils";
 
 const PANEL_ID = "mobile-header-panel";
@@ -76,7 +79,7 @@ export function MobileHeaderPanel({
         <div
           className={cn(
             "flex flex-col gap-3 pt-3 transition-opacity duration-300",
-            open ? "opacity-100 delay-100" : "opacity-0"
+            open ? "opacity-100 delay-100" : "opacity-0",
           )}
         >
           {breadcrumbs.length > 0 && (
@@ -84,7 +87,11 @@ export function MobileHeaderPanel({
               {/* Click delegation instead of threading onNavigate through
                   Breadcrumbs itself — that component is shared with the
                   desktop header, which has no panel to close. */}
-              <div onClick={(e) => (e.target as HTMLElement).closest("a") && onNavigate()}>
+              <div
+                onClick={(e) =>
+                  (e.target as HTMLElement).closest("a") && onNavigate()
+                }
+              >
                 <Breadcrumbs items={breadcrumbs} />
               </div>
               <span aria-hidden className="h-px w-full bg-border" />
@@ -106,10 +113,14 @@ export function MobileHeaderPanel({
                         "flex items-center gap-3 rounded-lg px-2 py-2 text-sm transition-colors",
                         active
                           ? "bg-primary/10 text-primary"
-                          : "text-foreground hover:bg-primary/8"
+                          : "text-foreground hover:bg-primary/8",
                       )}
                     >
-                      <Icon className="size-5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+                      <Icon
+                        className="size-5 shrink-0"
+                        strokeWidth={1.75}
+                        aria-hidden="true"
+                      />
                       {label}
                     </Link>
                   );
@@ -120,7 +131,9 @@ export function MobileHeaderPanel({
           )}
           <div className="flex items-center justify-between gap-3">
             {userEmail && (
-              <span className="min-w-0 truncate text-sm text-muted-foreground">{userEmail}</span>
+              <span className="min-w-0 truncate text-sm text-muted-foreground">
+                {userEmail}
+              </span>
             )}
             <SignOutButton />
           </div>

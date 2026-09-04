@@ -1,4 +1,14 @@
-import { pgTable, text, timestamp, uuid, integer, jsonb, index, uniqueIndex, pgEnum } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  integer,
+  jsonb,
+  index,
+  uniqueIndex,
+  pgEnum,
+} from "drizzle-orm/pg-core";
 import { families } from "./family";
 import { users } from "./auth";
 import { events } from "./event";
@@ -7,7 +17,12 @@ import { stories } from "./story";
 import { persons } from "./person";
 import { privacyLevelEnum } from "./privacy";
 
-export const mediaKindEnum = pgEnum("media_kind", ["photo", "video", "audio", "document"]);
+export const mediaKindEnum = pgEnum("media_kind", [
+  "photo",
+  "video",
+  "audio",
+  "document",
+]);
 
 /**
  * Media — photos/videos/audio/documents. Never embedded directly on Person;
@@ -36,7 +51,10 @@ export const media = pgTable(
     durationSeconds: integer("duration_seconds"),
     title: text("title"),
     description: text("description"),
-    documentMetadata: jsonb("document_metadata").$type<Record<string, unknown> | null>(),
+    documentMetadata: jsonb("document_metadata").$type<Record<
+      string,
+      unknown
+    > | null>(),
     privacyLevel: privacyLevelEnum("privacy_level").notNull().default("family"),
     uploadedBy: uuid("uploaded_by")
       .notNull()
@@ -91,7 +109,9 @@ export const mediaPlace = pgTable(
       .notNull()
       .references(() => places.id, { onDelete: "cascade" }),
   },
-  (table) => [uniqueIndex("media_place_unique").on(table.mediaId, table.placeId)],
+  (table) => [
+    uniqueIndex("media_place_unique").on(table.mediaId, table.placeId),
+  ],
 );
 
 export const mediaStory = pgTable(
@@ -105,5 +125,7 @@ export const mediaStory = pgTable(
       .notNull()
       .references(() => stories.id, { onDelete: "cascade" }),
   },
-  (table) => [uniqueIndex("media_story_unique").on(table.mediaId, table.storyId)],
+  (table) => [
+    uniqueIndex("media_story_unique").on(table.mediaId, table.storyId),
+  ],
 );

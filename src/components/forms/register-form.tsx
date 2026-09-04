@@ -12,7 +12,12 @@ const initialState: RegisterFormState = {};
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" className="w-full" disabled={pending} aria-busy={pending}>
+    <Button
+      type="submit"
+      className="w-full"
+      disabled={pending}
+      aria-busy={pending}
+    >
       {pending ? "Создаём аккаунт…" : "Создать аккаунт"}
     </Button>
   );
@@ -33,7 +38,13 @@ export function RegisterForm() {
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" autoComplete="email" required />
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+        />
         {state.fieldErrors?.email && (
           <p className="text-sm text-destructive">{state.fieldErrors.email}</p>
         )}
@@ -50,7 +61,9 @@ export function RegisterForm() {
           required
         />
         {state.fieldErrors?.password && (
-          <p className="text-sm text-destructive">{state.fieldErrors.password}</p>
+          <p className="text-sm text-destructive">
+            {state.fieldErrors.password}
+          </p>
         )}
       </div>
 

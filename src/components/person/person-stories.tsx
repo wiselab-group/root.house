@@ -30,12 +30,21 @@ export async function PersonStories({
         ) : (
           <ul className="flex flex-col gap-4">
             {stories.map((story) => (
-              <li key={story.id} className="border-b border-border pb-4 last:border-0 last:pb-0">
+              <li
+                key={story.id}
+                className="border-b border-border pb-4 last:border-0 last:pb-0"
+              >
                 <h3 className="font-medium">{story.title}</h3>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{story.body}</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
+                  {story.body}
+                </p>
                 {canEdit && (
                   <div className="mt-1">
-                    <DeleteStoryButton familyId={familyId} personId={personId} storyId={story.id} />
+                    <DeleteStoryButton
+                      familyId={familyId}
+                      personId={personId}
+                      storyId={story.id}
+                    />
                   </div>
                 )}
               </li>

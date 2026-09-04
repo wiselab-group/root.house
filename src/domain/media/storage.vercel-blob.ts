@@ -1,5 +1,9 @@
 import { put, del, get } from "@vercel/blob";
-import type { StorageService, UploadInput, UploadResult } from "./storage.service";
+import type {
+  StorageService,
+  UploadInput,
+  UploadResult,
+} from "./storage.service";
 
 /**
  * Vercel Blob implementation of StorageService — chosen for the MVP (see
@@ -46,7 +50,12 @@ class VercelBlobStorageService implements StorageService {
   }
 
   /** Used by the media route handler to stream a private blob's bytes back to an authorized request. */
-  async getStream(storageKey: string): Promise<{ stream: ReadableStream<Uint8Array>; contentType: string | null }> {
+  async getStream(
+    storageKey: string,
+  ): Promise<{
+    stream: ReadableStream<Uint8Array>;
+    contentType: string | null;
+  }> {
     const result = await get(storageKey, { access: "private" });
     if (!result || !result.stream) {
       throw new Error(`Blob not found: ${storageKey}`);

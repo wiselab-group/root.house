@@ -88,7 +88,12 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
   setPosition(graph.focusPersonId, 0, 0);
 
   // 2) Предки фокуса — вверх, papa-side влево, mama-side вправо (§7/§8/§9).
-  placeAncestorFork(graph.focusPersonId, positionByPerson.get(graph.focusPersonId)!.x, 0, "free");
+  placeAncestorFork(
+    graph.focusPersonId,
+    positionByPerson.get(graph.focusPersonId)!.x,
+    0,
+    "free",
+  );
 
   // 3) Нормализация: сдвигаем ВСЮ раскладку так, чтобы фокус оказался ровно
   // на x=0 (§6/§28 — это жёсткое требование, но достигается пост-фактум
@@ -141,10 +146,17 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
   }
 
   /** Расширяет занятую территорию на (y, side) до нового края, если он дальше уже зафиксированного (§25 — safety net против независимых веток на одной стороне, не связанных общим caller'ом). */
-  function extendOccupiedEdge(y: number, side: "left" | "right", edgeX: number): void {
+  function extendOccupiedEdge(
+    y: number,
+    side: "left" | "right",
+    edgeX: number,
+  ): void {
     const key = `${y}|${side}`;
     const current = occupiedEdgeBySide.get(key);
-    if (current === undefined || (side === "left" ? edgeX < current : edgeX > current)) {
+    if (
+      current === undefined ||
+      (side === "left" ? edgeX < current : edgeX > current)
+    ) {
       occupiedEdgeBySide.set(key, edgeX);
     }
   }
@@ -169,7 +181,11 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
    * что и первый, и оба супруга (и их дети) физически совпадают (см.
    * историю бага: b и d — оба супруга A — оказывались в одной точке).
    */
-  function placeDescendantBranches(personId: string, personX: number, y: number): void {
+  function placeDescendantBranches(
+    personId: string,
+    personX: number,
+    y: number,
+  ): void {
     const alreadyHadPosition = placedPersons.has(personId);
     setPosition(personId, personX, y);
     const homeX = positionByPerson.get(personId)!.x;
@@ -182,7 +198,9 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     // branchCenterX для НОВЫХ branches (см. историю бага: второй брак супруга
     // — F — вычислялся относительно фантомного слота первого брака и
     // накладывался на A).
-    const branches = branchesOf(graph, personId).filter((b) => !isVisitedBranch(b));
+    const branches = branchesOf(graph, personId).filter(
+      (b) => !isVisitedBranch(b),
+    );
     if (branches.length === 0) return;
 
     const cache = new Map<string, number>();
@@ -204,12 +222,19 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
       // одного пола совпадали бы в одной точке (см. историю бага: b и d).
       const useGenderDirection = branches.length === 1;
       const totalWidth =
-        branchWidths.reduce((sum, w) => sum + w, 0) + REMARRIAGE_GAP * Math.max(0, branches.length - 1);
+        branchWidths.reduce((sum, w) => sum + w, 0) +
+        REMARRIAGE_GAP * Math.max(0, branches.length - 1);
       let cursor = homeX - totalWidth / 2;
       for (let i = 0; i < branches.length; i++) {
         const width = branchWidths[i];
         const branchCenterX = cursor + width / 2;
-        placeBranch(personId, branches[i], branchCenterX, y, useGenderDirection);
+        placeBranch(
+          personId,
+          branches[i],
+          branchCenterX,
+          y,
+          useGenderDirection,
+        );
         cursor += width + REMARRIAGE_GAP;
       }
       return;
@@ -232,9 +257,9 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     // единственным супругом; см. историю бага: Елена Ушкар/Николай Ушкар,
     // Михаил/Марина Купчик оказывались на 352px, а не на 208px, друг от
     // друга — детально разобрано в финальном отчёте, Known limitations).
-    const hasVisitedPartnership = (graph.personById.get(personId)?.partnershipIds ?? []).some((pid) =>
-      visitedPartnerships.has(pid),
-    );
+    const hasVisitedPartnership = (
+      graph.personById.get(personId)?.partnershipIds ?? []
+    ).some((pid) => visitedPartnerships.has(pid));
     const occupiedFarEdge = farthestOccupiedEdgeNear(personId, homeX, y);
     let cursor = occupiedFarEdge;
     for (let i = 0; i < branches.length; i++) {
@@ -280,13 +305,20 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
    * историю бага). Если у personId ещё нет посещённых браков — просто
    * homeX (супруг встаёт прямо рядом).
    */
-  function farthestOccupiedEdgeNear(personId: string, homeX: number, y: number): number {
+  function farthestOccupiedEdgeNear(
+    personId: string,
+    homeX: number,
+    y: number,
+  ): number {
     let farEdge = homeX;
     const person = graph.personById.get(personId);
     for (const partnershipId of person?.partnershipIds ?? []) {
       if (!visitedPartnerships.has(partnershipId)) continue;
       const partnership = graph.partnershipById.get(partnershipId)!;
-      const spouseId = partnership.leftPersonId === personId ? partnership.rightPersonId : partnership.leftPersonId;
+      const spouseId =
+        partnership.leftPersonId === personId
+          ? partnership.rightPersonId
+          : partnership.leftPersonId;
       const spousePos = positionByPerson.get(spouseId);
       if (!spousePos || spousePos.y !== y) continue;
       const edge = spousePos.x + CARD_WIDTH / 2;
@@ -296,16 +328,23 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
   }
 
   function isVisitedBranch(branch: Branch): boolean {
-    return branch.type === "partnership" && visitedPartnerships.has(branch.partnershipId);
+    return (
+      branch.type === "partnership" &&
+      visitedPartnerships.has(branch.partnershipId)
+    );
   }
 
   function branchWidth(branch: Branch, cache: Map<string, number>): number {
-    const ownWidth = branch.type === "partnership" ? CARD_WIDTH * 2 + SPOUSE_GAP : CARD_WIDTH;
+    const ownWidth =
+      branch.type === "partnership" ? CARD_WIDTH * 2 + SPOUSE_GAP : CARD_WIDTH;
     if (branch.childrenIds.length === 0) return ownWidth;
     const childIds = [...new Set(branch.childrenIds)];
-    const childWidths = childIds.map((id) => measurePersonDescendantWidth(graph, id, cache));
+    const childWidths = childIds.map((id) =>
+      measurePersonDescendantWidth(graph, id, cache),
+    );
     const childrenTotal =
-      childWidths.reduce((sum, w) => sum + w, 0) + SIBLING_GAP * Math.max(0, childIds.length - 1);
+      childWidths.reduce((sum, w) => sum + w, 0) +
+      SIBLING_GAP * Math.max(0, childIds.length - 1);
     return Math.max(ownWidth, childrenTotal);
   }
 
@@ -345,7 +384,12 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
       visitedPartnerships.add(branch.partnershipId);
 
       const spouse = graph.personById.get(branch.spouseId)!;
-      const isPersonLeft = shouldBeLeft(graph.personById.get(personId)!.gender, spouse.gender, personId, branch.spouseId);
+      const isPersonLeft = shouldBeLeft(
+        graph.personById.get(personId)!.gender,
+        spouse.gender,
+        personId,
+        branch.spouseId,
+      );
       const halfSpan = (CARD_WIDTH + SPOUSE_GAP) / 2;
       const personX = positionByPerson.get(personId)!.x;
 
@@ -363,8 +407,12 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
       // useGenderDirection=false (§19 ремарьяж, второй и далее брак) —
       // branchCenterX геометрически значим, направление — его знак
       // относительно personX.
-      const spouseGoesRight = useGenderDirection ? isPersonLeft : branchCenterX > personX;
-      const spouseTargetX = spouseGoesRight ? personX + 2 * halfSpan : personX - 2 * halfSpan;
+      const spouseGoesRight = useGenderDirection
+        ? isPersonLeft
+        : branchCenterX > personX;
+      const spouseTargetX = spouseGoesRight
+        ? personX + 2 * halfSpan
+        : personX - 2 * halfSpan;
       const junctionX = (personX + spouseTargetX) / 2;
 
       setPosition(personId, personX, y);
@@ -402,13 +450,22 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
    */
   function slotAnchorX(personId: string, slotCenter: number): number {
     const branches = branchesOf(graph, personId);
-    const partnershipBranches = branches.filter((b): b is Extract<Branch, { type: "partnership" }> => b.type === "partnership");
-    if (branches.length !== 1 || partnershipBranches.length !== 1) return slotCenter;
+    const partnershipBranches = branches.filter(
+      (b): b is Extract<Branch, { type: "partnership" }> =>
+        b.type === "partnership",
+    );
+    if (branches.length !== 1 || partnershipBranches.length !== 1)
+      return slotCenter;
 
     const branch = partnershipBranches[0];
     const person = graph.personById.get(personId)!;
     const spouse = graph.personById.get(branch.spouseId)!;
-    const isPersonLeft = shouldBeLeft(person.gender, spouse.gender, personId, branch.spouseId);
+    const isPersonLeft = shouldBeLeft(
+      person.gender,
+      spouse.gender,
+      personId,
+      branch.spouseId,
+    );
     const halfSpan = (CARD_WIDTH + SPOUSE_GAP) / 2;
     return isPersonLeft ? slotCenter - halfSpan : slotCenter + halfSpan;
   }
@@ -424,7 +481,8 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
   function freeDirectionGrowsLeft(personId: string): boolean {
     const branches = branchesOf(graph, personId);
     const partnershipBranches = branches.filter(
-      (b): b is Extract<Branch, { type: "partnership" }> => b.type === "partnership",
+      (b): b is Extract<Branch, { type: "partnership" }> =>
+        b.type === "partnership",
     );
     if (partnershipBranches.length !== 1) return false;
     const spouse = graph.personById.get(partnershipBranches[0].spouseId)!;
@@ -432,7 +490,12 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     // Если personId сам стоит слева от супруга (husband-left, §9) — супруг
     // занял правую сторону, значит сиблинги растут ЕЩЁ левее (прочь от
     // супруга). Если personId справа (wife-right) — сиблинги растут вправо.
-    return shouldBeLeft(person.gender, spouse.gender, personId, partnershipBranches[0].spouseId);
+    return shouldBeLeft(
+      person.gender,
+      spouse.gender,
+      personId,
+      partnershipBranches[0].spouseId,
+    );
   }
 
   /** husband-left/wife-right (§9): male слева. Если оба unknown/same gender — детерминированный tie-break по id (§43). */
@@ -442,7 +505,8 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     personId: string,
     spouseId: string,
   ): boolean {
-    const rank = (g: "male" | "female" | "unknown") => (g === "male" ? 0 : g === "unknown" ? 1 : 2);
+    const rank = (g: "male" | "female" | "unknown") =>
+      g === "male" ? 0 : g === "unknown" ? 1 : 2;
     const pr = rank(personGender);
     const sr = rank(spouseGender);
     if (pr !== sr) return pr < sr;
@@ -450,14 +514,21 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
   }
 
   /** Раскладывает список детей (уникализированных) в ряд, центрированный на centerX, на y + GENERATION_GAP (§10) — каждый занимает measurePersonDescendantWidth. */
-  function placeChildrenRow(childrenIds: string[], centerX: number, y: number): void {
+  function placeChildrenRow(
+    childrenIds: string[],
+    centerX: number,
+    y: number,
+  ): void {
     const childIds = [...new Set(childrenIds)];
     if (childIds.length === 0) return;
 
     const cache = new Map<string, number>();
-    const widths = childIds.map((id) => measurePersonDescendantWidth(graph, id, cache));
+    const widths = childIds.map((id) =>
+      measurePersonDescendantWidth(graph, id, cache),
+    );
     const totalWidth =
-      widths.reduce((sum, w) => sum + w, 0) + SIBLING_GAP * Math.max(0, childIds.length - 1);
+      widths.reduce((sum, w) => sum + w, 0) +
+      SIBLING_GAP * Math.max(0, childIds.length - 1);
 
     let cursor = centerX - totalWidth / 2;
     const childY = y + GENERATION_GAP;
@@ -513,7 +584,8 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
         if (seen.has(childId)) continue;
         const childParentIds = graph.personById.get(childId)?.parentIds ?? [];
         const sameParents =
-          childParentIds.length === referenceSet.size && childParentIds.every((id) => referenceSet.has(id));
+          childParentIds.length === referenceSet.size &&
+          childParentIds.every((id) => referenceSet.has(id));
         if (!sameParents) continue;
         seen.add(childId);
         result.push(childId);
@@ -584,19 +656,29 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     // же формула, что и halfSpan в placeBranch/placeAncestorPairUndirected),
     // иначе просто CARD_WIDTH.
     const personBranches = branchesOf(graph, personId);
-    const personHasPartnership = personBranches.some((b) => b.type === "partnership");
-    const personOwnWidth = personHasPartnership ? CARD_WIDTH * 2 + SPOUSE_GAP : CARD_WIDTH;
-    const personOwnEdge = growLeft ? anchorX - personOwnWidth / 2 : anchorX + personOwnWidth / 2;
+    const personHasPartnership = personBranches.some(
+      (b) => b.type === "partnership",
+    );
+    const personOwnWidth = personHasPartnership
+      ? CARD_WIDTH * 2 + SPOUSE_GAP
+      : CARD_WIDTH;
+    const personOwnEdge = growLeft
+      ? anchorX - personOwnWidth / 2
+      : anchorX + personOwnWidth / 2;
     const chainedEdge =
       siblingsStartEdgeX !== undefined
-        ? (growLeft ? Math.min(siblingsStartEdgeX, personOwnEdge) : Math.max(siblingsStartEdgeX, personOwnEdge))
+        ? growLeft
+          ? Math.min(siblingsStartEdgeX, personOwnEdge)
+          : Math.max(siblingsStartEdgeX, personOwnEdge)
         : personOwnEdge;
     // §25 safety net: clamp против ЛЮБОЙ независимой ветки, ранее занявшей
     // территорию на этой (y, side) — не только против явно "chained" вызова
     // с известным siblingsStartEdgeX (см. историю бага: Марфа Купчик и
     // Григорий Кривуша — НИКАКОЙ общий caller не связывал их напрямую).
     const globalEdge = occupiedEdge(y, side);
-    const startEdge = growLeft ? Math.min(chainedEdge, globalEdge) : Math.max(chainedEdge, globalEdge);
+    const startEdge = growLeft
+      ? Math.min(chainedEdge, globalEdge)
+      : Math.max(chainedEdge, globalEdge);
     let cursor = startEdge;
     // minX/maxX (и, в конце, outerEdgeX/extendOccupiedEdge) должны отражать
     // РЕАЛЬНО занятую территорию НА ЭТОМ Y — т.е. ширину собственной карточки
@@ -650,9 +732,16 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     // "сестра фокуса стоит рядом с его женой", а не рядом с самим фокусом
     // (см. историю бага: Дарья Купчик оказывалась на x=396, ПОСЛЕ Элеоноры
     // на x=208, вместо места слева от Александра на x=0).
-    const growLeft = direction === "left" || (direction === "free" && freeDirectionGrowsLeft(personId));
+    const growLeft =
+      direction === "left" ||
+      (direction === "free" && freeDirectionGrowsLeft(personId));
 
-    const { rowCenterX } = placeFixedAnchorSiblingRow(personId, growLeft, anchorX, anchorY);
+    const { rowCenterX } = placeFixedAnchorSiblingRow(
+      personId,
+      growLeft,
+      anchorX,
+      anchorY,
+    );
 
     const parentUnitY = anchorY - GENERATION_GAP;
     if (parentIds.length === 2) {
@@ -730,13 +819,23 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
         // пересекаются, так что итоговое смещение (если оно вообще нужно)
         // одинаково по величине и противоположно по знаку для paternal и
         // maternal стороны.
-        if (!leftAlreadyPlaced) setPosition(leftId, coupleCenterX - halfSpan, parentUnitY);
-        if (!rightAlreadyPlaced) setPosition(rightId, coupleCenterX + halfSpan, parentUnitY);
+        if (!leftAlreadyPlaced)
+          setPosition(leftId, coupleCenterX - halfSpan, parentUnitY);
+        if (!rightAlreadyPlaced)
+          setPosition(rightId, coupleCenterX + halfSpan, parentUnitY);
         if (direction === "left") {
-          extendOccupiedEdge(parentUnitY, "left", coupleCenterX - halfSpan - CARD_WIDTH / 2);
+          extendOccupiedEdge(
+            parentUnitY,
+            "left",
+            coupleCenterX - halfSpan - CARD_WIDTH / 2,
+          );
         }
         if (direction === "right") {
-          extendOccupiedEdge(parentUnitY, "right", coupleCenterX + halfSpan + CARD_WIDTH / 2);
+          extendOccupiedEdge(
+            parentUnitY,
+            "right",
+            coupleCenterX + halfSpan + CARD_WIDTH / 2,
+          );
         }
 
         // Каждая сторона растит СВОИХ сиблингов (дядья/тёти персоны, если
@@ -762,7 +861,12 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
         const rightGrowLeft = chained ? growLeft : false;
         let leftOuterEdge: number | undefined;
         if (!leftAlreadyPlaced) {
-          leftOuterEdge = placeFixedAnchorSiblingRow(leftId, leftGrowLeft, positionByPerson.get(leftId)!.x, parentUnitY).outerEdgeX;
+          leftOuterEdge = placeFixedAnchorSiblingRow(
+            leftId,
+            leftGrowLeft,
+            positionByPerson.get(leftId)!.x,
+            parentUnitY,
+          ).outerEdgeX;
         }
         if (!rightAlreadyPlaced) {
           // chained (leftSide===rightSide, унаследованный direction общий
@@ -781,7 +885,11 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
         }
 
         const partnershipId = findSharedPartnershipId(aId, bId);
-        if (partnershipId) junctionByPartnership.set(partnershipId, { x: coupleCenterX, y: parentUnitY });
+        if (partnershipId)
+          junctionByPartnership.set(partnershipId, {
+            x: coupleCenterX,
+            y: parentUnitY,
+          });
 
         // ПРИМЕЧАНИЕ: placeFixedAnchorSiblingRow (вызванный выше для
         // leftId/rightId) УЖЕ спускается в placeDescendantBranches для
@@ -795,8 +903,18 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
         // placeDescendantBranches несколько раз с разными personX за один
         // прогон, и её супруг (Николай Ушкар) в итоге вычислялся
         // относительно НЕ последней её реальной позиции (см. историю бага).
-        placeAncestorFork(leftId, positionByPerson.get(leftId)!.x, parentUnitY, leftSide);
-        placeAncestorFork(rightId, positionByPerson.get(rightId)!.x, parentUnitY, rightSide);
+        placeAncestorFork(
+          leftId,
+          positionByPerson.get(leftId)!.x,
+          parentUnitY,
+          leftSide,
+        );
+        placeAncestorFork(
+          rightId,
+          positionByPerson.get(rightId)!.x,
+          parentUnitY,
+          rightSide,
+        );
       }
     } else if (parentIds.length === 1 && !placedPersons.has(primaryParentId)) {
       setPosition(primaryParentId, rowCenterX, parentUnitY);
@@ -809,7 +927,8 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     for (const partnershipId of a?.partnershipIds ?? []) {
       const partnership = graph.partnershipById.get(partnershipId)!;
       if (
-        (partnership.leftPersonId === aId && partnership.rightPersonId === bId) ||
+        (partnership.leftPersonId === aId &&
+          partnership.rightPersonId === bId) ||
         (partnership.leftPersonId === bId && partnership.rightPersonId === aId)
       ) {
         return partnershipId;

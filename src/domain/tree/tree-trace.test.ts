@@ -43,7 +43,11 @@ describe("applyRelationshipTrace", () => {
       partnershipEdges: [],
       focusPersonId: "alice",
     });
-    const outcome: RelationshipPathOutcome = { status: "unrelated", personAId: "alice", personBId: "bob" };
+    const outcome: RelationshipPathOutcome = {
+      status: "unrelated",
+      personAId: "alice",
+      personBId: "bob",
+    };
     const traced = applyRelationshipTrace(graph, outcome);
     expect(traced.tracePersonIds.size).toBe(0);
     expect(traced.traceStatus).toBe("unrelated");
@@ -66,15 +70,33 @@ describe("applyRelationshipTrace", () => {
       personBId: "grandparent",
       personIds: ["alice", "father", "grandparent"],
       steps: [
-        { fromId: "alice", toId: "father", edgeKind: "parent_child", direction: "up", parentRole: "biological" },
-        { fromId: "father", toId: "grandparent", edgeKind: "parent_child", direction: "up", parentRole: "biological" },
+        {
+          fromId: "alice",
+          toId: "father",
+          edgeKind: "parent_child",
+          direction: "up",
+          parentRole: "biological",
+        },
+        {
+          fromId: "father",
+          toId: "grandparent",
+          edgeKind: "parent_child",
+          direction: "up",
+          parentRole: "biological",
+        },
       ],
       commonAncestorId: "grandparent",
-      relationship: { label: "grandparent", commonAncestorId: "grandparent", removed: 1 },
+      relationship: {
+        label: "grandparent",
+        commonAncestorId: "grandparent",
+        removed: 1,
+      },
     };
 
     const traced = applyRelationshipTrace(graph, outcome);
-    expect(traced.tracePersonIds).toEqual(new Set(["alice", "father", "grandparent"]));
+    expect(traced.tracePersonIds).toEqual(
+      new Set(["alice", "father", "grandparent"]),
+    );
     expect(traced.traceEdgeIds.size).toBe(2);
     expect(traced.traceStatus).toBe("found");
   });
@@ -97,7 +119,10 @@ describe("applyRelationshipTrace", () => {
       personIds: ["alice", "father", "grandparent", "great-grandparent"],
       steps: [],
       commonAncestorId: "great-grandparent",
-      relationship: { label: "grandparent", commonAncestorId: "great-grandparent" },
+      relationship: {
+        label: "grandparent",
+        commonAncestorId: "great-grandparent",
+      },
     };
 
     const traced = applyRelationshipTrace(graph, outcome);
@@ -109,7 +134,9 @@ describe("applyRelationshipTrace", () => {
     const graph = buildFocusTreeLayout({
       persons: [person("alice"), person("bob")],
       parentChildEdges: [],
-      partnershipEdges: [{ person1Id: "alice", person2Id: "bob", isCurrent: true }],
+      partnershipEdges: [
+        { person1Id: "alice", person2Id: "bob", isCurrent: true },
+      ],
       focusPersonId: "alice",
     });
 

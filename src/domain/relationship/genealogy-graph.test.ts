@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { buildGenealogyGraph, getPerson } from "./genealogy-graph";
 import type { PersonRecord } from "@/domain/person/person.repository";
-import type { ParentChildRecord, PartnershipRecord } from "./relationship.repository";
+import type {
+  ParentChildRecord,
+  PartnershipRecord,
+} from "./relationship.repository";
 
-function person(id: string, overrides: Partial<PersonRecord> = {}): PersonRecord {
+function person(
+  id: string,
+  overrides: Partial<PersonRecord> = {},
+): PersonRecord {
   return {
     id,
     familyId: "family-1",
@@ -31,11 +37,25 @@ function person(id: string, overrides: Partial<PersonRecord> = {}): PersonRecord
   };
 }
 
-function parentChild(parentId: string, childId: string, parentRole: ParentChildRecord["parentRole"] = "biological"): ParentChildRecord {
-  return { id: `${parentId}-${childId}`, familyId: "family-1", parentId, childId, parentRole };
+function parentChild(
+  parentId: string,
+  childId: string,
+  parentRole: ParentChildRecord["parentRole"] = "biological",
+): ParentChildRecord {
+  return {
+    id: `${parentId}-${childId}`,
+    familyId: "family-1",
+    parentId,
+    childId,
+    parentRole,
+  };
 }
 
-function partnership(person1Id: string, person2Id: string, overrides: Partial<PartnershipRecord> = {}): PartnershipRecord {
+function partnership(
+  person1Id: string,
+  person2Id: string,
+  overrides: Partial<PartnershipRecord> = {},
+): PartnershipRecord {
   return {
     id: `${person1Id}-${person2Id}`,
     familyId: "family-1",
@@ -65,9 +85,18 @@ describe("buildGenealogyGraph", () => {
     );
 
     expect(graph.parentEdgesOf.get("alice")).toHaveLength(2);
-    expect(graph.parentEdgesOf.get("alice")?.map((e) => e.parentId).sort()).toEqual(["father", "mother"]);
-    expect(graph.childEdgesOf.get("mother")).toEqual([parentChild("mother", "alice")]);
-    expect(graph.childEdgesOf.get("father")).toEqual([parentChild("father", "alice")]);
+    expect(
+      graph.parentEdgesOf
+        .get("alice")
+        ?.map((e) => e.parentId)
+        .sort(),
+    ).toEqual(["father", "mother"]);
+    expect(graph.childEdgesOf.get("mother")).toEqual([
+      parentChild("mother", "alice"),
+    ]);
+    expect(graph.childEdgesOf.get("father")).toEqual([
+      parentChild("father", "alice"),
+    ]);
     // No edges recorded on the wrong side.
     expect(graph.parentEdgesOf.get("mother")).toBeUndefined();
     expect(graph.childEdgesOf.get("alice")).toBeUndefined();
@@ -90,7 +119,9 @@ describe("buildGenealogyGraph", () => {
     );
     expect(graph.partnershipEdgesOf.get("alice")).toHaveLength(1);
     expect(graph.partnershipEdgesOf.get("bob")).toHaveLength(1);
-    expect(graph.partnershipEdgesOf.get("alice")?.[0].id).toBe(graph.partnershipEdgesOf.get("bob")?.[0].id);
+    expect(graph.partnershipEdgesOf.get("alice")?.[0].id).toBe(
+      graph.partnershipEdgesOf.get("bob")?.[0].id,
+    );
   });
 
   it("supports multiple partnerships for the same person (divorce + remarriage)", () => {
@@ -117,7 +148,12 @@ describe("buildGenealogyGraph", () => {
 
   it("supports more than two parents recorded for the same child", () => {
     const graph = buildGenealogyGraph(
-      [person("bio-mother"), person("bio-father"), person("stepmother"), person("child")],
+      [
+        person("bio-mother"),
+        person("bio-father"),
+        person("stepmother"),
+        person("child"),
+      ],
       [
         parentChild("bio-mother", "child", "biological"),
         parentChild("bio-father", "child", "biological"),

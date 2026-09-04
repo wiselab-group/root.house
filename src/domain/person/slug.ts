@@ -5,9 +5,16 @@
  * raw UUID. Pure functions only — no DB access, per CLAUDE.md domain rules;
  * uniqueness enforcement (scoped by familyId) lives in person.service.ts.
  */
-import { isValidSlugFormat as isValidSlugFormatBase, slugifyBase } from "@/domain/shared/slugify";
+import {
+  isValidSlugFormat as isValidSlugFormatBase,
+  slugifyBase,
+} from "@/domain/shared/slugify";
 
-export { SLUG_MIN_LENGTH, SLUG_MAX_LENGTH, ensureUniqueSlug } from "@/domain/shared/slugify";
+export {
+  SLUG_MIN_LENGTH,
+  SLUG_MAX_LENGTH,
+  ensureUniqueSlug,
+} from "@/domain/shared/slugify";
 
 /** "new" is the one that matters — /families/[slug]/people/new is a real
  *  static route sitting next to the [personSlug] dynamic segment, same
@@ -37,7 +44,10 @@ export interface PersonSlugSource {
  * person's own id) is used to produce a short, deterministic, collision-free
  * slug for that case instead of guessing at a label.
  */
-export function slugifyPerson(source: PersonSlugSource, fallbackSeed: string): string {
+export function slugifyPerson(
+  source: PersonSlugSource,
+  fallbackSeed: string,
+): string {
   const base = source.firstName || source.nickname;
   if (base) {
     return slugifyBase(base, `person-${fallbackSeed.slice(0, 8)}`);

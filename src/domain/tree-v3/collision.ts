@@ -129,7 +129,8 @@ export function compactPaternalMaternalGap(
   positionByPerson: Map<string, PlacedPosition>,
   graph: NormalizedGraph,
 ): void {
-  const focusGeneration = graph.personById.get(graph.focusPersonId)?.generation ?? 0;
+  const focusGeneration =
+    graph.personById.get(graph.focusPersonId)?.generation ?? 0;
   const parentGeneration = focusGeneration - 1;
 
   const paternalIds: string[] = [];
@@ -156,7 +157,9 @@ export function compactPaternalMaternalGap(
       const partnership = graph.partnershipById.get(partnershipId);
       if (!partnership) continue;
       const spouseId =
-        partnership.leftPersonId === person.id ? partnership.rightPersonId : partnership.leftPersonId;
+        partnership.leftPersonId === person.id
+          ? partnership.rightPersonId
+          : partnership.leftPersonId;
       if (paternalSet.has(spouseId)) {
         paternalIds.push(person.id);
         break;
@@ -183,7 +186,8 @@ export function compactPaternalMaternalGap(
     const bucket = bucketOf(pos.y);
     const edge = pos.x + CARD_WIDTH / 2;
     const current = paternalRightEdgeByBucket.get(bucket);
-    if (current === undefined || edge > current) paternalRightEdgeByBucket.set(bucket, edge);
+    if (current === undefined || edge > current)
+      paternalRightEdgeByBucket.set(bucket, edge);
   }
   for (const id of maternalIds) {
     const pos = positionByPerson.get(id);
@@ -191,7 +195,8 @@ export function compactPaternalMaternalGap(
     const bucket = bucketOf(pos.y);
     const edge = pos.x - CARD_WIDTH / 2;
     const current = maternalLeftEdgeByBucket.get(bucket);
-    if (current === undefined || edge < current) maternalLeftEdgeByBucket.set(bucket, edge);
+    if (current === undefined || edge < current)
+      maternalLeftEdgeByBucket.set(bucket, edge);
   }
 
   // Наименьший фактический зазор между половинами среди всех общих bucket'ов
@@ -233,15 +238,19 @@ export function compactPaternalMaternalGap(
   if (viktorLikeParent) {
     const anchorX = positionByPerson.get(viktorLikeParent.id)?.x;
     if (anchorX !== undefined) {
-      const maxShiftFromParentAnchor = anchorX - CARD_WIDTH - paternalRightmostEdge;
-      if (shiftEach > maxShiftFromParentAnchor) shiftEach = Math.max(0, maxShiftFromParentAnchor);
+      const maxShiftFromParentAnchor =
+        anchorX - CARD_WIDTH - paternalRightmostEdge;
+      if (shiftEach > maxShiftFromParentAnchor)
+        shiftEach = Math.max(0, maxShiftFromParentAnchor);
     }
   }
   if (galinaLikeParent) {
     const anchorX = positionByPerson.get(galinaLikeParent.id)?.x;
     if (anchorX !== undefined) {
-      const maxShiftFromParentAnchor = maternalLeftmostEdge - (anchorX + CARD_WIDTH);
-      if (shiftEach > maxShiftFromParentAnchor) shiftEach = Math.max(0, maxShiftFromParentAnchor);
+      const maxShiftFromParentAnchor =
+        maternalLeftmostEdge - (anchorX + CARD_WIDTH);
+      if (shiftEach > maxShiftFromParentAnchor)
+        shiftEach = Math.max(0, maxShiftFromParentAnchor);
     }
   }
   if (shiftEach <= 0) return;
@@ -291,7 +300,8 @@ export function resolveGrandparentSymmetry(
   positionByPerson: Map<string, PlacedPosition>,
   graph: NormalizedGraph,
 ): void {
-  const focusGeneration = graph.personById.get(graph.focusPersonId)?.generation ?? 0;
+  const focusGeneration =
+    graph.personById.get(graph.focusPersonId)?.generation ?? 0;
   const parentGeneration = focusGeneration - 1;
   const grandparentGeneration = focusGeneration - 2;
 
@@ -312,15 +322,25 @@ export function resolveGrandparentSymmetry(
   const maternalGrandparentIds = maternalParent.parentIds.filter(
     (id) => graph.personById.get(id)?.generation === grandparentGeneration,
   );
-  if (paternalGrandparentIds.length !== 2 || maternalGrandparentIds.length !== 2) return;
+  if (
+    paternalGrandparentIds.length !== 2 ||
+    maternalGrandparentIds.length !== 2
+  )
+    return;
 
-  const paternalPositions = paternalGrandparentIds.map((id) => positionByPerson.get(id)).filter((p) => p !== undefined);
-  const maternalPositions = maternalGrandparentIds.map((id) => positionByPerson.get(id)).filter((p) => p !== undefined);
+  const paternalPositions = paternalGrandparentIds
+    .map((id) => positionByPerson.get(id))
+    .filter((p) => p !== undefined);
+  const maternalPositions = maternalGrandparentIds
+    .map((id) => positionByPerson.get(id))
+    .filter((p) => p !== undefined);
   if (paternalPositions.length !== 2 || maternalPositions.length !== 2) return;
   if (paternalPositions[0].y !== maternalPositions[0].y) return; // не на одном Y — сравнивать нечего.
 
-  const paternalRightEdge = Math.max(...paternalPositions.map((p) => p.x)) + CARD_WIDTH / 2;
-  const maternalLeftEdge = Math.min(...maternalPositions.map((p) => p.x)) - CARD_WIDTH / 2;
+  const paternalRightEdge =
+    Math.max(...paternalPositions.map((p) => p.x)) + CARD_WIDTH / 2;
+  const maternalLeftEdge =
+    Math.min(...maternalPositions.map((p) => p.x)) - CARD_WIDTH / 2;
   const actualGap = maternalLeftEdge - paternalRightEdge;
   const deficit = MIN_GAP + RESOLUTION_GAP - actualGap;
   if (deficit <= 0) return; // уже достаточный зазор — ничего не трогаем.
@@ -335,8 +355,10 @@ export function resolveGrandparentSymmetry(
   // (deficit/2), и "не пересечь своего ребёнка" — берём больший.
   const paternalInnerX = Math.max(...paternalPositions.map((p) => p.x)); // ближе к центру = правее у paternal-пары
   const maternalInnerX = Math.min(...maternalPositions.map((p) => p.x)); // ближе к центру = левее у maternal-пары
-  const paternalOwnChildX = positionByPerson.get(paternalParent.id)?.x ?? paternalInnerX;
-  const maternalOwnChildX = positionByPerson.get(maternalParent.id)?.x ?? maternalInnerX;
+  const paternalOwnChildX =
+    positionByPerson.get(paternalParent.id)?.x ?? paternalInnerX;
+  const maternalOwnChildX =
+    positionByPerson.get(maternalParent.id)?.x ?? maternalInnerX;
   const minShiftForOwnChildBound = Math.max(
     0,
     paternalInnerX - paternalOwnChildX + MIN_GAP, // paternal inner must end up ≤ paternalOwnChildX
@@ -413,7 +435,9 @@ export function resolveResidualOverlaps(
   // коллизий") важнее эстетики в этом редком residual-случае (см. финальный
   // отчёт, Known limitations).
   for (const ids of groupsByBucket.values()) {
-    const sorted = [...ids].sort((a, b) => positionByPerson.get(a)!.x - positionByPerson.get(b)!.x);
+    const sorted = [...ids].sort(
+      (a, b) => positionByPerson.get(a)!.x - positionByPerson.get(b)!.x,
+    );
     let previousId: string | null = null;
     for (const id of sorted) {
       if (previousId === null) {

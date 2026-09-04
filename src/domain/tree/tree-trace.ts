@@ -47,7 +47,9 @@ export function applyRelationshipTrace(
   }
 
   const visibleIds = new Set(graph.nodes.map((n) => n.id));
-  const tracePersonIds = new Set(outcome.personIds.filter((id) => visibleIds.has(id)));
+  const tracePersonIds = new Set(
+    outcome.personIds.filter((id) => visibleIds.has(id)),
+  );
 
   const traceEdgeIds = new Set(
     graph.edges
@@ -59,7 +61,10 @@ export function applyRelationshipTrace(
         for (let i = 0; i < outcome.personIds.length - 1; i++) {
           const a = outcome.personIds[i];
           const b = outcome.personIds[i + 1];
-          if ((edge.source === a && edge.target === b) || (edge.source === b && edge.target === a)) {
+          if (
+            (edge.source === a && edge.target === b) ||
+            (edge.source === b && edge.target === a)
+          ) {
             return true;
           }
         }
@@ -68,5 +73,10 @@ export function applyRelationshipTrace(
       .map((edge) => edge.id),
   );
 
-  return { ...graph, tracePersonIds, traceEdgeIds, traceStatus: outcome.status };
+  return {
+    ...graph,
+    tracePersonIds,
+    traceEdgeIds,
+    traceStatus: outcome.status,
+  };
 }

@@ -1,7 +1,19 @@
-import { pgTable, text, timestamp, uuid, uniqueIndex, index, pgEnum } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  uniqueIndex,
+  index,
+  pgEnum,
+} from "drizzle-orm/pg-core";
 import { users } from "./auth";
 
-export const familyRoleEnum = pgEnum("family_role", ["owner", "editor", "viewer"]);
+export const familyRoleEnum = pgEnum("family_role", [
+  "owner",
+  "editor",
+  "viewer",
+]);
 export const planTierEnum = pgEnum("plan_tier", ["free"]); // extended later (premium, lifetime, ...)
 
 /**
@@ -46,7 +58,9 @@ export const familyMembers = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     role: familyRoleEnum("role").notNull().default("viewer"),
-    invitedBy: uuid("invited_by").references(() => users.id, { onDelete: "set null" }),
+    invitedBy: uuid("invited_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
     // Per-user "which person does the family tree open centered on" — a
     // personal viewing preference, not a family-wide setting (each member
     // may want to start from themselves). NO schema-level FK to persons:
@@ -62,7 +76,10 @@ export const familyMembers = pgTable(
     joinedAt: timestamp("joined_at").defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("family_members_family_user_unique").on(table.familyId, table.userId),
+    uniqueIndex("family_members_family_user_unique").on(
+      table.familyId,
+      table.userId,
+    ),
     index("family_members_user_idx").on(table.userId),
     index("family_members_family_idx").on(table.familyId),
   ],

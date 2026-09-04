@@ -1,7 +1,11 @@
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { events, eventParticipants } from "@/db/schema";
-import { fromColumns, toColumns, type PartialDate } from "@/domain/shared/partial-date";
+import {
+  fromColumns,
+  toColumns,
+  type PartialDate,
+} from "@/domain/shared/partial-date";
 
 export type EventType =
   | "birth"
@@ -64,7 +68,10 @@ function toRecord(row: typeof events.$inferSelect): EventRecord {
 }
 
 /** Fetches an Event scoped to a family in the same query — same IDOR-safe pattern as getPersonById. */
-export async function getEventById(eventId: string, familyId: string): Promise<EventRecord | null> {
+export async function getEventById(
+  eventId: string,
+  familyId: string,
+): Promise<EventRecord | null> {
   const row = await db.query.events.findFirst({
     where: and(eq(events.id, eventId), eq(events.familyId, familyId)),
   });
@@ -72,23 +79,39 @@ export async function getEventById(eventId: string, familyId: string): Promise<E
 }
 
 /** All events a Person participates in, oldest first — the raw material for a Person's timeline. */
-export async function getEventsForPerson(personId: string, familyId: string): Promise<EventRecord[]> {
+export async function getEventsForPerson(
+  personId: string,
+  familyId: string,
+): Promise<EventRecord[]> {
   const rows = await db
     .select({ event: events })
     .from(eventParticipants)
     .innerJoin(events, eq(eventParticipants.eventId, events.id))
-    .where(and(eq(eventParticipants.personId, personId), eq(events.familyId, familyId)))
+    .where(
+      and(
+        eq(eventParticipants.personId, personId),
+        eq(events.familyId, familyId),
+      ),
+    )
     .orderBy(asc(events.dateYear));
 
   return rows.map((r) => toRecord(r.event));
 }
 
-export async function getParticipantsOf(eventId: string, familyId: string): Promise<EventParticipantRecord[]> {
+export async function getParticipantsOf(
+  eventId: string,
+  familyId: string,
+): Promise<EventParticipantRecord[]> {
   const rows = await db
     .select({ participant: eventParticipants })
     .from(eventParticipants)
     .innerJoin(events, eq(eventParticipants.eventId, events.id))
-    .where(and(eq(eventParticipants.eventId, eventId), eq(events.familyId, familyId)));
+    .where(
+      and(
+        eq(eventParticipants.eventId, eventId),
+        eq(events.familyId, familyId),
+      ),
+    );
 
   return rows.map((r) => r.participant);
 }
@@ -106,7 +129,9 @@ export interface CreateEventData {
   participants: Array<{ personId: string; role: string }>;
 }
 
-export async function createEvent(data: CreateEventData): Promise<{ id: string }> {
+export async function createEvent(
+  data: CreateEventData,
+): Promise<{ id: string }> {
   const dateCols = toColumns(data.date ?? null);
   const endDateCols = toColumns(data.endDate ?? null);
 
@@ -133,15 +158,24 @@ export async function createEvent(data: CreateEventData): Promise<{ id: string }
     .returning({ id: events.id });
 
   if (data.participants.length > 0) {
-    await db.insert(eventParticipants).values(
-      data.participants.map((p) => ({ eventId: row.id, personId: p.personId, role: p.role })),
-    );
+    await db
+      .insert(eventParticipants)
+      .values(
+        data.participants.map((p) => ({
+          eventId: row.id,
+          personId: p.personId,
+          role: p.role,
+        })),
+      );
   }
 
   return row;
 }
 
-export async function deleteEvent(eventId: string, familyId: string): Promise<boolean> {
+export async function deleteEvent(
+  eventId: string,
+  familyId: string,
+): Promise<boolean> {
   const result = await db
     .delete(events)
     .where(and(eq(events.id, eventId), eq(events.familyId, familyId)))

@@ -56,16 +56,16 @@ describe("requireFamilyAccess", () => {
 
   it("throws ForbiddenError when the member's role is below minRole", async () => {
     const db = fakeDb([{ id: "m1", familyId, userId, role: "viewer" }]);
-    await expect(requireFamilyAccess(familyId, userId, "editor", db)).rejects.toThrow(
-      ForbiddenError,
-    );
+    await expect(
+      requireFamilyAccess(familyId, userId, "editor", db),
+    ).rejects.toThrow(ForbiddenError);
   });
 
   it("throws ForbiddenError when the user is not a member at all", async () => {
     const db = fakeDb([]);
-    await expect(requireFamilyAccess(familyId, userId, "viewer", db)).rejects.toThrow(
-      ForbiddenError,
-    );
+    await expect(
+      requireFamilyAccess(familyId, userId, "viewer", db),
+    ).rejects.toThrow(ForbiddenError);
   });
 
   it("throws ForbiddenError for a non-existent family (no membership row can exist)", async () => {

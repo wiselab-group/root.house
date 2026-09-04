@@ -48,7 +48,10 @@ const MIN_PLAUSIBLE_PARENT_AGE = 12; // biologically implausible below this, but
  * edits) rather than to gate new writes (relationship.service.ts already
  * does that on insert).
  */
-function findCycleFrom(graph: GenealogyGraph, startId: string): string[] | null {
+function findCycleFrom(
+  graph: GenealogyGraph,
+  startId: string,
+): string[] | null {
   const visited = new Set<string>();
   const stack: string[] = [];
 
@@ -81,7 +84,9 @@ function yearOf(date: PartialDate | null): number | null {
  * except the cycle check, which is capped by `visited` de-duplication across
  * calls.
  */
-export function validateGenealogyGraph(graph: GenealogyGraph): GenealogyIssue[] {
+export function validateGenealogyGraph(
+  graph: GenealogyGraph,
+): GenealogyIssue[] {
   const issues: GenealogyIssue[] = [];
 
   // --- Structural errors -----------------------------------------------
@@ -95,7 +100,8 @@ export function validateGenealogyGraph(graph: GenealogyGraph): GenealogyIssue[] 
       issues.push({
         kind: "self_parent_cycle",
         severity: "error",
-        message: "Обнаружен цикл в родословной: человек является собственным предком.",
+        message:
+          "Обнаружен цикл в родословной: человек является собственным предком.",
         personIds: cycle,
       });
     } else {
@@ -111,7 +117,8 @@ export function validateGenealogyGraph(graph: GenealogyGraph): GenealogyIssue[] 
         issues.push({
           kind: "duplicate_parent_child",
           severity: "error",
-          message: "Найдена дублирующаяся родительская связь между двумя людьми.",
+          message:
+            "Найдена дублирующаяся родительская связь между двумя людьми.",
           personIds: [edge.parentId, edge.childId],
         });
       }
@@ -152,7 +159,8 @@ export function validateGenealogyGraph(graph: GenealogyGraph): GenealogyIssue[] 
         issues.push({
           kind: "child_older_than_parent",
           severity: "warning",
-          message: "Дата рождения ребёнка не позже даты рождения родителя — стоит перепроверить даты.",
+          message:
+            "Дата рождения ребёнка не позже даты рождения родителя — стоит перепроверить даты.",
           personIds: [parent.id, childId],
         });
       } else if (childBirthYear - parentBirthYear < MIN_PLAUSIBLE_PARENT_AGE) {

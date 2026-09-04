@@ -5,7 +5,12 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { UserIcon, FocusIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { personInitials } from "@/domain/person/display-name";
-import { Popover, PopoverTrigger, PopoverContent, PopoverClose } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverClose,
+} from "@/components/ui/popover";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
 import { CompactCardBody } from "./compact-card-body";
 import { PortraitCardBody } from "./portrait-card-body";
@@ -159,11 +164,7 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
 }
 
 /** The two actions offered by a card's click popover — kept separate from PersonNode so its already-long JSX doesn't grow a third nesting level. */
-function PersonNodePopoverActions({
-  data,
-}: {
-  data: PersonFlowNode["data"];
-}) {
+function PersonNodePopoverActions({ data }: { data: PersonFlowNode["data"] }) {
   return (
     <div className="flex flex-col">
       <PopoverClose

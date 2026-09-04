@@ -70,7 +70,10 @@ export function slugifyBase(input: string, fallback: string): string {
   return slug.length >= SLUG_MIN_LENGTH ? slug : fallback;
 }
 
-export function isValidSlugFormat(slug: string, reserved: ReadonlySet<string>): boolean {
+export function isValidSlugFormat(
+  slug: string,
+  reserved: ReadonlySet<string>,
+): boolean {
   return (
     slug.length >= SLUG_MIN_LENGTH &&
     slug.length <= SLUG_MAX_LENGTH &&

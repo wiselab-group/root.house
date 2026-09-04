@@ -12,9 +12,15 @@ import {
   getSiblings,
 } from "./genealogy-algorithms";
 import type { PersonRecord } from "@/domain/person/person.repository";
-import type { ParentChildRecord, PartnershipRecord } from "./relationship.repository";
+import type {
+  ParentChildRecord,
+  PartnershipRecord,
+} from "./relationship.repository";
 
-function person(id: string, overrides: Partial<PersonRecord> = {}): PersonRecord {
+function person(
+  id: string,
+  overrides: Partial<PersonRecord> = {},
+): PersonRecord {
   return {
     id,
     familyId: "family-1",
@@ -42,11 +48,25 @@ function person(id: string, overrides: Partial<PersonRecord> = {}): PersonRecord
   };
 }
 
-function pc(parentId: string, childId: string, parentRole: ParentChildRecord["parentRole"] = "biological"): ParentChildRecord {
-  return { id: `${parentId}-${childId}`, familyId: "family-1", parentId, childId, parentRole };
+function pc(
+  parentId: string,
+  childId: string,
+  parentRole: ParentChildRecord["parentRole"] = "biological",
+): ParentChildRecord {
+  return {
+    id: `${parentId}-${childId}`,
+    familyId: "family-1",
+    parentId,
+    childId,
+    parentRole,
+  };
 }
 
-function partner(person1Id: string, person2Id: string, overrides: Partial<PartnershipRecord> = {}): PartnershipRecord {
+function partner(
+  person1Id: string,
+  person2Id: string,
+  overrides: Partial<PartnershipRecord> = {},
+): PartnershipRecord {
   return {
     id: `${person1Id}-${person2Id}`,
     familyId: "family-1",
@@ -74,8 +94,14 @@ describe("simple ancestor chain (grandfather -> father -> me)", () => {
 
   it("getAncestors finds both generations with correct depth", () => {
     const ancestors = getAncestors(graph, "me");
-    expect(ancestors).toContainEqual({ person: person("father"), generationsAway: 1 });
-    expect(ancestors).toContainEqual({ person: person("grandfather"), generationsAway: 2 });
+    expect(ancestors).toContainEqual({
+      person: person("father"),
+      generationsAway: 1,
+    });
+    expect(ancestors).toContainEqual({
+      person: person("grandfather"),
+      generationsAway: 2,
+    });
   });
 
   it("getDescendants mirrors from the top", () => {
@@ -84,8 +110,12 @@ describe("simple ancestor chain (grandfather -> father -> me)", () => {
   });
 
   it("calculateRelationship identifies grandparent/grandchild", () => {
-    expect(calculateRelationship(graph, "grandfather", "me").label).toBe("grandparent");
-    expect(calculateRelationship(graph, "me", "grandfather").label).toBe("grandchild");
+    expect(calculateRelationship(graph, "grandfather", "me").label).toBe(
+      "grandparent",
+    );
+    expect(calculateRelationship(graph, "me", "grandfather").label).toBe(
+      "grandchild",
+    );
   });
 
   it("findRelationshipPath returns the full chain of people", () => {
@@ -94,8 +124,20 @@ describe("simple ancestor chain (grandfather -> father -> me)", () => {
     if (result.status !== "found") throw new Error("expected found");
     expect(result.personIds).toEqual(["me", "father", "grandfather"]);
     expect(result.steps).toEqual([
-      { fromId: "me", toId: "father", edgeKind: "parent_child", direction: "up", parentRole: "biological" },
-      { fromId: "father", toId: "grandfather", edgeKind: "parent_child", direction: "up", parentRole: "biological" },
+      {
+        fromId: "me",
+        toId: "father",
+        edgeKind: "parent_child",
+        direction: "up",
+        parentRole: "biological",
+      },
+      {
+        fromId: "father",
+        toId: "grandfather",
+        edgeKind: "parent_child",
+        direction: "up",
+        parentRole: "biological",
+      },
     ]);
   });
 });
@@ -104,7 +146,13 @@ describe("simple ancestor chain (grandfather -> father -> me)", () => {
 // 2. Two parents + multiple children
 // ---------------------------------------------------------------------------
 describe("two parents with multiple children", () => {
-  const persons = [person("mother"), person("father"), person("alice"), person("bob"), person("carol")];
+  const persons = [
+    person("mother"),
+    person("father"),
+    person("alice"),
+    person("bob"),
+    person("carol"),
+  ];
   const edges = [
     pc("mother", "alice"),
     pc("father", "alice"),
@@ -121,13 +169,23 @@ describe("two parents with multiple children", () => {
   });
 
   it("each parent has all three children", () => {
-    expect(getChildren(graph, "mother").map((c) => c.person.id).sort()).toEqual(["alice", "bob", "carol"]);
+    expect(
+      getChildren(graph, "mother")
+        .map((c) => c.person.id)
+        .sort(),
+    ).toEqual(["alice", "bob", "carol"]);
   });
 
   it("all three children are full siblings of each other", () => {
     const siblings = getSiblings(graph, "alice");
-    expect(siblings).toContainEqual({ person: person("bob"), sharedParentCount: 2 });
-    expect(siblings).toContainEqual({ person: person("carol"), sharedParentCount: 2 });
+    expect(siblings).toContainEqual({
+      person: person("bob"),
+      sharedParentCount: 2,
+    });
+    expect(siblings).toContainEqual({
+      person: person("carol"),
+      sharedParentCount: 2,
+    });
   });
 });
 
@@ -135,8 +193,19 @@ describe("two parents with multiple children", () => {
 // 3 & 4. Multiple partners + children from different partnerships
 // ---------------------------------------------------------------------------
 describe("multiple partners, children from different partnerships", () => {
-  const persons = [person("peter"), person("olga"), person("elena"), person("alex"), person("annaJr")];
-  const edges = [pc("peter", "alex"), pc("olga", "alex"), pc("peter", "annaJr"), pc("elena", "annaJr")];
+  const persons = [
+    person("peter"),
+    person("olga"),
+    person("elena"),
+    person("alex"),
+    person("annaJr"),
+  ];
+  const edges = [
+    pc("peter", "alex"),
+    pc("olga", "alex"),
+    pc("peter", "annaJr"),
+    pc("elena", "annaJr"),
+  ];
   const partnerships = [
     partner("peter", "olga", { status: "divorced", isCurrent: false }),
     partner("peter", "elena", { status: "married", isCurrent: true }),
@@ -150,7 +219,9 @@ describe("multiple partners, children from different partnerships", () => {
 
   it("children from different partnerships are half-siblings (one shared parent)", () => {
     const siblings = getSiblings(graph, "alex");
-    expect(siblings).toEqual([{ person: person("annaJr"), sharedParentCount: 1 }]);
+    expect(siblings).toEqual([
+      { person: person("annaJr"), sharedParentCount: 1 },
+    ]);
   });
 
   it("alex and annaJr share exactly one common ancestor (peter)", () => {
@@ -159,7 +230,9 @@ describe("multiple partners, children from different partnerships", () => {
   });
 
   it("calculateRelationship still calls them siblings (half-sibling is a UI-level distinction)", () => {
-    expect(calculateRelationship(graph, "alex", "annaJr").label).toBe("sibling");
+    expect(calculateRelationship(graph, "alex", "annaJr").label).toBe(
+      "sibling",
+    );
   });
 });
 
@@ -176,8 +249,12 @@ describe("divorce and remarriage", () => {
     const graph = buildGenealogyGraph(persons, [], partnerships);
     const partners = getPartners(graph, "ivan");
     expect(partners).toHaveLength(2);
-    expect(partners.find((p) => p.person.id === "anna")?.partnership.status).toBe("divorced");
-    expect(partners.find((p) => p.person.id === "maria")?.partnership.status).toBe("married");
+    expect(
+      partners.find((p) => p.person.id === "anna")?.partnership.status,
+    ).toBe("divorced");
+    expect(
+      partners.find((p) => p.person.id === "maria")?.partnership.status,
+    ).toBe("married");
   });
 });
 
@@ -186,14 +263,27 @@ describe("divorce and remarriage", () => {
 // ---------------------------------------------------------------------------
 describe("step-parent", () => {
   it("parentRole distinguishes the step relationship without changing traversal", () => {
-    const persons = [person("bio-father"), person("stepmother"), person("child")];
-    const edges = [pc("bio-father", "child", "biological"), pc("stepmother", "child", "step")];
+    const persons = [
+      person("bio-father"),
+      person("stepmother"),
+      person("child"),
+    ];
+    const edges = [
+      pc("bio-father", "child", "biological"),
+      pc("stepmother", "child", "step"),
+    ];
     const graph = buildGenealogyGraph(persons, edges, []);
 
     const parents = getParents(graph, "child");
-    expect(parents.find((p) => p.person.id === "stepmother")?.parentRole).toBe("step");
-    expect(parents.find((p) => p.person.id === "bio-father")?.parentRole).toBe("biological");
-    expect(calculateRelationship(graph, "stepmother", "child").label).toBe("parent");
+    expect(parents.find((p) => p.person.id === "stepmother")?.parentRole).toBe(
+      "step",
+    );
+    expect(parents.find((p) => p.person.id === "bio-father")?.parentRole).toBe(
+      "biological",
+    );
+    expect(calculateRelationship(graph, "stepmother", "child").label).toBe(
+      "parent",
+    );
   });
 });
 
@@ -227,7 +317,10 @@ describe("adoptive parent", () => {
 // ---------------------------------------------------------------------------
 describe("unknown parent represented as a placeholder person", () => {
   it("a placeholder parent participates in traversal like any other person", () => {
-    const persons = [person("unknown-father", { isPlaceholder: true, firstName: null }), person("child")];
+    const persons = [
+      person("unknown-father", { isPlaceholder: true, firstName: null }),
+      person("child"),
+    ];
     const edges = [pc("unknown-father", "child", "unknown")];
     const graph = buildGenealogyGraph(persons, edges, []);
 
@@ -254,7 +347,14 @@ describe("complex multi-marriage family", () => {
     person("elena"),
     person("childOfPeter"),
   ];
-  const edges = [pc("ivan", "peter"), pc("anna", "peter"), pc("ivan", "sergey"), pc("olga", "sergey"), pc("peter", "childOfPeter"), pc("elena", "childOfPeter")];
+  const edges = [
+    pc("ivan", "peter"),
+    pc("anna", "peter"),
+    pc("ivan", "sergey"),
+    pc("olga", "sergey"),
+    pc("peter", "childOfPeter"),
+    pc("elena", "childOfPeter"),
+  ];
   const partnerships = [
     partner("ivan", "anna", { status: "divorced", isCurrent: false }),
     partner("ivan", "olga", { status: "married", isCurrent: true }),
@@ -263,12 +363,16 @@ describe("complex multi-marriage family", () => {
   const graph = buildGenealogyGraph(persons, edges, partnerships);
 
   it("peter and sergey are half-siblings via ivan", () => {
-    expect(getSiblings(graph, "peter")).toEqual([{ person: person("sergey"), sharedParentCount: 1 }]);
+    expect(getSiblings(graph, "peter")).toEqual([
+      { person: person("sergey"), sharedParentCount: 1 },
+    ]);
   });
 
   it("childOfPeter's grandparents include ivan (through peter) but not olga", () => {
     const ancestors = getAncestors(graph, "childOfPeter");
-    const grandparentIds = ancestors.filter((a) => a.generationsAway === 2).map((a) => a.person.id);
+    const grandparentIds = ancestors
+      .filter((a) => a.generationsAway === 2)
+      .map((a) => a.person.id);
     expect(grandparentIds).toContain("ivan");
     expect(grandparentIds).toContain("anna");
     expect(grandparentIds).not.toContain("olga");
@@ -286,12 +390,25 @@ describe("complex multi-marriage family", () => {
 // ---------------------------------------------------------------------------
 describe("findCommonAncestors", () => {
   it("finds a shared grandparent for first cousins", () => {
-    const persons = [person("grandparent"), person("parentA"), person("parentB"), person("cousinA"), person("cousinB")];
-    const edges = [pc("grandparent", "parentA"), pc("grandparent", "parentB"), pc("parentA", "cousinA"), pc("parentB", "cousinB")];
+    const persons = [
+      person("grandparent"),
+      person("parentA"),
+      person("parentB"),
+      person("cousinA"),
+      person("cousinB"),
+    ];
+    const edges = [
+      pc("grandparent", "parentA"),
+      pc("grandparent", "parentB"),
+      pc("parentA", "cousinA"),
+      pc("parentB", "cousinB"),
+    ];
     const graph = buildGenealogyGraph(persons, edges, []);
 
     const common = findCommonAncestors(graph, "cousinA", "cousinB");
-    expect(common).toEqual([{ person: person("grandparent"), depthFromA: 2, depthFromB: 2 }]);
+    expect(common).toEqual([
+      { person: person("grandparent"), depthFromA: 2, depthFromB: 2 },
+    ]);
   });
 
   it("returns an empty list for unrelated people", () => {
@@ -316,16 +433,26 @@ describe("findRelationshipPath", () => {
 
   it("returns unrelated when there is no path between two people", () => {
     const graph = buildGenealogyGraph([person("a"), person("b")], [], []);
-    expect(findRelationshipPath(graph, "a", "b")).toEqual({ status: "unrelated", personAId: "a", personBId: "b" });
+    expect(findRelationshipPath(graph, "a", "b")).toEqual({
+      status: "unrelated",
+      personAId: "a",
+      personBId: "b",
+    });
   });
 
   it("finds a spouse via a direct partnership edge when there's no shared ancestor", () => {
-    const graph = buildGenealogyGraph([person("husband"), person("wife")], [], [partner("husband", "wife")]);
+    const graph = buildGenealogyGraph(
+      [person("husband"), person("wife")],
+      [],
+      [partner("husband", "wife")],
+    );
     const result = findRelationshipPath(graph, "husband", "wife");
     expect(result.status).toBe("found");
     if (result.status !== "found") throw new Error("expected found");
     expect(result.personIds).toEqual(["husband", "wife"]);
-    expect(result.steps).toEqual([{ fromId: "husband", toId: "wife", edgeKind: "partnership" }]);
+    expect(result.steps).toEqual([
+      { fromId: "husband", toId: "wife", edgeKind: "partnership" },
+    ]);
     expect(result.relationship.label).toBe("spouse");
   });
 
@@ -355,20 +482,47 @@ describe("findRelationshipPath", () => {
   it("handles the same-person case", () => {
     const graph = buildGenealogyGraph([person("a")], [], []);
     const result = findRelationshipPath(graph, "a", "a");
-    expect(result).toMatchObject({ status: "found", personIds: ["a"], steps: [], commonAncestorId: "a" });
+    expect(result).toMatchObject({
+      status: "found",
+      personIds: ["a"],
+      steps: [],
+      commonAncestorId: "a",
+    });
   });
 
   it("builds a path through a common ancestor with correct up/down directions (cousins)", () => {
     // grandparent -> father -> alice ; grandparent -> uncle -> cousin
-    const persons = [person("grandparent"), person("father"), person("uncle"), person("alice"), person("cousin")];
-    const edges = [pc("grandparent", "father"), pc("grandparent", "uncle"), pc("father", "alice"), pc("uncle", "cousin")];
+    const persons = [
+      person("grandparent"),
+      person("father"),
+      person("uncle"),
+      person("alice"),
+      person("cousin"),
+    ];
+    const edges = [
+      pc("grandparent", "father"),
+      pc("grandparent", "uncle"),
+      pc("father", "alice"),
+      pc("uncle", "cousin"),
+    ];
     const graph = buildGenealogyGraph(persons, edges, []);
 
     const result = findRelationshipPath(graph, "alice", "cousin");
     expect(result.status).toBe("found");
     if (result.status !== "found") throw new Error("expected found");
-    expect(result.personIds).toEqual(["alice", "father", "grandparent", "uncle", "cousin"]);
-    expect(result.steps.map((s) => s.direction)).toEqual(["up", "up", "down", "down"]);
+    expect(result.personIds).toEqual([
+      "alice",
+      "father",
+      "grandparent",
+      "uncle",
+      "cousin",
+    ]);
+    expect(result.steps.map((s) => s.direction)).toEqual([
+      "up",
+      "up",
+      "down",
+      "down",
+    ]);
     expect(result.relationship.label).toBe("cousin");
     expect(result.relationship.cousinDegree).toBe(1);
   });
@@ -415,7 +569,10 @@ describe("findRelationshipPath", () => {
 describe("calculateRelationship", () => {
   it("delegates to computeRelationshipPath and returns unrelated (not a guess) with no shared ancestor", () => {
     const graph = buildGenealogyGraph([person("a"), person("b")], [], []);
-    expect(calculateRelationship(graph, "a", "b")).toEqual({ label: "unrelated", commonAncestorId: null });
+    expect(calculateRelationship(graph, "a", "b")).toEqual({
+      label: "unrelated",
+      commonAncestorId: null,
+    });
   });
 });
 
@@ -448,7 +605,9 @@ describe("larger tree", () => {
     expect(Math.max(...descendants.map((d) => d.generationsAway))).toBe(3);
 
     // Two leaves in different branches at generation 3 should be at least cousins (share p0).
-    const leaves = descendants.filter((d) => d.generationsAway === 3).map((d) => d.person.id);
+    const leaves = descendants
+      .filter((d) => d.generationsAway === 3)
+      .map((d) => d.person.id);
     if (leaves.length >= 2) {
       const rel = calculateRelationship(graph, leaves[0], leaves[1]);
       expect(["cousin", "sibling", "unrelated"]).toContain(rel.label);

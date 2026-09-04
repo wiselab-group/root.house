@@ -1,4 +1,11 @@
-import { pgTable, text, timestamp, uuid, numeric, index } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  numeric,
+  index,
+} from "drizzle-orm/pg-core";
 import { families } from "./family";
 
 /**

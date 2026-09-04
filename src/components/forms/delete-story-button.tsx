@@ -23,7 +23,9 @@ export function DeleteStoryButton({
       disabled={isPending}
       aria-busy={isPending}
       className="text-muted-foreground hover:text-destructive"
-      onClick={() => startTransition(() => deleteStoryAction(familyId, personId, storyId))}
+      onClick={() =>
+        startTransition(() => deleteStoryAction(familyId, personId, storyId))
+      }
     >
       {isPending ? "Удаляем…" : "Удалить"}
     </Button>

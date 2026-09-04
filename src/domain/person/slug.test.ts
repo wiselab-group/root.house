@@ -1,16 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { ensureUniqueSlug, isValidPersonSlugFormat, slugifyPerson } from "./slug";
+import {
+  ensureUniqueSlug,
+  isValidPersonSlugFormat,
+  slugifyPerson,
+} from "./slug";
 
 describe("slugifyPerson", () => {
   it("uses only the first name, not last name", () => {
     expect(
-      slugifyPerson({ firstName: "Александр", nickname: null, isPlaceholder: false }, "any-id"),
+      slugifyPerson(
+        { firstName: "Александр", nickname: null, isPlaceholder: false },
+        "any-id",
+      ),
     ).toBe("aleksandr");
   });
 
   it("falls back to nickname when first name is missing", () => {
     expect(
-      slugifyPerson({ firstName: null, nickname: "Дюша", isPlaceholder: false }, "any-id"),
+      slugifyPerson(
+        { firstName: null, nickname: "Дюша", isPlaceholder: false },
+        "any-id",
+      ),
     ).toBe("dyusha");
   });
 
@@ -55,7 +65,9 @@ describe("isValidPersonSlugFormat", () => {
 describe("ensureUniqueSlug (person scope)", () => {
   it("appends an incrementing suffix scoped to collisions within one family", async () => {
     const takenInFamily = new Set(["alexander", "alexander-2"]);
-    const result = await ensureUniqueSlug("alexander", async (candidate) => takenInFamily.has(candidate));
+    const result = await ensureUniqueSlug("alexander", async (candidate) =>
+      takenInFamily.has(candidate),
+    );
     expect(result).toBe("alexander-3");
   });
 });

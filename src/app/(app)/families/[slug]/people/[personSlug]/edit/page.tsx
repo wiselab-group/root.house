@@ -37,7 +37,10 @@ export default async function EditPersonPage({
           { label: "Мои семьи", href: "/families" },
           { label: family?.name ?? slug, href: `/families/${slug}` },
           { label: "Люди", href: `/families/${slug}/people` },
-          { label: personDisplayName(person), href: `/families/${slug}/people/${personSlug}` },
+          {
+            label: personDisplayName(person),
+            href: `/families/${slug}/people/${personSlug}`,
+          },
           { label: "Редактировать" },
         ]}
       />

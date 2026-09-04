@@ -93,7 +93,9 @@ export function UnionChildEdge({
     { x: targetX, y: midY },
     { x: targetX, y: targetY },
   ];
-  const path = roundedOrthogonalPath(tracedStart ? [tracedStart, ...trunkPoints] : trunkPoints);
+  const path = roundedOrthogonalPath(
+    tracedStart ? [tracedStart, ...trunkPoints] : trunkPoints,
+  );
 
   return (
     <BaseEdge

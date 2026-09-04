@@ -3,7 +3,12 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { PersonAvatar } from "@/components/person/person-avatar";
 import { personDisplayName } from "@/domain/person/display-name";
 import { formatPartialDate } from "@/domain/shared/partial-date";
@@ -94,17 +99,23 @@ export function PeopleList({
                     <div>
                       <CardTitle>
                         {personDisplayName(person)}
-                        {person.maidenName && person.maidenName !== person.lastName && (
-                          // Same "differs from lastName" guard as the tree's
-                          // person combobox — a placeholder person or someone
-                          // whose maiden name IS their current last name
-                          // shouldn't show a redundant "(Smith) Smith".
-                          <span className="font-normal text-muted-foreground"> ({person.maidenName})</span>
-                        )}
+                        {person.maidenName &&
+                          person.maidenName !== person.lastName && (
+                            // Same "differs from lastName" guard as the tree's
+                            // person combobox — a placeholder person or someone
+                            // whose maiden name IS their current last name
+                            // shouldn't show a redundant "(Smith) Smith".
+                            <span className="font-normal text-muted-foreground">
+                              {" "}
+                              ({person.maidenName})
+                            </span>
+                          )}
                       </CardTitle>
                       <CardDescription>
                         {formatPartialDate(person.birthDate)}
-                        {person.isLiving ? "" : ` — ${formatPartialDate(person.deathDate)}`}
+                        {person.isLiving
+                          ? ""
+                          : ` — ${formatPartialDate(person.deathDate)}`}
                       </CardDescription>
                     </div>
                   </CardHeader>

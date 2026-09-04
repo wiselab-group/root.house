@@ -68,7 +68,10 @@ function DetailsEditForm({
         )}
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="family-description" className="text-xs text-muted-foreground">
+        <Label
+          htmlFor="family-description"
+          className="text-xs text-muted-foreground"
+        >
           Описание (необязательно)
         </Label>
         <Input
@@ -80,7 +83,9 @@ function DetailsEditForm({
           placeholder="Пара слов об архиве"
         />
         {state.fieldErrors?.description && (
-          <p className="text-sm text-destructive">{state.fieldErrors.description}</p>
+          <p className="text-sm text-destructive">
+            {state.fieldErrors.description}
+          </p>
         )}
       </div>
       <div className="flex items-center gap-2">
@@ -134,12 +139,19 @@ export function FamilyDetailsSettings({
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-heading text-lg">{name}</span>
         {canEdit && (
-          <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(true)}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditing(true)}
+          >
             Изменить
           </Button>
         )}
       </div>
-      {description && <p className="text-sm text-muted-foreground">{description}</p>}
+      {description && (
+        <p className="text-sm text-muted-foreground">{description}</p>
+      )}
     </div>
   );
 }

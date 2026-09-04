@@ -1,4 +1,14 @@
-import { pgTable, text, timestamp, uuid, smallint, boolean, index, uniqueIndex, pgEnum } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  smallint,
+  boolean,
+  index,
+  uniqueIndex,
+  pgEnum,
+} from "drizzle-orm/pg-core";
 import { families } from "./family";
 import { places } from "./place";
 import { persons } from "./person";
@@ -50,7 +60,9 @@ export const events = pgTable(
     endDatePrecision: text("end_date_precision"),
     endDateApproximate: boolean("end_date_approximate"),
 
-    placeId: uuid("place_id").references(() => places.id, { onDelete: "set null" }),
+    placeId: uuid("place_id").references(() => places.id, {
+      onDelete: "set null",
+    }),
     privacyLevel: privacyLevelEnum("privacy_level").notNull().default("family"),
     createdBy: uuid("created_by"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -80,7 +92,11 @@ export const eventParticipants = pgTable(
     role: text("role").notNull().default("participant"),
   },
   (table) => [
-    uniqueIndex("event_participants_unique").on(table.eventId, table.personId, table.role),
+    uniqueIndex("event_participants_unique").on(
+      table.eventId,
+      table.personId,
+      table.role,
+    ),
     index("event_participants_person_idx").on(table.personId),
   ],
 );
