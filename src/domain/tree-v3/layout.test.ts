@@ -1,7 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { buildTreeV3Layout } from "./layout";
 import { detectOverlaps, CARD_HEIGHT } from "./collision";
-import { CARD_WIDTH, SIBLING_GAP, SPOUSE_GAP } from "./subtree";
+import {
+  CARD_WIDTH,
+  INTER_FAMILY_GAP,
+  SIBLING_GAP,
+  SPOUSE_GAP,
+} from "./subtree";
 import { initialFamilyGraph, focusPersonId as realFocusId } from "./fixture";
 import type { FamilyGraph } from "./types";
 
@@ -161,19 +166,25 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     expect(edgeGap(nikolaiJr, viktor)).toBe(SIBLING_GAP);
   });
 
-  it("gives two unrelated grandparent couples AT LEAST the same edge gap as full siblings (§11)", () => {
+  it("gives two unrelated grandparent couples AT LEAST INTER_FAMILY_GAP (2×SPOUSE_GAP), not just the sibling gap (§11)", () => {
     // Elizaveta Kupchik (paternal grandmother, Nikolai Kupchik Sr.'s wife)
     // and Nikolai Kozlovsky (maternal grandfather, Nadezhda's husband) are
     // the innermost members of two DIFFERENT families (Kupchik side vs.
-    // Kozlovsky side) that happen to land on the same generation row.
-    // Product requirement: this inter-family gap should read AT LEAST like
-    // the gap between full siblings (SIBLING_GAP) — not just clear a bare
-    // anti-collision minimum (MIN_GAP+RESOLUTION_GAP = 20px, which used to
-    // land the pair only 48px apart edge-to-edge — see history in
-    // resolveGrandparentSymmetry). It can end up WIDER than exactly
-    // SIBLING_GAP when Viktor's own siblings (a separate §11 requirement)
-    // push the paternal cluster further out on their own — the assertion is
-    // a floor, not an exact target.
+    // Kozlovsky side) that happen to land on the same generation row —
+    // NOT siblings (no shared parents). Product requirement: "между семьями
+    // расстояние должно быть в 2 раза больше, чем между супругами" — this
+    // inter-family gap must read AT LEAST like INTER_FAMILY_GAP = 2×
+    // SPOUSE_GAP — not just clear a bare anti-collision minimum
+    // (MIN_GAP+RESOLUTION_GAP = 20px, which used to land the pair only 48px
+    // apart edge-to-edge — see history in resolveGrandparentSymmetry).
+    // INTER_FAMILY_GAP happens to equal SIBLING_GAP numerically (both 64px)
+    // — that's a coincidence of current constant values, not the rule
+    // itself; resolveAdjacentAncestorCouples reads INTER_FAMILY_GAP, a
+    // separately named constant, precisely so the two can diverge later
+    // without silently reusing the wrong one. It can end up WIDER than
+    // exactly INTER_FAMILY_GAP when Viktor's own siblings (a separate §11
+    // requirement) push the paternal cluster further out on their own — the
+    // assertion is a floor, not an exact target.
     const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
     const byId = new Map(result.persons.map((p) => [p.id, p]));
     const elizaveta = byId.get("elizaveta-kupchik")!;
@@ -182,7 +193,7 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     expect(elizaveta.y).toBe(nikolaiKozlovsky.y);
     const edgeGap =
       nikolaiKozlovsky.x - CARD_WIDTH / 2 - (elizaveta.x + CARD_WIDTH / 2);
-    expect(edgeGap).toBeGreaterThanOrEqual(SIBLING_GAP);
+    expect(edgeGap).toBeGreaterThanOrEqual(INTER_FAMILY_GAP);
   });
 
   it("keeps each grandparent-couple's innermost member on their own child's side of the paternal/maternal split (§7/§8)", () => {
@@ -273,6 +284,15 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
 
     // Both grandparent couples sit on the same generation row.
     expect(vasily.y).toBe(grigoryK.y);
+
+    // The two couples are unrelated families sharing a row — at least
+    // INTER_FAMILY_GAP (2×SPOUSE_GAP, §11) edge-to-edge between them, same
+    // rule as Elizaveta Kupchik/Nikolai Kozlovsky and Marfa/Grigory Krivusha.
+    const elizavetaKRightEdge = elizavetaK.x + CARD_WIDTH / 2;
+    const grigoryKLeftEdge = grigoryK.x - CARD_WIDTH / 2;
+    expect(grigoryKLeftEdge - elizavetaKRightEdge).toBeGreaterThanOrEqual(
+      INTER_FAMILY_GAP,
+    );
 
     const positions = new Map(
       result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
@@ -478,13 +498,14 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     const spouseHalfSpan = (CARD_WIDTH + SPOUSE_GAP) / 2;
     expect(elizavetaKupchik.x - nikolaiSrKupchik.x).toBe(spouseHalfSpan * 2);
 
-    // The two great-grandparent couples must not collide — SIBLING_GAP
-    // edge-to-edge between Marfa (paternal-side inner card) and Grigory
-    // (maternal-side inner card).
+    // The two great-grandparent couples must not collide — at least
+    // INTER_FAMILY_GAP (2×SPOUSE_GAP, §11) edge-to-edge between Marfa
+    // (paternal-side inner card) and Grigory (maternal-side inner card) —
+    // they are two unrelated families, not siblings.
     const marfaRightEdge = marfa.x + CARD_WIDTH / 2;
     const grigoryLeftEdge = grigoryKrivusha.x - CARD_WIDTH / 2;
     expect(grigoryLeftEdge - marfaRightEdge).toBeGreaterThanOrEqual(
-      SIBLING_GAP,
+      INTER_FAMILY_GAP,
     );
 
     // Both great-grandparent couples stay on their own side of their own

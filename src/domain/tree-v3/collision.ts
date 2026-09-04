@@ -1,5 +1,5 @@
 import type { NormalizedGraph } from "./types";
-import { CARD_WIDTH, SIBLING_GAP } from "./subtree";
+import { CARD_WIDTH, INTER_FAMILY_GAP } from "./subtree";
 import { GENERATION_GAP, type PlacedPosition } from "./placement";
 
 /** Высота карточки — используется вместе с CARD_WIDTH для bounding box (§23/§24). Совпадает по духу с card-geometry.ts во view-слое, но domain не импортирует оттуда (§ domain изолирован от React). */
@@ -467,16 +467,19 @@ function resolveAdjacentAncestorCouples(
   const maternalLeftEdge =
     Math.min(...maternalPositions.map((p) => p.x)) - CARD_WIDTH / 2;
   const actualGap = maternalLeftEdge - paternalRightEdge;
-  // Целевой зазор — SIBLING_GAP (§11), не голый MIN_GAP+RESOLUTION_GAP
-  // (20px, чисто анти-коллизионный порог): paternal- и maternal-пары —
-  // это ДВЕ РАЗНЫЕ семьи (родня Купчиков и родня Козловских), а не
-  // сиблинги внутри одной — они должны читаться как визуально ОТДЕЛЬНЫЕ
-  // группы, с тем же зазором, что и между родными сиблингами (Александр↔
-  // Дарья, §11 "между семьями должно быть такое же расстояние, как между
-  // сиблингами"), а не просто "не накладываются" (см. историю бага:
+  // Целевой зазор — INTER_FAMILY_GAP = 2×SPOUSE_GAP (§11 "между семьями
+  // расстояние должно быть в 2 раза больше, чем между супругами", product
+  // decision), не голый MIN_GAP+RESOLUTION_GAP (20px, чисто анти-
+  // коллизионный порог): paternal- и maternal-пары — это ДВЕ РАЗНЫЕ семьи
+  // (родня Купчиков и родня Козловских), а не один и тот же supruzheskiy
+  // partnership — они должны читаться как визуально ОТДЕЛЬНЫЕ группы, с
+  // зазором, явно бо́льшим, чем внутри одной пары (см. историю бага:
   // Елизавета Купчик/Николай Козловский сходились на 48px — едва больше
-  // MIN_GAP+RESOLUTION_GAP — вместо 64px=SIBLING_GAP).
-  const deficit = SIBLING_GAP - actualGap;
+  // MIN_GAP+RESOLUTION_GAP — вместо целевых 64px). До введения именованной
+  // константы здесь ошибочно использовался SIBLING_GAP — численно то же
+  // самое (64px), но по смыслу другое правило (сиблинги — общие родители,
+  // не "две независимые семьи").
+  const deficit = INTER_FAMILY_GAP - actualGap;
 
   // §7/§8 — деды/бабки ДОЛЖНЫ оставаться на своей стороне относительно
   // СОБСТВЕННОГО ребёнка (Виктор/Галина): даже "внутренний" (ближе к
@@ -486,7 +489,7 @@ function resolveAdjacentAncestorCouples(
   // чтобы Николай Козловский (0+98=98) остался правее Галины (104)).
   //
   // ЭТА проверка НЕ зависит от deficit (зазора между парами) и считается
-  // ВСЕГДА, даже когда деды/бабки уже далеко друг от друга по SIBLING_GAP
+  // ВСЕГДА, даже когда деды/бабки уже далеко друг от друга по INTER_FAMILY_GAP
   // (deficit<=0) — иначе она пропускалась целиком: когда одна половина
   // сильно шире другой (напр. у Виктора появились сиблинги — Николай мл.,
   // Светлана, Наталья — их sibling-row утягивает paternal-пару далеко
