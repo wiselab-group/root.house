@@ -256,6 +256,105 @@ export function compactPaternalMaternalGap(
 }
 
 /**
+ * Симметрично раздвигает пару "родители Виктора" (paternal) и пару
+ * "родители Галины" (maternal) — т.е. ДВУХ супружеских пар в поколении
+ * бабушек/дедушек фокуса — если их "домашние" позиции (каждая пара
+ * центрирована ровно над своим ребёнком, halfSpan друг от друга) физически
+ * пересекаются на общем Y. И у paternal-, и у maternal-пары halfSpan равен
+ * (CARD_WIDTH+SPOUSE_GAP)/2 = 104px — тот же, что и между самими Виктором и
+ * Галиной (родителями фокуса), поэтому при отсутствии у дедушек/бабушек
+ * собственных сиблингов их "внутренние" (ближе к центру) карточки сходятся
+ * РОВНО в одной точке x=0 (Елизавета Купчик и Николай Козловский) — реальная
+ * коллизия, не мнимая.
+ *
+ * Раньше это чинилось ТОЧЕЧНЫМ clamp'ом внутри placeAncestorPairUndirected
+ * (placement.ts) — сдвигал ТОЛЬКО ОДНУ из двух пар (ту, что раскладывается
+ * позже по direction="left"/"right" порядку вызовов), а другая оставалась
+ * идеально центрированной над своим ребёнком. Строго корректная (без
+ * коллизий) раскладка, но визуально ЯВНАЯ асимметрия: у одних
+ * дедушки/бабушки линия к внуку/внучке прямая, у других — с изломом (см.
+ * историю бага, product feedback: "отношения равноценные но вот линии
+ * почему-то разные", "дерево Виктора и Галины должны быть симметричными").
+ *
+ * Эта функция вместо этого раздвигает ОБЕ пары ПОРОВНУ — на одинаковую
+ * дельту в противоположные стороны от их текущих (each-centered-over-its-
+ * own-child) позиций — после чего линия к ребёнку у ОБЕИХ пар отклоняется
+ * от вертикали на одинаковый угол (симметрично, а не "одна прямая, другая
+ * сломана"). Работает ТОЛЬКО с этой одной парой поколений (родители фокуса
+ * и их родители) — более глубокие поколения предков уже обслуживаются
+ * compactPaternalMaternalGap (компакция всего, что СТРОГО ВЫШЕ этого
+ * уровня) и resolveResidualOverlaps (общий residual sweep); здесь —
+ * специализированный частный случай (ровно 2 пары, каждая по 2 человека, на
+ * одном Y), для которого общие механизмы дают асимметричный результат.
+ */
+export function resolveGrandparentSymmetry(
+  positionByPerson: Map<string, PlacedPosition>,
+  graph: NormalizedGraph,
+): void {
+  const focusGeneration = graph.personById.get(graph.focusPersonId)?.generation ?? 0;
+  const parentGeneration = focusGeneration - 1;
+  const grandparentGeneration = focusGeneration - 2;
+
+  // paternalParent/maternalParent — "Виктор"/"Галина" (родители фокуса,
+  // generation===parentGeneration) — их СОБСТВЕННЫЕ родители (grandparent-
+  // couple) сравниваются попарно.
+  const paternalParent = [...graph.personById.values()].find(
+    (p) => p.generation === parentGeneration && p.branch === "paternal",
+  );
+  const maternalParent = [...graph.personById.values()].find(
+    (p) => p.generation === parentGeneration && p.branch === "maternal",
+  );
+  if (!paternalParent || !maternalParent) return;
+
+  const paternalGrandparentIds = paternalParent.parentIds.filter(
+    (id) => graph.personById.get(id)?.generation === grandparentGeneration,
+  );
+  const maternalGrandparentIds = maternalParent.parentIds.filter(
+    (id) => graph.personById.get(id)?.generation === grandparentGeneration,
+  );
+  if (paternalGrandparentIds.length !== 2 || maternalGrandparentIds.length !== 2) return;
+
+  const paternalPositions = paternalGrandparentIds.map((id) => positionByPerson.get(id)).filter((p) => p !== undefined);
+  const maternalPositions = maternalGrandparentIds.map((id) => positionByPerson.get(id)).filter((p) => p !== undefined);
+  if (paternalPositions.length !== 2 || maternalPositions.length !== 2) return;
+  if (paternalPositions[0].y !== maternalPositions[0].y) return; // не на одном Y — сравнивать нечего.
+
+  const paternalRightEdge = Math.max(...paternalPositions.map((p) => p.x)) + CARD_WIDTH / 2;
+  const maternalLeftEdge = Math.min(...maternalPositions.map((p) => p.x)) - CARD_WIDTH / 2;
+  const actualGap = maternalLeftEdge - paternalRightEdge;
+  const deficit = MIN_GAP + RESOLUTION_GAP - actualGap;
+  if (deficit <= 0) return; // уже достаточный зазор — ничего не трогаем.
+
+  // §7/§8 — деды/бабки ДОЛЖНЫ оставаться на своей стороне относительно
+  // СОБСТВЕННОГО ребёнка (Виктор/Галина): даже "внутренний" (ближе к
+  // центру) член пары не может пересечь x своего ребёнка — иначе paternal-
+  // предок оказывается правее (не левее) Виктора, что противоречит §7/§8
+  // (см. историю бага: наивный deficit/2 давал shiftEach=98, недостаточно,
+  // чтобы Николай Козловский (0+98=98) остался правее Галины (104)).
+  // Считаем минимальный сдвиг, необходимый ОБОИМ ограничениям — и зазору
+  // (deficit/2), и "не пересечь своего ребёнка" — берём больший.
+  const paternalInnerX = Math.max(...paternalPositions.map((p) => p.x)); // ближе к центру = правее у paternal-пары
+  const maternalInnerX = Math.min(...maternalPositions.map((p) => p.x)); // ближе к центру = левее у maternal-пары
+  const paternalOwnChildX = positionByPerson.get(paternalParent.id)?.x ?? paternalInnerX;
+  const maternalOwnChildX = positionByPerson.get(maternalParent.id)?.x ?? maternalInnerX;
+  const minShiftForOwnChildBound = Math.max(
+    0,
+    paternalInnerX - paternalOwnChildX + MIN_GAP, // paternal inner must end up ≤ paternalOwnChildX
+    maternalOwnChildX - maternalInnerX + MIN_GAP, // maternal inner must end up ≥ maternalOwnChildX
+  );
+
+  const shiftEach = Math.max(deficit / 2, minShiftForOwnChildBound);
+  for (const id of paternalGrandparentIds) {
+    const pos = positionByPerson.get(id);
+    if (pos) pos.x -= shiftEach;
+  }
+  for (const id of maternalGrandparentIds) {
+    const pos = positionByPerson.get(id);
+    if (pos) pos.x += shiftEach;
+  }
+}
+
+/**
  * §25 — разрешение ОСТАТОЧНЫХ коллизий (после measure-then-place, который
  * по построению исключает коллизии ВНУТРИ одного family-обхода — §12, но не
  * между двумя независимыми обходами, ничего не знающими друг о друге —

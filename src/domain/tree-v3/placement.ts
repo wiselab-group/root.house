@@ -12,24 +12,6 @@ import {
 /** Вертикальный шаг между поколениями (soft — §14: базовый интервал; конкретный y узла может быть скорректирован локально при разрешении коллизий). */
 export const GENERATION_GAP = 240;
 
-/**
- * Минимальный зазор МЕЖДУ КРАЯМИ paternal- и maternal-территорий на одном Y
- * (см. использование в placeAncestorPairUndirected) — держится чуть выше
- * collision.ts::MIN_GAP (не импортируется оттуда — placement.ts не должен
- * зависеть от collision.ts, зависимость обратная), т.е. чуть больше самого
- * жёсткого порога "это уже коллизия" (detectOverlaps: |dx| < CARD_WIDTH+
- * MIN_GAP). Намеренно НЕ равен collision.ts::RESOLUTION_GAP —
- * resolveResidualOverlaps использует RESOLUTION_GAP как ЖЕЛАЕМЫЙ (не
- * обязательный) зазор при раздвижке уже коллидирующих карточек, а не как
- * нижний порог "это ещё не коллизия" — если целиться в RESOLUTION_GAP здесь,
- * пара предков без своих сиблингов (напр. Николай Козловский/Надежда
- * Козловская) уезжает от своего "домашнего" anchor'а (Галины) на сотни px
- * больше необходимого, хотя реальной коллизии при заметно меньшем зазоре
- * уже нет (см. историю бага). Небольшой запас (12px) над MIN_GAP — чтобы
- * итоговый зазор не оказывался ровно на грани нового обнаружения.
- */
-const MIN_HALF_PLANE_GAP = 12;
-
 export interface PlacedPosition {
   x: number;
   y: number;
@@ -81,19 +63,6 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
   // реализации — remaining архитектурная граница measure-then-place
   // подхода задокументирована как known limitation в финальном отчёте.
   const occupiedEdgeBySide = new Map<string, number>();
-  // Ближайший к x=0 занятый край каждой стороны на каждом Y — ключ
-  // `${y}|left`/`${y}|right`, как и occupiedEdgeBySide, но с ПРОТИВОПОЛОЖНОЙ
-  // семантикой: occupiedEdgeBySide хранит самый ДАЛЬНИЙ (наиболее удалённый
-  // от центра) достигнутый край экспансии стороны — нужен, чтобы НЕ дать
-  // новому ряду начать РАНЬШЕ уже занятой территории. innerEdgeBySide хранит
-  // самый БЛИЖНИЙ к центру край — нужен для перекрёстного paternal↔maternal
-  // clamp'а (см. placeAncestorPairUndirected), где важно не "докуда дошла
-  // экспансия", а "где начинается уже занятая территория этой стороны,
-  // ближе всего к x=0" — без отдельного трекера occupiedEdgeBySide для этого
-  // не подходит (см. историю бага: перепутал семантику "самый дальний" и
-  // "самый ближний" край — Николай Козловский/Надежда Козловская всё ещё
-  // уезжали на x=200/400 после первой попытки исправить перекрёстный clamp).
-  const innerEdgeBySide = new Map<string, number>();
   // Partnership id'ы, для которых placeBranch УЖЕ отработал (карточки +
   // junction + дети) — предотвращает бесконечную взаимную рекурсию
   // A→placeDescendantBranches(B)→[та же партнёрка a-b]→placeBranch→
@@ -177,23 +146,6 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
     const current = occupiedEdgeBySide.get(key);
     if (current === undefined || (side === "left" ? edgeX < current : edgeX > current)) {
       occupiedEdgeBySide.set(key, edgeX);
-    }
-  }
-
-  /** Ближайший к x=0 занятый край на (y, side) — Infinity/-Infinity (никогда не ограничивает), если сторона ещё не занята. См. innerEdgeBySide выше. */
-  function innerEdge(y: number, side: "left" | "right"): number {
-    const key = `${y}|${side}`;
-    const value = innerEdgeBySide.get(key);
-    if (value !== undefined) return value;
-    return side === "left" ? Infinity : -Infinity;
-  }
-
-  /** Сужает занятую территорию на (y, side) до нового БЛИЖНЕГО к центру края, если он ближе уже зафиксированного (обратная логика extendOccupiedEdge — тот расширяет ДАЛЬНИЙ край). */
-  function extendInnerEdge(y: number, side: "left" | "right", edgeX: number): void {
-    const key = `${y}|${side}`;
-    const current = innerEdgeBySide.get(key);
-    if (current === undefined || (side === "left" ? edgeX > current : edgeX < current)) {
-      innerEdgeBySide.set(key, edgeX);
     }
   }
 
@@ -729,56 +681,30 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
           if (rowCenterX - halfSpan < edge) coupleCenterX = edge + halfSpan;
         }
 
-        // Перекрёстный clamp против ПРОТИВОПОЛОЖНОЙ (paternal↔maternal)
-        // территории на этом же Y — occupiedEdgeBySide до сих пор проверялся
-        // только "своей" стороной (left против left, right против right), но
-        // если у обеих пар предков нет собственных сиблингов (минимальный
-        // случай — только фокус + родители + деды без братьев/сестёр), обе
-        // пары центрируются симметрично вокруг СВОИХ детей (Виктор -104,
-        // Галина 104) и их "внутренние" родители (те, что ближе к центру)
-        // сходятся на ОДНОМ x — resolveResidualOverlaps потом раздвигает их
-        // несимметрично (двигает только maternal-пару вправо, не сохраняя
-        // центрирование над Галиной), что рвёт parent-child линию на излом
-        // при абсолютно ровной линии с paternal-стороны (см. историю бага:
-        // Николай Козловский/Надежда Козловская уезжали на x=200/400 вместо
-        // симметричных 0/208 вокруг Галины). Минимальный зазор между самими
-        // half-planes — MIN_HALF_PLANE_GAP (тот же порядок величины, что и
-        // collision.ts::RESOLUTION_GAP) — гарантирует, что резервный sweep
-        // потом не найдёт коллизию и не тронет эту пару вообще. innerEdge
-        // уже возвращает ФИЗИЧЕСКИЙ край карточки (± CARD_WIDTH/2 включены,
-        // см. extendInnerEdge выше) — здесь добавляется только сам зазор, не
-        // ещё одна CARD_WIDTH (см. историю бага: pair Козловских улетала на
-        // x=288/496 вместо ожидаемых ~0/208, т.к. CARD_WIDTH считался дважды).
-        // Ближний к центру person этой пары (leftId для "left", rightId для
-        // "right") стоит на coupleCenterX∓halfSpan — его СОБСТВЕННЫЙ
-        // физический край (не просто coupleCenterX∓halfSpan) — это ещё
-        // ±CARD_WIDTH/2 дальше (см. историю бага: забыл учесть половину
-        // ширины самой ближней карточки — пара продолжала физически
-        // пересекаться с противоположной half-plane даже после первой
-        // попытки исправить эту формулу).
-        if (direction === "left") {
-          const oppositeEdge = innerEdge(parentUnitY, "right");
-          const nearEdge = coupleCenterX + halfSpan + CARD_WIDTH / 2;
-          if (Number.isFinite(oppositeEdge) && nearEdge + MIN_HALF_PLANE_GAP > oppositeEdge) {
-            coupleCenterX = oppositeEdge - MIN_HALF_PLANE_GAP - CARD_WIDTH / 2 - halfSpan;
-          }
-        } else if (direction === "right") {
-          const oppositeEdge = innerEdge(parentUnitY, "left");
-          const nearEdge = coupleCenterX - halfSpan - CARD_WIDTH / 2;
-          if (Number.isFinite(oppositeEdge) && nearEdge - MIN_HALF_PLANE_GAP < oppositeEdge) {
-            coupleCenterX = oppositeEdge + MIN_HALF_PLANE_GAP + CARD_WIDTH / 2 + halfSpan;
-          }
-        }
-
+        // Перекрёстный (paternal↔maternal) конфликт на этом Y больше НЕ
+        // разрешается здесь точечным clamp'ом одной из двух пар — это давало
+        // асимметрию по построению (какая из двух пар накладывает clamp,
+        // зависело от порядка direction="left"/"right", т.е. ВСЕГДА двигалась
+        // только одна сторона, а другая оставалась идеально центрированной
+        // над своим ребёнком — читалось как "у одних дедушек с бабушками линия
+        // прямая, у других — сломанная", хотя отношения симметричны, см.
+        // историю бага и product feedback: "дерево Виктора и Галины должны
+        // быть симметричными"). Вместо этого обе пары остаются здесь
+        // центрированными РОВНО над своим ребёнком (rowCenterX ± halfSpan,
+        // без клампа) — потенциальное пересечение с противоположной half-
+        // plane на этом же Y разрешается ОДНИМ симметричным проходом ПОСЛЕ
+        // полного placeGraph (см. collision.ts::resolveGrandparentSymmetry) —
+        // раздвигает ОБЕ пары поровну от их анкеров, если они физически
+        // пересекаются, так что итоговое смещение (если оно вообще нужно)
+        // одинаково по величине и противоположно по знаку для paternal и
+        // maternal стороны.
         if (!leftAlreadyPlaced) setPosition(leftId, coupleCenterX - halfSpan, parentUnitY);
         if (!rightAlreadyPlaced) setPosition(rightId, coupleCenterX + halfSpan, parentUnitY);
         if (direction === "left") {
           extendOccupiedEdge(parentUnitY, "left", coupleCenterX - halfSpan - CARD_WIDTH / 2);
-          extendInnerEdge(parentUnitY, "left", coupleCenterX + halfSpan + CARD_WIDTH / 2);
         }
         if (direction === "right") {
           extendOccupiedEdge(parentUnitY, "right", coupleCenterX + halfSpan + CARD_WIDTH / 2);
-          extendInnerEdge(parentUnitY, "right", coupleCenterX - halfSpan - CARD_WIDTH / 2);
         }
 
         // Каждая сторона растит СВОИХ сиблингов (дядья/тёти персоны, если

@@ -2,7 +2,12 @@ import type { FamilyGraph, LaidOutPartnership, LaidOutPerson, TreeLayoutResult }
 import { normalizeGraph } from "./graph";
 import { placeGraph } from "./placement";
 import { buildEdgeSpecs } from "./edges";
-import { assertNoOverlaps, compactPaternalMaternalGap, resolveResidualOverlaps } from "./collision";
+import {
+  assertNoOverlaps,
+  compactPaternalMaternalGap,
+  resolveGrandparentSymmetry,
+  resolveResidualOverlaps,
+} from "./collision";
 
 export { buildEdgeSpecs };
 export type { EdgeSpecs, PartnershipEdgeSpec, ParentChildEdgeSpec } from "./edges";
@@ -20,6 +25,15 @@ export function buildTreeV3Layout(
 ): TreeLayoutResult {
   const normalized = normalizeGraph(graph, focusPersonId);
   const { positionByPerson, junctionByPartnership } = placeGraph(normalized);
+
+  // Родители фокуса-родителей (дедушки/бабушки) — если их "домашние",
+  // центрированные над своим ребёнком позиции физически пересекаются на
+  // общем Y, раздвигаем ОБЕ пары поровну (product feedback: "дерево Виктора
+  // и Галины должны быть симметричными" — см. collision.ts::
+  // resolveGrandparentSymmetry). ДО compactPaternalMaternalGap: та функция
+  // компактит только СТРОГО ВЫШЕ поколения родителей фокуса и не трогает
+  // именно эту пару.
+  resolveGrandparentSymmetry(positionByPerson, normalized);
 
   // Стягиваем отцовскую/материнскую половины друг к другу (product feedback:
   // "должно быть всё компактно" — measure-then-place сам по себе оставляет
