@@ -719,6 +719,42 @@ function cascadeShift(
     }
   }
 
+  // §7/§8/§9/§10 — эта BFS обходит СВОЮ РОДНУЮ линию потомков personId'а,
+  // а НЕ произвольно расширяется на всё, что случайно достижимо через
+  // supruzheskie связи потомков. Правило, которого не было раньше (см.
+  // историю бага: Николай Козловский обзавёлся родителями (Василий+
+  // Елизавета), их сдвиг каскадом дошёл до Галины (его дочь, ожидаемо) →
+  // ЧЕРЕЗ супружескую связь до её мужа Виктора Купчика (сам корень
+  // СОВЕРШЕННО другой семьи — свои родители Николай ст.+Елизавета, 3
+  // родных сиблинга); первая попытка (никогда не пересекать супружескую
+  // связь потомка) чинила это, но ломала §9 в обратную сторону — Виктор с
+  // Галиной, САМИ РОДИТЕЛИ ФОКУСА, разъезжались на сотни px, product
+  // decision: "супруги должны быть всегда вместе" — этого допускать нельзя):
+  //
+  // Ребёнок с ДВУМЯ родителями в графе добавляется в BFS, только когда ОБА
+  // его родителя уже сдвинуты (посещены) этим же вызовом — иначе он
+  // "разрывается" между сдвинутым и несдвинутым родителем, теряя §10
+  // центрирование между ними (см. историю с Александром: сдвигался через
+  // Галину одну, хотя его второй родитель Виктор не двигался). У ребёнка с
+  // ОДНИМ known-родителем (SoloParent) это ограничение не применяется —
+  // сдвигается сразу. Раз оба родителя ребёнка уже в сдвиге — сам ребёнок
+  // считается "полноправным" членом этой сдвигаемой семьи (как и корень
+  // personId), и его СОБСТВЕННАЯ супружеская связь ТОЖЕ пересекается — это
+  // и есть путь, которым Виктор (муж Галины — она "полноправна", т.к. оба
+  // её родителя, Николай Козловский+Надежда, сдвинуты) корректно попадает
+  // в сдвиг и остаётся рядом с женой, вместо того чтобы либо отрываться от
+  // нее, либо тащить за собой чужой, несвязанный sibling-row.
+  // "Полноправный" узел — корень personId, или ребёнок, чьи ОБА родителя уже
+  // в этом же сдвиге (см. bothParentsShifted ниже). Только у полноправных
+  // узлов пересекается их СОБСТВЕННАЯ супружеская связь — супруг, встреченный
+  // ТОЛЬКО через одного из двух родителей "неполноправного" узла (напр.
+  // Виктор Купчик — муж Галины, но сам целиком принадлежит ДРУГОЙ, никак не
+  // связанной с этим сдвигом семье), не тащится за собой (см. историю бага
+  // выше). Но если оба родителя ребёнка сдвинуты — сам ребёнок уже реально
+  // "внутри" этой сдвигаемой семьи (в отличие от Александра, чей ОДИН
+  // родитель Виктор так и не сдвинулся) — и ЕГО супруг(а) должна остаться
+  // рядом с ним (§9), поэтому пересекается тоже.
+  const legitimate = new Set<string>([personId]);
   const visited = new Set<string>();
   const queue = [personId];
   while (queue.length > 0) {
@@ -730,18 +766,61 @@ function cascadeShift(
     const pos = positionByPerson.get(id);
     if (pos) pos.x += delta;
 
-    const person = graph.personById.get(id);
-    for (const partnershipId of person?.partnershipIds ?? []) {
-      const partnership = graph.partnershipById.get(partnershipId);
-      if (!partnership) continue;
-      const spouseId =
-        partnership.leftPersonId === id
-          ? partnership.rightPersonId
-          : partnership.leftPersonId;
-      queue.push(spouseId);
+    if (legitimate.has(id)) {
+      const person = graph.personById.get(id);
+      for (const partnershipId of person?.partnershipIds ?? []) {
+        const partnership = graph.partnershipById.get(partnershipId);
+        if (!partnership) continue;
+        const spouseId =
+          partnership.leftPersonId === id
+            ? partnership.rightPersonId
+            : partnership.leftPersonId;
+        queue.push(spouseId);
+        // Супруг ПОЛНОПРАВНОГО узла, встреченный ЧЕРЕЗ супружескую связь
+        // (а не как ребёнок с обоими сдвинутыми родителями), сам не
+        // "полноправен" по умолчанию — но его РОДНЫЕ СИБЛИНГИ (product
+        // decision: "родные братья и сестры должны располагаться рядом")
+        // должны сдвигаться ВМЕСТЕ с ним, иначе он отрывается от
+        // собственного sibling-row'а (см. историю бага: Виктор Купчик
+        // сдвигался вместе с женой Галиной, чьи родители получили новых
+        // предков, но его родные сиблинги — Наталья/Светлана/Николай мл. —
+        // оставались на месте, ломая §10-центрирование ИХ родителей
+        // Николая ст.+Елизаветы над всеми 4 детьми). Добавляем этих
+        // сиблингов в очередь напрямую (не как "детей spouseId'а" — они
+        // сиблинги, не дети) — они сами становятся полноправными узлами
+        // (их родители не относятся к этому сдвигу вообще, так что для НИХ
+        // "оба родителя сдвинуты" неприменимо — но раз сам spouseId уже
+        // сдвигается как единое целое со своей второй половиной, его родные
+        // сиблинги идут вместе с ним по тому же принципу "не отрываться от
+        // своей родной линии").
+        const spouse = graph.personById.get(spouseId);
+        if (spouse && spouse.parentIds.length === 2) {
+          const [parentAId, parentBId] = spouse.parentIds;
+          for (const siblingId of childrenIdsByParent.get(parentAId) ?? []) {
+            if (siblingId === spouseId) continue;
+            const sibling = graph.personById.get(siblingId);
+            const sameParents =
+              sibling?.parentIds.length === 2 &&
+              sibling.parentIds.includes(parentAId) &&
+              sibling.parentIds.includes(parentBId);
+            if (sameParents) {
+              legitimate.add(siblingId);
+              queue.push(siblingId);
+            }
+          }
+        }
+      }
     }
     for (const childId of childrenIdsByParent.get(id) ?? []) {
-      queue.push(childId);
+      const child = graph.personById.get(childId);
+      const bothParentsShifted =
+        !child ||
+        child.parentIds.length !== 2 ||
+        child.parentIds.every((pid) => visited.has(pid));
+      if (bothParentsShifted) {
+        legitimate.add(childId);
+        queue.push(childId);
+      }
     }
   }
 }

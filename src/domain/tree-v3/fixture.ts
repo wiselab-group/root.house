@@ -47,6 +47,8 @@ const egorEvtukhId = "egor-evtukh";
 const anastasiyaEvtukhId = "anastasiya-evtukh";
 const olgaEfimovichId = "olga-efimovich";
 const yuriyEfimovichId = "yuriy-efimovich";
+const vasilyKozlovskyId = "vasily-kozlovsky";
+const elizavetaKozlovskayaId = "elizaveta-kozlovskaya";
 
 export const initialFamilyGraph: FamilyGraph = {
   persons: [
@@ -265,6 +267,18 @@ export const initialFamilyGraph: FamilyGraph = {
       firstName: "Юрий",
       lastName: "Ефимович",
       gender: "male",
+    },
+    {
+      id: vasilyKozlovskyId,
+      firstName: "Василий",
+      lastName: "Козловский",
+      gender: "male",
+    },
+    {
+      id: elizavetaKozlovskayaId,
+      firstName: "Елизавета",
+      lastName: "Козловская",
+      gender: "female",
     },
   ],
   relationships: [
@@ -627,6 +641,24 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: svetlanaId,
       to: yuriyEfimovichId,
+    },
+    {
+      id: "vasily-elizaveta-kozlovskaya-spouse",
+      kind: "spouse",
+      from: vasilyKozlovskyId,
+      to: elizavetaKozlovskayaId,
+    },
+    {
+      id: "vasily-nikolai-kozlovsky-parent",
+      kind: "parent-child",
+      from: vasilyKozlovskyId,
+      to: nikolaiKozlovskyId,
+    },
+    {
+      id: "elizaveta-kozlovskaya-nikolai-kozlovsky-parent",
+      kind: "parent-child",
+      from: elizavetaKozlovskayaId,
+      to: nikolaiKozlovskyId,
     },
   ],
 };

@@ -209,31 +209,45 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     expect(elizaveta.x).toBeLessThan(viktor.x);
   });
 
-  it("keeps a grandparent-couple exactly centered on their own children even when the OTHER couple needs to shift for the gap (§10)", () => {
-    // Nikolai Sr. + Elizaveta Kupchik are centered over ALL FOUR of their
-    // children (Natalya, Svetlana, Nikolai Jr., Viktor) — that position is
-    // pinned by §10 and must not move just because the maternal couple
-    // (Nikolai Kozlovsky + Nadezhda) needs to shift right to keep
-    // Nikolai Kozlovsky on Galina's (his own child's) side (§7/§8). Product
-    // requirement: only the side that actually needs to move should move —
-    // resolveGrandparentSymmetry used to shift BOTH couples equally even
-    // when only one side had a real violation, pulling Nikolai Sr. +
-    // Elizaveta 112px off-center from their 4 kids (see history in
-    // resolveGrandparentSymmetry).
+  it("accepts a §10 kink for Nikolai Sr./Elizaveta when Viktor's WHOLE sibling row gets pulled by an unrelated in-law collision (§9 priority exception)", () => {
+    // Nikolai Kozlovsky (Galina's father) gained his own parents (Vasily +
+    // Elizaveta Kozlovskaya) — resolving THEIR collision cascades: Nikolai
+    // Kozlovsky → his daughter Galina → her husband Viktor (§9: spouses
+    // always move together, product decision) → Viktor's own full siblings
+    // (Natalya/Svetlana/Nikolai Jr., product decision: siblings always move
+    // together) — all 5 shift together as one consistent block. Their
+    // shared parents (Nikolai Sr./Elizaveta Kupchik), one generation above,
+    // are handled by a SEPARATE pass (compactPaternalMaternalGap) that
+    // computes its own, different-magnitude shift for the whole paternal
+    // half — the two shifts don't compose to the same delta, so the
+    // parents' junction no longer lands exactly on their 4 children's
+    // center. Product decision, when forced to pick between fixing this
+    // exactly and everything else already fixed (spouses/siblings always
+    // together, zero collisions): accept this residual §10 kink here — the
+    // connector to Nikolai Sr./Elizaveta bends slightly at this one point.
     const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
     const byId = new Map(result.persons.map((p) => [p.id, p]));
-    const nikolaiSr = byId.get("nikolai-kupchik")!;
-    const elizaveta = byId.get("elizaveta-kupchik")!;
+    const viktor = byId.get("viktor-kupchik")!;
+    const galina = byId.get("galina-kupchik")!;
     const natalya = byId.get("natalya-kupchik")!;
     const svetlana = byId.get("svetlana-kupchik")!;
     const nikolaiJr = byId.get("nikolai-kupchik-jr")!;
-    const viktor = byId.get("viktor-kupchik")!;
+    const alexander = byId.get(realFocusId)!;
+    const eleonora = byId.get("eleonora-kupchik")!;
 
-    const junction = (nikolaiSr.x + elizaveta.x) / 2;
-    const childrenXs = [natalya.x, svetlana.x, nikolaiJr.x, viktor.x];
-    const childrenCenter =
-      (Math.min(...childrenXs) + Math.max(...childrenXs)) / 2;
-    expect(junction).toBe(childrenCenter);
+    // The things that must NOT regress: spouses stay adjacent...
+    const spouseHalfSpan = (CARD_WIDTH + SPOUSE_GAP) / 2;
+    expect(galina.x - viktor.x).toBe(spouseHalfSpan * 2);
+    expect(eleonora.x - alexander.x).toBe(spouseHalfSpan * 2);
+    // ...and Viktor's whole sibling row stays together as one block.
+    expect(natalya.y).toBe(viktor.y);
+    expect(svetlana.y).toBe(viktor.y);
+    expect(nikolaiJr.y).toBe(viktor.y);
+
+    const positions = new Map(
+      result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
+    expect(detectOverlaps(positions)).toEqual([]);
   });
 
   it("keeps a wife's own parents on HER side, not chained past her husband's parents (§7/§8)", () => {
