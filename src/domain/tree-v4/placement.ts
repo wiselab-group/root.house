@@ -511,6 +511,25 @@ function placeAncestors(
         0;
       units.push({ person, width, idealX });
     }
+
+    // resolveSymmetricOverlaps treats units[i] as "left of" units[i+1] and
+    // pushes them apart accordingly — so the array MUST already be ordered
+    // by actual idealX (left to right), not by id. peopleInRow was sorted
+    // by sideRank/id only to decide WHICH couples are near each other on
+    // this row; that id order does not necessarily match which couple's
+    // real children sit further left. Two paternal-branch couples can both
+    // land on the same row (e.g. Vladimir/Marfa, pulled toward Nikolai on
+    // the left, and Grigory/Elizaveta Krivusha, pulled toward Elizaveta —
+    // Nikolai's wife — on the right): if resolveSymmetricOverlaps pushed
+    // them apart in id order instead of idealX order, a couple whose real
+    // pull is further right could get shoved further LEFT than the couple
+    // pulling left — crossing their own connector lines with the other
+    // couple's, even though neither couple individually collided with
+    // anything. This was a real bug (Vladimir/Marfa's card ended up right
+    // of Grigory/Elizaveta Krivusha's while their connector lines still
+    // pointed at Nikolai/Elizaveta in the ORIGINAL left-to-right order,
+    // crossing over each other) — sort by idealX right before resolving.
+    units.sort((a, b) => a.idealX - b.idealX);
     resolveSymmetricOverlaps(units);
 
     for (const unit of units) {

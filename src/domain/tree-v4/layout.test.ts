@@ -259,6 +259,38 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     expect(grigory.y).toBe(vladimir.y);
   });
 
+  it("Vladimir/Marfa never end up on the wrong side of Grigory/Elizaveta Krivusha relative to their real children (regression: connector lines must not cross)", () => {
+    // Real bug: two same-branch ("paternal") couples sharing a generation
+    // row — Vladimir/Marfa (pulled toward Nikolai, the LEFT child) and
+    // Grigory/Elizaveta Krivusha (pulled toward Elizaveta, the RIGHT child,
+    // Nikolai's wife) — were resolved by resolveSymmetricOverlaps using
+    // ID-alphabetical array order instead of actual idealX order. Since
+    // "elizaveta-krivusha" sorts before "marfa-kupchik" alphabetically,
+    // Grigory/Elizaveta Krivusha was placed as if it were the LEFTMOST
+    // couple even though its real pull (Elizaveta Kupchik) sits to the
+    // RIGHT of Vladimir/Marfa's real pull (Nikolai) — crossing their own
+    // connector lines with each other even though neither couple
+    // individually collided with anything. The relative left/right order
+    // of the two couples themselves must match the relative left/right
+    // order of the children they're centered over.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const nikolai = personById(result, "nikolai-kupchik");
+    const elizaveta = personById(result, "elizaveta-kupchik");
+    const vladimir = personById(result, "vladimir-kupchik");
+    const marfa = personById(result, "marfa-kupchik");
+    const grigory = personById(result, "grigory-krivusha");
+    const elizavetaKrivusha = personById(result, "elizaveta-krivusha");
+
+    const vladimirMarfaCenterX = (vladimir.x + marfa.x) / 2;
+    const krivushaCenterX = (grigory.x + elizavetaKrivusha.x) / 2;
+
+    // Nikolai (Vladimir/Marfa's real child) sits left of Elizaveta
+    // (Krivusha's real child) — so Vladimir/Marfa's couple must also sit
+    // left of Krivusha's couple, preserving the same relative order.
+    expect(nikolai.x).toBeLessThan(elizaveta.x);
+    expect(vladimirMarfaCenterX).toBeLessThan(krivushaCenterX);
+  });
+
   it("Yustin (Vladimir's father, recorded as a SOLO parent — no mother in this graph) is above Vladimir, one generation further up", () => {
     // Exercises the SoloParent path with real data for the first time:
     // Yustin has no recorded spouse, so he must still be placed as a
