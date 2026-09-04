@@ -49,6 +49,8 @@ const olgaEfimovichId = "olga-efimovich";
 const yuriyEfimovichId = "yuriy-efimovich";
 const vasilyKozlovskyId = "vasily-kozlovsky";
 const elizavetaKozlovskayaId = "elizaveta-kozlovskaya";
+const grigoryKolesnikovichId = "grigory-kolesnikovich";
+const agrafenaKolesnikovichId = "agrafena-kolesnikovich";
 
 export const initialFamilyGraph: FamilyGraph = {
   persons: [
@@ -278,6 +280,18 @@ export const initialFamilyGraph: FamilyGraph = {
       id: elizavetaKozlovskayaId,
       firstName: "Елизавета",
       lastName: "Козловская",
+      gender: "female",
+    },
+    {
+      id: grigoryKolesnikovichId,
+      firstName: "Григорий",
+      lastName: "Колесникович",
+      gender: "male",
+    },
+    {
+      id: agrafenaKolesnikovichId,
+      firstName: "Аграфена",
+      lastName: "Колесникович",
       gender: "female",
     },
   ],
@@ -659,6 +673,24 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: elizavetaKozlovskayaId,
       to: nikolaiKozlovskyId,
+    },
+    {
+      id: "grigory-agrafena-kolesnikovich-spouse",
+      kind: "spouse",
+      from: grigoryKolesnikovichId,
+      to: agrafenaKolesnikovichId,
+    },
+    {
+      id: "grigory-kolesnikovich-nadezhda-parent",
+      kind: "parent-child",
+      from: grigoryKolesnikovichId,
+      to: nadezhdaId,
+    },
+    {
+      id: "agrafena-kolesnikovich-nadezhda-parent",
+      kind: "parent-child",
+      from: agrafenaKolesnikovichId,
+      to: nadezhdaId,
     },
   ],
 };

@@ -250,6 +250,43 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     expect(detectOverlaps(positions)).toEqual([]);
   });
 
+  it("centers Grigory+Agrafena Kolesnikovich's junction over their daughter Nadezhda without colliding with the Vasily/Elizaveta Kozlovsky couple on the same row (§10/§40)", () => {
+    // Nadezhda Kozlovskaya (Nikolai Kozlovsky's wife) gained her own parents
+    // — Grigory + Agrafena Kolesnikovich — one generation above, landing on
+    // the SAME row as Vasily + Elizaveta Kozlovskaya (Nikolai's own parents,
+    // a completely unrelated couple that merely shares that generation).
+    // Both grandparent pairs must clear each other (no overlap) and each
+    // pair's junction should still land close to its own child's center.
+    const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
+    const byId = new Map(result.persons.map((p) => [p.id, p]));
+    const grigoryK = byId.get("grigory-kolesnikovich")!;
+    const agrafenaK = byId.get("agrafena-kolesnikovich")!;
+    const nadezhda = byId.get("nadezhda-kozlovskaya")!;
+    const vasily = byId.get("vasily-kozlovsky")!;
+    const elizavetaK = byId.get("elizaveta-kozlovskaya")!;
+
+    // Husband-left/wife-right (§9) for the new couple.
+    expect(grigoryK.y).toBe(agrafenaK.y);
+    expect(grigoryK.x).toBeLessThan(agrafenaK.x);
+    const spouseHalfSpan = (CARD_WIDTH + SPOUSE_GAP) / 2;
+    expect(agrafenaK.x - grigoryK.x).toBe(spouseHalfSpan * 2);
+
+    // Both grandparent couples sit on the same generation row.
+    expect(vasily.y).toBe(grigoryK.y);
+
+    const positions = new Map(
+      result.persons.map((p) => [p.id, { x: p.x, y: p.y }]),
+    );
+    expect(detectOverlaps(positions)).toEqual([]);
+
+    // Nadezhda's own parents' junction stays reasonably close to her own
+    // position — allowed to drift (§10 kink precedent), but never crosses
+    // to the wrong side of the Vasily/Elizaveta Kozlovsky couple.
+    expect(grigoryK.x).toBeGreaterThan(elizavetaK.x);
+    const junction = (grigoryK.x + agrafenaK.x) / 2;
+    expect(Math.abs(junction - nadezhda.x)).toBeLessThan(500);
+  });
+
   it("keeps a wife's own parents on HER side, not chained past her husband's parents (§7/§8)", () => {
     // Nikolai Sr. Kupchik (husband) and Elizaveta Kupchik (wife) are both
     // within the SAME paternal half-plane — but their OWN parents (Vladimir
