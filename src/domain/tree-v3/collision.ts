@@ -352,7 +352,6 @@ export function resolveGrandparentSymmetry(
   // Елизавета Купчик/Николай Козловский сходились на 48px — едва больше
   // MIN_GAP+RESOLUTION_GAP — вместо 64px=SIBLING_GAP).
   const deficit = SIBLING_GAP - actualGap;
-  if (deficit <= 0) return; // уже достаточный зазор — ничего не трогаем.
 
   // §7/§8 — деды/бабки ДОЛЖНЫ оставаться на своей стороне относительно
   // СОБСТВЕННОГО ребёнка (Виктор/Галина): даже "внутренний" (ближе к
@@ -360,8 +359,19 @@ export function resolveGrandparentSymmetry(
   // предок оказывается правее (не левее) Виктора, что противоречит §7/§8
   // (см. историю бага: наивный deficit/2 давал shiftEach=98, недостаточно,
   // чтобы Николай Козловский (0+98=98) остался правее Галины (104)).
-  // Считаем минимальный сдвиг, необходимый ОБОИМ ограничениям — и зазору
-  // (deficit/2), и "не пересечь своего ребёнка" — берём больший.
+  //
+  // ЭТА проверка НЕ зависит от deficit (зазора между парами) и считается
+  // ВСЕГДА, даже когда деды/бабки уже далеко друг от друга по SIBLING_GAP
+  // (deficit<=0) — иначе она пропускалась целиком: когда одна половина
+  // сильно шире другой (напр. у Виктора появились сиблинги — Николай мл.,
+  // Светлана, Наталья — их sibling-row утягивает paternal-пару далеко
+  // влево, actualGap между парами становится огромным САМ ПО СЕБЕ), ранний
+  // return "уже достаточный зазор" срабатывал ДО того, как проверялся
+  // own-child bound — Николай Козловский оставался на своей "домашней"
+  // позиции (centered husband-left от Галины), которая сама по себе левее
+  // Галины (муж всегда слева от жены, §9), но это уже пересечение с §7/§8:
+  // maternal-дед не может быть левее СВОЕГО РЕБЁНКА (Галины) — см. историю
+  // бага: Николай Козловский x=-68 оказывался левее Галины x=36.
   const paternalInnerX = Math.max(...paternalPositions.map((p) => p.x)); // ближе к центру = правее у paternal-пары
   const maternalInnerX = Math.min(...maternalPositions.map((p) => p.x)); // ближе к центру = левее у maternal-пары
   const paternalOwnChildX =
@@ -373,6 +383,8 @@ export function resolveGrandparentSymmetry(
     paternalInnerX - paternalOwnChildX + MIN_GAP, // paternal inner must end up ≤ paternalOwnChildX
     maternalOwnChildX - maternalInnerX + MIN_GAP, // maternal inner must end up ≥ maternalOwnChildX
   );
+
+  if (deficit <= 0 && minShiftForOwnChildBound <= 0) return; // уже достаточный зазор И обе пары на своей стороне — ничего не трогаем.
 
   const shiftEach = Math.max(deficit / 2, minShiftForOwnChildBound);
   for (const id of paternalGrandparentIds) {

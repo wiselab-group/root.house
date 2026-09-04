@@ -113,19 +113,19 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     expect(siblingEdgeGap).toBe(spouseEdgeGap * 2);
   });
 
-  it("gives two unrelated grandparent couples the same edge gap as full siblings (§11)", () => {
+  it("gives two unrelated grandparent couples AT LEAST the same edge gap as full siblings (§11)", () => {
     // Elizaveta Kupchik (paternal grandmother, Nikolai Kupchik Sr.'s wife)
     // and Nikolai Kozlovsky (maternal grandfather, Nadezhda's husband) are
     // the innermost members of two DIFFERENT families (Kupchik side vs.
     // Kozlovsky side) that happen to land on the same generation row.
-    // Neither grandparent has siblings of their own, so their "home"
-    // positions (centered over Viktor/Galina respectively) physically
-    // coincide at x=0 — resolveGrandparentSymmetry pushes both apart to
-    // resolve that collision. Product requirement: this inter-family gap
-    // should read the same as the gap between full siblings (SIBLING_GAP),
-    // not just clear a bare anti-collision minimum (MIN_GAP+RESOLUTION_GAP
-    // = 20px, which used to land the pair only 48px apart edge-to-edge —
-    // see history in resolveGrandparentSymmetry).
+    // Product requirement: this inter-family gap should read AT LEAST like
+    // the gap between full siblings (SIBLING_GAP) — not just clear a bare
+    // anti-collision minimum (MIN_GAP+RESOLUTION_GAP = 20px, which used to
+    // land the pair only 48px apart edge-to-edge — see history in
+    // resolveGrandparentSymmetry). It can end up WIDER than exactly
+    // SIBLING_GAP when Viktor's own siblings (a separate §11 requirement)
+    // push the paternal cluster further out on their own — the assertion is
+    // a floor, not an exact target.
     const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
     const byId = new Map(result.persons.map((p) => [p.id, p]));
     const elizaveta = byId.get("elizaveta-kupchik")!;
@@ -134,7 +134,31 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     expect(elizaveta.y).toBe(nikolaiKozlovsky.y);
     const edgeGap =
       nikolaiKozlovsky.x - CARD_WIDTH / 2 - (elizaveta.x + CARD_WIDTH / 2);
-    expect(edgeGap).toBe(SIBLING_GAP);
+    expect(edgeGap).toBeGreaterThanOrEqual(SIBLING_GAP);
+  });
+
+  it("keeps each grandparent-couple's innermost member on their own child's side of the paternal/maternal split (§7/§8)", () => {
+    // Nikolai Kozlovsky (maternal grandfather) sits husband-left of his own
+    // wife Nadezhda (§9) — but that couple, as a whole, must stay entirely
+    // on Galina's (their daughter's) side of x=0, i.e. Nikolai Kozlovsky
+    // himself must not cross LEFT of Galina into paternal territory. This
+    // used to slip through resolveGrandparentSymmetry whenever the OTHER
+    // (paternal) half was independently very wide — e.g. once Viktor gained
+    // full siblings (Nikolai Jr., Svetlana, Natalya), the paternal cluster's
+    // sibling row alone created a huge measured gap between the two couples,
+    // so the function's early-return ("gap already >= SIBLING_GAP") fired
+    // BEFORE the separate "stay on your own child's side" bound was ever
+    // checked — Nikolai Kozlovsky landed at x=-68, left of Galina at x=36
+    // (see history in resolveGrandparentSymmetry).
+    const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
+    const byId = new Map(result.persons.map((p) => [p.id, p]));
+    const galina = byId.get("galina-kupchik")!;
+    const nikolaiKozlovsky = byId.get("nikolai-kozlovsky")!;
+    const viktor = byId.get("viktor-kupchik")!;
+    const elizaveta = byId.get("elizaveta-kupchik")!;
+
+    expect(nikolaiKozlovsky.x).toBeGreaterThan(galina.x);
+    expect(elizaveta.x).toBeLessThan(viktor.x);
   });
 
   // Пропущено: fixture временно урезан пользователем — nikolai-ushkar/
