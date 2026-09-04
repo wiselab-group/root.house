@@ -4,15 +4,18 @@ import type { FamilyGraph } from "./types";
  * tree-v4 — real genealogy data, minimal core: Alexander Kupczyk, Eleonora
  * (his wife), Eva (their daughter), Alexander's parents Viktor and Galina,
  * his sister Daria, Viktor's own parents Nikolai and Elizaveta plus Viktor's
- * siblings Nikolai Jr./Svetlana/Natalya, and Galina's own parents Nikolai
- * and Nadezhda Kozlovsky plus Galina's sisters Nina/Marina/Tatyana/Vera/
- * Lyubov/Olga/Raisa/Lyudmila. This is the ONLY real data reused from the
- * existing project data (people/relationships, never layout code —
- * tree-v2/tree-v3 remain untouched and are not imported here); ids match
- * the existing tree-v2/tree-v3 fixtures so this stays the same canonical
- * people, not new synthetic stand-ins. Broader family/ancestor/divorce/
- * remarriage scenarios beyond this core are covered by the synthetic
- * fixtures below, not by further expanding this real dataset.
+ * siblings Nikolai Jr./Svetlana/Natalya, Nikolai (Sr.)'s own parents
+ * Vladimir and Marfa, Vladimir's own father Yustin (a SOLO parent — no
+ * recorded mother/spouse for Yustin in this data, exercising the
+ * SoloParent path with real data), and Galina's own parents Nikolai and
+ * Nadezhda Kozlovsky plus Galina's sisters Nina/Marina/Tatyana/Vera/Lyubov/
+ * Olga/Raisa/Lyudmila. This is the ONLY real data reused from the existing
+ * project data (people/relationships, never layout code — tree-v2/tree-v3
+ * remain untouched and are not imported here); ids match the existing
+ * tree-v2/tree-v3 fixtures so this stays the same canonical people, not new
+ * synthetic stand-ins. Broader family/ancestor/divorce/remarriage scenarios
+ * beyond this core are covered by the synthetic fixtures below, not by
+ * further expanding this real dataset.
  */
 export const focusPersonId = "alexander-kupchik";
 const eleonoraId = "eleonora-kupchik";
@@ -25,6 +28,9 @@ const elizavetaId = "elizaveta-kupchik";
 const nikolaiKupchikJrId = "nikolai-kupchik-jr";
 const svetlanaId = "svetlana-kupchik";
 const natalyaId = "natalya-kupchik";
+const vladimirId = "vladimir-kupchik";
+const marfaId = "marfa-kupchik";
+const yustinId = "yustin-kupchik";
 const nikolaiKozlovskyId = "nikolai-kozlovsky";
 const nadezhdaId = "nadezhda-kozlovskaya";
 const ninaId = "nina-kozlovskaya";
@@ -98,6 +104,24 @@ export const initialFamilyGraph: FamilyGraph = {
       firstName: "Наталья",
       lastName: "Купчик",
       gender: "female",
+    },
+    {
+      id: vladimirId,
+      firstName: "Владимир",
+      lastName: "Купчик",
+      gender: "male",
+    },
+    {
+      id: marfaId,
+      firstName: "Марфа",
+      lastName: "Купчик",
+      gender: "female",
+    },
+    {
+      id: yustinId,
+      firstName: "Юстин",
+      lastName: "Купчик",
+      gender: "male",
     },
     {
       id: nikolaiKozlovskyId,
@@ -265,6 +289,31 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: elizavetaId,
       to: natalyaId,
+    },
+    {
+      id: "vladimir-marfa-spouse",
+      kind: "spouse",
+      from: vladimirId,
+      to: marfaId,
+      status: "married",
+    },
+    {
+      id: "vladimir-nikolai-kupchik-sr-parent",
+      kind: "parent-child",
+      from: vladimirId,
+      to: nikolaiKupchikId,
+    },
+    {
+      id: "marfa-nikolai-kupchik-sr-parent",
+      kind: "parent-child",
+      from: marfaId,
+      to: nikolaiKupchikId,
+    },
+    {
+      id: "yustin-vladimir-parent",
+      kind: "parent-child",
+      from: yustinId,
+      to: vladimirId,
     },
     {
       id: "nikolai-kozlovsky-nadezhda-spouse",

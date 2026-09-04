@@ -28,10 +28,10 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Nikolai/Nadezhda Kozlovsky + Galina's 8 sisters minimal core)", () => {
+describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir/Marfa + Yustin (solo) + Nikolai/Nadezhda Kozlovsky + Galina's 8 sisters minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    expect(result.persons).toHaveLength(21);
+    expect(result.persons).toHaveLength(24);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -195,6 +195,43 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     );
     const siblingRowCenterX = (siblingRowMinX + siblingRowMaxX) / 2;
     expect(paternalCenterX).toBeCloseTo(siblingRowCenterX, 5);
+  });
+
+  it("Vladimir and Marfa (Nikolai Kupchik Sr.'s own parents) are above him, one generation further up than Nikolai/Elizaveta", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const nikolai = personById(result, "nikolai-kupchik");
+    const vladimir = personById(result, "vladimir-kupchik");
+    const marfa = personById(result, "marfa-kupchik");
+    expect(vladimir.y).toBeLessThan(nikolai.y);
+    expect(marfa.y).toBeLessThan(nikolai.y);
+  });
+
+  it("Vladimir (husband) is left of Marfa (wife)", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const vladimir = personById(result, "vladimir-kupchik");
+    const marfa = personById(result, "marfa-kupchik");
+    expect(vladimir.x).toBeLessThan(marfa.x);
+  });
+
+  it("Vladimir and Marfa's partnership is centered exactly above Nikolai Kupchik Sr. (their only recorded child in this graph)", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const nikolai = personById(result, "nikolai-kupchik");
+    const vladimir = personById(result, "vladimir-kupchik");
+    const marfa = personById(result, "marfa-kupchik");
+    const centerX = (vladimir.x + marfa.x) / 2;
+    expect(centerX).toBeCloseTo(nikolai.x, 5);
+  });
+
+  it("Yustin (Vladimir's father, recorded as a SOLO parent — no mother in this graph) is above Vladimir, one generation further up", () => {
+    // Exercises the SoloParent path with real data for the first time:
+    // Yustin has no recorded spouse, so he must still be placed as a
+    // single ancestor unit (unitWidth = one card, not a paired 384px unit),
+    // centered on his only child Vladimir.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const vladimir = personById(result, "vladimir-kupchik");
+    const yustin = personById(result, "yustin-kupchik");
+    expect(yustin.y).toBeLessThan(vladimir.y);
+    expect(yustin.x).toBeCloseTo(vladimir.x, 5);
   });
 
   it("Viktor's full siblings (Nikolai Jr., Svetlana, Natalya) are adjacent to Viktor, not scattered far away searching for free space near the origin", () => {
