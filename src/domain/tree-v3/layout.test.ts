@@ -214,6 +214,36 @@ describe("tree-v3 layout — real data (§40 regression case)", () => {
     expect(junction).toBe(childrenCenter);
   });
 
+  it("keeps a wife's own parents on HER side, not chained past her husband's parents (§7/§8)", () => {
+    // Nikolai Sr. Kupchik (husband) and Elizaveta Kupchik (wife) are both
+    // within the SAME paternal half-plane — but their OWN parents (Vladimir
+    // + Marfa Kupchik for Nikolai Sr.; Grigory + Elizaveta Krivusha for
+    // Elizaveta) are two COMPLETELY UNRELATED families that merely happen to
+    // land on the same generation row. Product requirement: Elizaveta's own
+    // parents must grow from HER anchor (right of Nikolai Sr., §9), not get
+    // shoved further left past her husband's parents — that used to happen
+    // because the couple-centering clamp treated occupiedEdge as shared
+    // between the husband's and wife's ancestor lines (see history in
+    // placeAncestorPairUndirected).
+    const result = buildTreeV3Layout(initialFamilyGraph, realFocusId);
+    const byId = new Map(result.persons.map((p) => [p.id, p]));
+    const nikolaiSrKupchik = byId.get("nikolai-kupchik")!;
+    const elizavetaKupchik = byId.get("elizaveta-kupchik")!;
+    const vladimir = byId.get("vladimir-kupchik")!;
+    const marfa = byId.get("marfa-kupchik")!;
+    const grigoryKrivusha = byId.get("grigory-krivusha")!;
+    const elizavetaKrivusha = byId.get("elizaveta-krivusha")!;
+
+    // Elizaveta sits to the right of her husband Nikolai Sr. (§9).
+    expect(elizavetaKupchik.x).toBeGreaterThan(nikolaiSrKupchik.x);
+    // Her own parents' junction must land on HER side (right of her
+    // husband's own parents' junction) — not chained further left, past
+    // Vladimir+Marfa, into "Nikolai's side" territory.
+    const vladimirMarfaJunction = (vladimir.x + marfa.x) / 2;
+    const krivushaJunction = (grigoryKrivusha.x + elizavetaKrivusha.x) / 2;
+    expect(krivushaJunction).toBeGreaterThan(vladimirMarfaJunction);
+  });
+
   // Пропущено: fixture временно урезан пользователем — nikolai-ushkar/
   // elena-ushkar (Виктора paternal aunt's family) больше нет в графе. Вернуть
   // .skip → обычный it, когда Ushkar-ветка снова появится в fixture.ts.

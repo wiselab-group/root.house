@@ -924,23 +924,29 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
         const leftAlreadyPlaced = placedPersons.has(leftId);
         const rightAlreadyPlaced = placedPersons.has(rightId);
 
-        // Сама чета (не только её сиблинги) должна уважать уже занятую
-        // территорию на унаследованной стороне (direction !== "free") —
-        // иначе ДВЕ полностью независимые пары (напр. Владимир+Марфа Купчик
-        // и Григорий+Елизавета Кривуша — обе "papa-side", но из РАЗНЫХ,
-        // никак явно не связанных вызовов placeAncestorFork) могут занять
-        // одно и то же место на одном Y (см. историю бага). Сдвигаем
-        // rowCenterX ЦЕЛИКОМ (сохраняя halfSpan между leftId/rightId) так,
-        // чтобы вся чета оказалась за пределами occupiedEdge на своей
-        // стороне.
-        let coupleCenterX = rowCenterX;
-        if (direction === "left") {
-          const edge = occupiedEdge(parentUnitY, "left");
-          if (rowCenterX + halfSpan > edge) coupleCenterX = edge - halfSpan;
-        } else if (direction === "right") {
-          const edge = occupiedEdge(parentUnitY, "right");
-          if (rowCenterX - halfSpan < edge) coupleCenterX = edge + halfSpan;
-        }
+        // Чета (leftId/rightId — родители personId'а) центрируется РОВНО
+        // над своим ребёнком (rowCenterX ± halfSpan) — БЕЗ клампа против
+        // occupiedEdge чужой, никак не связанной пары на том же Y/стороне.
+        //
+        // Раньше здесь стоял clamp против occupiedEdge(parentUnitY, side) —
+        // задуман для СИБЛИНГОВ personId'а (дядья/тёти, растущие НАРУЖУ от
+        // уже размещённой четы, см. leftGrowLeft/rightGrowLeft ниже), но по
+        // ошибке применялся и к САМОЙ чете. personId — ЖЕНА в паре (напр.
+        // Елизавета Купчик, rightId с точки зрения ЕЁ РОДИТЕЛЕЙ выше по
+        // дереву) НЕ имеет отношения к occupiedEdge, который уже застолбили
+        // родители её МУЖА (Николай ст. → Владимир+Марфа) — это ДВЕ разные,
+        // никак не связанные родословные линии, просто совпавшие по Y и
+        // общему paternal half-plane. Clamp сдвигал родителей жены (Григорий
+        // +Елизавета Кривуша) ЗА пределы уже занятого мужниной линией края —
+        // в итоге они вставали ЛЕВЕЕ родителей мужа, читаясь как "родители
+        // Елизаветы — со стороны Николая", хотя должны расти строго над
+        // САМОЙ Елизаветой (см. историю бага). Потенциальное физическое
+        // пересечение двух независимо центрированных пар на одном Y (редкий
+        // случай — CARD_WIDTH+SPOUSE_GAP её самой узкий) разрешается ОТДЕЛЬНО
+        // после полного placeGraph тем же generic-механизмом, что и для
+        // дедушек/бабушек фокуса (см. collision.ts::resolveGrandparentSymmetry,
+        // §25 — hard no-overlap constraint важнее локальной оптимизации).
+        const coupleCenterX = rowCenterX;
 
         // Перекрёстный (paternal↔maternal) конфликт на этом Y больше НЕ
         // разрешается здесь точечным clamp'ом одной из двух пар — это давало
