@@ -28,10 +28,10 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Galina's 8 sisters minimal core)", () => {
+describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Galina's 8 sisters minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    expect(result.persons).toHaveLength(26);
+    expect(result.persons).toHaveLength(29);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -168,10 +168,15 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   it("Nikolai and Elizaveta's partnership is centered over their FULL sibling row (Viktor + Nikolai Jr. + Svetlana + Natalya), not just over Viktor", () => {
     // Same "parents centered over the full sibling row" rule as
     // Viktor/Galina over Alexander+Daria, one generation up: Nikolai and
-    // Elizaveta have FOUR children on this row, so their ideal center is the
-    // midpoint of that whole row, not directly above whichever child
+    // Elizaveta have FOUR children on this row, so their ideal center is
+    // pulled from ALL FOUR children's x (an average, not just the midpoint
+    // of the row's outer bounds), not directly above whichever child
     // (Viktor) happens to have his own already-placed descendants pulling
-    // the ancestor pass to notice him first.
+    // the ancestor pass to notice him first. Since Natalya's husband
+    // Vladimir Evtukh sits physically between Nikolai Jr. and Natalya on
+    // this row (not a blood child himself), the row's midpoint-of-bounds
+    // and the average-of-blood-children's-x are no longer identical down
+    // to the pixel — allow a reasonable margin rather than exact equality.
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     const nikolai = personById(result, "nikolai-kupchik");
     const elizaveta = personById(result, "elizaveta-kupchik");
@@ -194,7 +199,9 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
       natalya.x,
     );
     const siblingRowCenterX = (siblingRowMinX + siblingRowMaxX) / 2;
-    expect(paternalCenterX).toBeCloseTo(siblingRowCenterX, 5);
+    expect(Math.abs(paternalCenterX - siblingRowCenterX)).toBeLessThan(
+      CARD_WIDTH,
+    );
   });
 
   it("Vladimir and Marfa (Nikolai Kupchik Sr.'s own parents) are above him, one generation further up than Nikolai/Elizaveta", () => {
@@ -312,6 +319,9 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // instead of right beside him. They must be placed via
     // placeUnplacedSiblings, anchored on Viktor (the sibling who's already
     // placed), the same mechanism that seats Daria beside Alexander.
+    // Bound widened to 7 cards: Natalya's husband Vladimir Evtukh now sits
+    // between Natalya and Nikolai Jr. on this same row, pushing Svetlana
+    // (the furthest sibling) an extra card-width away from Viktor.
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     const viktor = personById(result, "viktor-kupchik");
     const nikolaiJr = personById(result, "nikolai-kupchik-jr");
@@ -319,12 +329,24 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     const natalya = personById(result, "natalya-kupchik");
     const siblingXs = [nikolaiJr.x, svetlana.x, natalya.x];
     for (const x of siblingXs) {
-      expect(Math.abs(x - viktor.x)).toBeLessThan(CARD_WIDTH * 5);
+      expect(Math.abs(x - viktor.x)).toBeLessThan(CARD_WIDTH * 7);
     }
     // All four full siblings sit on the same generation row as Viktor.
     expect(nikolaiJr.y).toBe(viktor.y);
     expect(svetlana.y).toBe(viktor.y);
     expect(natalya.y).toBe(viktor.y);
+  });
+
+  it("Vladimir Evtukh (Natalya's husband) is left of Natalya, and their children Egor/Anastasiya are below them", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const vladimirEvtukh = personById(result, "vladimir-evtukh");
+    const natalya = personById(result, "natalya-kupchik");
+    const egor = personById(result, "egor-evtukh");
+    const anastasiya = personById(result, "anastasiya-evtukh");
+    expect(vladimirEvtukh.x).toBeLessThan(natalya.x);
+    expect(vladimirEvtukh.y).toBe(natalya.y);
+    expect(egor.y).toBeGreaterThan(natalya.y);
+    expect(anastasiya.y).toBeGreaterThan(natalya.y);
   });
 
   it("no overlaps across all three generations (Nikolai/Elizaveta, Viktor/Galina + Daria, Alexander + Eleonora/Eva)", () => {

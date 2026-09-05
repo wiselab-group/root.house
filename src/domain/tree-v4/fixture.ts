@@ -4,7 +4,8 @@ import type { FamilyGraph } from "./types";
  * tree-v4 — real genealogy data, minimal core: Alexander Kupczyk, Eleonora
  * (his wife), Eva (their daughter), Alexander's parents Viktor and Galina,
  * his sister Daria, Viktor's own parents Nikolai and Elizaveta plus Viktor's
- * siblings Nikolai Jr./Svetlana/Natalya, Nikolai (Sr.)'s own parents
+ * siblings Nikolai Jr./Svetlana/Natalya, Natalya's own husband Vladimir
+ * Evtukh and their children Egor/Anastasiya, Nikolai (Sr.)'s own parents
  * Vladimir and Marfa, Vladimir's own father Yustin (a SOLO parent — no
  * recorded mother/spouse for Yustin in this data, exercising the
  * SoloParent path with real data), Elizaveta's own parents Grigory and
@@ -29,6 +30,9 @@ const elizavetaId = "elizaveta-kupchik";
 const nikolaiKupchikJrId = "nikolai-kupchik-jr";
 const svetlanaId = "svetlana-kupchik";
 const natalyaId = "natalya-kupchik";
+const vladimirEvtukhId = "vladimir-evtukh";
+const egorEvtukhId = "egor-evtukh";
+const anastasiyaEvtukhId = "anastasiya-evtukh";
 const vladimirId = "vladimir-kupchik";
 const marfaId = "marfa-kupchik";
 const yustinId = "yustin-kupchik";
@@ -106,6 +110,24 @@ export const initialFamilyGraph: FamilyGraph = {
       id: natalyaId,
       firstName: "Наталья",
       lastName: "Купчик",
+      gender: "female",
+    },
+    {
+      id: vladimirEvtukhId,
+      firstName: "Владимир",
+      lastName: "Евтух",
+      gender: "male",
+    },
+    {
+      id: egorEvtukhId,
+      firstName: "Егор",
+      lastName: "Евтух",
+      gender: "male",
+    },
+    {
+      id: anastasiyaEvtukhId,
+      firstName: "Анастасия",
+      lastName: "Евтух",
       gender: "female",
     },
     {
@@ -304,6 +326,37 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: elizavetaId,
       to: natalyaId,
+    },
+    {
+      id: "natalya-vladimir-evtukh-spouse",
+      kind: "spouse",
+      from: vladimirEvtukhId,
+      to: natalyaId,
+      status: "married",
+    },
+    {
+      id: "vladimir-evtukh-egor-parent",
+      kind: "parent-child",
+      from: vladimirEvtukhId,
+      to: egorEvtukhId,
+    },
+    {
+      id: "natalya-egor-parent",
+      kind: "parent-child",
+      from: natalyaId,
+      to: egorEvtukhId,
+    },
+    {
+      id: "vladimir-evtukh-anastasiya-parent",
+      kind: "parent-child",
+      from: vladimirEvtukhId,
+      to: anastasiyaEvtukhId,
+    },
+    {
+      id: "natalya-anastasiya-parent",
+      kind: "parent-child",
+      from: natalyaId,
+      to: anastasiyaEvtukhId,
     },
     {
       id: "vladimir-marfa-spouse",
