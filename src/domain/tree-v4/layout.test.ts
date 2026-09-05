@@ -28,10 +28,10 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Vasily/Elizaveta Kozlovskaya + Galina's 8 sisters minimal core)", () => {
+describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Vasily/Elizaveta Kozlovskaya + Petr (solo) + Galina's 8 sisters minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    expect(result.persons).toHaveLength(34);
+    expect(result.persons).toHaveLength(35);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -333,6 +333,18 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     const elizavetaKozlovskaya = personById(result, "elizaveta-kozlovskaya");
     const centerX = (vasily.x + elizavetaKozlovskaya.x) / 2;
     expect(centerX).toBeCloseTo(nikolaiKozlovsky.x, 5);
+  });
+
+  it("Petr (Vasily's father, recorded as a SOLO parent — no mother in this graph) is above Vasily, one generation further up", () => {
+    // Second SoloParent case with real data (the first was Yustin, Vladimir
+    // Kupchik's father) — this time on the MATERNAL side, exercising the
+    // same unpaired-ancestor-unit path with branch="maternal" instead of
+    // "paternal".
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const vasily = personById(result, "vasily-kozlovsky");
+    const petr = personById(result, "petr-kozlovsky");
+    expect(petr.y).toBeLessThan(vasily.y);
+    expect(petr.x).toBeCloseTo(vasily.x, 5);
   });
 
   it("Viktor's full siblings (Nikolai Jr., Svetlana, Natalya) are adjacent to Viktor, not scattered far away searching for free space near the origin", () => {
