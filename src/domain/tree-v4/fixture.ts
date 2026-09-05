@@ -27,15 +27,24 @@ import type { FamilyGraph } from "./types";
  * maiden "Kozlovskaya" invented in an earlier draft of this fixture and
  * later corrected): Nina Tikhonovich, Marina Ravbetskaya, Tatiana Naumovich,
  * Vera Artyukh, Lyubov Baidovskaya, Olga Stashevskaya, Raisa Shlyazhko,
- * Lyudmila Redko — plus Marina's own husband Viktor Ravbetsky and their
- * children Lyudmila Ravbetskaya and Vadim Ravbetsky.
- * This is the ONLY real data reused from the existing project data
- * (people/relationships, never layout code — tree-v2/tree-v3 remain
+ * Lyudmila Redko — plus Marina's own husband Viktor Ravbetsky (canonical,
+ * from tree-v2) and their children Lyudmila Ravbetskaya and Vadim
+ * Ravbetsky, and the other five sisters' own husbands: Alexey Naumovich
+ * (Tatiana), Vladimir Artyukh (Vera), Vladimir Baidovsky (Lyubov),
+ * Alexander Stashevsky (Olga), Sergey Shlyazhko (Raisa), Oleg Redko
+ * (Lyudmila) — EXCEPTION to the "canonical ids only" rule below: neither
+ * tree-v2 nor tree-v3 records a husband for these five, so these six
+ * husbands (minus Viktor Ravbetsky, who is canonical) are genuinely NEW
+ * synthetic people, added here only because the user explicitly asked for
+ * this exception rather than leaving the sisters' husbands unrecorded.
+ * This is otherwise the ONLY real data reused from the existing project
+ * data (people/relationships, never layout code — tree-v2/tree-v3 remain
  * untouched and are not imported here); ids match the existing
  * tree-v2/tree-v3 fixtures so this stays the same canonical people, not new
- * synthetic stand-ins. Broader family/ancestor/divorce/remarriage scenarios
- * beyond this core are covered by the synthetic fixtures below, not by
- * further expanding this real dataset.
+ * synthetic stand-ins (aside from the five husbands above). Broader
+ * family/ancestor/divorce/remarriage scenarios beyond this core are
+ * covered by the synthetic fixtures below, not by further expanding this
+ * real dataset.
  */
 export const focusPersonId = "alexander-kupchik";
 const eleonoraId = "eleonora-kupchik";
@@ -86,6 +95,12 @@ const lyudmilaId = "lyudmila-redko";
 const viktorRavbetskyId = "viktor-ravbetsky";
 const lyudmilaRavbetskayaId = "lyudmila-ravbetskaya";
 const vadimRavbetskyId = "vadim-ravbetsky";
+const alexeyNaumovichId = "alexey-naumovich";
+const vladimirArtyukhId = "vladimir-artyukh";
+const vladimirBaidovskyId = "vladimir-baidovsky";
+const alexanderStashevskyId = "alexander-stashevsky";
+const sergeyShlyazhkoId = "sergey-shlyazhko";
+const olegRedkoId = "oleg-redko";
 
 export const initialFamilyGraph: FamilyGraph = {
   persons: [
@@ -376,6 +391,42 @@ export const initialFamilyGraph: FamilyGraph = {
       id: vadimRavbetskyId,
       firstName: "Вадим",
       lastName: "Равбецкий",
+      gender: "male",
+    },
+    {
+      id: alexeyNaumovichId,
+      firstName: "Алексей",
+      lastName: "Наумович",
+      gender: "male",
+    },
+    {
+      id: vladimirArtyukhId,
+      firstName: "Владимир",
+      lastName: "Артюх",
+      gender: "male",
+    },
+    {
+      id: vladimirBaidovskyId,
+      firstName: "Владимир",
+      lastName: "Байдовский",
+      gender: "male",
+    },
+    {
+      id: alexanderStashevskyId,
+      firstName: "Александр",
+      lastName: "Сташевский",
+      gender: "male",
+    },
+    {
+      id: sergeyShlyazhkoId,
+      firstName: "Сергей",
+      lastName: "Шляжко",
+      gender: "male",
+    },
+    {
+      id: olegRedkoId,
+      firstName: "Олег",
+      lastName: "Редько",
       gender: "male",
     },
   ],
@@ -876,6 +927,48 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: marinaId,
       to: vadimRavbetskyId,
+    },
+    {
+      id: "tatiana-alexey-naumovich-spouse",
+      kind: "spouse",
+      from: alexeyNaumovichId,
+      to: tatyanaId,
+      status: "married",
+    },
+    {
+      id: "vera-vladimir-artyukh-spouse",
+      kind: "spouse",
+      from: vladimirArtyukhId,
+      to: veraId,
+      status: "married",
+    },
+    {
+      id: "lyubov-vladimir-baidovsky-spouse",
+      kind: "spouse",
+      from: vladimirBaidovskyId,
+      to: lyubovId,
+      status: "married",
+    },
+    {
+      id: "olga-alexander-stashevsky-spouse",
+      kind: "spouse",
+      from: alexanderStashevskyId,
+      to: olgaId,
+      status: "married",
+    },
+    {
+      id: "raisa-sergey-shlyazhko-spouse",
+      kind: "spouse",
+      from: sergeyShlyazhkoId,
+      to: raisaId,
+      status: "married",
+    },
+    {
+      id: "lyudmila-oleg-redko-spouse",
+      kind: "spouse",
+      from: olegRedkoId,
+      to: lyudmilaId,
+      status: "married",
     },
   ],
 };

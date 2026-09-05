@@ -28,10 +28,10 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Nikolai's brothers Yuzik/Daniil/Alexey + Vasily/Elizaveta Kozlovskaya + Petr (solo)/Yakov (solo) + Grigory Kolesnikovich/Agrafena + Filipp (solo) + Nadezhda's brothers Nikolai/Alexey/Pavel/Grigory Jr. Kolesnikovich + Galina's 8 sisters (own married surnames) + Marina's husband Viktor Ravbetsky/children Lyudmila+Vadim minimal core)", () => {
+describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Nikolai's brothers Yuzik/Daniil/Alexey + Vasily/Elizaveta Kozlovskaya + Petr (solo)/Yakov (solo) + Grigory Kolesnikovich/Agrafena + Filipp (solo) + Nadezhda's brothers Nikolai/Alexey/Pavel/Grigory Jr. Kolesnikovich + Galina's 8 sisters (own married surnames) + Galina's sisters' own husbands (Viktor Ravbetsky/Alexey Naumovich/Vladimir Artyukh/Vladimir Baidovsky/Alexander Stashevsky/Sergey Shlyazhko/Oleg Redko) + Marina's children Lyudmila+Vadim minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    expect(result.persons).toHaveLength(49);
+    expect(result.persons).toHaveLength(55);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -633,14 +633,20 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     for (const sister of sisters) {
       expect(sister.y).toBe(galina.y);
     }
-    // The whole row of 9 sisters (Galina + 8) plus Marina's own husband
-    // Viktor Ravbetsky (wedged in beside her, one extra card + spouse gap
-    // width) spans at most 9 cards + 8 sibling gaps + Viktor's own card and
-    // spouse gap — nobody drifted off far past that searching for space.
+    // The whole row of 9 sisters (Galina + 8) plus SIX sisters' own husbands
+    // (Marina/Viktor Ravbetsky, Tatiana/Alexey Naumovich, Vera/Vladimir
+    // Artyukh, Lyubov/Vladimir Baidovsky, Olga/Alexander Stashevsky,
+    // Raisa/Sergey Shlyazhko, Lyudmila/Oleg Redko) wedged in beside their
+    // wives spans at most 9 cards + 8 sibling gaps + 6 extra husband cards,
+    // each with generous room for growPersonDescendants' own (pre-existing,
+    // not this fixture's concern) wider-than-SPOUSE_GAP spouse placement —
+    // this bound exists to catch the regression (a sibling-with-spouse
+    // getting bounced thousands of px away searching for free space), not
+    // to pin the exact packing constant.
     const allXs = [galina.x, ...sisters.map((s) => s.x)];
     const spread = Math.max(...allXs) - Math.min(...allXs);
     expect(spread).toBeLessThanOrEqual(
-      9 * CARD_WIDTH + 8 * SIBLING_GAP + CARD_WIDTH + SPOUSE_GAP + 1,
+      9 * CARD_WIDTH + 8 * SIBLING_GAP + 6 * (CARD_WIDTH * 2 + SPOUSE_GAP) + 1,
     );
   });
 
@@ -690,6 +696,30 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     const vadim = personById(result, "vadim-ravbetsky");
     expect(lyudmilaRavbetskaya.y).toBeGreaterThan(marina.y);
     expect(vadim.y).toBeGreaterThan(marina.y);
+    expect(detectOverlaps(positionMap(result))).toEqual([]);
+  });
+
+  it("the other five sisters' husbands (Alexey Naumovich, Vladimir Artyukh, Vladimir Baidovsky, Alexander Stashevsky, Sergey Shlyazhko, Oleg Redko) each stay adjacent to their own wife, on her left (male < female)", () => {
+    // Same fix as Marina/Viktor Ravbetsky, now exercised with FIVE more
+    // sister-with-spouse pairs sharing the same contiguous row — confirms
+    // the placeUnplacedSiblings unit-width fix generalizes past the first
+    // case it was found and fixed on.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const pairs: [string, string][] = [
+      ["alexey-naumovich", "tatiana-naumovich"],
+      ["vladimir-artyukh", "vera-artyukh"],
+      ["vladimir-baidovsky", "lyubov-baidovskaya"],
+      ["alexander-stashevsky", "olga-stashevskaya"],
+      ["sergey-shlyazhko", "raisa-shlyazhko"],
+      ["oleg-redko", "lyudmila-redko"],
+    ];
+    for (const [husbandId, wifeId] of pairs) {
+      const husband = personById(result, husbandId);
+      const wife = personById(result, wifeId);
+      expect(husband.y).toBe(wife.y);
+      expect(husband.x).toBeLessThan(wife.x);
+      expect(Math.abs(wife.x - husband.x)).toBeLessThan(CARD_WIDTH * 3);
+    }
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
