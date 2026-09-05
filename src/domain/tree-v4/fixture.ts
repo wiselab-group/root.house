@@ -11,7 +11,8 @@ import type { FamilyGraph } from "./types";
  * no recorded mother/spouse for Yustin in this data, exercising the
  * SoloParent path with real data), Elizaveta's own parents Grigory and
  * Elizaveta Krivusha, and Galina's own parents Nikolai and Nadezhda
- * Kozlovsky plus Galina's sisters Nina/Marina/Tatyana/Vera/Lyubov/Olga/
+ * Kozlovsky (Nikolai Kozlovsky's own parents Vasily and Elizaveta
+ * Kozlovskaya) plus Galina's sisters Nina/Marina/Tatyana/Vera/Lyubov/Olga/
  * Raisa/Lyudmila. This is the ONLY real data reused from the existing
  * project data (people/relationships, never layout code — tree-v2/tree-v3
  * remain untouched and are not imported here); ids match the existing
@@ -43,6 +44,8 @@ const yustinId = "yustin-kupchik";
 const grigoryKrivushaId = "grigory-krivusha";
 const elizavetaKrivushaId = "elizaveta-krivusha";
 const nikolaiKozlovskyId = "nikolai-kozlovsky";
+const vasilyKozlovskyId = "vasily-kozlovsky";
+const elizavetaKozlovskayaId = "elizaveta-kozlovskaya";
 const nadezhdaId = "nadezhda-kozlovskaya";
 const ninaId = "nina-kozlovskaya";
 const marinaId = "marina-kozlovskaya";
@@ -187,6 +190,18 @@ export const initialFamilyGraph: FamilyGraph = {
       firstName: "Николай",
       lastName: "Козловский",
       gender: "male",
+    },
+    {
+      id: vasilyKozlovskyId,
+      firstName: "Василий",
+      lastName: "Козловский",
+      gender: "male",
+    },
+    {
+      id: elizavetaKozlovskayaId,
+      firstName: "Елизавета",
+      lastName: "Козловская",
+      gender: "female",
     },
     {
       id: nadezhdaId,
@@ -454,6 +469,25 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: elizavetaKrivushaId,
       to: elizavetaId,
+    },
+    {
+      id: "vasily-elizaveta-kozlovskaya-spouse",
+      kind: "spouse",
+      from: vasilyKozlovskyId,
+      to: elizavetaKozlovskayaId,
+      status: "married",
+    },
+    {
+      id: "vasily-nikolai-kozlovsky-parent",
+      kind: "parent-child",
+      from: vasilyKozlovskyId,
+      to: nikolaiKozlovskyId,
+    },
+    {
+      id: "elizaveta-kozlovskaya-nikolai-kozlovsky-parent",
+      kind: "parent-child",
+      from: elizavetaKozlovskayaId,
+      to: nikolaiKozlovskyId,
     },
     {
       id: "nikolai-kozlovsky-nadezhda-spouse",
