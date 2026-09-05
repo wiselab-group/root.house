@@ -22,8 +22,13 @@ import type { FamilyGraph } from "./types";
  * married name "Колесникович", per the user's explicit correction —
  * plus Agrafena's own father Filipp Strunevsky, a SOLO parent, confirming
  * the same maiden surname, and Nadezhda Kozlovskaya's own siblings Nikolai/
- * Alexey/Pavel/Grigory Jr. Kolesnikovich) plus Galina's sisters Nina/Marina/
- * Tatyana/Vera/Lyubov/Olga/Raisa/Lyudmila.
+ * Alexey/Pavel/Grigory Jr. Kolesnikovich) plus Galina's sisters — each given
+ * her own married surname per tree-v2's canonical ids/lastNames (NOT the
+ * maiden "Kozlovskaya" invented in an earlier draft of this fixture and
+ * later corrected): Nina Tikhonovich, Marina Ravbetskaya, Tatiana Naumovich,
+ * Vera Artyukh, Lyubov Baidovskaya, Olga Stashevskaya, Raisa Shlyazhko,
+ * Lyudmila Redko — plus Marina's own husband Viktor Ravbetsky and their
+ * children Lyudmila Ravbetskaya and Vadim Ravbetsky.
  * This is the ONLY real data reused from the existing project data
  * (people/relationships, never layout code — tree-v2/tree-v3 remain
  * untouched and are not imported here); ids match the existing
@@ -70,14 +75,17 @@ const nikolaiKolesnikovichId = "nikolai-kolesnikovich";
 const alexeyKolesnikovichId = "alexey-kolesnikovich";
 const pavelKolesnikovichId = "pavel-kolesnikovich";
 const grigoryKolesnikovichJrId = "grigory-kolesnikovich-jr";
-const ninaId = "nina-kozlovskaya";
-const marinaId = "marina-kozlovskaya";
-const tatyanaId = "tatyana-kozlovskaya";
-const veraId = "vera-kozlovskaya";
-const lyubovId = "lyubov-kozlovskaya";
-const olgaId = "olga-kozlovskaya";
-const raisaId = "raisa-kozlovskaya";
-const lyudmilaId = "lyudmila-kozlovskaya";
+const ninaId = "nina-tikhonovich";
+const marinaId = "marina-ravbetskaya";
+const tatyanaId = "tatiana-naumovich";
+const veraId = "vera-artyukh";
+const lyubovId = "lyubov-baidovskaya";
+const olgaId = "olga-stashevskaya";
+const raisaId = "raisa-shlyazhko";
+const lyudmilaId = "lyudmila-redko";
+const viktorRavbetskyId = "viktor-ravbetsky";
+const lyudmilaRavbetskayaId = "lyudmila-ravbetskaya";
+const vadimRavbetskyId = "vadim-ravbetsky";
 
 export const initialFamilyGraph: FamilyGraph = {
   persons: [
@@ -307,50 +315,68 @@ export const initialFamilyGraph: FamilyGraph = {
     {
       id: ninaId,
       firstName: "Нина",
-      lastName: "Козловская",
+      lastName: "Тихонович",
       gender: "female",
     },
     {
       id: marinaId,
       firstName: "Марина",
-      lastName: "Козловская",
+      lastName: "Равбецкая",
       gender: "female",
     },
     {
       id: tatyanaId,
       firstName: "Татьяна",
-      lastName: "Козловская",
+      lastName: "Наумович",
       gender: "female",
     },
     {
       id: veraId,
       firstName: "Вера",
-      lastName: "Козловская",
+      lastName: "Артюх",
       gender: "female",
     },
     {
       id: lyubovId,
       firstName: "Любовь",
-      lastName: "Козловская",
+      lastName: "Байдовская",
       gender: "female",
     },
     {
       id: olgaId,
       firstName: "Ольга",
-      lastName: "Козловская",
+      lastName: "Сташевская",
       gender: "female",
     },
     {
       id: raisaId,
       firstName: "Раиса",
-      lastName: "Козловская",
+      lastName: "Шляжко",
       gender: "female",
     },
     {
       id: lyudmilaId,
       firstName: "Людмила",
-      lastName: "Козловская",
+      lastName: "Редько",
       gender: "female",
+    },
+    {
+      id: viktorRavbetskyId,
+      firstName: "Виктор",
+      lastName: "Равбецкий",
+      gender: "male",
+    },
+    {
+      id: lyudmilaRavbetskayaId,
+      firstName: "Людмила",
+      lastName: "Равбецкая",
+      gender: "female",
+    },
+    {
+      id: vadimRavbetskyId,
+      firstName: "Вадим",
+      lastName: "Равбецкий",
+      gender: "male",
     },
   ],
   relationships: [
@@ -819,6 +845,37 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: nadezhdaId,
       to: lyudmilaId,
+    },
+    {
+      id: "marina-viktor-ravbetsky-spouse",
+      kind: "spouse",
+      from: marinaId,
+      to: viktorRavbetskyId,
+      status: "married",
+    },
+    {
+      id: "viktor-ravbetsky-lyudmila-parent",
+      kind: "parent-child",
+      from: viktorRavbetskyId,
+      to: lyudmilaRavbetskayaId,
+    },
+    {
+      id: "marina-lyudmila-ravbetskaya-parent",
+      kind: "parent-child",
+      from: marinaId,
+      to: lyudmilaRavbetskayaId,
+    },
+    {
+      id: "viktor-ravbetsky-vadim-parent",
+      kind: "parent-child",
+      from: viktorRavbetskyId,
+      to: vadimRavbetskyId,
+    },
+    {
+      id: "marina-vadim-parent",
+      kind: "parent-child",
+      from: marinaId,
+      to: vadimRavbetskyId,
     },
   ],
 };

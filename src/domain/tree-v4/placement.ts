@@ -457,12 +457,38 @@ function placeAncestors(
         );
       });
     };
+    // A person with NO blood parent recorded in this graph at all (e.g.
+    // Viktor Ravbetsky, married into the family with no ancestors of his own
+    // in this data) and NOT pulled by their own placed descendants either is
+    // never an independent ancestor unit — `hasSiblingInGraph` is (correctly)
+    // false for them since they have no parentIds to check siblings against,
+    // but `!hasSiblingInGraph` alone then wrongly let them through as an
+    // "independent ancestor unit" defaulting to idealX=0. Real bug: once
+    // Marina (blood) got her own children, her husband Viktor Ravbetsky
+    // (in-law, parentIds=[]) started passing this filter — via
+    // isPulledByOwnDescendants(viktor) OR isPulledByOwnDescendants(marina)
+    // both still being false at that point in the loop — and was placed by
+    // placeAncestorUnit BEFORE Marina's own placeUnplacedSiblings turn ever
+    // came, landing the whole Kozlovsky-sisters row on top of/past Viktor
+    // Kupchik's sibling cluster instead of beside Galina. Someone with no
+    // blood parents in this graph (e.g. Yustin Kupchik, a SoloParent ancestor
+    // who genuinely IS pulled by his own placed descendant Vladimir) must
+    // still qualify when isPulledByOwnDescendants is true — only exclude the
+    // case where they're a parentless in-law with NOTHING of their own
+    // pulling them, who must be placed exclusively via growPersonDescendants/
+    // placeChildrenRow from their blood-relative partner's side instead.
+    const isParentlessInLawWithNoPull = (personId: string): boolean => {
+      const person = graph.personById.get(personId);
+      if (!person || person.parentIds.length > 0) return false;
+      return !isPulledByOwnDescendants(personId);
+    };
 
     const peopleInRow = [...graph.personById.values()]
       .filter(
         (p) =>
           p.generation === gen &&
           !positionByPerson.has(p.id) &&
+          !isParentlessInLawWithNoPull(p.id) &&
           (isPulledByOwnDescendants(p.id) || !hasSiblingInGraph(p.id)),
       )
       .sort(
@@ -811,14 +837,37 @@ function placeUnplacedSiblings(
       ? positionByPerson.get(nearestSiblingId)!.x
       : 0;
 
-    const leftCandidateX = anchorX - CARD_WIDTH - SIBLING_GAP;
-    const rightCandidateX = anchorX + CARD_WIDTH + SIBLING_GAP;
+    // A sibling who ALREADY has a spouse of their own (e.g. Marina, married
+    // to Viktor Ravbetsky) needs their FULL unit width (both cards + the
+    // standard spouse gap) reserved right here as their candidate slot, not
+    // just CARD_WIDTH for their own card — otherwise the neighboring slot
+    // reserved for a LATER sibling can land exactly where this sibling's own
+    // (not-yet-placed) spouse needs to go. Real bug: Marina was reserved only
+    // CARD_WIDTH between Nina and the rest of the row, then her husband
+    // Viktor Ravbetsky (who must be leftPersonId — male < female — so he
+    // belongs on Marina's LEFT) tried to grow into that slot via
+    // growPersonDescendants, found Nina's card already sitting there (placed
+    // right after, with no idea Marina would need room on her left), and
+    // searched hundreds of px further out looking for free space instead.
+    // Reserving the whole couple's width as ONE candidate slot up front
+    // (mirroring placeAncestorUnit for an ancestor couple sharing a row)
+    // guarantees growPersonDescendants' own spouse-placement search finds
+    // its preferred immediately-adjacent spot free, without duplicating that
+    // function's placement logic here.
+    const spouseId = spouseOf(graph, childId);
+    const unitWidth =
+      spouseId && !positionByPerson.has(spouseId)
+        ? CARD_WIDTH * 2 + SPOUSE_GAP
+        : CARD_WIDTH;
+
+    const leftCandidateX = anchorX - unitWidth - SIBLING_GAP;
+    const rightCandidateX = anchorX + unitWidth + SIBLING_GAP;
     const leftFree = !occupancy.intersects(
-      { x: leftCandidateX, y, width: CARD_WIDTH, height: CARD_HEIGHT },
+      { x: leftCandidateX, y, width: unitWidth, height: CARD_HEIGHT },
       SIBLING_GAP,
     );
     const rightFree = !occupancy.intersects(
-      { x: rightCandidateX, y, width: CARD_WIDTH, height: CARD_HEIGHT },
+      { x: rightCandidateX, y, width: unitWidth, height: CARD_HEIGHT },
       SIBLING_GAP,
     );
 
@@ -826,17 +875,17 @@ function placeUnplacedSiblings(
     // free, prefer left (deterministic tie-break, §39). Only fall back to
     // searching further outward when NEITHER immediately-adjacent slot is
     // actually free (e.g. that side is blocked by an unrelated branch).
-    let resolvedX: number;
+    let unitCenterX: number;
     if (leftFree) {
-      resolvedX = leftCandidateX;
+      unitCenterX = leftCandidateX;
     } else if (rightFree) {
-      resolvedX = rightCandidateX;
+      unitCenterX = rightCandidateX;
     } else {
-      resolvedX =
+      unitCenterX =
         occupancy.findFreeInterval(
           y,
           CARD_HEIGHT,
-          CARD_WIDTH,
+          unitWidth,
           SIBLING_GAP,
           leftCandidateX,
           3000,
@@ -845,13 +894,38 @@ function placeUnplacedSiblings(
         occupancy.findFreeInterval(
           y,
           CARD_HEIGHT,
-          CARD_WIDTH,
+          unitWidth,
           SIBLING_GAP,
           rightCandidateX,
           3000,
           1,
         ) ??
         leftCandidateX;
+    }
+
+    // This sibling's own card sits on whichever side of unitCenterX their
+    // spouse's partnership side (leftPersonId/rightPersonId) requires — the
+    // OTHER half of the reserved unit width is left free for
+    // growPersonDescendants (below) to place the spouse into, using its own
+    // preferred-adjacent-slot search. No spouse: the sibling's own card is
+    // simply centered on unitCenterX (unitWidth === CARD_WIDTH already).
+    let resolvedX = unitCenterX;
+    if (spouseId && !positionByPerson.has(spouseId)) {
+      const partnershipId = graph.personById
+        .get(childId)!
+        .partnershipIds.find((id) => {
+          const p = graph.partnershipById.get(id);
+          return (
+            p && (p.leftPersonId === childId || p.rightPersonId === childId)
+          );
+        });
+      const partnership = partnershipId
+        ? graph.partnershipById.get(partnershipId)
+        : undefined;
+      const isLeft = partnership?.leftPersonId === childId;
+      resolvedX = isLeft
+        ? unitCenterX - CARD_WIDTH / 2 - SPOUSE_GAP / 2
+        : unitCenterX + CARD_WIDTH / 2 + SPOUSE_GAP / 2;
     }
 
     positionByPerson.set(childId, { x: resolvedX, y });

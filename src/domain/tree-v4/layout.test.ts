@@ -28,10 +28,10 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Nikolai's brothers Yuzik/Daniil/Alexey + Vasily/Elizaveta Kozlovskaya + Petr (solo)/Yakov (solo) + Grigory Kolesnikovich/Agrafena + Filipp (solo) + Nadezhda's brothers Nikolai/Alexey/Pavel/Grigory Jr. Kolesnikovich + Galina's 8 sisters minimal core)", () => {
+describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Nikolai's brothers Yuzik/Daniil/Alexey + Vasily/Elizaveta Kozlovskaya + Petr (solo)/Yakov (solo) + Grigory Kolesnikovich/Agrafena + Filipp (solo) + Nadezhda's brothers Nikolai/Alexey/Pavel/Grigory Jr. Kolesnikovich + Galina's 8 sisters (own married surnames) + Marina's husband Viktor Ravbetsky/children Lyudmila+Vadim minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    expect(result.persons).toHaveLength(46);
+    expect(result.persons).toHaveLength(49);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -577,32 +577,37 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     expect(kozlovskyCenterX).toBeGreaterThanOrEqual(galina.x);
   });
 
-  it("Nikolai/Nadezhda Kozlovsky's partnership is centered over their FULL sibling row (Galina + all 8 sisters), not just over Galina", () => {
+  it("Nikolai/Nadezhda Kozlovsky's partnership is centered over the AVERAGE x of their full sibling row (Galina + all 8 sisters), not just over Galina", () => {
     // Same "parents centered over the full sibling row" rule as
     // Nikolai/Elizaveta over Viktor's four children: Kozlovsky now has NINE
     // children on this row (Galina + Nina/Marina/Tatyana/Vera/Lyubov/Olga/
-    // Raisa/Lyudmila), so their ideal center is the midpoint of the WHOLE
-    // row, not directly above Galina alone.
+    // Raisa/Lyudmila), so their ideal center is the MEAN of the whole row's
+    // x positions (preferredAncestorX's own definition), not directly above
+    // Galina alone. NOTE: this is the arithmetic mean, not (min+max)/2 — once
+    // Marina's own husband Viktor Ravbetsky is wedged in next to her, the
+    // gap between Nina and Marina is wider than the other uniform sibling
+    // gaps, so the mean and the midpoint of the row's visual span are no
+    // longer the same value; preferredAncestorX only ever computes the mean.
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
     const nadezhda = personById(result, "nadezhda-kozlovskaya");
     const sisterIds = [
       "galina-kupchik",
-      "nina-kozlovskaya",
-      "marina-kozlovskaya",
-      "tatyana-kozlovskaya",
-      "vera-kozlovskaya",
-      "lyubov-kozlovskaya",
-      "olga-kozlovskaya",
-      "raisa-kozlovskaya",
-      "lyudmila-kozlovskaya",
+      "nina-tikhonovich",
+      "marina-ravbetskaya",
+      "tatiana-naumovich",
+      "vera-artyukh",
+      "lyubov-baidovskaya",
+      "olga-stashevskaya",
+      "raisa-shlyazhko",
+      "lyudmila-redko",
     ];
     const sisterXs = sisterIds.map((id) => personById(result, id).x);
 
     const maternalCenterX = (nikolaiKozlovsky.x + nadezhda.x) / 2;
-    const siblingRowCenterX =
-      (Math.min(...sisterXs) + Math.max(...sisterXs)) / 2;
-    expect(maternalCenterX).toBeCloseTo(siblingRowCenterX, 5);
+    const siblingRowMeanX =
+      sisterXs.reduce((a, b) => a + b, 0) / sisterXs.length;
+    expect(maternalCenterX).toBeCloseTo(siblingRowMeanX, 5);
   });
 
   it("all of Galina's sisters are adjacent to each other in one continuous row, not scattered far away searching for free space near the origin", () => {
@@ -615,24 +620,77 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     const galina = personById(result, "galina-kupchik");
     const sisterIds = [
-      "nina-kozlovskaya",
-      "marina-kozlovskaya",
-      "tatyana-kozlovskaya",
-      "vera-kozlovskaya",
-      "lyubov-kozlovskaya",
-      "olga-kozlovskaya",
-      "raisa-kozlovskaya",
-      "lyudmila-kozlovskaya",
+      "nina-tikhonovich",
+      "marina-ravbetskaya",
+      "tatiana-naumovich",
+      "vera-artyukh",
+      "lyubov-baidovskaya",
+      "olga-stashevskaya",
+      "raisa-shlyazhko",
+      "lyudmila-redko",
     ];
     const sisters = sisterIds.map((id) => personById(result, id));
     for (const sister of sisters) {
       expect(sister.y).toBe(galina.y);
     }
-    // The whole row of 9 sisters (Galina + 8) spans at most
-    // 9 cards + 8 sibling gaps — nobody drifted off far past that.
+    // The whole row of 9 sisters (Galina + 8) plus Marina's own husband
+    // Viktor Ravbetsky (wedged in beside her, one extra card + spouse gap
+    // width) spans at most 9 cards + 8 sibling gaps + Viktor's own card and
+    // spouse gap — nobody drifted off far past that searching for space.
     const allXs = [galina.x, ...sisters.map((s) => s.x)];
     const spread = Math.max(...allXs) - Math.min(...allXs);
-    expect(spread).toBeLessThanOrEqual(9 * CARD_WIDTH + 8 * SIBLING_GAP + 1);
+    expect(spread).toBeLessThanOrEqual(
+      9 * CARD_WIDTH + 8 * SIBLING_GAP + CARD_WIDTH + SPOUSE_GAP + 1,
+    );
+  });
+
+  it("Marina's husband Viktor Ravbetsky (married in, no recorded blood parents of his own) is never treated as an independent ancestor unit (regression: a parentless in-law must not default to idealX=0 and get placed before his own wife's sibling row)", () => {
+    // Real bug: Viktor Ravbetsky has parentIds=[] (no ancestors of his own
+    // recorded in this data), so hasSiblingInGraph(viktor) was (correctly)
+    // false — but the exclusion filter's OTHER clause, !hasSiblingInGraph,
+    // then wrongly let him through as a standalone "ancestor unit" pulled
+    // toward idealX=0, placed by placeAncestorUnit BEFORE Marina's own
+    // placeUnplacedSiblings turn ever came. That planted him (and, via his
+    // couple-unit, Marina too) in the middle of Viktor Kupchik's own sibling
+    // cluster, on a totally different row segment than Galina's sisters.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const galina = personById(result, "galina-kupchik");
+    const nina = personById(result, "nina-tikhonovich");
+    const marina = personById(result, "marina-ravbetskaya");
+    const viktorRavbetsky = personById(result, "viktor-ravbetsky");
+    // Galina's sibling row runs Galina, Nina, [Viktor Ravbetsky, Marina], ...
+    // — all increasing in x, all on Galina's own row, none of them jumping
+    // over to Viktor Kupchik's side (which is at negative x, left of Galina).
+    expect(nina.x).toBeGreaterThan(galina.x);
+    expect(viktorRavbetsky.x).toBeGreaterThan(nina.x);
+    expect(marina.x).toBeGreaterThan(viktorRavbetsky.x);
+    expect(viktorRavbetsky.y).toBe(galina.y);
+  });
+
+  it("Marina and her husband Viktor Ravbetsky stay adjacent to each other (regression: a sibling-with-spouse wedged between two other blood siblings must reserve room for their own spouse, not just their own card)", () => {
+    // Real bug: placeUnplacedSiblings reserved only CARD_WIDTH for Marina's
+    // own slot between Nina and the rest of the row — when Marina's husband
+    // Viktor Ravbetsky (who must be leftPersonId — male < female — so he
+    // belongs on Marina's LEFT) then tried to grow into that slot via
+    // growPersonDescendants, he found Nina's own card already sitting there
+    // and searched thousands of px further out looking for free space,
+    // ending up on the opposite side of the whole tree from his own wife.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const marina = personById(result, "marina-ravbetskaya");
+    const viktorRavbetsky = personById(result, "viktor-ravbetsky");
+    expect(viktorRavbetsky.y).toBe(marina.y);
+    expect(viktorRavbetsky.x).toBeLessThan(marina.x);
+    expect(Math.abs(marina.x - viktorRavbetsky.x)).toBeLessThan(CARD_WIDTH * 3);
+  });
+
+  it("Marina's children Lyudmila and Vadim Ravbetsky are placed below Marina/Viktor Ravbetsky, with no overlaps", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const marina = personById(result, "marina-ravbetskaya");
+    const lyudmilaRavbetskaya = personById(result, "lyudmila-ravbetskaya");
+    const vadim = personById(result, "vadim-ravbetsky");
+    expect(lyudmilaRavbetskaya.y).toBeGreaterThan(marina.y);
+    expect(vadim.y).toBeGreaterThan(marina.y);
+    expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
   it("Viktor and Galina stay at the standard spouse gap, never stretched apart for their own grandparents' sake", () => {
