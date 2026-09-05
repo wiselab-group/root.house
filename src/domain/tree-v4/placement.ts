@@ -894,28 +894,35 @@ function placeUnplacedSiblings(
       const nearEdgeX = spouseTowardAnchor
         ? anchorX + side * (CARD_WIDTH + SIBLING_GAP + extraFarSideWidth)
         : anchorX + side * (CARD_WIDTH + SIBLING_GAP);
-      const unitCenterX = spouseTowardAnchor
+      // Only the width that actually sits on the near (anchor-facing) side
+      // needs checking against the blood-sibling gap — when the spouse is
+      // NOT toward anchor, that's just this sibling's own CARD_WIDTH (the
+      // spouse's extra width sits entirely on the far side and is checked
+      // separately, below); when the spouse IS toward anchor, the full
+      // unitWidth genuinely sits between the two blood siblings.
+      const nearSideWidth = spouseTowardAnchor ? unitWidth : CARD_WIDTH;
+      const nearSideCenterX = spouseTowardAnchor
         ? nearEdgeX - side * (extraFarSideWidth / 2)
-        : nearEdgeX + side * (extraFarSideWidth / 2);
-      return { nearEdgeX, unitCenterX };
+        : nearEdgeX;
+      return { nearEdgeX, nearSideWidth, nearSideCenterX, spouseTowardAnchor };
     };
 
     const leftCandidate = trySide(-1);
     const rightCandidate = trySide(1);
     const leftFree = !occupancy.intersects(
       {
-        x: leftCandidate.unitCenterX,
+        x: leftCandidate.nearSideCenterX,
         y,
-        width: unitWidth,
+        width: leftCandidate.nearSideWidth,
         height: CARD_HEIGHT,
       },
       SIBLING_GAP,
     );
     const rightFree = !occupancy.intersects(
       {
-        x: rightCandidate.unitCenterX,
+        x: rightCandidate.nearSideCenterX,
         y,
-        width: unitWidth,
+        width: rightCandidate.nearSideWidth,
         height: CARD_HEIGHT,
       },
       SIBLING_GAP,
@@ -935,37 +942,66 @@ function placeUnplacedSiblings(
     // (INTER_FAMILY_GAP, see placeAncestorUnit) inconsistently gives siblings
     // and their in-laws whatever gap the search happens to land on instead
     // of a fixed, predictable one.
+    //
+    // The search itself only needs to find room for the NEAR-SIDE width
+    // (this sibling's own card, or the full unit only when the spouse is
+    // unavoidably toward anchor) — never the whole unitWidth when the
+    // spouse sits on the far side, since the spouse never needs its own
+    // clearance from whatever blocked the naive slot (it's already farther
+    // away than this card is). Real bug: searching for the whole unit's
+    // width in one atomic block even when only the near side was blocked
+    // (checked with INTER_FAMILY_GAP on BOTH sides, including an already-
+    // empty far side) combined with findFreeInterval's coarse step size
+    // (proportional to the searched width) overshot far more than
+    // necessary — e.g. Natalya ended up 320px from Viktor Efimovich (her
+    // sister Svetlana's husband) instead of the correct 240px
+    // (CARD_WIDTH+INTER_FAMILY_GAP), because the search had to clear space
+    // for her own unplaced husband Vladimir Evtukh too, even though he
+    // sits well past Viktor Efimovich regardless of where exactly
+    // Natalya's own card lands.
     let resolvedX: number;
     if (leftFree) {
       resolvedX = leftCandidate.nearEdgeX;
     } else if (rightFree) {
       resolvedX = rightCandidate.nearEdgeX;
     } else {
-      const fallbackUnitCenterX =
+      const leftSearchResult = occupancy.findFreeInterval(
+        y,
+        CARD_HEIGHT,
+        leftCandidate.nearSideWidth,
+        INTER_FAMILY_GAP,
+        leftCandidate.nearSideCenterX,
+        3000,
+        -1,
+      );
+      // Track which SIDE's search actually succeeded — its own
+      // spouseTowardAnchor is what determines whether the found near-side-
+      // block center needs converting back to this sibling's own card
+      // position (offset by the spouse's half-width when the spouse was
+      // part of that block) or is already this card's own center. Real
+      // bug: using `leftCandidate.spouseTowardAnchor ||
+      // rightCandidate.spouseTowardAnchor` applied the OTHER (losing)
+      // side's flag regardless of which side's search actually won,
+      // wrongly offsetting an already-correct position and causing a real
+      // card overlap (Natalya × Viktor Efimovich).
+      const winner = leftSearchResult !== null ? leftCandidate : rightCandidate;
+      const fallbackNearSideCenterX =
+        leftSearchResult ??
         occupancy.findFreeInterval(
           y,
           CARD_HEIGHT,
-          unitWidth,
+          rightCandidate.nearSideWidth,
           INTER_FAMILY_GAP,
-          leftCandidate.unitCenterX,
-          3000,
-          -1,
-        ) ??
-        occupancy.findFreeInterval(
-          y,
-          CARD_HEIGHT,
-          unitWidth,
-          INTER_FAMILY_GAP,
-          rightCandidate.unitCenterX,
+          rightCandidate.nearSideCenterX,
           3000,
           1,
         ) ??
-        leftCandidate.unitCenterX;
-      resolvedX = spouseNotYetPlaced
+        leftCandidate.nearSideCenterX;
+      resolvedX = winner.spouseTowardAnchor
         ? spouseGoesOnLeft
-          ? fallbackUnitCenterX + CARD_WIDTH / 2 + SPOUSE_GAP / 2
-          : fallbackUnitCenterX - CARD_WIDTH / 2 - SPOUSE_GAP / 2
-        : fallbackUnitCenterX;
+          ? fallbackNearSideCenterX + CARD_WIDTH / 2 + SPOUSE_GAP / 2
+          : fallbackNearSideCenterX - CARD_WIDTH / 2 - SPOUSE_GAP / 2
+        : fallbackNearSideCenterX;
     }
 
     positionByPerson.set(childId, { x: resolvedX, y });

@@ -585,6 +585,29 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     expect(anastasiya.y).toBeGreaterThan(natalya.y);
   });
 
+  it("Natalya's own card stays close to (not thousands of px from) her sister Svetlana's husband Viktor Efimovich, at least INTER_FAMILY_GAP away with no overlap (regression: two unrelated in-laws sharing a row boundary)", () => {
+    // Real bug: Natalya (with her own unplaced husband Vladimir Evtukh, who
+    // must sit further left of her) needed her own card placed next to
+    // Svetlana, but Svetlana's OWN husband Viktor Efimovich already occupies
+    // that exact space. The fallback search previously tried to clear room
+    // for Natalya's WHOLE couple-unit (both her own card AND Vladimir
+    // Evtukh's, who doesn't actually need any clearance from Viktor
+    // Efimovich — he sits well past Natalya regardless) in one atomic
+    // block, overshooting far past what was needed. Fixed to search only
+    // for Natalya's own CARD_WIDTH against Viktor Efimovich, at
+    // INTER_FAMILY_GAP (the fixed gap between any two unrelated people
+    // sharing a row) — the exact value can be a little more than
+    // CARD_WIDTH+INTER_FAMILY_GAP due to the search's coarse step size, but
+    // must never be a different order of magnitude, and must never overlap.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const natalya = personById(result, "natalya-kupchik");
+    const viktorEfimovich = personById(result, "viktor-efimovich");
+    const gap = Math.abs(viktorEfimovich.x - natalya.x) - CARD_WIDTH;
+    expect(gap).toBeGreaterThanOrEqual(SIBLING_GAP);
+    expect(gap).toBeLessThan(SIBLING_GAP * 3);
+    expect(detectOverlaps(positionMap(result))).toEqual([]);
+  });
+
   it("Viktor Efimovich (Svetlana's husband) is left of Svetlana, and their children Olga/Yuriy are below them", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     const viktorEfimovich = personById(result, "viktor-efimovich");
