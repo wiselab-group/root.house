@@ -15,10 +15,14 @@ import type { FamilyGraph } from "./types";
  * Kozlovskaya, Vasily's own father Petr, Elizaveta Kozlovskaya's own
  * father Yakov — both SOLO parents, ids from tree-v2's fixture rather than
  * tree-v3's, since tree-v2 is the one that records this generation — and
- * Nikolai Kozlovsky's own brothers Yuzik/Daniil/Alexey, also from tree-v2)
- * plus Galina's sisters Nina/Marina/Tatyana/Vera/Lyubov/Olga/Raisa/
- * Lyudmila. This is the ONLY real data reused from the existing project
- * data (people/relationships, never layout code — tree-v2/tree-v3 remain
+ * Nikolai Kozlovsky's own brothers Yuzik/Daniil/Alexey, also from tree-v2,
+ * and Nadezhda Kozlovskaya's own parents Grigory Kolesnikovich and Agrafena
+ * — the id `agrafena-kolesnikovich` is reused from tree-v2, but she's given
+ * her maiden name "Струневская"/"Strunevskaya" here rather than her
+ * married name "Колесникович", per the user's explicit correction) plus
+ * Galina's sisters Nina/Marina/Tatyana/Vera/Lyubov/Olga/Raisa/Lyudmila.
+ * This is the ONLY real data reused from the existing project data
+ * (people/relationships, never layout code — tree-v2/tree-v3 remain
  * untouched and are not imported here); ids match the existing
  * tree-v2/tree-v3 fixtures so this stays the same canonical people, not new
  * synthetic stand-ins. Broader family/ancestor/divorce/remarriage scenarios
@@ -56,6 +60,8 @@ const elizavetaKozlovskayaId = "elizaveta-kozlovskaya";
 const petrKozlovskyId = "petr-kozlovsky";
 const yakovKozlovskyId = "yakov-kozlovsky";
 const nadezhdaId = "nadezhda-kozlovskaya";
+const grigoryKolesnikovichId = "grigory-kolesnikovich";
+const agrafenaId = "agrafena-kolesnikovich";
 const ninaId = "nina-kozlovskaya";
 const marinaId = "marina-kozlovskaya";
 const tatyanaId = "tatyana-kozlovskaya";
@@ -246,6 +252,18 @@ export const initialFamilyGraph: FamilyGraph = {
       id: nadezhdaId,
       firstName: "Надежда",
       lastName: "Козловская",
+      gender: "female",
+    },
+    {
+      id: grigoryKolesnikovichId,
+      firstName: "Григорий",
+      lastName: "Колесникович",
+      gender: "male",
+    },
+    {
+      id: agrafenaId,
+      firstName: "Аграфена",
+      lastName: "Струневская",
       gender: "female",
     },
     {
@@ -594,6 +612,25 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: nadezhdaId,
       to: galinaId,
+    },
+    {
+      id: "grigory-agrafena-kolesnikovich-spouse",
+      kind: "spouse",
+      from: grigoryKolesnikovichId,
+      to: agrafenaId,
+      status: "married",
+    },
+    {
+      id: "grigory-kolesnikovich-nadezhda-parent",
+      kind: "parent-child",
+      from: grigoryKolesnikovichId,
+      to: nadezhdaId,
+    },
+    {
+      id: "agrafena-kolesnikovich-nadezhda-parent",
+      kind: "parent-child",
+      from: agrafenaId,
+      to: nadezhdaId,
     },
     {
       id: "nikolai-kozlovsky-nina-parent",

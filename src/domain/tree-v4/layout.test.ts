@@ -28,10 +28,10 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Nikolai's brothers Yuzik/Daniil/Alexey + Vasily/Elizaveta Kozlovskaya + Petr (solo)/Yakov (solo) + Galina's 8 sisters minimal core)", () => {
+describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Nikolai's brothers Yuzik/Daniil/Alexey + Vasily/Elizaveta Kozlovskaya + Petr (solo)/Yakov (solo) + Grigory Kolesnikovich/Agrafena + Galina's 8 sisters minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    expect(result.persons).toHaveLength(39);
+    expect(result.persons).toHaveLength(41);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -361,6 +361,33 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     expect(yuzik.y).toBe(nikolaiKozlovsky.y);
     expect(daniil.y).toBe(nikolaiKozlovsky.y);
     expect(alexey.y).toBe(nikolaiKozlovsky.y);
+  });
+
+  it("Grigory Kolesnikovich and Agrafena (Nadezhda Kozlovskaya's own parents) are above her, at the same generation as Vasily/Elizaveta Kozlovskaya", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const nadezhda = personById(result, "nadezhda-kozlovskaya");
+    const grigoryKolesnikovich = personById(result, "grigory-kolesnikovich");
+    const agrafena = personById(result, "agrafena-kolesnikovich");
+    const vasily = personById(result, "vasily-kozlovsky");
+    expect(grigoryKolesnikovich.y).toBeLessThan(nadezhda.y);
+    expect(agrafena.y).toBeLessThan(nadezhda.y);
+    expect(grigoryKolesnikovich.y).toBe(vasily.y);
+  });
+
+  it("Grigory Kolesnikovich (husband) is left of Agrafena (wife)", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const grigoryKolesnikovich = personById(result, "grigory-kolesnikovich");
+    const agrafena = personById(result, "agrafena-kolesnikovich");
+    expect(grigoryKolesnikovich.x).toBeLessThan(agrafena.x);
+  });
+
+  it("Grigory Kolesnikovich and Agrafena's partnership is centered exactly above Nadezhda Kozlovskaya (their only recorded child in this graph)", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const nadezhda = personById(result, "nadezhda-kozlovskaya");
+    const grigoryKolesnikovich = personById(result, "grigory-kolesnikovich");
+    const agrafena = personById(result, "agrafena-kolesnikovich");
+    const centerX = (grigoryKolesnikovich.x + agrafena.x) / 2;
+    expect(centerX).toBeCloseTo(nadezhda.x, 5);
   });
 
   it("Petr (Vasily's father, recorded as a SOLO parent — no mother in this graph) is above Vasily, one generation further up", () => {
