@@ -19,8 +19,10 @@ import type { FamilyGraph } from "./types";
  * and Nadezhda Kozlovskaya's own parents Grigory Kolesnikovich and Agrafena
  * — the id `agrafena-kolesnikovich` is reused from tree-v2, but she's given
  * her maiden name "Струневская"/"Strunevskaya" here rather than her
- * married name "Колесникович", per the user's explicit correction) plus
- * Galina's sisters Nina/Marina/Tatyana/Vera/Lyubov/Olga/Raisa/Lyudmila.
+ * married name "Колесникович", per the user's explicit correction —
+ * plus Agrafena's own father Filipp Strunevsky, a SOLO parent, confirming
+ * the same maiden surname) plus Galina's sisters Nina/Marina/Tatyana/Vera/
+ * Lyubov/Olga/Raisa/Lyudmila.
  * This is the ONLY real data reused from the existing project data
  * (people/relationships, never layout code — tree-v2/tree-v3 remain
  * untouched and are not imported here); ids match the existing
@@ -62,6 +64,7 @@ const yakovKozlovskyId = "yakov-kozlovsky";
 const nadezhdaId = "nadezhda-kozlovskaya";
 const grigoryKolesnikovichId = "grigory-kolesnikovich";
 const agrafenaId = "agrafena-kolesnikovich";
+const filippStrunevskyId = "filipp-strunevsky";
 const ninaId = "nina-kozlovskaya";
 const marinaId = "marina-kozlovskaya";
 const tatyanaId = "tatyana-kozlovskaya";
@@ -265,6 +268,12 @@ export const initialFamilyGraph: FamilyGraph = {
       firstName: "Аграфена",
       lastName: "Струневская",
       gender: "female",
+    },
+    {
+      id: filippStrunevskyId,
+      firstName: "Филипп",
+      lastName: "Струневский",
+      gender: "male",
     },
     {
       id: ninaId,
@@ -631,6 +640,12 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: agrafenaId,
       to: nadezhdaId,
+    },
+    {
+      id: "filipp-strunevsky-agrafena-parent",
+      kind: "parent-child",
+      from: filippStrunevskyId,
+      to: agrafenaId,
     },
     {
       id: "nikolai-kozlovsky-nina-parent",

@@ -28,10 +28,10 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Nikolai's brothers Yuzik/Daniil/Alexey + Vasily/Elizaveta Kozlovskaya + Petr (solo)/Yakov (solo) + Grigory Kolesnikovich/Agrafena + Galina's 8 sisters minimal core)", () => {
+describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Nikolai's brothers Yuzik/Daniil/Alexey + Vasily/Elizaveta Kozlovskaya + Petr (solo)/Yakov (solo) + Grigory Kolesnikovich/Agrafena + Filipp (solo) + Galina's 8 sisters minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    expect(result.persons).toHaveLength(41);
+    expect(result.persons).toHaveLength(42);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -388,6 +388,18 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     const agrafena = personById(result, "agrafena-kolesnikovich");
     const centerX = (grigoryKolesnikovich.x + agrafena.x) / 2;
     expect(centerX).toBeCloseTo(nadezhda.x, 5);
+  });
+
+  it("Filipp (Agrafena's own father, a SOLO parent) is above her, one generation further up than Grigory Kolesnikovich/Agrafena", () => {
+    // Third SoloParent case with real data. Filipp's row (generation -4)
+    // also holds Petr and Yakov (Vasily/Elizaveta Kozlovskaya's own solo
+    // parents), but there's enough room here for Filipp to still center
+    // exactly above Agrafena without any symmetric-kink shortfall.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const agrafena = personById(result, "agrafena-kolesnikovich");
+    const filipp = personById(result, "filipp-strunevsky");
+    expect(filipp.y).toBeLessThan(agrafena.y);
+    expect(filipp.x).toBeCloseTo(agrafena.x, 5);
   });
 
   it("Petr (Vasily's father, recorded as a SOLO parent — no mother in this graph) is above Vasily, one generation further up", () => {
