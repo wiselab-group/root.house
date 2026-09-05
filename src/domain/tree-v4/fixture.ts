@@ -10,7 +10,10 @@ import type { FamilyGraph } from "./types";
  * parents Vladimir and Marfa, Vladimir's own father Yustin (a SOLO parent —
  * no recorded mother/spouse for Yustin in this data, exercising the
  * SoloParent path with real data), Elizaveta's own parents Grigory and
- * Elizaveta Krivusha, and Galina's own parents Nikolai and Nadezhda
+ * Elizaveta Krivusha, plus Elizaveta's own sister Elena Ushkar (canonical
+ * from tree-v2, another daughter of Grigory and Elizaveta Krivusha) and
+ * Elena's own husband Nikolai Ushkar (also canonical), and Galina's own
+ * parents Nikolai and Nadezhda
  * Kozlovsky (Nikolai Kozlovsky's own parents Vasily and Elizaveta
  * Kozlovskaya, Vasily's own father Petr, Elizaveta Kozlovskaya's own
  * father Yakov — both SOLO parents, ids from tree-v2's fixture rather than
@@ -68,6 +71,8 @@ const marfaId = "marfa-kupchik";
 const yustinId = "yustin-kupchik";
 const grigoryKrivushaId = "grigory-krivusha";
 const elizavetaKrivushaId = "elizaveta-krivusha";
+const elenaUshkarId = "elena-ushkar";
+const nikolaiUshkarId = "nikolai-ushkar";
 const nikolaiKozlovskyId = "nikolai-kozlovsky";
 const yuzikKozlovskyId = "yuzik-kozlovsky";
 const daniilKozlovskyId = "daniil-kozlovsky";
@@ -230,6 +235,18 @@ export const initialFamilyGraph: FamilyGraph = {
       firstName: "Елизавета",
       lastName: "Кривуша",
       gender: "female",
+    },
+    {
+      id: elenaUshkarId,
+      firstName: "Елена",
+      lastName: "Ушкар",
+      gender: "female",
+    },
+    {
+      id: nikolaiUshkarId,
+      firstName: "Николай",
+      lastName: "Ушкар",
+      gender: "male",
     },
     {
       id: nikolaiKozlovskyId,
@@ -641,6 +658,25 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: elizavetaKrivushaId,
       to: elizavetaId,
+    },
+    {
+      id: "grigory-krivusha-elena-ushkar-parent",
+      kind: "parent-child",
+      from: grigoryKrivushaId,
+      to: elenaUshkarId,
+    },
+    {
+      id: "elizaveta-krivusha-elena-ushkar-parent",
+      kind: "parent-child",
+      from: elizavetaKrivushaId,
+      to: elenaUshkarId,
+    },
+    {
+      id: "nikolai-ushkar-elena-ushkar-spouse",
+      kind: "spouse",
+      from: nikolaiUshkarId,
+      to: elenaUshkarId,
+      status: "married",
     },
     {
       id: "vasily-elizaveta-kozlovskaya-spouse",

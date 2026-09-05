@@ -28,10 +28,10 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Nikolai's brothers Yuzik/Daniil/Alexey + Vasily/Elizaveta Kozlovskaya + Petr (solo)/Yakov (solo) + Grigory Kolesnikovich/Agrafena + Filipp (solo) + Nadezhda's brothers Nikolai/Alexey/Pavel/Grigory Jr. Kolesnikovich + Galina's 8 sisters (own married surnames) + Galina's sisters' own husbands (Viktor Ravbetsky/Alexey Naumovich/Vladimir Artyukh/Vladimir Baidovsky/Alexander Stashevsky/Sergey Shlyazhko/Oleg Redko) + Marina's children Lyudmila+Vadim minimal core)", () => {
+describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Elizaveta's sister Elena Ushkar/Nikolai Ushkar + Nikolai/Nadezhda Kozlovsky + Nikolai's brothers Yuzik/Daniil/Alexey + Vasily/Elizaveta Kozlovskaya + Petr (solo)/Yakov (solo) + Grigory Kolesnikovich/Agrafena + Filipp (solo) + Nadezhda's brothers Nikolai/Alexey/Pavel/Grigory Jr. Kolesnikovich + Galina's 8 sisters (own married surnames) + Galina's sisters' own husbands (Viktor Ravbetsky/Alexey Naumovich/Vladimir Artyukh/Vladimir Baidovsky/Alexander Stashevsky/Sergey Shlyazhko/Oleg Redko) + Marina's children Lyudmila+Vadim minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    expect(result.persons).toHaveLength(55);
+    expect(result.persons).toHaveLength(57);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -220,19 +220,27 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     expect(vladimir.x).toBeLessThan(marfa.x);
   });
 
-  it("Vladimir/Marfa and Grigory/Elizaveta Krivusha (both Nikolai Kupchik Sr.'s side, one generation further up) are pulled off-center from their own children by equal, opposite amounts (symmetric kink, not one-straight-one-kinked)", () => {
-    // Vladimir/Marfa (pulled toward Nikolai) and Grigory/Elizaveta Krivusha
-    // (pulled toward Elizaveta, Nikolai's wife) are BOTH labeled "paternal"
-    // branch here — they're two independent couples that happen to land on
-    // the same generation row, one generation above Nikolai/Elizaveta. Same
-    // situation as Nikolai/Elizaveta Kupchik vs Nikolai/Nadezhda Kozlovsky:
-    // Nikolai and Elizaveta stay at the standard SPOUSE_GAP, so their two
-    // respective parent couples can't both center exactly above their own
-    // child without overlapping. The shortfall is split evenly rather than
-    // one couple keeping a perfect center while the other absorbs it all.
+  it("Vladimir/Marfa and Grigory/Elizaveta Krivusha (both Nikolai Kupchik Sr.'s side, one generation further up) are pulled off-center from their own children's midpoint by equal, opposite amounts (symmetric kink, not one-straight-one-kinked)", () => {
+    // Vladimir/Marfa (pulled toward their only child Nikolai) and Grigory/
+    // Elizaveta Krivusha (pulled toward the MIDPOINT of their two children —
+    // Elizaveta Kupchik and her sister Elena Ushkar) are BOTH labeled
+    // "paternal" branch here — they're two independent couples that happen
+    // to land on the same generation row, one generation above Nikolai/
+    // Elizaveta. Same situation as Nikolai/Elizaveta Kupchik vs Nikolai/
+    // Nadezhda Kozlovsky: Nikolai and Elizaveta stay at the standard
+    // SPOUSE_GAP, so their two respective parent couples can't both center
+    // exactly above their own ideal pull without overlapping. The shortfall
+    // is split evenly rather than one couple keeping a perfect center while
+    // the other absorbs it all. Reference point for Krivusha's ideal pull
+    // MUST be its own children's midpoint (Elizaveta+Elena), not Elizaveta
+    // Kupchik's position alone — once Elena existed as a second recorded
+    // child, comparing against Elizaveta alone made this look like an
+    // asymmetric kink when the actual underlying idealX-collision-driven
+    // shift was still perfectly symmetric.
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     const nikolai = personById(result, "nikolai-kupchik");
     const elizaveta = personById(result, "elizaveta-kupchik");
+    const elena = personById(result, "elena-ushkar");
     const vladimir = personById(result, "vladimir-kupchik");
     const marfa = personById(result, "marfa-kupchik");
     const grigory = personById(result, "grigory-krivusha");
@@ -240,8 +248,9 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
 
     const vladimirMarfaCenterX = (vladimir.x + marfa.x) / 2;
     const krivushaCenterX = (grigory.x + elizavetaKrivusha.x) / 2;
+    const krivushaChildrenMidpointX = (elizaveta.x + elena.x) / 2;
     const vladimirMarfaOffset = vladimirMarfaCenterX - nikolai.x;
-    const krivushaOffset = krivushaCenterX - elizaveta.x;
+    const krivushaOffset = krivushaCenterX - krivushaChildrenMidpointX;
 
     expect(Math.abs(vladimirMarfaOffset)).toBeGreaterThan(1);
     expect(Math.abs(krivushaOffset)).toBeGreaterThan(1);
@@ -536,6 +545,32 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     );
   });
 
+  it("Elizaveta Kupchik's blood-sibling gap from her sister Elena Ushkar widens by the exact same formula, at the same generation as Vladimir/Marfa's own row (regression: same spouse-toward-anchor widening one level further up the tree)", () => {
+    // Elena Ushkar (Elizaveta Kupchik's full sister, another daughter of
+    // Grigory/Elizaveta Krivusha) has her own husband Nikolai Ushkar, who
+    // must be leftPersonId (male < female) — same shape as Marina/Viktor
+    // Ravbetsky above, one generation further up (Krivusha's own children
+    // row instead of Galina's sisters' row). Nikolai Ushkar unavoidably
+    // lands BETWEEN Elizaveta and Elena, so the blood gap must widen by
+    // exactly CARD_WIDTH+SPOUSE_GAP over the plain CARD_WIDTH+SIBLING_GAP —
+    // not merely "wider than usual" (a loose bound would silently accept a
+    // further regression), but the EXACT extra width Nikolai Ushkar's own
+    // card + spouse gap require.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const elizaveta = personById(result, "elizaveta-kupchik");
+    const elena = personById(result, "elena-ushkar");
+    const nikolaiUshkar = personById(result, "nikolai-ushkar");
+    expect(nikolaiUshkar.x).toBeGreaterThan(elizaveta.x);
+    expect(nikolaiUshkar.x).toBeLessThan(elena.x);
+    const elizavetaElenaGap = elena.x - elizaveta.x;
+    expect(elizavetaElenaGap).toBeCloseTo(
+      CARD_WIDTH + SIBLING_GAP + (CARD_WIDTH + SPOUSE_GAP),
+      5,
+    );
+    const nikolaiUshkarElenaGap = elena.x - nikolaiUshkar.x;
+    expect(nikolaiUshkarElenaGap).toBeCloseTo(CARD_WIDTH + SPOUSE_GAP, 5);
+  });
+
   it("EVERY married couple in this real dataset sits at the EXACT SAME standard spouse gap (CARD_WIDTH+SPOUSE_GAP=208px), regardless of which code path placed them (regression: three different paths gave three different gaps — 192/208/236px)", () => {
     // Real bug, caught by the user comparing pairs across the tree: couples
     // placed via placeAncestorUnit (e.g. Viktor/Galina) got 208px — correct.
@@ -559,6 +594,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
       ["vladimir-evtukh", "natalya-kupchik"],
       ["viktor-efimovich", "svetlana-kupchik"],
       ["viktor-ravbetsky", "marina-ravbetskaya"],
+      ["nikolai-ushkar", "elena-ushkar"],
       ["alexey-naumovich", "tatiana-naumovich"],
       ["vladimir-artyukh", "vera-artyukh"],
       ["vladimir-baidovsky", "lyubov-baidovskaya"],
