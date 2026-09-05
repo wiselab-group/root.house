@@ -536,6 +536,43 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     );
   });
 
+  it("EVERY married couple in this real dataset sits at the EXACT SAME standard spouse gap (CARD_WIDTH+SPOUSE_GAP=208px), regardless of which code path placed them (regression: three different paths gave three different gaps — 192/208/236px)", () => {
+    // Real bug, caught by the user comparing pairs across the tree: couples
+    // placed via placeAncestorUnit (e.g. Viktor/Galina) got 208px — correct.
+    // Couples grown via growPersonDescendants (e.g. Vladimir Evtukh/Natalya,
+    // Viktor Efimovich/Svetlana) got 236px — that function's own
+    // preferredSpouseX formula wrongly halved SPOUSE_GAP (personX +
+    // CARD_WIDTH/2 + SPOUSE_GAP/2 + CARD_WIDTH/2 = only +192, not +208),
+    // AND its collision search used REMARRIAGE_GAP (56px) instead of
+    // SPOUSE_GAP (32px) as the buffer, which — checked on BOTH sides of the
+    // candidate, including the side facing the very card this spouse is
+    // meant to sit immediately beside — falsely detected a "collision"
+    // against that person's own reservation and pushed the search further
+    // out, landing at 236px instead of 208px. Couples placed via the newer
+    // placeUnplacedSiblings spouse-reservation path (e.g. Marina/Viktor
+    // Ravbetsky) got 192px from the same halved-SPOUSE_GAP formula (that
+    // path's fallback branch, reused from the same buggy pattern). All
+    // three are now fixed to the same 208px.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const pairs: [string, string][] = [
+      ["viktor-kupchik", "galina-kupchik"],
+      ["vladimir-evtukh", "natalya-kupchik"],
+      ["viktor-efimovich", "svetlana-kupchik"],
+      ["viktor-ravbetsky", "marina-ravbetskaya"],
+      ["alexey-naumovich", "tatiana-naumovich"],
+      ["vladimir-artyukh", "vera-artyukh"],
+      ["vladimir-baidovsky", "lyubov-baidovskaya"],
+      ["alexander-stashevsky", "olga-stashevskaya"],
+      ["sergey-shlyazhko", "raisa-shlyazhko"],
+      ["oleg-redko", "lyudmila-redko"],
+    ];
+    for (const [husbandId, wifeId] of pairs) {
+      const husband = personById(result, husbandId);
+      const wife = personById(result, wifeId);
+      expect(wife.x - husband.x).toBeCloseTo(CARD_WIDTH + SPOUSE_GAP, 5);
+    }
+  });
+
   it("Vladimir Evtukh (Natalya's husband) is left of Natalya, and their children Egor/Anastasiya are below them", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     const vladimirEvtukh = personById(result, "vladimir-evtukh");

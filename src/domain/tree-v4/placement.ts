@@ -921,6 +921,20 @@ function placeUnplacedSiblings(
       SIBLING_GAP,
     );
 
+    // When the immediately-adjacent slot at SIBLING_GAP is NOT free, the
+    // thing blocking it is never another blood sibling of this row (blood
+    // siblings are always placed adjacent-first, one at a time, so nothing
+    // else could already occupy that exact space) — it is always an
+    // unrelated in-law, most commonly the PREVIOUS sibling's own spouse
+    // (e.g. Natalya's naive slot next to Svetlana lands on top of Svetlana's
+    // husband Viktor Efimovich instead). That boundary is between two people
+    // with no blood relation to each other at all, so it must keep
+    // INTER_FAMILY_GAP, not the tighter SIBLING_GAP, once a fallback search
+    // is needed — otherwise the same collision-avoidance search that
+    // legitimately treats two unrelated ancestor couples on a row
+    // (INTER_FAMILY_GAP, see placeAncestorUnit) inconsistently gives siblings
+    // and their in-laws whatever gap the search happens to land on instead
+    // of a fixed, predictable one.
     let resolvedX: number;
     if (leftFree) {
       resolvedX = leftCandidate.nearEdgeX;
@@ -932,7 +946,7 @@ function placeUnplacedSiblings(
           y,
           CARD_HEIGHT,
           unitWidth,
-          SIBLING_GAP,
+          INTER_FAMILY_GAP,
           leftCandidate.unitCenterX,
           3000,
           -1,
@@ -941,7 +955,7 @@ function placeUnplacedSiblings(
           y,
           CARD_HEIGHT,
           unitWidth,
-          SIBLING_GAP,
+          INTER_FAMILY_GAP,
           rightCandidate.unitCenterX,
           3000,
           1,
@@ -1012,16 +1026,37 @@ function growPersonDescendants(
       : partnership.leftPersonId;
     if (positionByPerson.has(spouseId)) continue; // spouse placed elsewhere — avoid double placement
 
+    // personX is one spouse's OWN already-fixed position (not a shared
+    // midpoint), so the full CARD_WIDTH+SPOUSE_GAP must be added here, not
+    // halved — halving it (the old, buggy formula) understated the gap by
+    // SPOUSE_GAP/2, giving every couple placed through this path (e.g.
+    // Viktor Efimovich/Svetlana, Vladimir Evtukh/Natalya) a smaller
+    // spouse-to-spouse distance (192px) than couples placed via
+    // placeAncestorUnit (208px, correct: CARD_WIDTH+SPOUSE_GAP) — an
+    // inconsistency the user caught by comparing gaps across pairs.
     const preferredSpouseX = isLeft
-      ? personX + CARD_WIDTH / 2 + SPOUSE_GAP / 2 + CARD_WIDTH / 2
-      : personX - CARD_WIDTH / 2 - SPOUSE_GAP / 2 - CARD_WIDTH / 2;
+      ? personX + CARD_WIDTH + SPOUSE_GAP
+      : personX - CARD_WIDTH - SPOUSE_GAP;
     const direction = isLeft ? 1 : -1;
+    // The gap passed to findFreeInterval is checked on BOTH sides of the
+    // candidate — including the side facing personX's own card, which the
+    // spouse is deliberately placed immediately next to. REMARRIAGE_GAP
+    // (56px) used here was a second, compounding bug: at the preferred
+    // (correct, offset=0) candidate, that buffer reaches back far enough to
+    // overlap personX's own already-reserved card, so intersects() reports
+    // a false collision against the very person this spouse is being
+    // placed beside — the search then steps outward, landing the couple
+    // 236px apart instead of the correct 208px. SPOUSE_GAP (32px) is the
+    // right buffer here: this call is placing THIS partnership's own
+    // immediate spouse (remarriage's second-partnership case is handled
+    // separately, by growSpouseOwnPartnerships, which legitimately does
+    // need REMARRIAGE_GAP against a DIFFERENT, unrelated ex-partner).
     const spouseX =
       occupancy.findFreeInterval(
         y,
         CARD_HEIGHT,
         CARD_WIDTH,
-        REMARRIAGE_GAP,
+        SPOUSE_GAP,
         preferredSpouseX,
         2000,
         direction,
