@@ -21,8 +21,9 @@ import type { FamilyGraph } from "./types";
  * her maiden name "Струневская"/"Strunevskaya" here rather than her
  * married name "Колесникович", per the user's explicit correction —
  * plus Agrafena's own father Filipp Strunevsky, a SOLO parent, confirming
- * the same maiden surname) plus Galina's sisters Nina/Marina/Tatyana/Vera/
- * Lyubov/Olga/Raisa/Lyudmila.
+ * the same maiden surname, and Nadezhda Kozlovskaya's own siblings Nikolai/
+ * Alexey/Pavel/Grigory Jr. Kolesnikovich) plus Galina's sisters Nina/Marina/
+ * Tatyana/Vera/Lyubov/Olga/Raisa/Lyudmila.
  * This is the ONLY real data reused from the existing project data
  * (people/relationships, never layout code — tree-v2/tree-v3 remain
  * untouched and are not imported here); ids match the existing
@@ -65,6 +66,10 @@ const nadezhdaId = "nadezhda-kozlovskaya";
 const grigoryKolesnikovichId = "grigory-kolesnikovich";
 const agrafenaId = "agrafena-kolesnikovich";
 const filippStrunevskyId = "filipp-strunevsky";
+const nikolaiKolesnikovichId = "nikolai-kolesnikovich";
+const alexeyKolesnikovichId = "alexey-kolesnikovich";
+const pavelKolesnikovichId = "pavel-kolesnikovich";
+const grigoryKolesnikovichJrId = "grigory-kolesnikovich-jr";
 const ninaId = "nina-kozlovskaya";
 const marinaId = "marina-kozlovskaya";
 const tatyanaId = "tatyana-kozlovskaya";
@@ -273,6 +278,30 @@ export const initialFamilyGraph: FamilyGraph = {
       id: filippStrunevskyId,
       firstName: "Филипп",
       lastName: "Струневский",
+      gender: "male",
+    },
+    {
+      id: nikolaiKolesnikovichId,
+      firstName: "Николай",
+      lastName: "Колесникович",
+      gender: "male",
+    },
+    {
+      id: alexeyKolesnikovichId,
+      firstName: "Алексей",
+      lastName: "Колесникович",
+      gender: "male",
+    },
+    {
+      id: pavelKolesnikovichId,
+      firstName: "Павел",
+      lastName: "Колесникович",
+      gender: "male",
+    },
+    {
+      id: grigoryKolesnikovichJrId,
+      firstName: "Григорий",
+      lastName: "Колесникович",
       gender: "male",
     },
     {
@@ -646,6 +675,54 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: filippStrunevskyId,
       to: agrafenaId,
+    },
+    {
+      id: "grigory-kolesnikovich-nikolai-parent",
+      kind: "parent-child",
+      from: grigoryKolesnikovichId,
+      to: nikolaiKolesnikovichId,
+    },
+    {
+      id: "agrafena-kolesnikovich-nikolai-parent",
+      kind: "parent-child",
+      from: agrafenaId,
+      to: nikolaiKolesnikovichId,
+    },
+    {
+      id: "grigory-kolesnikovich-alexey-parent",
+      kind: "parent-child",
+      from: grigoryKolesnikovichId,
+      to: alexeyKolesnikovichId,
+    },
+    {
+      id: "agrafena-kolesnikovich-alexey-parent",
+      kind: "parent-child",
+      from: agrafenaId,
+      to: alexeyKolesnikovichId,
+    },
+    {
+      id: "grigory-kolesnikovich-pavel-parent",
+      kind: "parent-child",
+      from: grigoryKolesnikovichId,
+      to: pavelKolesnikovichId,
+    },
+    {
+      id: "agrafena-kolesnikovich-pavel-parent",
+      kind: "parent-child",
+      from: agrafenaId,
+      to: pavelKolesnikovichId,
+    },
+    {
+      id: "grigory-kolesnikovich-grigory-jr-parent",
+      kind: "parent-child",
+      from: grigoryKolesnikovichId,
+      to: grigoryKolesnikovichJrId,
+    },
+    {
+      id: "agrafena-kolesnikovich-grigory-jr-parent",
+      kind: "parent-child",
+      from: agrafenaId,
+      to: grigoryKolesnikovichJrId,
     },
     {
       id: "nikolai-kozlovsky-nina-parent",
