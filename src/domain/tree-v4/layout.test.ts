@@ -28,10 +28,10 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Vasily/Elizaveta Kozlovskaya + Petr (solo)/Yakov (solo) + Galina's 8 sisters minimal core)", () => {
+describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Nikolai's brothers Yuzik/Daniil/Alexey + Vasily/Elizaveta Kozlovskaya + Petr (solo)/Yakov (solo) + Galina's 8 sisters minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    expect(result.persons).toHaveLength(36);
+    expect(result.persons).toHaveLength(39);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -326,13 +326,41 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     expect(vasily.x).toBeLessThan(elizavetaKozlovskaya.x);
   });
 
-  it("Vasily and Elizaveta Kozlovskaya's partnership is centered exactly above Nikolai Kozlovsky (their only recorded child in this graph)", () => {
+  it("Vasily and Elizaveta Kozlovskaya's partnership is centered over their FULL sibling row (Nikolai Kozlovsky + Yuzik + Daniil + Alexey), not just over Nikolai Kozlovsky", () => {
+    // Same "parents centered over the full sibling row" rule seen with
+    // Viktor/Galina over Alexander+Daria and Nikolai/Elizaveta Kupchik over
+    // Viktor's four children: Vasily and Elizaveta Kozlovskaya now have
+    // FOUR children on this row (Nikolai Kozlovsky + his three brothers),
+    // so their ideal center is pulled from all four children's x, not
+    // directly above Nikolai Kozlovsky alone.
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
     const vasily = personById(result, "vasily-kozlovsky");
     const elizavetaKozlovskaya = personById(result, "elizaveta-kozlovskaya");
+    const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
+    const yuzik = personById(result, "yuzik-kozlovsky");
+    const daniil = personById(result, "daniil-kozlovsky");
+    const alexey = personById(result, "alexey-kozlovsky");
+
     const centerX = (vasily.x + elizavetaKozlovskaya.x) / 2;
-    expect(centerX).toBeCloseTo(nikolaiKozlovsky.x, 5);
+    const siblingXs = [nikolaiKozlovsky.x, yuzik.x, daniil.x, alexey.x];
+    const siblingRowCenterX =
+      (Math.min(...siblingXs) + Math.max(...siblingXs)) / 2;
+    expect(Math.abs(centerX - siblingRowCenterX)).toBeLessThan(CARD_WIDTH);
+  });
+
+  it("Yuzik, Daniil, and Alexey (Nikolai Kozlovsky's full brothers) are adjacent to him, not scattered far away searching for free space near the origin", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
+    const yuzik = personById(result, "yuzik-kozlovsky");
+    const daniil = personById(result, "daniil-kozlovsky");
+    const alexey = personById(result, "alexey-kozlovsky");
+    const siblingXs = [yuzik.x, daniil.x, alexey.x];
+    for (const x of siblingXs) {
+      expect(Math.abs(x - nikolaiKozlovsky.x)).toBeLessThan(CARD_WIDTH * 7);
+    }
+    expect(yuzik.y).toBe(nikolaiKozlovsky.y);
+    expect(daniil.y).toBe(nikolaiKozlovsky.y);
+    expect(alexey.y).toBe(nikolaiKozlovsky.y);
   });
 
   it("Petr (Vasily's father, recorded as a SOLO parent — no mother in this graph) is above Vasily, one generation further up", () => {

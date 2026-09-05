@@ -12,12 +12,13 @@ import type { FamilyGraph } from "./types";
  * SoloParent path with real data), Elizaveta's own parents Grigory and
  * Elizaveta Krivusha, and Galina's own parents Nikolai and Nadezhda
  * Kozlovsky (Nikolai Kozlovsky's own parents Vasily and Elizaveta
- * Kozlovskaya, Vasily's own father Petr, and Elizaveta Kozlovskaya's own
+ * Kozlovskaya, Vasily's own father Petr, Elizaveta Kozlovskaya's own
  * father Yakov — both SOLO parents, ids from tree-v2's fixture rather than
- * tree-v3's, since tree-v2 is the one that records this generation) plus
- * Galina's sisters Nina/Marina/Tatyana/Vera/Lyubov/Olga/Raisa/Lyudmila.
- * This is the ONLY real data reused from the existing project data
- * (people/relationships, never layout code — tree-v2/tree-v3 remain
+ * tree-v3's, since tree-v2 is the one that records this generation — and
+ * Nikolai Kozlovsky's own brothers Yuzik/Daniil/Alexey, also from tree-v2)
+ * plus Galina's sisters Nina/Marina/Tatyana/Vera/Lyubov/Olga/Raisa/
+ * Lyudmila. This is the ONLY real data reused from the existing project
+ * data (people/relationships, never layout code — tree-v2/tree-v3 remain
  * untouched and are not imported here); ids match the existing
  * tree-v2/tree-v3 fixtures so this stays the same canonical people, not new
  * synthetic stand-ins. Broader family/ancestor/divorce/remarriage scenarios
@@ -47,6 +48,9 @@ const yustinId = "yustin-kupchik";
 const grigoryKrivushaId = "grigory-krivusha";
 const elizavetaKrivushaId = "elizaveta-krivusha";
 const nikolaiKozlovskyId = "nikolai-kozlovsky";
+const yuzikKozlovskyId = "yuzik-kozlovsky";
+const daniilKozlovskyId = "daniil-kozlovsky";
+const alexeyKozlovskyId = "alexey-kozlovsky";
 const vasilyKozlovskyId = "vasily-kozlovsky";
 const elizavetaKozlovskayaId = "elizaveta-kozlovskaya";
 const petrKozlovskyId = "petr-kozlovsky";
@@ -193,6 +197,24 @@ export const initialFamilyGraph: FamilyGraph = {
     {
       id: nikolaiKozlovskyId,
       firstName: "Николай",
+      lastName: "Козловский",
+      gender: "male",
+    },
+    {
+      id: yuzikKozlovskyId,
+      firstName: "Юзик",
+      lastName: "Козловский",
+      gender: "male",
+    },
+    {
+      id: daniilKozlovskyId,
+      firstName: "Даниил",
+      lastName: "Козловский",
+      gender: "male",
+    },
+    {
+      id: alexeyKozlovskyId,
+      firstName: "Алексей",
       lastName: "Козловский",
       gender: "male",
     },
@@ -505,6 +527,42 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: elizavetaKozlovskayaId,
       to: nikolaiKozlovskyId,
+    },
+    {
+      id: "vasily-yuzik-parent",
+      kind: "parent-child",
+      from: vasilyKozlovskyId,
+      to: yuzikKozlovskyId,
+    },
+    {
+      id: "elizaveta-kozlovskaya-yuzik-parent",
+      kind: "parent-child",
+      from: elizavetaKozlovskayaId,
+      to: yuzikKozlovskyId,
+    },
+    {
+      id: "vasily-daniil-parent",
+      kind: "parent-child",
+      from: vasilyKozlovskyId,
+      to: daniilKozlovskyId,
+    },
+    {
+      id: "elizaveta-kozlovskaya-daniil-parent",
+      kind: "parent-child",
+      from: elizavetaKozlovskayaId,
+      to: daniilKozlovskyId,
+    },
+    {
+      id: "vasily-alexey-parent",
+      kind: "parent-child",
+      from: vasilyKozlovskyId,
+      to: alexeyKozlovskyId,
+    },
+    {
+      id: "elizaveta-kozlovskaya-alexey-parent",
+      kind: "parent-child",
+      from: elizavetaKozlovskayaId,
+      to: alexeyKozlovskyId,
     },
     {
       id: "petr-kozlovsky-vasily-parent",
