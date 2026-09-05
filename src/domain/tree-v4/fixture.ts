@@ -5,9 +5,10 @@ import type { FamilyGraph } from "./types";
  * (his wife), Eva (their daughter), Alexander's parents Viktor and Galina,
  * his sister Daria, Viktor's own parents Nikolai and Elizaveta plus Viktor's
  * siblings Nikolai Jr./Svetlana/Natalya, Natalya's own husband Vladimir
- * Evtukh and their children Egor/Anastasiya, Nikolai (Sr.)'s own parents
- * Vladimir and Marfa, Vladimir's own father Yustin (a SOLO parent — no
- * recorded mother/spouse for Yustin in this data, exercising the
+ * Evtukh and their children Egor/Anastasiya, Svetlana's own husband Viktor
+ * Efimovich and their children Olga/Yuriy Efimovich, Nikolai (Sr.)'s own
+ * parents Vladimir and Marfa, Vladimir's own father Yustin (a SOLO parent —
+ * no recorded mother/spouse for Yustin in this data, exercising the
  * SoloParent path with real data), Elizaveta's own parents Grigory and
  * Elizaveta Krivusha, and Galina's own parents Nikolai and Nadezhda
  * Kozlovsky plus Galina's sisters Nina/Marina/Tatyana/Vera/Lyubov/Olga/
@@ -33,6 +34,9 @@ const natalyaId = "natalya-kupchik";
 const vladimirEvtukhId = "vladimir-evtukh";
 const egorEvtukhId = "egor-evtukh";
 const anastasiyaEvtukhId = "anastasiya-evtukh";
+const viktorEfimovichId = "viktor-efimovich";
+const olgaEfimovichId = "olga-efimovich";
+const yuriyEfimovichId = "yuriy-efimovich";
 const vladimirId = "vladimir-kupchik";
 const marfaId = "marfa-kupchik";
 const yustinId = "yustin-kupchik";
@@ -129,6 +133,24 @@ export const initialFamilyGraph: FamilyGraph = {
       firstName: "Анастасия",
       lastName: "Евтух",
       gender: "female",
+    },
+    {
+      id: viktorEfimovichId,
+      firstName: "Виктор",
+      lastName: "Ефимович",
+      gender: "male",
+    },
+    {
+      id: olgaEfimovichId,
+      firstName: "Ольга",
+      lastName: "Ефимович",
+      gender: "female",
+    },
+    {
+      id: yuriyEfimovichId,
+      firstName: "Юрий",
+      lastName: "Ефимович",
+      gender: "male",
     },
     {
       id: vladimirId,
@@ -357,6 +379,37 @@ export const initialFamilyGraph: FamilyGraph = {
       kind: "parent-child",
       from: natalyaId,
       to: anastasiyaEvtukhId,
+    },
+    {
+      id: "svetlana-viktor-efimovich-spouse",
+      kind: "spouse",
+      from: viktorEfimovichId,
+      to: svetlanaId,
+      status: "married",
+    },
+    {
+      id: "viktor-efimovich-olga-parent",
+      kind: "parent-child",
+      from: viktorEfimovichId,
+      to: olgaEfimovichId,
+    },
+    {
+      id: "svetlana-olga-parent",
+      kind: "parent-child",
+      from: svetlanaId,
+      to: olgaEfimovichId,
+    },
+    {
+      id: "viktor-efimovich-yuriy-parent",
+      kind: "parent-child",
+      from: viktorEfimovichId,
+      to: yuriyEfimovichId,
+    },
+    {
+      id: "svetlana-yuriy-parent",
+      kind: "parent-child",
+      from: svetlanaId,
+      to: yuriyEfimovichId,
     },
     {
       id: "vladimir-marfa-spouse",

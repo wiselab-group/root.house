@@ -28,10 +28,10 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Galina's 8 sisters minimal core)", () => {
+describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Nikolai/Nadezhda Kozlovsky + Galina's 8 sisters minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    expect(result.persons).toHaveLength(29);
+    expect(result.persons).toHaveLength(32);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -347,6 +347,40 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     expect(vladimirEvtukh.y).toBe(natalya.y);
     expect(egor.y).toBeGreaterThan(natalya.y);
     expect(anastasiya.y).toBeGreaterThan(natalya.y);
+  });
+
+  it("Viktor Efimovich (Svetlana's husband) is left of Svetlana, and their children Olga/Yuriy are below them", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const viktorEfimovich = personById(result, "viktor-efimovich");
+    const svetlana = personById(result, "svetlana-kupchik");
+    const olga = personById(result, "olga-efimovich");
+    const yuriy = personById(result, "yuriy-efimovich");
+    expect(viktorEfimovich.x).toBeLessThan(svetlana.x);
+    expect(viktorEfimovich.y).toBe(svetlana.y);
+    expect(olga.y).toBeGreaterThan(svetlana.y);
+    expect(yuriy.y).toBeGreaterThan(svetlana.y);
+  });
+
+  it("Daria stays at the standard sibling gap from Alexander even though several cousin branches (Svetlana/Natalya's own grandchildren) land on the SAME generation row (regression: cousin branches must never claim the focus's own sibling's spot first)", () => {
+    // Real bug: Svetlana and Natalya's grandchildren (Olga/Yuriy Efimovich,
+    // Egor/Anastasiya Evtukh) are several generations removed from Alexander
+    // by blood, but BFS generation distance — not blood closeness — decides
+    // which row a person lands on, so they end up on the exact same row as
+    // Daria (generation 0). The ancestor-row loop processes units in id
+    // order within a row, and "natalya-kupchik"/"svetlana-kupchik" sort
+    // before "viktor-kupchik" — so their grandchildren's branches used to
+    // grow into the space right next to Alexander BEFORE Daria (a full
+    // sibling, must-be-adjacent per CLAUDE.md) ever got a turn, sending
+    // Daria searching hundreds of px further out. Blood closeness to the
+    // focus always outranks id-order processing: the focus's own siblings
+    // must claim their spot first, before any other branch on the same row.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const alexander = personById(result, realFocusId);
+    const daria = personById(result, "daria-kupchik");
+    expect(Math.abs(daria.x - alexander.x)).toBeCloseTo(
+      CARD_WIDTH + SIBLING_GAP,
+      5,
+    );
   });
 
   it("no overlaps across all three generations (Nikolai/Elizaveta, Viktor/Galina + Daria, Alexander + Eleonora/Eva)", () => {

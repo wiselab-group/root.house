@@ -397,6 +397,27 @@ function placeAncestors(
     ...[...graph.personById.values()].map((p) => p.generation),
   );
 
+  // The focus person's OWN full siblings (Daria beside Alexander) must
+  // claim their spot immediately, before ANY other branch on the focus's
+  // generation row gets a chance to grow into it. Real bug: a cousin's
+  // descendants (Svetlana/Natalya's own grandchildren, several generations
+  // removed from the focus by blood) can legitimately land on the SAME row
+  // as the focus (BFS generation distance, not blood closeness, decides the
+  // row) — if those cousin branches are grown first (they get iterated
+  // earlier purely by id order within the ancestor-row loop below), they
+  // can occupy the space right next to the focus before the focus's own
+  // sibling ever gets a turn, sending that sibling searching hundreds of px
+  // further out. Blood closeness to the focus always outranks id order —
+  // reserve the focus's sibling row here, upfront, once.
+  placeUnplacedSiblings(
+    graph,
+    focusSiblingIds(graph),
+    0,
+    occupancy,
+    positionByPerson,
+    junctionByPartnership,
+  );
+
   for (let gen = -1; gen >= minGeneration; gen--) {
     const y = gen * GENERATION_GAP;
 
@@ -576,6 +597,28 @@ function spouseOf(
   return partnership.leftPersonId === personId
     ? partnership.rightPersonId
     : partnership.leftPersonId;
+}
+
+/** All of the focus person's own full/half siblings — the children of the same partnership/solo-parent the focus belongs to (the focus's own id is excluded; placeUnplacedSiblings treats it as already-placed and skips it). */
+function focusSiblingIds(graph: NormalizedGraph): string[] {
+  const focus = graph.personById.get(graph.focusPersonId);
+  if (!focus) return [];
+
+  const siblingIds = new Set<string>();
+  for (const parentId of focus.parentIds) {
+    const parent = graph.personById.get(parentId);
+    if (!parent) continue;
+    for (const partnershipId of parent.partnershipIds) {
+      const partnership = graph.partnershipById.get(partnershipId);
+      if (!partnership?.childrenIds.includes(graph.focusPersonId)) continue;
+      for (const childId of partnership.childrenIds) siblingIds.add(childId);
+    }
+    const solo = graph.soloParentByPersonId.get(parentId);
+    if (solo?.childrenIds.includes(graph.focusPersonId)) {
+      for (const childId of solo.childrenIds) siblingIds.add(childId);
+    }
+  }
+  return [...siblingIds];
 }
 
 /**
