@@ -491,6 +491,51 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     expect(natalya.y).toBe(viktor.y);
   });
 
+  it("Svetlana (who has her own husband Viktor Efimovich) stays at the EXACT standard sibling gap from her blood brother Nikolai Jr. (regression: a sibling-with-spouse's blood-sibling gap must not inflate just because a neighbor has a spouse)", () => {
+    // Real bug, caught via screenshot: the previous fix for
+    // placeUnplacedSiblings reserved a spouse-having sibling's whole couple
+    // width centered at SIBLING_GAP+unitWidth from the anchor — since this
+    // sibling's own card sits on only the NEAR half of that reserved unit,
+    // roughly unitWidth/2 of UNINTENDED extra space ended up between the two
+    // BLOOD siblings (Svetlana↔Nikolai Jr. rendered ~168px apart instead of
+    // the usual 64px edge gap), while contributing nothing to the boundary
+    // where that width actually belongs (Viktor Efimovich↔Natalya, two
+    // different families). The user could see on a screenshot that the gap
+    // "didn't look like 64px" even though it was numerically ≥64.
+    // Here Svetlana's spouse Viktor Efimovich sits AWAY from Nikolai Jr (on
+    // Svetlana's far side), so nothing forces the blood gap to widen — it
+    // must be exactly CARD_WIDTH + SIBLING_GAP, identical to any ordinary
+    // sibling pair with no spouse involved at all (e.g. Nikolai Jr.↔Viktor).
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const nikolaiJr = personById(result, "nikolai-kupchik-jr");
+    const svetlana = personById(result, "svetlana-kupchik");
+    const viktor = personById(result, "viktor-kupchik");
+    const svetlanaNikolaiGap = Math.abs(nikolaiJr.x - svetlana.x);
+    const nikolaiViktorGap = Math.abs(viktor.x - nikolaiJr.x);
+    expect(svetlanaNikolaiGap).toBeCloseTo(CARD_WIDTH + SIBLING_GAP, 5);
+    expect(svetlanaNikolaiGap).toBeCloseTo(nikolaiViktorGap, 5);
+  });
+
+  it("Marina's blood-sibling gap from Nina widens to fit her husband Viktor Ravbetsky when the spouse's required side unavoidably points toward the anchor (not a bug — the opposite case from Svetlana above)", () => {
+    // Marina's husband must be leftPersonId (male < female), so when Marina
+    // is placed to the RIGHT of Nina (continuing the row's established
+    // growth direction), Viktor Ravbetsky unavoidably lands BETWEEN Marina
+    // and Nina — there is no way to keep the blood gap at plain SIBLING_GAP
+    // here without either colliding with Nina or flipping the whole row's
+    // growth direction (which is its own, worse bug — see CLAUDE.md). The
+    // gap must widen to fit Viktor Ravbetsky's card + SPOUSE_GAP inside it.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const nina = personById(result, "nina-tikhonovich");
+    const marina = personById(result, "marina-ravbetskaya");
+    const viktorRavbetsky = personById(result, "viktor-ravbetsky");
+    expect(viktorRavbetsky.x).toBeGreaterThan(nina.x);
+    expect(viktorRavbetsky.x).toBeLessThan(marina.x);
+    const ninaMarinaGap = marina.x - nina.x;
+    expect(ninaMarinaGap).toBeGreaterThan(
+      CARD_WIDTH + SIBLING_GAP + CARD_WIDTH,
+    );
+  });
+
   it("Vladimir Evtukh (Natalya's husband) is left of Natalya, and their children Egor/Anastasiya are below them", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     const vladimirEvtukh = personById(result, "vladimir-evtukh");

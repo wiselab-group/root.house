@@ -849,45 +849,91 @@ function placeUnplacedSiblings(
     // growPersonDescendants, found Nina's card already sitting there (placed
     // right after, with no idea Marina would need room on her left), and
     // searched hundreds of px further out looking for free space instead.
-    // Reserving the whole couple's width as ONE candidate slot up front
-    // (mirroring placeAncestorUnit for an ancestor couple sharing a row)
-    // guarantees growPersonDescendants' own spouse-placement search finds
-    // its preferred immediately-adjacent spot free, without duplicating that
-    // function's placement logic here.
     const spouseId = spouseOf(graph, childId);
-    const unitWidth =
-      spouseId && !positionByPerson.has(spouseId)
-        ? CARD_WIDTH * 2 + SPOUSE_GAP
-        : CARD_WIDTH;
+    const spouseNotYetPlaced =
+      Boolean(spouseId) && !positionByPerson.has(spouseId!);
+    const partnershipId = spouseNotYetPlaced
+      ? graph.personById.get(childId)!.partnershipIds.find((id) => {
+          const p = graph.partnershipById.get(id);
+          return (
+            p && (p.leftPersonId === childId || p.rightPersonId === childId)
+          );
+        })
+      : undefined;
+    const partnership = partnershipId
+      ? graph.partnershipById.get(partnershipId)
+      : undefined;
+    // True when the SPOUSE (not childId) belongs on childId's left side —
+    // i.e. childId is the partnership's rightPersonId.
+    const spouseGoesOnLeft = partnership?.rightPersonId === childId;
+    const unitWidth = spouseNotYetPlaced
+      ? CARD_WIDTH * 2 + SPOUSE_GAP
+      : CARD_WIDTH;
+    const extraFarSideWidth = unitWidth - CARD_WIDTH; // 0 with no spouse
 
-    const leftCandidateX = anchorX - unitWidth - SIBLING_GAP;
-    const rightCandidateX = anchorX + unitWidth + SIBLING_GAP;
+    // The row must keep growing in ONE consistent direction (try LEFT of
+    // anchorX first, same as before any of this spouse handling existed) —
+    // it must never flip direction just because a sibling's spouse happens
+    // to need the other side; that flip is itself a bug (it sent an entire
+    // row of sisters cascading the wrong way once every sister had a
+    // husband). Whichever side is chosen, the sibling's OWN card sits
+    // exactly SIBLING_GAP from anchorX's card WHENEVER POSSIBLE — but if
+    // this sibling's spouse's required side (spouseGoesOnLeft) points
+    // TOWARD anchorX rather than away from it, the spouse unavoidably lands
+    // between the two blood siblings, and the blood gap has no choice but
+    // to widen enough to fit the spouse's own card + SPOUSE_GAP too, rather
+    // than colliding with anchorX. That widening is a real, unavoidable
+    // exception — it must NOT default to the ordinary case just because a
+    // spouse happens to exist (that was this fix's own first, wrong
+    // attempt: it always kept the blood gap exact by flipping the whole
+    // row's direction instead, which is worse).
+    const trySide = (side: -1 | 1) => {
+      const spouseTowardAnchor = spouseNotYetPlaced
+        ? (spouseGoesOnLeft && side === 1) || (!spouseGoesOnLeft && side === -1)
+        : false;
+      const nearEdgeX = spouseTowardAnchor
+        ? anchorX + side * (CARD_WIDTH + SIBLING_GAP + extraFarSideWidth)
+        : anchorX + side * (CARD_WIDTH + SIBLING_GAP);
+      const unitCenterX = spouseTowardAnchor
+        ? nearEdgeX - side * (extraFarSideWidth / 2)
+        : nearEdgeX + side * (extraFarSideWidth / 2);
+      return { nearEdgeX, unitCenterX };
+    };
+
+    const leftCandidate = trySide(-1);
+    const rightCandidate = trySide(1);
     const leftFree = !occupancy.intersects(
-      { x: leftCandidateX, y, width: unitWidth, height: CARD_HEIGHT },
+      {
+        x: leftCandidate.unitCenterX,
+        y,
+        width: unitWidth,
+        height: CARD_HEIGHT,
+      },
       SIBLING_GAP,
     );
     const rightFree = !occupancy.intersects(
-      { x: rightCandidateX, y, width: unitWidth, height: CARD_HEIGHT },
+      {
+        x: rightCandidate.unitCenterX,
+        y,
+        width: unitWidth,
+        height: CARD_HEIGHT,
+      },
       SIBLING_GAP,
     );
 
-    // Prefer whichever immediately-adjacent side is free; if both are
-    // free, prefer left (deterministic tie-break, §39). Only fall back to
-    // searching further outward when NEITHER immediately-adjacent slot is
-    // actually free (e.g. that side is blocked by an unrelated branch).
-    let unitCenterX: number;
+    let resolvedX: number;
     if (leftFree) {
-      unitCenterX = leftCandidateX;
+      resolvedX = leftCandidate.nearEdgeX;
     } else if (rightFree) {
-      unitCenterX = rightCandidateX;
+      resolvedX = rightCandidate.nearEdgeX;
     } else {
-      unitCenterX =
+      const fallbackUnitCenterX =
         occupancy.findFreeInterval(
           y,
           CARD_HEIGHT,
           unitWidth,
           SIBLING_GAP,
-          leftCandidateX,
+          leftCandidate.unitCenterX,
           3000,
           -1,
         ) ??
@@ -896,36 +942,16 @@ function placeUnplacedSiblings(
           CARD_HEIGHT,
           unitWidth,
           SIBLING_GAP,
-          rightCandidateX,
+          rightCandidate.unitCenterX,
           3000,
           1,
         ) ??
-        leftCandidateX;
-    }
-
-    // This sibling's own card sits on whichever side of unitCenterX their
-    // spouse's partnership side (leftPersonId/rightPersonId) requires — the
-    // OTHER half of the reserved unit width is left free for
-    // growPersonDescendants (below) to place the spouse into, using its own
-    // preferred-adjacent-slot search. No spouse: the sibling's own card is
-    // simply centered on unitCenterX (unitWidth === CARD_WIDTH already).
-    let resolvedX = unitCenterX;
-    if (spouseId && !positionByPerson.has(spouseId)) {
-      const partnershipId = graph.personById
-        .get(childId)!
-        .partnershipIds.find((id) => {
-          const p = graph.partnershipById.get(id);
-          return (
-            p && (p.leftPersonId === childId || p.rightPersonId === childId)
-          );
-        });
-      const partnership = partnershipId
-        ? graph.partnershipById.get(partnershipId)
-        : undefined;
-      const isLeft = partnership?.leftPersonId === childId;
-      resolvedX = isLeft
-        ? unitCenterX - CARD_WIDTH / 2 - SPOUSE_GAP / 2
-        : unitCenterX + CARD_WIDTH / 2 + SPOUSE_GAP / 2;
+        leftCandidate.unitCenterX;
+      resolvedX = spouseNotYetPlaced
+        ? spouseGoesOnLeft
+          ? fallbackUnitCenterX + CARD_WIDTH / 2 + SPOUSE_GAP / 2
+          : fallbackUnitCenterX - CARD_WIDTH / 2 - SPOUSE_GAP / 2
+        : fallbackUnitCenterX;
     }
 
     positionByPerson.set(childId, { x: resolvedX, y });
