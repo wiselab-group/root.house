@@ -19,16 +19,14 @@ export type { NormalizedGraph } from "./types";
 export * from "./types";
 
 /**
- * tree-v4 — the single public entry point into the genealogy layout
- * pipeline: normalize → measure (bottom-up, inside placeGraph) → place →
- * validate geometry. Returns a library-agnostic result — no React Flow here
- * (see src/components/tree-v4/react-flow-adapter.ts for the only place that
- * converts this into xyflow nodes/edges).
- *
- * This is a from-scratch implementation, independent of tree-v2 and
- * tree-v3 — it does not import from either.
+ * buildTreeLayout — the single public entry point into the genealogy
+ * layout pipeline: normalize → measure (bottom-up, inside placeGraph) →
+ * place → validate geometry. Returns a library-agnostic result — no React
+ * Flow here; production wiring lives in src/domain/tree/tree-adapter.ts
+ * (DB rows → FamilyGraph → this function → TreeLayoutGraph), consumed by
+ * src/components/tree/adapters/xyflow-adapter.ts.
  */
-export function buildTreeV4Layout(
+export function buildTreeLayout(
   graph: FamilyGraph,
   focusPersonId: string,
 ): TreeLayoutResult {
@@ -66,7 +64,7 @@ export function buildTreeV4Layout(
       const pos = positionByPerson.get(p.id);
       if (!pos) {
         throw new Error(
-          `buildTreeV4Layout: person "${p.id}" was not placed (unsupported graph shape)`,
+          `buildTreeLayout: person "${p.id}" was not placed (unsupported graph shape)`,
         );
       }
       return { ...p, x: pos.x, y: pos.y };

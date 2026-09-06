@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildFocusTreeLayout, type PersonNode } from "./tree-layout.builder";
+import type {
+  LayoutEdge,
+  LayoutNode,
+  PersonNode,
+  TreeLayoutGraph,
+} from "./tree-layout.builder";
 import { applyRelationshipTrace } from "./tree-trace";
 import type { RelationshipPathOutcome } from "@/domain/relationship/genealogy-algorithms";
 
@@ -22,9 +27,56 @@ function person(id: string, overrides: Partial<PersonNode> = {}): PersonNode {
   };
 }
 
+/**
+ * Builds a TreeLayoutGraph by hand — applyRelationshipTrace is algorithm-
+ * agnostic (it only reads TreeLayoutGraph.nodes/.edges), so these tests
+ * never need a real layout engine, just a graph in the right shape. x/y/
+ * generation are arbitrary placeholders. A person NOT listed in `persons`
+ * is simply absent from the resulting graph — this is how the "outside the
+ * currently visible layout window" test below simulates a windowed view,
+ * without any windowing support in the graph builder itself.
+ */
+function buildGraph(input: {
+  persons: PersonNode[];
+  parentChildEdges: { parentId: string; childId: string }[];
+  partnershipEdges: {
+    person1Id: string;
+    person2Id: string;
+    isCurrent: boolean;
+  }[];
+  focusPersonId: string;
+}): TreeLayoutGraph {
+  const nodes: LayoutNode[] = input.persons.map((p, i) => ({
+    id: p.id,
+    kind: "person",
+    personId: p.id,
+    x: i * 100,
+    y: 0,
+    generation: 0,
+    isFocus: p.id === input.focusPersonId,
+    person: p,
+  }));
+  const edges: LayoutEdge[] = [
+    ...input.parentChildEdges.map((e) => ({
+      id: `pc-${e.parentId}-${e.childId}`,
+      kind: "parent_child" as const,
+      source: e.parentId,
+      target: e.childId,
+    })),
+    ...input.partnershipEdges.map((e) => ({
+      id: `partner-${e.person1Id}-${e.person2Id}`,
+      kind: "partnership" as const,
+      source: e.person1Id,
+      target: e.person2Id,
+      isCurrent: e.isCurrent,
+    })),
+  ];
+  return { nodes, edges, focusPersonId: input.focusPersonId };
+}
+
 describe("applyRelationshipTrace", () => {
   it("marks no nodes/edges when outcome is null", () => {
-    const graph = buildFocusTreeLayout({
+    const graph = buildGraph({
       persons: [person("alice")],
       parentChildEdges: [],
       partnershipEdges: [],
@@ -37,7 +89,7 @@ describe("applyRelationshipTrace", () => {
   });
 
   it("marks no nodes/edges when the outcome is unrelated", () => {
-    const graph = buildFocusTreeLayout({
+    const graph = buildGraph({
       persons: [person("alice"), person("bob")],
       parentChildEdges: [],
       partnershipEdges: [],
@@ -54,7 +106,7 @@ describe("applyRelationshipTrace", () => {
   });
 
   it("marks every person and edge on a found path", () => {
-    const graph = buildFocusTreeLayout({
+    const graph = buildGraph({
       persons: [person("grandparent"), person("father"), person("alice")],
       parentChildEdges: [
         { parentId: "grandparent", childId: "father" },
@@ -102,14 +154,15 @@ describe("applyRelationshipTrace", () => {
   });
 
   it("does not mark edges/nodes that fall outside the currently visible layout window", () => {
-    // Layout only shows alice + father (descendantGenerations/ancestorGenerations=1),
-    // but the path outcome includes a great-grandparent beyond that window.
-    const graph = buildFocusTreeLayout({
+    // Layout only shows alice + father (a windowed view showing 1 ancestor
+    // generation), but the path outcome includes a great-grandparent beyond
+    // that window — simulated here by simply omitting grandparent/
+    // great-grandparent from the graph's own persons/nodes.
+    const graph = buildGraph({
       persons: [person("father"), person("alice")],
       parentChildEdges: [{ parentId: "father", childId: "alice" }],
       partnershipEdges: [],
       focusPersonId: "alice",
-      ancestorGenerations: 1,
     });
 
     const outcome: RelationshipPathOutcome = {
@@ -131,7 +184,7 @@ describe("applyRelationshipTrace", () => {
   });
 
   it("marks a partnership edge (down-then-lateral path shape) as on-path when both endpoints are consecutive in personIds", () => {
-    const graph = buildFocusTreeLayout({
+    const graph = buildGraph({
       persons: [person("alice"), person("bob")],
       parentChildEdges: [],
       partnershipEdges: [
@@ -155,7 +208,7 @@ describe("applyRelationshipTrace", () => {
   });
 
   it("handles the same-person case (single node, no edges)", () => {
-    const graph = buildFocusTreeLayout({
+    const graph = buildGraph({
       persons: [person("alice")],
       parentChildEdges: [],
       partnershipEdges: [],

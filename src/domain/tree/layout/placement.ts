@@ -486,21 +486,24 @@ function placeAncestors(
     // "only-child fallback" pass after placeAncestorUnit runs.
     const childrenIdsByPersonId = new Map<string, string[]>();
     for (const person of peopleInRow) {
-      const partnershipId = person.partnershipIds.find((id) => {
-        const p = graph.partnershipById.get(id);
-        return (
-          p && (p.leftPersonId === person.id || p.rightPersonId === person.id)
-        );
-      });
-      const partnership = partnershipId
-        ? graph.partnershipById.get(partnershipId)
-        : undefined;
-      childrenIdsByPersonId.set(
-        person.id,
-        partnership?.childrenIds ??
-          graph.soloParentByPersonId.get(person.id)?.childrenIds ??
-          [],
-      );
+      // Combine children from EVERY recorded partnership plus any solo-
+      // parent children — a `??` fallback here would silently drop a solo
+      // child the moment this person ALSO has a partnership with its own
+      // recorded children (e.g. a person with both a spouse's shared child
+      // AND an earlier solo-parent child from an unrecorded partner): the
+      // first non-empty source would win and the other's children would
+      // never get placed at all (assertOnePositionPerPerson would then
+      // throw "has no position" for the shadowed child). preferredAncestorX
+      // and the sibling-count check further down already combine both
+      // sources this same way (via push/spread, not `??`) — this must too.
+      const childrenIds: string[] = [];
+      for (const partnershipId of person.partnershipIds) {
+        const p = graph.partnershipById.get(partnershipId);
+        if (p) childrenIds.push(...p.childrenIds);
+      }
+      const solo = graph.soloParentByPersonId.get(person.id);
+      if (solo) childrenIds.push(...solo.childrenIds);
+      childrenIdsByPersonId.set(person.id, childrenIds);
     }
 
     // First, place every not-yet-placed sibling row this generation's units
@@ -769,7 +772,7 @@ function placeAncestorUnit(
   // ideals by an equal amount, rather than letting whichever unit is
   // processed first keep a perfect center while the other absorbs the whole
   // shortfall (§ the Kozlovsky/Kupchik "one line straight, one line kinked"
-  // bug — see CLAUDE.md tree-v4 principle). So this function only needs to
+  // bug — see CLAUDE.md § Семейное дерево principle). So this function only needs to
   // resolve actual, already-reserved collisions from OTHER rows/branches,
   // using idealX as the preferred candidate.
   //

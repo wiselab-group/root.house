@@ -127,8 +127,8 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
               "origin-center cursor-pointer overflow-hidden rounded-lg border bg-card shadow-sm",
               data.cardStyle === "portrait" ? "w-40" : "w-55",
               "animate-tree-node-enter",
-              "transition-[transform,box-shadow,opacity] duration-200 ease-(--ease-tree-focus)",
-              "hover:-translate-y-0.5 hover:shadow-md",
+              "transition-[box-shadow,opacity] duration-200 ease-(--ease-tree-focus)",
+              "hover:shadow-md",
               data.isFocus || isTraceHighlighted
                 ? "border-primary ring-2 ring-primary/30"
                 : "border-border",

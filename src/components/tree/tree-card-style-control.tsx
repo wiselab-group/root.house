@@ -1,19 +1,35 @@
 import { Controls, ControlButton } from "@xyflow/react";
-import { RectangleHorizontalIcon, RectangleVerticalIcon } from "lucide-react";
+import {
+  LockIcon,
+  LockOpenIcon,
+  RectangleHorizontalIcon,
+  RectangleVerticalIcon,
+} from "lucide-react";
 import type { TreeCardStyle } from "./use-tree-card-style";
 
 /**
- * Card-style toggle (compact/portrait) — split out from tree-canvas.tsx
- * purely to keep that file under the 150-line component limit. Bottom-left
- * xyflow control cluster (the library's default position).
+ * Card-style toggle (compact/portrait) + drag-lock toggle — split out from
+ * tree-canvas.tsx purely to keep that file under the 150-line component
+ * limit. Bottom-left xyflow control cluster (the library's default
+ * position).
+ *
+ * The drag lock uses a custom ControlButton (not xyflow's own built-in lock
+ * button, which showInteractive={false} above disables) because this app's
+ * card-style button already lives in this same custom cluster — one
+ * <Controls> owning both keeps them visually grouped instead of splitting
+ * across two separate button stacks.
  */
 export function TreeCardStyleControl({
   cardStyle,
   setCardStyle,
+  draggable,
+  setDraggable,
   showZoom,
 }: {
   cardStyle: TreeCardStyle;
   setCardStyle: (style: TreeCardStyle) => void;
+  draggable: boolean;
+  setDraggable: (draggable: boolean) => void;
   showZoom: boolean;
 }) {
   return (
@@ -54,6 +70,24 @@ export function TreeCardStyleControl({
           <RectangleVerticalIcon className="fill-none!" />
         ) : (
           <RectangleHorizontalIcon className="fill-none!" />
+        )}
+      </ControlButton>
+      <ControlButton
+        onClick={() => setDraggable(!draggable)}
+        title={
+          draggable
+            ? "Заблокировать перетаскивание карточек"
+            : "Разблокировать перетаскивание карточек"
+        }
+        aria-pressed={!draggable}
+      >
+        {/* Closed padlock = locked (default) = cards can't be dragged; open
+            padlock = unlocked = dragging enabled — same icon/state mapping
+            xyflow's own built-in lock button uses. */}
+        {draggable ? (
+          <LockOpenIcon className="fill-none!" />
+        ) : (
+          <LockIcon className="fill-none!" />
         )}
       </ControlButton>
     </Controls>

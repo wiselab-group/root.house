@@ -26,10 +26,13 @@ export interface EdgeSpecs {
 
 /**
  * buildEdgeSpecs — pure-data edge description, independent of any rendering
- * library (React Flow adapter consumes this in src/components/tree-v4). One
- * partnership edge per couple, one parent-child edge per child connecting to
- * either the shared partnership's junction point (T-shaped connector, §29)
- * or directly to a solo parent when no partnership is recorded.
+ * library. Not currently used by the production xyflow adapter (which builds
+ * its own flat parent_child/partnership LayoutEdge[] from raw DB rows — see
+ * tree-adapter.ts's fromTreeLayout), but kept as a ready-made junction-
+ * point-based alternative. One partnership edge per couple, one parent-child
+ * edge per child connecting to either the shared partnership's junction point
+ * (T-shaped connector, §29) or directly to a solo parent when no partnership
+ * is recorded.
  */
 export function buildEdgeSpecs(
   graph: NormalizedGraph,

@@ -1,7 +1,10 @@
 import type { FamilyGraph } from "./types";
 
 /**
- * tree-v4 — real genealogy data, minimal core: Alexander Kupczyk, Eleonora
+ * Real genealogy data (Kupczyk family), minimal core — used by layout.test.ts
+ * as a regression corpus for the layout engine. Originally authored for an
+ * earlier dev sandbox (see git history); the sandbox itself is gone, this
+ * data lives on purely as test fixture data. Alexander Kupczyk, Eleonora
  * (his wife), Eva (their daughter), Alexander's parents Viktor and Galina,
  * his sister Daria, Viktor's own parents Nikolai and Elizaveta plus Viktor's
  * siblings Nikolai Jr./Svetlana/Natalya, Natalya's own husband Vladimir

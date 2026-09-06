@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildFocusTreeLayout, type PersonNode } from "./tree-layout.builder";
+import type {
+  LayoutEdge,
+  LayoutNode,
+  PersonNode,
+  TreeLayoutGraph,
+} from "./tree-layout.builder";
 import {
   applyFilter,
   isEmptyFilter,
@@ -24,6 +29,50 @@ function person(id: string, overrides: Partial<PersonNode> = {}): PersonNode {
     nationality: null,
     ...overrides,
   };
+}
+
+/**
+ * Builds a TreeLayoutGraph by hand — applyFilter is algorithm-agnostic (it
+ * only reads TreeLayoutGraph.nodes/.edges), so these tests never need a real
+ * layout engine, just a graph in the right shape. x/y/generation are
+ * arbitrary placeholders; applyFilter doesn't look at them.
+ */
+function buildGraph(input: {
+  persons: PersonNode[];
+  parentChildEdges: { parentId: string; childId: string }[];
+  partnershipEdges: {
+    person1Id: string;
+    person2Id: string;
+    isCurrent: boolean;
+  }[];
+  focusPersonId: string;
+}): TreeLayoutGraph {
+  const nodes: LayoutNode[] = input.persons.map((p, i) => ({
+    id: p.id,
+    kind: "person",
+    personId: p.id,
+    x: i * 100,
+    y: 0,
+    generation: 0,
+    isFocus: p.id === input.focusPersonId,
+    person: p,
+  }));
+  const edges: LayoutEdge[] = [
+    ...input.parentChildEdges.map((e) => ({
+      id: `pc-${e.parentId}-${e.childId}`,
+      kind: "parent_child" as const,
+      source: e.parentId,
+      target: e.childId,
+    })),
+    ...input.partnershipEdges.map((e) => ({
+      id: `partner-${e.person1Id}-${e.person2Id}`,
+      kind: "partnership" as const,
+      source: e.person1Id,
+      target: e.person2Id,
+      isCurrent: e.isCurrent,
+    })),
+  ];
+  return { nodes, edges, focusPersonId: input.focusPersonId };
 }
 
 describe("isEmptyFilter", () => {
@@ -106,7 +155,7 @@ describe("matchesFilter", () => {
 });
 
 describe("applyFilter — highlight mode (default)", () => {
-  const graph = buildFocusTreeLayout({
+  const graph = buildGraph({
     persons: [
       person("alice", { religion: "orthodox" }),
       person("bob", { religion: "catholic" }),
@@ -157,7 +206,7 @@ describe("applyFilter — highlight mode (default)", () => {
 
 describe("applyFilter — focus mode", () => {
   it("preserves full structure like highlight (styling-only distinction)", () => {
-    const graph = buildFocusTreeLayout({
+    const graph = buildGraph({
       persons: [person("alice", { religion: "orthodox" }), person("bob")],
       parentChildEdges: [],
       partnershipEdges: [],
@@ -170,7 +219,7 @@ describe("applyFilter — focus mode", () => {
 });
 
 describe("applyFilter — hide mode", () => {
-  const graph = buildFocusTreeLayout({
+  const graph = buildGraph({
     persons: [
       person("alice", { religion: "orthodox" }),
       person("bob", { religion: "catholic" }),

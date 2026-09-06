@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   ReactFlow,
@@ -95,6 +95,18 @@ export function TreeCanvas({
   const searchParams = useSearchParams();
   const [cardStyle, setCardStyle] = useTreeCardStyle();
   const isCoarsePointer = useCoarsePointer();
+  // Global drag lock — starts LOCKED (false): cards are meant to stay put at
+  // their computed layout position, dragging is an opt-in "let me nudge this
+  // one card" mode the lock button in TreeCardStyleControl toggles. Plain
+  // session state (not persisted like cardStyle) — every visit re-opens
+  // locked, matching the layout the server just computed. Deliberately does
+  // NOT also gate elementsSelectable: a card's click-to-open-popover
+  // ("Посмотреть профиль"/"Сделать фокус-персоной", see person-node.tsx) is
+  // a plain PopoverTrigger, not XYFlow's own node-selection UI — locking
+  // elementsSelectable to this same state was blocking that click,
+  // silently disabling the popover while drag was locked, which had no
+  // relation to dragging at all.
+  const [nodesDraggable, setNodesDraggable] = useState(false);
 
   const setFocus = useCallback(
     (personId: string) => {
@@ -156,6 +168,8 @@ export function TreeCanvas({
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
+        nodesDraggable={nodesDraggable}
+        nodesConnectable={nodesDraggable}
         proOptions={{ hideAttribution: true }}
         // No fitView here — InitialFocusViewport below centers on the focus
         // person at a fixed 85% zoom instead (per the family's "opens with
@@ -187,6 +201,8 @@ export function TreeCanvas({
         <TreeCardStyleControl
           cardStyle={cardStyle}
           setCardStyle={setCardStyle}
+          draggable={nodesDraggable}
+          setDraggable={setNodesDraggable}
           showZoom={!isCoarsePointer}
         />
         {/* Minimap needs room to read as a map, not a smudge — skip it below

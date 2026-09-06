@@ -5,7 +5,8 @@ import {
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { listPersonsByFamily } from "@/domain/person/person.repository";
-import { buildFocusTreeLayout, type PersonNode } from "./tree-layout.builder";
+import { buildTreeLayout } from "./layout/layout";
+import { toTreeFamilyGraph, fromTreeLayout } from "./tree-adapter";
 import type { TreeLayoutGraph } from "./tree-layout.builder";
 import {
   applyFilter,
@@ -15,20 +16,27 @@ import {
 } from "./tree-filter";
 
 export interface GetFocusTreeLayoutOptions {
-  /** Generations of ancestors to include above focusPersonId (plan §8 "expand ancestors"). Defaults to buildFocusTreeLayout's own default (2). */
+  /**
+   * Generations of ancestors to include above focusPersonId. The layout
+   * engine (src/domain/tree/layout/) has no windowing — it always lays out
+   * the entire connected graph reachable from focus — so this option is
+   * currently IGNORED. Kept for API stability; the one call site (the tree
+   * page) always passes Infinity anyway.
+   */
   ancestorGenerations?: number;
-  /** Generations of descendants to include below focusPersonId (plan §8 "expand descendants"). Defaults to buildFocusTreeLayout's own default (2). */
+  /** Generations of descendants to include below focusPersonId. Currently IGNORED — see ancestorGenerations. */
   descendantGenerations?: number;
-  /** Filter/Focus layer (plan §7) — applied to the built layout, never to the underlying genealogy structure. */
+  /** Filter/Focus layer (tree-filter.ts) — applied to the built layout, never to the underlying genealogy structure. */
   filter?: PersonFilter;
   filterMode?: FilterMode;
 }
 
 /**
  * Assembles a family's full Person+Relationship graph and runs it through
- * buildFocusTreeLayout(), then (optionally) tree-filter.ts's applyFilter().
- * This is the only place that bridges the database to the (library-agnostic)
- * layout builder — components/tree/* never touch the database directly.
+ * the layout engine (src/domain/tree/layout/, via tree-adapter.ts), then
+ * (optionally) tree-filter.ts's applyFilter(). This is the only place that
+ * bridges the database to the (library-agnostic) layout contract —
+ * components/tree/* never touch the database directly.
  *
  * Returns a plain TreeLayoutGraph when no filter is requested (unchanged
  * shape, so every existing caller keeps working untouched) and a
@@ -43,39 +51,49 @@ export async function getFocusTreeLayout(
     listPersonsByFamily(familyId),
     db.query.relationshipsParentChild.findMany({
       where: eq(relationshipsParentChild.familyId, familyId),
-      columns: { parentId: true, childId: true },
+      columns: { id: true, parentId: true, childId: true },
     }),
     db.query.relationshipsPartnership.findMany({
       where: eq(relationshipsPartnership.familyId, familyId),
-      columns: { person1Id: true, person2Id: true, isCurrent: true },
+      columns: {
+        id: true,
+        person1Id: true,
+        person2Id: true,
+        status: true,
+        isCurrent: true,
+      },
     }),
   ]);
 
-  const personNodes: PersonNode[] = persons.map((p) => ({
-    id: p.id,
-    slug: p.slug,
-    firstName: p.firstName,
-    lastName: p.lastName,
-    nickname: p.nickname,
-    isPlaceholder: p.isPlaceholder,
-    isLiving: p.isLiving,
-    birthYear: p.birthDate?.year ?? null,
-    deathYear: p.deathDate?.year ?? null,
-    photoMediaId: p.photoMediaId,
-    gender: p.gender,
-    religion: p.religion,
-    nationality: p.nationality,
-  }));
-
-  const graph = buildFocusTreeLayout({
-    persons: personNodes,
+  const { graph, personById } = toTreeFamilyGraph({
+    persons,
     parentChildEdges: parentChildRows,
     partnershipEdges: partnershipRows,
-    focusPersonId,
-    ancestorGenerations: options?.ancestorGenerations,
-    descendantGenerations: options?.descendantGenerations,
   });
 
-  if (!options?.filter) return graph;
-  return applyFilter(graph, options.filter, options.filterMode);
+  let result;
+  try {
+    result = buildTreeLayout(graph, focusPersonId);
+  } catch (err) {
+    throw new Error(
+      `getFocusTreeLayout: layout engine failed for family ${familyId}, focus ${focusPersonId}: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+      { cause: err },
+    );
+  }
+
+  const partnershipIsCurrentById = new Map(
+    partnershipRows.map((r) => [r.id, r.isCurrent]),
+  );
+  const layoutGraph = fromTreeLayout(
+    focusPersonId,
+    result,
+    personById,
+    parentChildRows,
+    partnershipIsCurrentById,
+  );
+
+  if (!options?.filter) return layoutGraph;
+  return applyFilter(layoutGraph, options.filter, options.filterMode);
 }

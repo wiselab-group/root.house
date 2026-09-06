@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTreeV4Layout } from "./layout";
+import { buildTreeLayout } from "./layout";
 import { detectOverlaps } from "./collision";
 import { CARD_WIDTH, GENERATION_GAP, SIBLING_GAP, SPOUSE_GAP } from "./subtree";
 import { initialFamilyGraph, focusPersonId as realFocusId } from "./fixture";
@@ -29,15 +29,15 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Elizaveta's sister Elena Ushkar/Nikolai Ushkar + their daughter Natalya Ushkar (NEW, no canonical record) + Nikolai/Nadezhda Kozlovsky + Nikolai's brothers Yuzik/Daniil/Alexey + Vasily/Elizaveta Kozlovskaya + Petr (solo)/Yakov (solo) + Grigory Kolesnikovich/Agrafena + Filipp (solo) + Nadezhda's brothers Nikolai/Alexey/Pavel/Grigory Jr. Kolesnikovich + Galina's 8 sisters (own married surnames) + Galina's sisters' own husbands (Viktor Ravbetsky/Alexey Naumovich/Vladimir Artyukh/Vladimir Baidovsky/Alexander Stashevsky/Sergey Shlyazhko/Oleg Redko) + Marina's children Lyudmila+Vadim minimal core)", () => {
+describe("layout engine — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Elizaveta's sister Elena Ushkar/Nikolai Ushkar + their daughter Natalya Ushkar (NEW, no canonical record) + Nikolai/Nadezhda Kozlovsky + Nikolai's brothers Yuzik/Daniil/Alexey + Vasily/Elizaveta Kozlovskaya + Petr (solo)/Yakov (solo) + Grigory Kolesnikovich/Agrafena + Filipp (solo) + Nadezhda's brothers Nikolai/Alexey/Pavel/Grigory Jr. Kolesnikovich + Galina's 8 sisters (own married surnames) + Galina's sisters' own husbands (Viktor Ravbetsky/Alexey Naumovich/Vladimir Artyukh/Vladimir Baidovsky/Alexander Stashevsky/Sergey Shlyazhko/Oleg Redko) + Marina's children Lyudmila+Vadim minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     expect(result.persons).toHaveLength(58);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
   it("focus person's partnership is centered on the origin (focus is the spatial anchor)", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const focus = personById(result, realFocusId);
     const eleonora = personById(result, "eleonora-kupchik");
     expect(focus.y).toBe(0);
@@ -45,7 +45,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("husband (Alexander) is left of wife (Eleonora)", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const alexander = personById(result, "alexander-kupchik");
     const eleonora = personById(result, "eleonora-kupchik");
     expect(alexander.x).toBeLessThan(eleonora.x);
@@ -59,7 +59,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // even though their actual Y ranges never overlapped — this silently
     // pushed an only child (or first-in-row sibling) away from its true
     // centered position under the parents for no genealogical reason.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const alexander = personById(result, "alexander-kupchik");
     const eleonora = personById(result, "eleonora-kupchik");
     const eva = personById(result, "eva-kupchik");
@@ -68,20 +68,20 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Eva (child) is below her parents", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const alexander = personById(result, "alexander-kupchik");
     const eva = personById(result, "eva-kupchik");
     expect(eva.y).toBeGreaterThan(alexander.y);
   });
 
   it("is deterministic — same graph, same focus, identical positions", () => {
-    const r1 = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    const r2 = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const r1 = buildTreeLayout(initialFamilyGraph, realFocusId);
+    const r2 = buildTreeLayout(initialFamilyGraph, realFocusId);
     expect(positionMap(r1)).toEqual(positionMap(r2));
   });
 
   it("Alexander's parents (Viktor and Galina) are above him", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const alexander = personById(result, "alexander-kupchik");
     const viktor = personById(result, "viktor-kupchik");
     const galina = personById(result, "galina-kupchik");
@@ -90,7 +90,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Viktor (husband) is left of Galina (wife)", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const viktor = personById(result, "viktor-kupchik");
     const galina = personById(result, "galina-kupchik");
     expect(viktor.x).toBeLessThan(galina.x);
@@ -103,7 +103,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // just whichever child happened to exist first. Parents/children stay
     // mutually aligned by moving the PARENTS to match the children's true
     // center, never the other way around (the focus anchor must not move).
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const viktor = personById(result, "viktor-kupchik");
     const galina = personById(result, "galina-kupchik");
     const alexander = personById(result, "alexander-kupchik");
@@ -114,7 +114,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Daria (Alexander's sister) is at the same generation, next to Alexander, under their shared parents", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const alexander = personById(result, "alexander-kupchik");
     const daria = personById(result, "daria-kupchik");
     expect(daria.y).toBe(alexander.y);
@@ -128,7 +128,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // collision-free, but wrong genealogically: a sibling must be adjacent
     // to the person they're related to by blood, never separated from them
     // by an in-law.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const alexander = personById(result, "alexander-kupchik");
     const eleonora = personById(result, "eleonora-kupchik");
     const daria = personById(result, "daria-kupchik");
@@ -144,14 +144,14 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("full siblings Alexander and Daria are placed adjacent to each other without overlapping", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const alexander = personById(result, "alexander-kupchik");
     const daria = personById(result, "daria-kupchik");
     expect(Math.abs(alexander.x - daria.x)).toBeGreaterThanOrEqual(CARD_WIDTH);
   });
 
   it("Viktor's own parents (Nikolai and Elizaveta) are above him, one generation further up than Viktor/Galina", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const viktor = personById(result, "viktor-kupchik");
     const nikolai = personById(result, "nikolai-kupchik");
     const elizaveta = personById(result, "elizaveta-kupchik");
@@ -160,7 +160,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Nikolai (husband) is left of Elizaveta (wife)", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const nikolai = personById(result, "nikolai-kupchik");
     const elizaveta = personById(result, "elizaveta-kupchik");
     expect(nikolai.x).toBeLessThan(elizaveta.x);
@@ -178,7 +178,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // this row (not a blood child himself), the row's midpoint-of-bounds
     // and the average-of-blood-children's-x are no longer identical down
     // to the pixel — allow a reasonable margin rather than exact equality.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const nikolai = personById(result, "nikolai-kupchik");
     const elizaveta = personById(result, "elizaveta-kupchik");
     const viktor = personById(result, "viktor-kupchik");
@@ -206,7 +206,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Vladimir and Marfa (Nikolai Kupchik Sr.'s own parents) are above him, one generation further up than Nikolai/Elizaveta", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const nikolai = personById(result, "nikolai-kupchik");
     const vladimir = personById(result, "vladimir-kupchik");
     const marfa = personById(result, "marfa-kupchik");
@@ -215,7 +215,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Vladimir (husband) is left of Marfa (wife)", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const vladimir = personById(result, "vladimir-kupchik");
     const marfa = personById(result, "marfa-kupchik");
     expect(vladimir.x).toBeLessThan(marfa.x);
@@ -227,11 +227,11 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // which forced a collision-driven symmetric kink in both couples' ideal
     // centers (same situation as Nikolai/Elizaveta Kupchik vs Nikolai/
     // Nadezhda Kozlovsky). Once Natalya Ushkar's stranded-only-child retry
-    // raised Krivusha one EXTRA generation (see buildTreeV4Layout's retry
+    // raised Krivusha one EXTRA generation (see buildTreeLayout's retry
     // pass), the two couples no longer share a row at all — there's no
     // collision left to force a kink, so Vladimir/Marfa now center EXACTLY
     // on Nikolai (their only recorded child) with zero offset.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const nikolai = personById(result, "nikolai-kupchik");
     const vladimir = personById(result, "vladimir-kupchik");
     const marfa = personById(result, "marfa-kupchik");
@@ -246,7 +246,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Grigory (husband) is left of Elizaveta Krivusha (wife)", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const grigory = personById(result, "grigory-krivusha");
     const elizavetaKrivusha = personById(result, "elizaveta-krivusha");
     expect(grigory.x).toBeLessThan(elizavetaKrivusha.x);
@@ -257,13 +257,13 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // Vladimir/Marfa (both "one generation above Nikolai/Elizaveta Kupchik").
     // Once Elena Ushkar's daughter Natalya was added, Natalya's natural BFS
     // row turned out to already belong entirely to Viktor/Galina's crowded
-    // sibling row — buildTreeV4Layout's stranded-only-child retry raises
+    // sibling row — buildTreeLayout's stranded-only-child retry raises
     // Natalya AND her entire ancestry (Nikolai/Elena Ushkar, then Elena's
     // own parents Grigory/Elizaveta Krivusha) one extra generation so
     // Natalya lands beside her actual parents instead. Grigory/Elizaveta
     // Krivusha are consequently now ONE generation above Vladimir/Marfa, not
     // at the same one — this is intentional, not a regression in itself.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const elizaveta = personById(result, "elizaveta-kupchik");
     const grigory = personById(result, "grigory-krivusha");
     const elizavetaKrivusha = personById(result, "elizaveta-krivusha");
@@ -287,7 +287,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // individually collided with anything. The relative left/right order
     // of the two couples themselves must match the relative left/right
     // order of the children they're centered over.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const nikolai = personById(result, "nikolai-kupchik");
     const elizaveta = personById(result, "elizaveta-kupchik");
     const vladimir = personById(result, "vladimir-kupchik");
@@ -310,7 +310,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // Yustin has no recorded spouse, so he must still be placed as a
     // single ancestor unit (unitWidth = one card, not a paired 384px unit),
     // centered on his only child Vladimir.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const vladimir = personById(result, "vladimir-kupchik");
     const yustin = personById(result, "yustin-kupchik");
     expect(yustin.y).toBeLessThan(vladimir.y);
@@ -318,7 +318,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Vasily and Elizaveta Kozlovskaya (Nikolai Kozlovsky's own parents) are above him, one generation further up than Nikolai/Nadezhda", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
     const vasily = personById(result, "vasily-kozlovsky");
     const elizavetaKozlovskaya = personById(result, "elizaveta-kozlovskaya");
@@ -327,7 +327,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Vasily (husband) is left of Elizaveta Kozlovskaya (wife)", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const vasily = personById(result, "vasily-kozlovsky");
     const elizavetaKozlovskaya = personById(result, "elizaveta-kozlovskaya");
     expect(vasily.x).toBeLessThan(elizavetaKozlovskaya.x);
@@ -340,7 +340,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // FOUR children on this row (Nikolai Kozlovsky + his three brothers),
     // so their ideal center is pulled from all four children's x, not
     // directly above Nikolai Kozlovsky alone.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const vasily = personById(result, "vasily-kozlovsky");
     const elizavetaKozlovskaya = personById(result, "elizaveta-kozlovskaya");
     const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
@@ -356,7 +356,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Yuzik, Daniil, and Alexey (Nikolai Kozlovsky's full brothers) are adjacent to him, not scattered far away searching for free space near the origin", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
     const yuzik = personById(result, "yuzik-kozlovsky");
     const daniil = personById(result, "daniil-kozlovsky");
@@ -371,7 +371,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Grigory Kolesnikovich and Agrafena (Nadezhda Kozlovskaya's own parents) are above her, at the same generation as Vasily/Elizaveta Kozlovskaya", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const nadezhda = personById(result, "nadezhda-kozlovskaya");
     const grigoryKolesnikovich = personById(result, "grigory-kolesnikovich");
     const agrafena = personById(result, "agrafena-kolesnikovich");
@@ -382,14 +382,14 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Grigory Kolesnikovich (husband) is left of Agrafena (wife)", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const grigoryKolesnikovich = personById(result, "grigory-kolesnikovich");
     const agrafena = personById(result, "agrafena-kolesnikovich");
     expect(grigoryKolesnikovich.x).toBeLessThan(agrafena.x);
   });
 
   it("Grigory Kolesnikovich and Agrafena's partnership is centered over the whole sibling row (Nadezhda + her brothers Nikolai/Alexey/Pavel/Grigory Jr.), not just over Nadezhda alone", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const nadezhda = personById(result, "nadezhda-kozlovskaya");
     const nikolaiJr = personById(result, "nikolai-kolesnikovich");
     const alexey = personById(result, "alexey-kolesnikovich");
@@ -407,7 +407,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Nadezhda Kozlovskaya's brothers Nikolai/Alexey/Pavel/Grigory Jr. Kolesnikovich stand adjacent to her at the standard sibling gap, in order", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const nadezhda = personById(result, "nadezhda-kozlovskaya");
     const nikolaiJr = personById(result, "nikolai-kolesnikovich");
     const alexey = personById(result, "alexey-kolesnikovich");
@@ -427,7 +427,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // also holds Petr and Yakov (Vasily/Elizaveta Kozlovskaya's own solo
     // parents), but there's enough room here for Filipp to still center
     // exactly above Agrafena without any symmetric-kink shortfall.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const agrafena = personById(result, "agrafena-kolesnikovich");
     const filipp = personById(result, "filipp-strunevsky");
     expect(filipp.y).toBeLessThan(agrafena.y);
@@ -443,7 +443,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // toward Elizaveta right next to Vasily — same symmetric-split situation
     // as the paired-ancestor cases (Nikolai/Elizaveta vs Nikolai/Nadezhda
     // Kozlovsky), just with two UNPAIRED solo parents instead of two couples.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const vasily = personById(result, "vasily-kozlovsky");
     const petr = personById(result, "petr-kozlovsky");
     expect(petr.y).toBeLessThan(vasily.y);
@@ -451,7 +451,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Petr and Yakov (both solo parents sharing a row) are pulled off-center from Vasily/Elizaveta Kozlovskaya by equal, opposite amounts", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const vasily = personById(result, "vasily-kozlovsky");
     const elizavetaKozlovskaya = personById(result, "elizaveta-kozlovskaya");
     const petr = personById(result, "petr-kozlovsky");
@@ -462,7 +462,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Yakov (Elizaveta Kozlovskaya's father, a SOLO parent) is above her, right of Petr", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const elizavetaKozlovskaya = personById(result, "elizaveta-kozlovskaya");
     const petr = personById(result, "petr-kozlovsky");
     const yakov = personById(result, "yakov-kozlovsky");
@@ -483,7 +483,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // Bound widened to 7 cards: Natalya's husband Vladimir Evtukh now sits
     // between Natalya and Nikolai Jr. on this same row, pushing Svetlana
     // (the furthest sibling) an extra card-width away from Viktor.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const viktor = personById(result, "viktor-kupchik");
     const nikolaiJr = personById(result, "nikolai-kupchik-jr");
     const svetlana = personById(result, "svetlana-kupchik");
@@ -513,7 +513,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // Svetlana's far side), so nothing forces the blood gap to widen — it
     // must be exactly CARD_WIDTH + SIBLING_GAP, identical to any ordinary
     // sibling pair with no spouse involved at all (e.g. Nikolai Jr.↔Viktor).
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const nikolaiJr = personById(result, "nikolai-kupchik-jr");
     const svetlana = personById(result, "svetlana-kupchik");
     const viktor = personById(result, "viktor-kupchik");
@@ -531,7 +531,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // here without either colliding with Nina or flipping the whole row's
     // growth direction (which is its own, worse bug — see CLAUDE.md). The
     // gap must widen to fit Viktor Ravbetsky's card + SPOUSE_GAP inside it.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const nina = personById(result, "nina-tikhonovich");
     const marina = personById(result, "marina-ravbetskaya");
     const viktorRavbetsky = personById(result, "viktor-ravbetsky");
@@ -554,7 +554,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // not merely "wider than usual" (a loose bound would silently accept a
     // further regression), but the EXACT extra width Nikolai Ushkar's own
     // card + spouse gap require.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const elizaveta = personById(result, "elizaveta-kupchik");
     const elena = personById(result, "elena-ushkar");
     const nikolaiUshkar = personById(result, "nikolai-ushkar");
@@ -586,7 +586,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // Ravbetsky) got 192px from the same halved-SPOUSE_GAP formula (that
     // path's fallback branch, reused from the same buggy pattern). All
     // three are now fixed to the same 208px.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const pairs: [string, string][] = [
       ["viktor-kupchik", "galina-kupchik"],
       ["vladimir-evtukh", "natalya-kupchik"],
@@ -608,7 +608,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Vladimir Evtukh (Natalya's husband) is left of Natalya, and their children Egor/Anastasiya are below them", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const vladimirEvtukh = personById(result, "vladimir-evtukh");
     const natalya = personById(result, "natalya-kupchik");
     const egor = personById(result, "egor-evtukh");
@@ -633,7 +633,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // sharing a row) — the exact value can be a little more than
     // CARD_WIDTH+INTER_FAMILY_GAP due to the search's coarse step size, but
     // must never be a different order of magnitude, and must never overlap.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const natalya = personById(result, "natalya-kupchik");
     const viktorEfimovich = personById(result, "viktor-efimovich");
     const gap = Math.abs(viktorEfimovich.x - natalya.x) - CARD_WIDTH;
@@ -643,7 +643,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Viktor Efimovich (Svetlana's husband) is left of Svetlana, and their children Olga/Yuriy are below them", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const viktorEfimovich = personById(result, "viktor-efimovich");
     const svetlana = personById(result, "svetlana-kupchik");
     const olga = personById(result, "olga-efimovich");
@@ -667,7 +667,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // Daria searching hundreds of px further out. Blood closeness to the
     // focus always outranks id-order processing: the focus's own siblings
     // must claim their spot first, before any other branch on the same row.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const alexander = personById(result, realFocusId);
     const daria = personById(result, "daria-kupchik");
     expect(Math.abs(daria.x - alexander.x)).toBeCloseTo(
@@ -677,12 +677,12 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("no overlaps across all three generations (Nikolai/Elizaveta, Viktor/Galina + Daria, Alexander + Eleonora/Eva)", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
   it("Galina's own parents (Nikolai and Nadezhda Kozlovsky) are above her, at the same generation as Nikolai/Elizaveta Kupchik", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const galina = personById(result, "galina-kupchik");
     const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
     const nadezhda = personById(result, "nadezhda-kozlovskaya");
@@ -693,7 +693,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Nikolai Kozlovsky (husband) is left of Nadezhda (wife)", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
     const nadezhda = personById(result, "nadezhda-kozlovskaya");
     expect(nikolaiKozlovsky.x).toBeLessThan(nadezhda.x);
@@ -708,7 +708,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // comparable amount anymore. What still must hold: Kozlovsky stays
     // right of Galina (correct maternal side), and the two great-
     // grandparent clusters don't overlap.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const galina = personById(result, "galina-kupchik");
     const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
     const nadezhda = personById(result, "nadezhda-kozlovskaya");
@@ -727,7 +727,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // gap between Nina and Marina is wider than the other uniform sibling
     // gaps, so the mean and the midpoint of the row's visual span are no
     // longer the same value; preferredAncestorX only ever computes the mean.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
     const nadezhda = personById(result, "nadezhda-kozlovskaya");
     const sisterIds = [
@@ -756,7 +756,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // position to x=0 instead of anchoring them beside the nearest already-
     // placed blood sibling via placeUnplacedSiblings — this must still hold
     // when there are EIGHT such siblings to place, not just one or three.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const galina = personById(result, "galina-kupchik");
     const sisterIds = [
       "nina-tikhonovich",
@@ -798,7 +798,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // placeUnplacedSiblings turn ever came. That planted him (and, via his
     // couple-unit, Marina too) in the middle of Viktor Kupchik's own sibling
     // cluster, on a totally different row segment than Galina's sisters.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const galina = personById(result, "galina-kupchik");
     const nina = personById(result, "nina-tikhonovich");
     const marina = personById(result, "marina-ravbetskaya");
@@ -820,7 +820,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // growPersonDescendants, he found Nina's own card already sitting there
     // and searched thousands of px further out looking for free space,
     // ending up on the opposite side of the whole tree from his own wife.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const marina = personById(result, "marina-ravbetskaya");
     const viktorRavbetsky = personById(result, "viktor-ravbetsky");
     expect(viktorRavbetsky.y).toBe(marina.y);
@@ -829,7 +829,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Marina's children Lyudmila and Vadim Ravbetsky are placed below Marina/Viktor Ravbetsky, with no overlaps", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const marina = personById(result, "marina-ravbetskaya");
     const lyudmilaRavbetskaya = personById(result, "lyudmila-ravbetskaya");
     const vadim = personById(result, "vadim-ravbetsky");
@@ -843,7 +843,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // sister-with-spouse pairs sharing the same contiguous row — confirms
     // the placeUnplacedSiblings unit-width fix generalizes past the first
     // case it was found and fixed on.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const pairs: [string, string][] = [
       ["alexey-naumovich", "tatiana-naumovich"],
       ["vladimir-artyukh", "vera-artyukh"],
@@ -863,14 +863,14 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("Viktor and Galina stay at the standard spouse gap, never stretched apart for their own grandparents' sake", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const viktor = personById(result, "viktor-kupchik");
     const galina = personById(result, "galina-kupchik");
     expect(galina.x - viktor.x).toBeCloseTo(CARD_WIDTH + SPOUSE_GAP, 5);
   });
 
   it("paternal great-grandparents (Nikolai/Elizaveta Kupchik) stay left of maternal great-grandparents (Nikolai/Nadezhda Kozlovsky) — the two ancestor lines never mix", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const nikolaiKupchik = personById(result, "nikolai-kupchik");
     const elizaveta = personById(result, "elizaveta-kupchik");
     const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
@@ -881,7 +881,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("no overlaps with both great-grandparent couples on the same row", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -901,7 +901,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // the Kupchik-great-grandparent row were resolved — collapsing the
     // entire maternal side (Nikolai/Nadezhda Kozlovsky, all 8 of Galina's
     // sisters) leftward by thousands of px via resolveSymmetricOverlaps.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
     const nadezhda = personById(result, "nadezhda-kozlovskaya");
     const galina = personById(result, "galina-kupchik");
@@ -925,14 +925,14 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // still ~1450px from her actual parents (off the far edge of that
     // crowded row). No amount of anchor-tuning within a single generation
     // row can fix a row that fundamentally belongs to someone else's
-    // family. buildTreeV4Layout now retries once: findStrandedOnlyChildren
+    // family. buildTreeLayout now retries once: findStrandedOnlyChildren
     // detects her post-placement distance from her parent exceeds the
     // threshold, and raiseAncestryOneGeneration raises HER OWN generation
     // AND her entire recorded ancestry (Nikolai/Elena Ushkar, then Elena's
     // own parents Grigory/Elizaveta Krivusha) by exactly one row each —
     // landing her on a row that belongs to her own family, right next to
     // her actual parents.
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const natalya = personById(result, "natalya-ushkar");
     const nikolaiUshkar = personById(result, "nikolai-ushkar");
     const elenaUshkar = personById(result, "elena-ushkar");
@@ -952,11 +952,11 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("no overlaps anywhere in the tree with Natalya Ushkar present", () => {
-    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
-  it("raiseAncestryOneGeneration also raises the STARTING person's own generation, not just their ancestors (unit test on graph.ts directly — this bug wouldn't manifest via buildTreeV4Layout's positions alone, since placeUnplacedSiblings anchors on the parent's resolved y directly rather than re-reading the child's own stored generation field)", () => {
+  it("raiseAncestryOneGeneration also raises the STARTING person's own generation, not just their ancestors (unit test on graph.ts directly — this bug wouldn't manifest via buildTreeLayout's positions alone, since placeUnplacedSiblings anchors on the parent's resolved y directly rather than re-reading the child's own stored generation field)", () => {
     // Real bug in an earlier version: raiseAncestryOneGeneration walked
     // UP from startPersonId's parentIds and raised every ancestor found,
     // but never touched startPersonId's own `generation` field. In THIS
@@ -976,7 +976,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
 });
 
 describe("CASE 1 — simple nuclear family (A+B -> C, D, E)", () => {
-  const result = buildTreeV4Layout(case1SimpleFamily, "a");
+  const result = buildTreeLayout(case1SimpleFamily, "a");
 
   it("no overlaps", () => {
     expect(detectOverlaps(positionMap(result))).toEqual([]);
@@ -1019,7 +1019,7 @@ describe("CASE 1 — simple nuclear family (A+B -> C, D, E)", () => {
 });
 
 describe("CASE 2 — deep chain then wide sibling row", () => {
-  const result = buildTreeV4Layout(case2DeepChain, "a");
+  const result = buildTreeLayout(case2DeepChain, "a");
 
   it("no overlaps", () => {
     expect(detectOverlaps(positionMap(result))).toEqual([]);
@@ -1042,7 +1042,7 @@ describe("CASE 2 — deep chain then wide sibling row", () => {
 });
 
 describe("CASE 3 — remarriage: A+B -> C, A+D -> E", () => {
-  const result = buildTreeV4Layout(case3Remarriage, "a");
+  const result = buildTreeLayout(case3Remarriage, "a");
 
   it("A appears exactly once (one Person node per canonical person)", () => {
     const occurrences = result.persons.filter((p) => p.id === "a");
@@ -1073,7 +1073,7 @@ describe("CASE 3 — remarriage: A+B -> C, A+D -> E", () => {
 });
 
 describe("CASE 4 — both former spouses remarry", () => {
-  const result = buildTreeV4Layout(case4BothRemarry, "a");
+  const result = buildTreeLayout(case4BothRemarry, "a");
 
   it("A and B each appear exactly once", () => {
     expect(result.persons.filter((p) => p.id === "a")).toHaveLength(1);
@@ -1099,7 +1099,7 @@ describe("CASE 4 — both former spouses remarry", () => {
 });
 
 describe("CASE 5 — sibling with its own large subtree", () => {
-  const result = buildTreeV4Layout(case5SiblingSubtree, "p1");
+  const result = buildTreeLayout(case5SiblingSubtree, "p1");
 
   it("no overlaps", () => {
     expect(detectOverlaps(positionMap(result))).toEqual([]);
@@ -1130,7 +1130,7 @@ describe("CASE 5 — sibling with its own large subtree", () => {
 });
 
 describe("CASE 6 — one large asymmetric descendant branch among siblings", () => {
-  const result = buildTreeV4Layout(case6AsymmetricBranch, "p1");
+  const result = buildTreeLayout(case6AsymmetricBranch, "p1");
 
   it("no overlaps", () => {
     expect(detectOverlaps(positionMap(result))).toEqual([]);
@@ -1153,7 +1153,7 @@ describe("CASE 6 — one large asymmetric descendant branch among siblings", () 
 });
 
 describe("CASE 7 — large paternal branch + large maternal branch", () => {
-  const result = buildTreeV4Layout(case7LargeBothSides, "focus");
+  const result = buildTreeLayout(case7LargeBothSides, "focus");
 
   it("no overlaps even with two large ancestor clusters on the same row", () => {
     expect(detectOverlaps(positionMap(result))).toEqual([]);
@@ -1177,7 +1177,7 @@ describe("CASE 7 — large paternal branch + large maternal branch", () => {
 });
 
 describe("CASE 8 — divorce + remarriage, three generations deep", () => {
-  const result = buildTreeV4Layout(case8DivorceRemarriageDeep, "a");
+  const result = buildTreeLayout(case8DivorceRemarriageDeep, "a");
 
   it("no overlaps", () => {
     expect(detectOverlaps(positionMap(result))).toEqual([]);
@@ -1201,7 +1201,7 @@ describe("CASE 8 — divorce + remarriage, three generations deep", () => {
 });
 
 describe("CASE 9 — many siblings (8)", () => {
-  const result = buildTreeV4Layout(case9ManySiblings, "p1");
+  const result = buildTreeLayout(case9ManySiblings, "p1");
 
   it("no overlaps among all 8 siblings", () => {
     expect(detectOverlaps(positionMap(result))).toEqual([]);
@@ -1219,7 +1219,7 @@ describe("CASE 9 — many siblings (8)", () => {
 });
 
 describe("CASE 10 — several generations both directions", () => {
-  const result = buildTreeV4Layout(case10ManyGenerations, "focus");
+  const result = buildTreeLayout(case10ManyGenerations, "focus");
 
   it("no overlaps across 7 generations", () => {
     expect(detectOverlaps(positionMap(result))).toEqual([]);
@@ -1249,27 +1249,26 @@ describe("CASE 10 — several generations both directions", () => {
 });
 
 describe("global invariants across every case", () => {
-  const cases: Array<
-    [string, Parameters<typeof buildTreeV4Layout>[0], string]
-  > = [
-    ["real data", initialFamilyGraph, realFocusId],
-    ["case1", case1SimpleFamily, "a"],
-    ["case2", case2DeepChain, "a"],
-    ["case3", case3Remarriage, "a"],
-    ["case4", case4BothRemarry, "a"],
-    ["case5", case5SiblingSubtree, "p1"],
-    ["case6", case6AsymmetricBranch, "p1"],
-    ["case7", case7LargeBothSides, "focus"],
-    ["case8", case8DivorceRemarriageDeep, "a"],
-    ["case9", case9ManySiblings, "p1"],
-    ["case10", case10ManyGenerations, "focus"],
-  ];
+  const cases: Array<[string, Parameters<typeof buildTreeLayout>[0], string]> =
+    [
+      ["real data", initialFamilyGraph, realFocusId],
+      ["case1", case1SimpleFamily, "a"],
+      ["case2", case2DeepChain, "a"],
+      ["case3", case3Remarriage, "a"],
+      ["case4", case4BothRemarry, "a"],
+      ["case5", case5SiblingSubtree, "p1"],
+      ["case6", case6AsymmetricBranch, "p1"],
+      ["case7", case7LargeBothSides, "focus"],
+      ["case8", case8DivorceRemarriageDeep, "a"],
+      ["case9", case9ManySiblings, "p1"],
+      ["case10", case10ManyGenerations, "focus"],
+    ];
 
   it.each(cases)(
     "%s: one Person node per canonical person, no overlaps, deterministic",
     (_name, graph, focus) => {
-      const r1 = buildTreeV4Layout(graph, focus);
-      const r2 = buildTreeV4Layout(graph, focus);
+      const r1 = buildTreeLayout(graph, focus);
+      const r2 = buildTreeLayout(graph, focus);
 
       expect(r1.persons.length).toBe(graph.persons.length);
       const ids = new Set(r1.persons.map((p) => p.id));

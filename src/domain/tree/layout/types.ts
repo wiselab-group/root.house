@@ -1,9 +1,10 @@
 /**
- * tree-v4 — доменные типы. Полностью независимая реализация: не импортирует
- * ничего из tree-v2 или tree-v3. Форма входного графа (Person + Relationship)
- * следует боевой модели Person+Relationship (CLAUDE.md WHAT — "родословная
- * это граф в БД, а не дерево"), но заново объявлена здесь, чтобы tree-v4 не
- * зависел молча от чужих типов, если те когда-нибудь изменятся.
+ * Семейное дерево — доменные типы layout-движка (единственная production-
+ * реализация). Форма входного графа (Person + Relationship) следует боевой
+ * модели Person+Relationship
+ * (CLAUDE.md WHAT — "родословная это граф в БД, а не дерево"), но объявлена
+ * здесь отдельно от src/domain/person и src/domain/relationship — DB-формы
+ * маппятся в неё явно в tree-adapter.ts, а не импортируются напрямую.
  *
  * Только plain data — никакого React/xyflow (src/domain/** не импортирует
  * next/react, CLAUDE.md CODE RULES).
