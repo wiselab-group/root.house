@@ -1,10 +1,5 @@
 import { Controls, ControlButton } from "@xyflow/react";
-import {
-  LockIcon,
-  LockOpenIcon,
-  RectangleHorizontalIcon,
-  RectangleVerticalIcon,
-} from "lucide-react";
+import { CircleIcon, LockIcon, LockOpenIcon, SquareIcon } from "lucide-react";
 import type { TreeCardStyle } from "./use-tree-card-style";
 
 /**
@@ -57,19 +52,20 @@ export function TreeCardStyleControl({
         aria-pressed={cardStyle === "portrait"}
       >
         {/* Icon shows the shape of the card you'll SWITCH TO, not the
-            current one — same convention as a play/pause toggle. A
-            horizontal rectangle reads as "wide compact row", a vertical
-            one as "tall portrait photo card". fill-none is required: the
-            zoom/fitview buttons' own icons are solid shapes styled via
-            XYFlow's `.react-flow__controls-button svg { fill: currentColor }`
-            rule, which — since a CSS fill declaration beats an SVG
-            presentation attribute — would otherwise turn these lucide
-            icons into solid blobs instead of the thin-line outline every
-            other icon button in this app uses. */}
+            current one — same convention as a play/pause toggle. A circle
+            reads as "round avatar" (compact), a square as "square photo"
+            (portrait) — matching each style's actual photo shape. fill-none
+            is required: the zoom/fitview buttons' own icons are solid shapes
+            styled via XYFlow's
+            `.react-flow__controls-button svg { fill: currentColor }` rule,
+            which — since a CSS fill declaration beats an SVG presentation
+            attribute — would otherwise turn these lucide icons into solid
+            blobs instead of the thin-line outline every other icon button
+            in this app uses. */}
         {cardStyle === "compact" ? (
-          <RectangleVerticalIcon className="fill-none!" />
+          <SquareIcon className="fill-none!" />
         ) : (
-          <RectangleHorizontalIcon className="fill-none!" />
+          <CircleIcon className="fill-none!" />
         )}
       </ControlButton>
       <ControlButton
