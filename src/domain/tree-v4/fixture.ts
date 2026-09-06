@@ -12,7 +12,9 @@ import type { FamilyGraph } from "./types";
  * SoloParent path with real data), Elizaveta's own parents Grigory and
  * Elizaveta Krivusha, plus Elizaveta's own sister Elena Ushkar (canonical
  * from tree-v2, another daughter of Grigory and Elizaveta Krivusha) and
- * Elena's own husband Nikolai Ushkar (also canonical), and Galina's own
+ * Elena's own husband Nikolai Ushkar (also canonical) and their daughter
+ * Natalya Ushkar — NEW, no canonical record in tree-v2/tree-v3 for this
+ * child, added per the user's explicit request — and Galina's own
  * parents Nikolai and Nadezhda
  * Kozlovsky (Nikolai Kozlovsky's own parents Vasily and Elizaveta
  * Kozlovskaya, Vasily's own father Petr, Elizaveta Kozlovskaya's own
@@ -73,6 +75,7 @@ const grigoryKrivushaId = "grigory-krivusha";
 const elizavetaKrivushaId = "elizaveta-krivusha";
 const elenaUshkarId = "elena-ushkar";
 const nikolaiUshkarId = "nikolai-ushkar";
+const natalyaUshkarId = "natalya-ushkar";
 const nikolaiKozlovskyId = "nikolai-kozlovsky";
 const yuzikKozlovskyId = "yuzik-kozlovsky";
 const daniilKozlovskyId = "daniil-kozlovsky";
@@ -247,6 +250,12 @@ export const initialFamilyGraph: FamilyGraph = {
       firstName: "Николай",
       lastName: "Ушкар",
       gender: "male",
+    },
+    {
+      id: natalyaUshkarId,
+      firstName: "Наталья",
+      lastName: "Ушкар",
+      gender: "female",
     },
     {
       id: nikolaiKozlovskyId,
@@ -677,6 +686,18 @@ export const initialFamilyGraph: FamilyGraph = {
       from: nikolaiUshkarId,
       to: elenaUshkarId,
       status: "married",
+    },
+    {
+      id: "nikolai-ushkar-natalya-ushkar-parent",
+      kind: "parent-child",
+      from: nikolaiUshkarId,
+      to: natalyaUshkarId,
+    },
+    {
+      id: "elena-ushkar-natalya-ushkar-parent",
+      kind: "parent-child",
+      from: elenaUshkarId,
+      to: natalyaUshkarId,
     },
     {
       id: "vasily-elizaveta-kozlovskaya-spouse",

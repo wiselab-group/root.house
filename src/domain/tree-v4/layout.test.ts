@@ -28,10 +28,10 @@ function personById(result: TreeLayoutResult, id: string) {
   return p;
 }
 
-describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Elizaveta's sister Elena Ushkar/Nikolai Ushkar + Nikolai/Nadezhda Kozlovsky + Nikolai's brothers Yuzik/Daniil/Alexey + Vasily/Elizaveta Kozlovskaya + Petr (solo)/Yakov (solo) + Grigory Kolesnikovich/Agrafena + Filipp (solo) + Nadezhda's brothers Nikolai/Alexey/Pavel/Grigory Jr. Kolesnikovich + Galina's 8 sisters (own married surnames) + Galina's sisters' own husbands (Viktor Ravbetsky/Alexey Naumovich/Vladimir Artyukh/Vladimir Baidovsky/Alexander Stashevsky/Sergey Shlyazhko/Oleg Redko) + Marina's children Lyudmila+Vadim minimal core)", () => {
+describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + Nikolai/Elizaveta/Nikolai Jr./Svetlana/Natalya + Vladimir Evtukh/Egor/Anastasiya + Viktor Efimovich/Olga/Yuriy + Vladimir/Marfa + Yustin (solo) + Grigory/Elizaveta Krivusha + Elizaveta's sister Elena Ushkar/Nikolai Ushkar + their daughter Natalya Ushkar (NEW, no canonical record) + Nikolai/Nadezhda Kozlovsky + Nikolai's brothers Yuzik/Daniil/Alexey + Vasily/Elizaveta Kozlovskaya + Petr (solo)/Yakov (solo) + Grigory Kolesnikovich/Agrafena + Filipp (solo) + Nadezhda's brothers Nikolai/Alexey/Pavel/Grigory Jr. Kolesnikovich + Galina's 8 sisters (own married surnames) + Galina's sisters' own husbands (Viktor Ravbetsky/Alexey Naumovich/Vladimir Artyukh/Vladimir Baidovsky/Alexander Stashevsky/Sergey Shlyazhko/Oleg Redko) + Marina's children Lyudmila+Vadim minimal core)", () => {
   it("places every person exactly once with no overlaps", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
-    expect(result.persons).toHaveLength(57);
+    expect(result.persons).toHaveLength(58);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
@@ -883,6 +883,48 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
   });
 
   it("no overlaps with both great-grandparent couples on the same row", () => {
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    expect(detectOverlaps(positionMap(result))).toEqual([]);
+  });
+
+  it("Natalya Ushkar (Elena/Nikolai Ushkar's only recorded child, no children/siblings of her own) is never treated as an independent ancestor unit (regression: an unpulled only child must not default to idealX=0 and drag the whole ancestor row with her)", () => {
+    // Real bug: Natalya Ushkar has real parentIds (Nikolai/Elena Ushkar) but
+    // no children of her own (not pulled by descendants) AND no sibling
+    // recorded in the graph (an only child) — the OLD filter's
+    // `!hasSiblingInGraph` clause treated "no sibling" as license to become
+    // an independent ancestor unit, exactly the failure this filter exists
+    // to prevent (just for a shape — only child, not sibling-of-someone-
+    // pulled — that hadn't been exercised before Natalya). She also lands on
+    // GENERATION -1 (the SAME BFS row as Viktor/Galina, since generation is
+    // BFS distance from focus, not blood closeness — Elena/Nikolai Ushkar
+    // are generation -2, one level up, so their child is back down at -1).
+    // Passing the old filter got her placed via placeAncestorUnit at
+    // idealX=0, BEFORE the Kozlovsky-sisters row and the Kupchik-great-
+    // grandparent row were resolved — collapsing the entire maternal side
+    // (Nikolai/Nadezhda Kozlovsky, all 8 of Galina's sisters) leftward by
+    // thousands of px via resolveSymmetricOverlaps. She must be placed
+    // exclusively via placeUnplacedSiblings from her OWN parents' row
+    // (Elena/Nikolai Ushkar, generation -2), never as a standalone unit.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
+    const nadezhda = personById(result, "nadezhda-kozlovskaya");
+    const galina = personById(result, "galina-kupchik");
+    const lyudmilaRedko = personById(result, "lyudmila-redko");
+    const natalyaUshkar = personById(result, "natalya-ushkar");
+    // The maternal side (Kozlovsky great-grandparents + Galina's own sibling
+    // row) must stay on its own side, undisturbed by Natalya Ushkar's
+    // placement — this is the same "paternal/maternal lines never mix"
+    // invariant as the test above, just re-asserted after Natalya exists.
+    expect(nikolaiKozlovsky.x).toBeGreaterThan(0);
+    expect(nadezhda.x).toBeGreaterThan(0);
+    expect(galina.x).toBeGreaterThan(nikolaiKozlovsky.x - 2000); // sanity: not collapsed onto paternal side
+    expect(lyudmilaRedko.x).toBeGreaterThan(galina.x);
+    // Natalya herself must stay at HER OWN generation row (-1), not get
+    // pulled onto her parents' row (-2) or anywhere else.
+    expect(natalyaUshkar.y).toBe(galina.y);
+  });
+
+  it("no overlaps anywhere in the tree with Natalya Ushkar present", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });

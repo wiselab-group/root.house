@@ -423,82 +423,68 @@ function placeAncestors(
 
     // A person with NO already-placed children/descendants of their own
     // (preferredAncestorX finds nothing to average, whether via them or
-    // their spouse) AND at least one sibling also recorded in the graph is
-    // never an independent "ancestor unit" pulled upward by its own
-    // children — they're a childless sibling of whoever DOES have that
-    // pull (e.g. Nikolai Jr./Svetlana/Natalya, Viktor's full siblings:
-    // Viktor is pulled up by Alexander, they are not pulled by anything).
-    // Treating a childless sibling as a standalone unit anyway defaults
-    // their idealX to 0 (the origin) and runs them through
-    // resolveSymmetricOverlaps against Viktor/Galina's real pulled position
-    // — cascading them hundreds of px away instead of landing right beside
-    // Viktor. These are placed exclusively via placeUnplacedSiblings,
-    // anchored on whichever sibling is already placed by blood, fired from
-    // THEIR PARENTS' own generation row later in this same loop — exactly
-    // like Daria beside Alexander, one generation up.
+    // their spouse) is NEVER an independent "ancestor unit" pulled upward by
+    // its own children — regardless of whether they happen to have a
+    // sibling recorded in the graph. Treating such a person as a standalone
+    // unit anyway defaults their idealX to 0 (the origin) and runs them
+    // through resolveSymmetricOverlaps against some real pulled position —
+    // cascading them (and often everything after them, since
+    // resolveSymmetricOverlaps pushes neighboring units apart too) hundreds
+    // or thousands of px away instead of landing right beside whoever
+    // they're actually related to. This covers two shapes that looked
+    // different at first but are the same underlying bug:
+    //   (a) a childless BLOOD sibling of someone who DOES have that pull
+    //       (e.g. Nikolai Jr./Svetlana/Natalya, Viktor's full siblings —
+    //       Viktor is pulled up by Alexander, they are not pulled by
+    //       anything themselves) — has real parentIds AND a sibling in the
+    //       graph;
+    //   (b) an only child with real parentIds but no children/pull of their
+    //       own (e.g. Natalya Ushkar, Elena/Nikolai Ushkar's only recorded
+    //       daughter) — has real parentIds but NO sibling in the graph.
+    // An earlier version of this filter used `!hasSiblingInGraph(id)` as an
+    // alternate qualifying condition (OR'd with isPulledByOwnDescendants),
+    // meaning an UNPULLED ONLY CHILD like Natalya Ushkar wrongly fell
+    // through as an "independent ancestor unit" defaulting to idealX=0 —
+    // exactly the bug this filter exists to prevent, just for a shape
+    // (only child, not sibling-of-someone-pulled) that hadn't been
+    // exercised yet. Real bug: once Natalya Ushkar was added (generation
+    // -1, same BFS row as Viktor/Galina, since generation is BFS distance
+    // from focus, not blood closeness), she passed the old filter and was
+    // placed via placeAncestorUnit BEFORE her own parents Nikolai/Elena
+    // Ushkar (generation -2) were even placed — dragging the entire
+    // Kozlovsky-sisters row (processed later in the same peopleInRow pass)
+    // into resolveSymmetricOverlaps against her bogus idealX=0, collapsing
+    // the whole maternal side leftward. `!hasSiblingInGraph` added nothing
+    // that `isPulledByOwnDescendants` didn't already cover on its own (every
+    // genuinely independent ancestor in this dataset, e.g. Yustin Kupchik, a
+    // SoloParent with no parents of his own recorded but a real placed son,
+    // already satisfies isPulledByOwnDescendants directly) — removed.
+    // Both shapes above are placed exclusively via placeUnplacedSiblings,
+    // anchored on whichever sibling is already placed by blood (or, for an
+    // only child, on their own parent's position once that parent IS
+    // placed), fired from THEIR PARENTS' own generation row later in this
+    // same loop — exactly like Daria beside Alexander, one generation up.
     const isPulledByOwnDescendants = (personId: string): boolean =>
       preferredAncestorX(graph, personId, positionByPerson) !== null ||
       preferredAncestorX(graph, spouseOf(graph, personId), positionByPerson) !==
         null;
-    const hasSiblingInGraph = (personId: string): boolean => {
-      const person = graph.personById.get(personId);
-      if (!person) return false;
-      return person.parentIds.some((parentId) => {
-        const parent = graph.personById.get(parentId);
-        if (!parent) return false;
-        const siblingSets = [
-          ...parent.partnershipIds.map(
-            (id) => graph.partnershipById.get(id)?.childrenIds ?? [],
-          ),
-          graph.soloParentByPersonId.get(parentId)?.childrenIds ?? [],
-        ];
-        return siblingSets.some(
-          (ids) => ids.includes(personId) && ids.length > 1,
-        );
-      });
-    };
-    // A person with NO blood parent recorded in this graph at all (e.g.
-    // Viktor Ravbetsky, married into the family with no ancestors of his own
-    // in this data) and NOT pulled by their own placed descendants either is
-    // never an independent ancestor unit — `hasSiblingInGraph` is (correctly)
-    // false for them since they have no parentIds to check siblings against,
-    // but `!hasSiblingInGraph` alone then wrongly let them through as an
-    // "independent ancestor unit" defaulting to idealX=0. Real bug: once
-    // Marina (blood) got her own children, her husband Viktor Ravbetsky
-    // (in-law, parentIds=[]) started passing this filter — via
-    // isPulledByOwnDescendants(viktor) OR isPulledByOwnDescendants(marina)
-    // both still being false at that point in the loop — and was placed by
-    // placeAncestorUnit BEFORE Marina's own placeUnplacedSiblings turn ever
-    // came, landing the whole Kozlovsky-sisters row on top of/past Viktor
-    // Kupchik's sibling cluster instead of beside Galina. Someone with no
-    // blood parents in this graph (e.g. Yustin Kupchik, a SoloParent ancestor
-    // who genuinely IS pulled by his own placed descendant Vladimir) must
-    // still qualify when isPulledByOwnDescendants is true — only exclude the
-    // case where they're a parentless in-law with NOTHING of their own
-    // pulling them, who must be placed exclusively via growPersonDescendants/
-    // placeChildrenRow from their blood-relative partner's side instead.
-    const isParentlessInLawWithNoPull = (personId: string): boolean => {
-      const person = graph.personById.get(personId);
-      if (!person || person.parentIds.length > 0) return false;
-      return !isPulledByOwnDescendants(personId);
-    };
 
     const peopleInRow = [...graph.personById.values()]
       .filter(
         (p) =>
           p.generation === gen &&
           !positionByPerson.has(p.id) &&
-          !isParentlessInLawWithNoPull(p.id) &&
-          (isPulledByOwnDescendants(p.id) || !hasSiblingInGraph(p.id)),
+          isPulledByOwnDescendants(p.id),
       )
       .sort(
         (a, b) =>
           sideRank(a.branch) - sideRank(b.branch) || a.id.localeCompare(b.id),
       );
 
-    // First, place every not-yet-placed sibling row this generation's units
-    // pull in — needed so each unit's "preferred center" below reflects the
-    // FULL sibling row, not just whichever child was placed first.
+    // Resolve each unit's own children list once — reused both for the
+    // early "complete the sibling row" pass below and for the late
+    // "only-child fallback" pass after placeAncestorUnit runs.
+    const childrenIdsByPersonId = new Map<string, string[]>();
     for (const person of peopleInRow) {
       const partnershipId = person.partnershipIds.find((id) => {
         const p = graph.partnershipById.get(id);
@@ -509,10 +495,29 @@ function placeAncestors(
       const partnership = partnershipId
         ? graph.partnershipById.get(partnershipId)
         : undefined;
-      const childrenIds =
+      childrenIdsByPersonId.set(
+        person.id,
         partnership?.childrenIds ??
-        graph.soloParentByPersonId.get(person.id)?.childrenIds ??
-        [];
+          graph.soloParentByPersonId.get(person.id)?.childrenIds ??
+          [],
+      );
+    }
+
+    // First, place every not-yet-placed sibling row this generation's units
+    // pull in — needed so each unit's "preferred center" below reflects the
+    // FULL sibling row, not just whichever child was placed first. Only
+    // fires when at least one child of this person is ALREADY placed (that
+    // placed child is exactly what got this person into isPulledByOwnDescendants
+    // in the first place) — an only child with NO already-placed sibling has
+    // nothing to "complete the row" for, and calling placeUnplacedSiblings
+    // here would default her anchor to fallbackAnchorX=0 before her own
+    // parent unit even has a real x yet (placeAncestorUnit for this row's
+    // units hasn't run below). That case is handled by the late pass after
+    // placeAncestorUnit, anchored on the parent's own resolved position
+    // instead of the origin.
+    for (const person of peopleInRow) {
+      const childrenIds = childrenIdsByPersonId.get(person.id) ?? [];
+      if (!childrenIds.some((id) => positionByPerson.has(id))) continue;
       placeUnplacedSiblings(
         graph,
         childrenIds,
@@ -589,6 +594,32 @@ function placeAncestors(
         occupancy,
         positionByPerson,
         junctionByPartnership,
+      );
+    }
+
+    // Now that every unit on this row has a REAL resolved x, place any
+    // children that the early pass above skipped — an only child (no
+    // already-placed sibling to anchor on at that point) whose parent unit
+    // itself wasn't placed yet either. Anchoring on the parent's own
+    // resolved x here (instead of the origin) keeps her right beside her
+    // actual parents rather than searching for free space from x=0 across
+    // an already-crowded row. Real bug: Natalya Ushkar (Nikolai/Elena
+    // Ushkar's only recorded child) defaulted to fallbackAnchorX=0 and
+    // landed searching from the literal origin — over 1000px from her own
+    // parents — because this pass used to run entirely before
+    // placeAncestorUnit gave Nikolai/Elena a real position.
+    for (const person of peopleInRow) {
+      const childrenIds = childrenIdsByPersonId.get(person.id) ?? [];
+      if (childrenIds.every((id) => positionByPerson.has(id))) continue;
+      const ownX = positionByPerson.get(person.id)?.x ?? 0;
+      placeUnplacedSiblings(
+        graph,
+        childrenIds,
+        y + GENERATION_GAP,
+        occupancy,
+        positionByPerson,
+        junctionByPartnership,
+        ownX,
       );
     }
   }
@@ -820,6 +851,19 @@ function placeUnplacedSiblings(
   occupancy: OccupancyModel,
   positionByPerson: Map<string, Point>,
   junctionByPartnership: Map<string, Point>,
+  // Anchor to use when NONE of childrenIds is placed yet (no blood sibling
+  // card to land beside). Defaults to 0 (the origin) — correct for the
+  // focus's own sibling row, which is anchored at the tree's root anyway.
+  // An ancestor-row ONLY child (e.g. Natalya Ushkar, whose parents Nikolai/
+  // Elena Ushkar have no other recorded children) has no sibling to anchor
+  // on and no descendants of her own to be centered under either — without
+  // an explicit fallback here she'd default to x=0 and search for free
+  // space from the literal origin, landing thousands of px from her actual
+  // parents (who, at THIS point in placeAncestors, may not even be placed
+  // yet themselves — see the call-site comment on why this fallback must be
+  // the PARENT UNIT'S resolved x, passed in after placeAncestorUnit runs,
+  // not some earlier guess).
+  fallbackAnchorX = 0,
 ): void {
   const unplaced = childrenIds.filter((id) => !positionByPerson.has(id));
   if (unplaced.length === 0) return;
@@ -831,11 +875,12 @@ function placeUnplacedSiblings(
     // average of the whole row, which could sit anywhere once spouses are
     // folded in — so each new sibling lands directly beside a relative,
     // preferring whichever side of that relative isn't already taken by
-    // their own spouse.
+    // their own spouse. With no sibling placed yet, fall back to the
+    // caller-provided anchor (see fallbackAnchorX above) instead of x=0.
     const nearestSiblingId = placedSiblingIds[placedSiblingIds.length - 1];
     const anchorX = nearestSiblingId
       ? positionByPerson.get(nearestSiblingId)!.x
-      : 0;
+      : fallbackAnchorX;
 
     // A sibling who ALREADY has a spouse of their own (e.g. Marina, married
     // to Viktor Ravbetsky) needs their FULL unit width (both cards + the
