@@ -4,8 +4,8 @@ import type {
   LaidOutPerson,
   TreeLayoutResult,
 } from "./types";
-import { normalizeGraph } from "./graph";
-import { placeGraph } from "./placement";
+import { normalizeGraph, raiseAncestryOneGeneration } from "./graph";
+import { placeGraph, findStrandedOnlyChildren } from "./placement";
 import { buildEdgeSpecs } from "./edges";
 import { assertNoOverlaps, assertOnePositionPerPerson } from "./collision";
 
@@ -33,7 +33,30 @@ export function buildTreeV4Layout(
   focusPersonId: string,
 ): TreeLayoutResult {
   const normalized = normalizeGraph(graph, focusPersonId);
-  const { positionByPerson, junctionByPartnership } = placeGraph(normalized);
+  let { positionByPerson, junctionByPartnership } = placeGraph(normalized);
+
+  // An "unpulled only child" (real parentIds, no children of her own, no
+  // sibling recorded either — see placement.ts) can land on her natural BFS
+  // generation row only to find that row already belongs entirely to an
+  // unrelated branch (e.g. Natalya Ushkar landing on Viktor/Galina's
+  // crowded row, ~1450px from her own parents). No amount of anchor-tuning
+  // within that single row can fix this — the row itself is wrong for her.
+  // Retry once: raise her AND her entire ancestry (parent + all of the
+  // parent's own recorded ancestors) one generation each, which moves her
+  // off the crowded row and lands her one row up, right beside her own
+  // (also-raised) parents instead. `generation` is
+  // documented as a "soft hint for Y, never a hardcoded row" precisely to
+  // allow this kind of per-branch adjustment. One retry only (not a loop
+  // until stable) — re-raising is not expected to be needed in practice,
+  // and looping indefinitely on a graph shape that can't stabilize would
+  // hang instead of failing loudly.
+  const stranded = findStrandedOnlyChildren(normalized, positionByPerson);
+  if (stranded.length > 0) {
+    for (const personId of stranded) {
+      raiseAncestryOneGeneration(normalized, personId);
+    }
+    ({ positionByPerson, junctionByPartnership } = placeGraph(normalized));
+  }
 
   assertOnePositionPerPerson(normalized, positionByPerson);
   assertNoOverlaps(positionByPerson);

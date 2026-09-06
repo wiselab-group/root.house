@@ -1205,3 +1205,87 @@ function preferredAncestorX(
   if (placedX.length === 0) return null;
   return placedX.reduce((a, b) => a + b, 0) / placedX.length;
 }
+
+// ---------------------------------------------------------------------------
+// Only-child stranded-on-a-crowded-row detection (see layout.ts's two-pass
+// placeGraph retry).
+// ---------------------------------------------------------------------------
+
+/**
+ * A person qualifies as an "unpulled only child" for this check under the
+ * exact same criteria placeAncestors already uses to route them through
+ * placeUnplacedSiblings instead of treating them as an independent ancestor
+ * unit: real parentIds, no children/descendants of their own, AND no
+ * sibling recorded in the graph (an only child — see the isPulledByOwnDescendants
+ * comment in placeAncestors for why "no sibling" alone isn't disqualifying).
+ */
+function isUnpulledOnlyChild(
+  graph: NormalizedGraph,
+  personId: string,
+  positionByPerson: Map<string, Point>,
+): boolean {
+  const person = graph.personById.get(personId);
+  if (!person || person.parentIds.length === 0) return false;
+  const hasOwnChildren =
+    preferredAncestorX(graph, personId, positionByPerson) !== null ||
+    preferredAncestorX(graph, spouseOf(graph, personId), positionByPerson) !==
+      null;
+  if (hasOwnChildren) return false;
+  const siblingIds = person.parentIds.flatMap((parentId) => {
+    const parent = graph.personById.get(parentId);
+    if (!parent) return [];
+    return [
+      ...parent.partnershipIds.flatMap(
+        (id) => graph.partnershipById.get(id)?.childrenIds ?? [],
+      ),
+      ...(graph.soloParentByPersonId.get(parentId)?.childrenIds ?? []),
+    ];
+  });
+  return new Set(siblingIds).size <= 1; // only themselves
+}
+
+/**
+ * The threshold above which an unpulled only child's distance from her own
+ * parent reads as "stranded on the wrong row" rather than "a bit off to one
+ * side" — three times the standard sibling footprint. Below this, some
+ * horizontal slack is normal and expected (findFreeInterval's search step is
+ * coarse); above it, the person is effectively landing on an unrelated
+ * family's row rather than beside her own parent.
+ */
+const STRANDED_ONLY_CHILD_THRESHOLD = (CARD_WIDTH + SIBLING_GAP) * 3;
+
+/**
+ * Finds every unpulled only child (see isUnpulledOnlyChild) whose distance
+ * from her own placed parent, after a normal placeGraph pass, exceeds
+ * STRANDED_ONLY_CHILD_THRESHOLD — i.e. she landed on her natural BFS
+ * generation row, but that row already belongs to an entirely unrelated
+ * family (e.g. Natalya Ushkar landing on Viktor/Galina's crowded row,
+ * ~1450px from her own parents Nikolai/Elena Ushkar). Real bug: no amount
+ * of anchor-tuning within a SINGLE generation row can fix this — the row
+ * itself is the wrong place for her. layout.ts uses this to retry the
+ * WHOLE layout with her entire ancestry (parent + all of the parent's own
+ * ancestors) raised one generation, landing her back on a row that belongs
+ * to her own family instead.
+ */
+export function findStrandedOnlyChildren(
+  graph: NormalizedGraph,
+  positionByPerson: Map<string, Point>,
+): string[] {
+  const stranded: string[] = [];
+  for (const person of graph.personById.values()) {
+    if (!isUnpulledOnlyChild(graph, person.id, positionByPerson)) continue;
+    const ownPos = positionByPerson.get(person.id);
+    if (!ownPos) continue;
+    const parentPositions = person.parentIds
+      .map((id) => positionByPerson.get(id))
+      .filter((p): p is Point => Boolean(p));
+    if (parentPositions.length === 0) continue;
+    const nearestParentDistance = Math.min(
+      ...parentPositions.map((p) => Math.abs(p.x - ownPos.x)),
+    );
+    if (nearestParentDistance > STRANDED_ONLY_CHILD_THRESHOLD) {
+      stranded.push(person.id);
+    }
+  }
+  return stranded;
+}

@@ -339,3 +339,81 @@ function orderParentsBySide(
   if (shouldBeLeft(genderA, genderB, a, b)) return [a, b];
   return [b, a];
 }
+
+/**
+ * Raises one person AND their entire recorded ancestry (own spouse, own
+ * parents, those parents' own parents and spouses, all the way up) by
+ * exactly one generation (generation -= 1). Never descends into anyone
+ * else's children — this only ever walks up the parentIds chain (plus
+ * sideways to a spouse at each step), so a childless leaf like Natalya
+ * Ushkar raises only herself and her ancestors above her, untouched by
+ * whatever her (nonexistent, in her case) own descendants would otherwise
+ * imply. Spouses are raised alongside whichever of the pair is the actual
+ * blood ancestor in this chain, so a couple never ends up split across two
+ * different rows.
+ *
+ * Used when a person's NATURAL BFS generation row already belongs to an
+ * entirely unrelated branch (see placement.ts's findStrandedOnlyChildren) —
+ * e.g. Natalya Ushkar herself, her parents Nikolai/Elena Ushkar, and
+ * Elena's own parents Grigory/Elizaveta Krivusha, are ALL raised one row
+ * each, so Natalya ends up on a row that belongs to her own family instead
+ * of a crowded, unrelated one. Real bug in an earlier version of this
+ * function: it raised startPersonId's ANCESTORS but never startPersonId's
+ * own stored `generation` field — since `generation` is a value assigned
+ * once during normalizeGraph's BFS (not dynamically recomputed as
+ * `parent.generation + 1` at read time), Natalya's parents moved up a row
+ * while her own generation field stayed exactly where it was, so she still
+ * rendered on the original crowded row even though her whole ancestry had
+ * moved.
+ *
+ * generation stays a "soft hint for Y" (see NormalizedPerson's doc comment)
+ * precisely so this kind of per-branch adjustment is legitimate — it is
+ * BFS-distance-from-focus by DEFAULT, not by hard invariant.
+ */
+export function raiseAncestryOneGeneration(
+  graph: NormalizedGraph,
+  startPersonId: string,
+): void {
+  const visited = new Set<string>([startPersonId]);
+  const startPerson = graph.personById.get(startPersonId);
+  if (!startPerson) return;
+  startPerson.generation -= 1;
+
+  let frontier = [startPersonId];
+  while (frontier.length > 0) {
+    const next: string[] = [];
+    for (const id of frontier) {
+      const person = graph.personById.get(id);
+      if (!person) continue;
+
+      // Raise this person's own spouse alongside them, so a couple never
+      // ends up split across two rows.
+      for (const partnershipId of person.partnershipIds) {
+        const partnership = graph.partnershipById.get(partnershipId);
+        if (!partnership) continue;
+        const spouseId =
+          partnership.leftPersonId === id
+            ? partnership.rightPersonId
+            : partnership.leftPersonId;
+        if (visited.has(spouseId)) continue;
+        visited.add(spouseId);
+        const spouse = graph.personById.get(spouseId);
+        if (!spouse) continue;
+        spouse.generation -= 1;
+        // A spouse's own parentIds are NOT this chain's blood ancestry —
+        // never walk further up from them (would raise an unrelated family
+        // that happens to have married in).
+      }
+
+      for (const parentId of person.parentIds) {
+        if (visited.has(parentId)) continue;
+        visited.add(parentId);
+        const parent = graph.personById.get(parentId);
+        if (!parent) continue;
+        parent.generation -= 1;
+        next.push(parentId);
+      }
+    }
+    frontier = next;
+  }
+}

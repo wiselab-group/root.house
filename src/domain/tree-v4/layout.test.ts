@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { buildTreeV4Layout } from "./layout";
 import { detectOverlaps } from "./collision";
-import { CARD_WIDTH, SIBLING_GAP, SPOUSE_GAP } from "./subtree";
+import { CARD_WIDTH, GENERATION_GAP, SIBLING_GAP, SPOUSE_GAP } from "./subtree";
 import { initialFamilyGraph, focusPersonId as realFocusId } from "./fixture";
+import { normalizeGraph, raiseAncestryOneGeneration } from "./graph";
 import {
   case1SimpleFamily,
   case2DeepChain,
@@ -220,41 +221,28 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     expect(vladimir.x).toBeLessThan(marfa.x);
   });
 
-  it("Vladimir/Marfa and Grigory/Elizaveta Krivusha (both Nikolai Kupchik Sr.'s side, one generation further up) are pulled off-center from their own children's midpoint by equal, opposite amounts (symmetric kink, not one-straight-one-kinked)", () => {
-    // Vladimir/Marfa (pulled toward their only child Nikolai) and Grigory/
-    // Elizaveta Krivusha (pulled toward the MIDPOINT of their two children —
-    // Elizaveta Kupchik and her sister Elena Ushkar) are BOTH labeled
-    // "paternal" branch here — they're two independent couples that happen
-    // to land on the same generation row, one generation above Nikolai/
-    // Elizaveta. Same situation as Nikolai/Elizaveta Kupchik vs Nikolai/
-    // Nadezhda Kozlovsky: Nikolai and Elizaveta stay at the standard
-    // SPOUSE_GAP, so their two respective parent couples can't both center
-    // exactly above their own ideal pull without overlapping. The shortfall
-    // is split evenly rather than one couple keeping a perfect center while
-    // the other absorbs it all. Reference point for Krivusha's ideal pull
-    // MUST be its own children's midpoint (Elizaveta+Elena), not Elizaveta
-    // Kupchik's position alone — once Elena existed as a second recorded
-    // child, comparing against Elizaveta alone made this look like an
-    // asymmetric kink when the actual underlying idealX-collision-driven
-    // shift was still perfectly symmetric.
+  it("Vladimir/Marfa center exactly on their only child Nikolai (regression: no longer share a row/collision with Grigory/Elizaveta Krivusha, since Krivusha was raised one extra generation for Natalya Ushkar's sake — see the stranded-only-child test below)", () => {
+    // Vladimir/Marfa and Grigory/Elizaveta Krivusha USED TO share the same
+    // generation row (both "one generation above Nikolai/Elizaveta Kupchik"),
+    // which forced a collision-driven symmetric kink in both couples' ideal
+    // centers (same situation as Nikolai/Elizaveta Kupchik vs Nikolai/
+    // Nadezhda Kozlovsky). Once Natalya Ushkar's stranded-only-child retry
+    // raised Krivusha one EXTRA generation (see buildTreeV4Layout's retry
+    // pass), the two couples no longer share a row at all — there's no
+    // collision left to force a kink, so Vladimir/Marfa now center EXACTLY
+    // on Nikolai (their only recorded child) with zero offset.
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     const nikolai = personById(result, "nikolai-kupchik");
-    const elizaveta = personById(result, "elizaveta-kupchik");
-    const elena = personById(result, "elena-ushkar");
     const vladimir = personById(result, "vladimir-kupchik");
     const marfa = personById(result, "marfa-kupchik");
     const grigory = personById(result, "grigory-krivusha");
     const elizavetaKrivusha = personById(result, "elizaveta-krivusha");
 
     const vladimirMarfaCenterX = (vladimir.x + marfa.x) / 2;
-    const krivushaCenterX = (grigory.x + elizavetaKrivusha.x) / 2;
-    const krivushaChildrenMidpointX = (elizaveta.x + elena.x) / 2;
-    const vladimirMarfaOffset = vladimirMarfaCenterX - nikolai.x;
-    const krivushaOffset = krivushaCenterX - krivushaChildrenMidpointX;
-
-    expect(Math.abs(vladimirMarfaOffset)).toBeGreaterThan(1);
-    expect(Math.abs(krivushaOffset)).toBeGreaterThan(1);
-    expect(vladimirMarfaOffset).toBeCloseTo(-krivushaOffset, 5);
+    expect(vladimirMarfaCenterX).toBeCloseTo(nikolai.x, 5);
+    // And confirm the two couples are genuinely on different rows now.
+    expect(vladimir.y).not.toBe(grigory.y);
+    expect(vladimir.y).not.toBe(elizavetaKrivusha.y);
   });
 
   it("Grigory (husband) is left of Elizaveta Krivusha (wife)", () => {
@@ -264,7 +252,17 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     expect(grigory.x).toBeLessThan(elizavetaKrivusha.x);
   });
 
-  it("Grigory/Elizaveta Krivusha are above Elizaveta Kupchik, at the same generation as Vladimir/Marfa", () => {
+  it("Grigory/Elizaveta Krivusha are above Elizaveta Kupchik (regression: raised one extra generation above Vladimir/Marfa, since their OTHER daughter Elena Ushkar's own daughter Natalya needed her natural row raised — see the stranded-only-child test below)", () => {
+    // Grigory/Elizaveta Krivusha used to sit at the SAME generation as
+    // Vladimir/Marfa (both "one generation above Nikolai/Elizaveta Kupchik").
+    // Once Elena Ushkar's daughter Natalya was added, Natalya's natural BFS
+    // row turned out to already belong entirely to Viktor/Galina's crowded
+    // sibling row — buildTreeV4Layout's stranded-only-child retry raises
+    // Natalya AND her entire ancestry (Nikolai/Elena Ushkar, then Elena's
+    // own parents Grigory/Elizaveta Krivusha) one extra generation so
+    // Natalya lands beside her actual parents instead. Grigory/Elizaveta
+    // Krivusha are consequently now ONE generation above Vladimir/Marfa, not
+    // at the same one — this is intentional, not a regression in itself.
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     const elizaveta = personById(result, "elizaveta-kupchik");
     const grigory = personById(result, "grigory-krivusha");
@@ -272,7 +270,7 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     const vladimir = personById(result, "vladimir-kupchik");
     expect(grigory.y).toBeLessThan(elizaveta.y);
     expect(elizavetaKrivusha.y).toBeLessThan(elizaveta.y);
-    expect(grigory.y).toBe(vladimir.y);
+    expect(grigory.y).toBeLessThan(vladimir.y);
   });
 
   it("Vladimir/Marfa never end up on the wrong side of Grigory/Elizaveta Krivusha relative to their real children (regression: connector lines must not cross)", () => {
@@ -894,23 +892,20 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     // `!hasSiblingInGraph` clause treated "no sibling" as license to become
     // an independent ancestor unit, exactly the failure this filter exists
     // to prevent (just for a shape — only child, not sibling-of-someone-
-    // pulled — that hadn't been exercised before Natalya). She also lands on
-    // GENERATION -1 (the SAME BFS row as Viktor/Galina, since generation is
-    // BFS distance from focus, not blood closeness — Elena/Nikolai Ushkar
-    // are generation -2, one level up, so their child is back down at -1).
-    // Passing the old filter got her placed via placeAncestorUnit at
-    // idealX=0, BEFORE the Kozlovsky-sisters row and the Kupchik-great-
-    // grandparent row were resolved — collapsing the entire maternal side
-    // (Nikolai/Nadezhda Kozlovsky, all 8 of Galina's sisters) leftward by
-    // thousands of px via resolveSymmetricOverlaps. She must be placed
-    // exclusively via placeUnplacedSiblings from her OWN parents' row
-    // (Elena/Nikolai Ushkar, generation -2), never as a standalone unit.
+    // pulled — that hadn't been exercised before Natalya). She NATURALLY
+    // lands on generation -1 (the SAME BFS row as Viktor/Galina, since
+    // generation is BFS distance from focus, not blood closeness — Elena/
+    // Nikolai Ushkar are generation -2, one level up, so their child is
+    // back down at -1). Passing the old filter got her placed via
+    // placeAncestorUnit at idealX=0, BEFORE the Kozlovsky-sisters row and
+    // the Kupchik-great-grandparent row were resolved — collapsing the
+    // entire maternal side (Nikolai/Nadezhda Kozlovsky, all 8 of Galina's
+    // sisters) leftward by thousands of px via resolveSymmetricOverlaps.
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     const nikolaiKozlovsky = personById(result, "nikolai-kozlovsky");
     const nadezhda = personById(result, "nadezhda-kozlovskaya");
     const galina = personById(result, "galina-kupchik");
     const lyudmilaRedko = personById(result, "lyudmila-redko");
-    const natalyaUshkar = personById(result, "natalya-ushkar");
     // The maternal side (Kozlovsky great-grandparents + Galina's own sibling
     // row) must stay on its own side, undisturbed by Natalya Ushkar's
     // placement — this is the same "paternal/maternal lines never mix"
@@ -919,14 +914,64 @@ describe("tree-v4 — real data (Alexander/Eleonora/Eva + Viktor/Galina/Daria + 
     expect(nadezhda.x).toBeGreaterThan(0);
     expect(galina.x).toBeGreaterThan(nikolaiKozlovsky.x - 2000); // sanity: not collapsed onto paternal side
     expect(lyudmilaRedko.x).toBeGreaterThan(galina.x);
-    // Natalya herself must stay at HER OWN generation row (-1), not get
-    // pulled onto her parents' row (-2) or anywhere else.
-    expect(natalyaUshkar.y).toBe(galina.y);
+  });
+
+  it("Natalya Ushkar's whole ancestry (herself, Nikolai/Elena Ushkar, Grigory/Elizaveta Krivusha) is raised one generation so she lands right beside her own parents instead of stranded on Viktor/Galina's crowded row", () => {
+    // Even once Natalya stopped being treated as an independent ancestor
+    // unit (see the test above), placeUnplacedSiblings still defaulted her
+    // anchor to her PARENT'S resolved x on her NATURAL row — but that row
+    // (generation -1, same as Viktor/Galina) is already packed edge-to-edge
+    // with ~1500px of unrelated blood family, so the nearest free slot was
+    // still ~1450px from her actual parents (off the far edge of that
+    // crowded row). No amount of anchor-tuning within a single generation
+    // row can fix a row that fundamentally belongs to someone else's
+    // family. buildTreeV4Layout now retries once: findStrandedOnlyChildren
+    // detects her post-placement distance from her parent exceeds the
+    // threshold, and raiseAncestryOneGeneration raises HER OWN generation
+    // AND her entire recorded ancestry (Nikolai/Elena Ushkar, then Elena's
+    // own parents Grigory/Elizaveta Krivusha) by exactly one row each —
+    // landing her on a row that belongs to her own family, right next to
+    // her actual parents.
+    const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
+    const natalya = personById(result, "natalya-ushkar");
+    const nikolaiUshkar = personById(result, "nikolai-ushkar");
+    const elenaUshkar = personById(result, "elena-ushkar");
+    const galina = personById(result, "galina-kupchik");
+
+    // No longer shares Viktor/Galina's crowded row.
+    expect(natalya.y).not.toBe(galina.y);
+    // Sits at the parents' own generation + 1 (one row below them), exactly
+    // as any ordinary child would.
+    expect(natalya.y).toBe(nikolaiUshkar.y + GENERATION_GAP);
+    expect(natalya.y).toBe(elenaUshkar.y + GENERATION_GAP);
+    // Close to her actual parents' midpoint — not stranded far away.
+    const parentsMidpointX = (nikolaiUshkar.x + elenaUshkar.x) / 2;
+    expect(Math.abs(natalya.x - parentsMidpointX)).toBeLessThan(
+      CARD_WIDTH + SIBLING_GAP,
+    );
   });
 
   it("no overlaps anywhere in the tree with Natalya Ushkar present", () => {
     const result = buildTreeV4Layout(initialFamilyGraph, realFocusId);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
+  });
+
+  it("raiseAncestryOneGeneration also raises the STARTING person's own generation, not just their ancestors (unit test on graph.ts directly — this bug wouldn't manifest via buildTreeV4Layout's positions alone, since placeUnplacedSiblings anchors on the parent's resolved y directly rather than re-reading the child's own stored generation field)", () => {
+    // Real bug in an earlier version: raiseAncestryOneGeneration walked
+    // UP from startPersonId's parentIds and raised every ancestor found,
+    // but never touched startPersonId's own `generation` field. In THIS
+    // dataset that happened to cause no visible symptom (Natalya's y comes
+    // from her parent's resolved position at placement time, not from her
+    // own stored generation, once she's routed through
+    // placeUnplacedSiblings) — but `generation` is still a real,
+    // independently-read field (used for peopleInRow's row grouping
+    // elsewhere), so leaving it stale is a correctness bug on the function
+    // itself, one a different graph shape could easily expose.
+    const graph = normalizeGraph(initialFamilyGraph, realFocusId);
+    const before = graph.personById.get("natalya-ushkar")!.generation;
+    raiseAncestryOneGeneration(graph, "natalya-ushkar");
+    const after = graph.personById.get("natalya-ushkar")!.generation;
+    expect(after).toBe(before - 1);
   });
 });
 
