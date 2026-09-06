@@ -181,20 +181,23 @@ export function TreeCanvas({
         // to see everyone from there.
         minZoom={0.02}
         maxZoom={1.5}
-        // Without this, every node/edge in the connected family stays
-        // mounted in the DOM regardless of zoom or pan — fine at the
-        // default 85% focus view where only a handful are ever on screen,
-        // but a pinch-zoom-out on a 30-100 person family (this app puts no
-        // depth cap on the graph, see ancestorGenerations/
-        // descendantGenerations: Infinity above) brings most of them into
-        // view simultaneously, each a full PersonNode with a photo. On a
-        // phone that's enough sustained paint/memory pressure that the next
-        // layout-triggering event — opening the mobile header's menu panel
-        // — was enough to crash the Safari tab ("a problem repeatedly
-        // occurred"). onlyRenderVisibleElements keeps only nodes/edges
-        // actually intersecting the current viewport mounted, so the DOM
-        // cost stays bounded by what's on screen, not by family size.
-        onlyRenderVisibleElements
+        // onlyRenderVisibleElements used to be enabled here (mounts only
+        // nodes/edges intersecting the current viewport, capping DOM cost on
+        // a large family regardless of zoom/pan — added after a pinch-zoom-
+        // out on a 30-100 person family, each a full PersonNode with a
+        // photo, crashed a phone Safari tab). Turned back OFF: XYFlow decides
+        // per-edge visibility from source/target node positions alone, with
+        // no notion of UnionChildEdge/PartnershipEdgeLine's own custom
+        // T-shaped geometry (both read LIVE positions via useInternalNode,
+        // not sourceX/targetX) — a card leaving and re-entering the viewport
+        // got remounted a beat before its measured size settled, so its
+        // union trunk/partnership line would render one frame with visibly
+        // offset connectors (reported: lines "съехали" after a drag that
+        // took a card off-screen and back). Losing this optimization
+        // reopens the phone-crash risk on very large families — if that
+        // resurfaces, the fix belongs in the edge components themselves
+        // (stop trusting a stale `measured` fallback mid-remount), not in
+        // silently re-enabling this flag.
       >
         <InitialFocusViewport focusNode={focusNode} />
         <Background gap={24} />
