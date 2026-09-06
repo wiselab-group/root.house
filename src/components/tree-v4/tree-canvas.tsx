@@ -83,8 +83,13 @@ function TreeCanvasInner({
   // as the reactflow.dev examples use, rather than a custom Panel + Switch.
   // React Flow's own "interactive" toggle covers dragging (and, as a side
   // effect, connecting/selecting too), which is fine here since tree-v4 has
-  // no connect-handles UI of its own for the user to lose.
-  const [nodesDraggable, setNodesDraggable] = useState(true);
+  // no connect-handles UI of its own for the user to lose. Starts LOCKED
+  // (false): the lock icon must render closed by default, and the button's
+  // rendered icon is driven by isInteractive = nodesDraggable ||
+  // nodesConnectable || elementsSelectable in React Flow's own store — so
+  // nodesConnectable/elementsSelectable must also start false, not just
+  // nodesDraggable, or the icon would still show unlocked on first render.
+  const [nodesDraggable, setNodesDraggable] = useState(false);
 
   const edges = useMemo(() => {
     const centerById = new Map(
@@ -112,6 +117,8 @@ function TreeCanvasInner({
         edgeTypes={edgeTypes}
         onNodesChange={handleNodesChange}
         nodesDraggable={nodesDraggable}
+        nodesConnectable={nodesDraggable}
+        elementsSelectable={nodesDraggable}
         fitView
         proOptions={{ hideAttribution: true }}
       >
