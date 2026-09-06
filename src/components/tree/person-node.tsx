@@ -106,6 +106,8 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
           name={name}
           years={years}
           initials={initials}
+          isHighlighted={data.isFocus || isTraceHighlighted}
+          isSelected={selected}
         />
       )}
       <Handle
@@ -124,16 +126,26 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
         render={
           <div
             className={cn(
-              "origin-center cursor-pointer overflow-hidden rounded-lg border bg-card shadow-sm",
-              data.cardStyle === "portrait" ? "w-40" : "w-55",
+              "w-40 origin-center cursor-pointer",
               "animate-tree-node-enter",
-              "transition-[box-shadow,opacity] duration-200 ease-(--ease-tree-focus)",
-              "hover:shadow-md",
-              data.isFocus || isTraceHighlighted
-                ? "border-primary ring-2 ring-primary/30"
-                : "border-border",
-              selected && "ring-2 ring-ring",
-              data.isPlaceholder && "border-dashed opacity-70",
+              "transition-opacity duration-200 ease-(--ease-tree-focus)",
+              data.cardStyle === "compact"
+                ? // No card frame at all for compact — the round avatar
+                  // itself carries the border/ring states (see
+                  // compact-card-body.tsx's isHighlighted/isSelected/
+                  // isPlaceholder handling) so the parent_child connector
+                  // line, anchored to this div's own top/bottom edges via
+                  // the Handles above, visibly touches the avatar instead
+                  // of stopping at an invisible card boundary.
+                  "overflow-visible"
+                : cn(
+                    "overflow-hidden rounded-lg border bg-card shadow-sm hover:shadow-md",
+                    data.isFocus || isTraceHighlighted
+                      ? "border-primary ring-2 ring-primary/30"
+                      : "border-border",
+                    selected && "ring-2 ring-ring",
+                    data.isPlaceholder && "border-dashed opacity-70",
+                  ),
               isDimmed && "opacity-35 hover:opacity-70",
             )}
             style={{

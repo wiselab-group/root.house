@@ -1,7 +1,11 @@
 "use client";
 
 import { BaseEdge, useInternalNode, type EdgeProps } from "@xyflow/react";
-import type { UnionChildFlowEdge } from "./adapters/xyflow-adapter";
+import {
+  CONNECTOR_CENTER_Y,
+  type PersonFlowNode,
+  type UnionChildFlowEdge,
+} from "./adapters/xyflow-adapter";
 import { TRACE_COLOR } from "./relationship-edge";
 import { roundedOrthogonalPath } from "./orthogonal-path";
 
@@ -25,8 +29,8 @@ export function UnionChildEdge({
   targetY,
   data,
 }: EdgeProps<UnionChildFlowEdge>) {
-  const parentA = useInternalNode(data?.parentAId ?? "");
-  const parentB = useInternalNode(data?.parentBId ?? "");
+  const parentA = useInternalNode<PersonFlowNode>(data?.parentAId ?? "");
+  const parentB = useInternalNode<PersonFlowNode>(data?.parentBId ?? "");
   const isOnTracePath = data?.isOnTracePath === true;
 
   if (!parentA || !parentB) return null;
@@ -41,22 +45,27 @@ export function UnionChildEdge({
   const heightB = parentB.measured?.height ?? parentB.height ?? 0;
   const xA = parentA.internals.positionAbsolute.x;
   const xB = parentB.internals.positionAbsolute.x;
-  const aIsLeft = xA <= xB;
-  // Midpoint between the *inner* edges of the two cards (right edge of
-  // whichever one is on the left, left edge of whichever is on the right)
-  // — the same span PartnershipEdgeLine draws its horizontal line across,
-  // so the trunk starts exactly on that line, not off to one side of it.
-  const innerLeft = aIsLeft ? xA + widthA : xB + widthB;
-  const innerRight = aIsLeft ? xB : xA;
-  const sourceX = (innerLeft + innerRight) / 2;
-  // Midpoint of the *two cards' own* vertical centers, not just parentA's —
-  // PartnershipEdgeLine draws its line between each card's own center
-  // (sourceCenterY, targetCenterY), so once the cards aren't level (either
-  // one dragged off the other's row) that line is a diagonal, and using
-  // only parentA's Y here left the trunk's start point off that diagonal
-  // entirely — this matches it at every drag position, not just level ones.
-  const centerYA = parentA.internals.positionAbsolute.y + heightA / 2;
-  const centerYB = parentB.internals.positionAbsolute.y + heightB / 2;
+  // Midpoint between each card's own horizontal center (not its inner edge)
+  // — PartnershipEdgeLine now draws its line center-to-center (through each
+  // card to its avatar's center), so the trunk must start on that same
+  // midpoint to land exactly on that line, not off to one side of it.
+  const centerXA = xA + widthA / 2;
+  const centerXB = xB + widthB / 2;
+  const sourceX = (centerXA + centerXB) / 2;
+  // Midpoint of the *two cards' own* avatar centers, not just parentA's —
+  // PartnershipEdgeLine draws its line between each card's own avatar center
+  // (sourceCenterY, targetCenterY, see CONNECTOR_CENTER_Y — the avatar
+  // doesn't span the card's full height, so this isn't heightA/2), so once
+  // the cards aren't level (either one dragged off the other's row) that
+  // line is a diagonal, and using only parentA's Y here left the trunk's
+  // start point off that diagonal entirely — this matches it at every drag
+  // position, not just level ones.
+  const centerYA =
+    parentA.internals.positionAbsolute.y +
+    CONNECTOR_CENTER_Y[parentA.data.cardStyle];
+  const centerYB =
+    parentB.internals.positionAbsolute.y +
+    CONNECTOR_CENTER_Y[parentB.data.cardStyle];
   const sourceY = (centerYA + centerYB) / 2;
   // The trunk's own vertical run must clear both cards' bottom edges before
   // it's visible as a line — starting it at sourceY (center height) would
@@ -70,7 +79,7 @@ export function UnionChildEdge({
   );
 
   // If the trace path reaches this child through only one parent, extend
-  // the path's start all the way back to that parent's own card edge (the
+  // the path's start all the way back to that parent's own card center (the
   // same point PartnershipEdgeLine's dashed line would start from) — one
   // continuous <path> from parent through the partnership midpoint down to
   // the child gets one smoothly rounded corner at every bend, instead of
@@ -80,9 +89,9 @@ export function UnionChildEdge({
   // visibly bumped corner that no per-path rounding could smooth over.
   const tracedStart =
     data?.tracedParentId === data?.parentAId
-      ? { x: aIsLeft ? xA + widthA : xA, y: centerYA }
+      ? { x: centerXA, y: centerYA }
       : data?.tracedParentId === data?.parentBId
-        ? { x: aIsLeft ? xB : xB + widthB, y: centerYB }
+        ? { x: centerXB, y: centerYB }
         : null;
 
   const midY = (clearY + targetY) / 2;
@@ -103,7 +112,7 @@ export function UnionChildEdge({
       path={path}
       style={{
         strokeWidth: isOnTracePath ? 3 : 2,
-        stroke: isOnTracePath ? TRACE_COLOR : "var(--border)",
+        stroke: isOnTracePath ? TRACE_COLOR : "var(--muted-foreground)",
       }}
     />
   );

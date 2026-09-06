@@ -267,11 +267,11 @@ describe("fromTreeLayout", () => {
     expect(grandparentsPartnership?.isCurrent).toBe(true);
   });
 
-  it("scales a known partner pair's horizontal distance to exactly PROD_PARTNER_X_SPACING (260)", () => {
+  it("scales a known partner pair's horizontal distance to exactly PROD_PARTNER_X_SPACING (184)", () => {
     const layoutGraph = run();
     const a = layoutGraph.nodes.find((n) => n.id === "grandpa")!;
     const b = layoutGraph.nodes.find((n) => n.id === "grandma")!;
-    expect(Math.abs(a.x - b.x)).toBeCloseTo(260, 5);
+    expect(Math.abs(a.x - b.x)).toBeCloseTo(184, 5);
   });
 
   it("throws a clear error if a laid-out person is missing from personById (adapter bug guard)", () => {

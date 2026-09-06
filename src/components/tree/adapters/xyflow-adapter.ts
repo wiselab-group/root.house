@@ -108,18 +108,25 @@ export interface TreeHighlightState {
 }
 
 // Node dimensions per card style — must match what PersonNode actually
-// renders at (see its w-*/h-* classes). Server-side layout (tree-layout.builder.ts)
-// only ever computes "compact" spacing (PARTNER_X_SPACING/GENERATION_Y_SPACING,
-// 260/180); the "portrait" style rescales those same x/y values proportionally
-// below rather than asking the server to lay out twice — this is purely a
+// renders at (see its w-*/h-* classes). "compact" is the layout engine's own
+// native coordinate space: the layout engine (src/domain/tree/layout/, via
+// tree-adapter.ts's X_SCALE/Y_SCALE) produces x/y already scaled to
+// COMPACT_X_SPACING/COMPACT_Y_SPACING — changing either constant here means
+// changing tree-adapter.ts's PROD_PARTNER_X_SPACING/PROD_GENERATION_Y_SPACING
+// to match, in lockstep, or collision-free spacing breaks for every card
+// style (portrait included, since it rescales off this same baseline). The
+// "portrait" style then rescales those coordinates proportionally below,
+// rather than asking the layout engine to lay out twice — this is purely a
 // client-side viewing preference (see use-tree-card-style.ts), not something
-// that needs its own domain-layer layout pass. COMPACT_X_SPACING must track
-// tree-layout.builder.ts's PARTNER_X_SPACING (the couple's own gap, the
-// tightest/baseline seam PORTRAIT_X_SPACING below was calibrated against) —
-// not UNIT_X_SPACING, the wider sibling/unrelated-unit seam, which scales
-// down by the same ratio automatically since every x uses one shared factor.
-const COMPACT_X_SPACING = 260;
-const COMPACT_Y_SPACING = 180;
+// that needs its own domain-layer layout pass.
+//
+// Both card styles are the same 160px width as of the round-avatar compact
+// redesign (previously compact was a wide 220x88 row) — COMPACT_X_SPACING/
+// PORTRAIT_X_SPACING converged to the same value as a result. compact's own
+// avatar (size-36, 144px) plus name/years now makes it about as tall as
+// portrait's square photo, so the Y values converged too.
+const COMPACT_X_SPACING = 184;
+const COMPACT_Y_SPACING = 230;
 const PORTRAIT_X_SPACING = 184;
 const PORTRAIT_Y_SPACING = 260;
 
@@ -127,8 +134,28 @@ const NODE_DIMENSIONS: Record<
   TreeCardStyle,
   { width: number; height: number }
 > = {
-  compact: { width: 220, height: 88 },
+  compact: { width: 160, height: 200 },
   portrait: { width: 160, height: 220 },
+};
+
+/**
+ * How far below each card's own top edge its *photo's* vertical center sits
+ * — used by RelationshipEdge/UnionChildEdge to draw the partnership line (and
+ * the trunk line hanging off it) through each avatar's own center rather
+ * than the card's overall center. The two differ because neither card style
+ * has its photo spanning the card's full height:
+ * - compact: a 72px round avatar (size-18, compact-card-body.tsx) flush
+ *   against the card's top edge (no top padding) → center at 72/2 = 36.
+ * - portrait: a full-width square photo (aspect-square, portrait-card-
+ *   body.tsx) — height equals the card's own width (160px) → center at
+ *   160/2 = 80.
+ * Exported for the edge components (see relationship-edge.tsx,
+ * union-child-edge.tsx) — must be kept in sync by hand with the actual
+ * avatar/photo size in each *-card-body.tsx if either ever changes.
+ */
+export const CONNECTOR_CENTER_Y: Record<TreeCardStyle, number> = {
+  compact: 36,
+  portrait: 80,
 };
 
 function toFlowNode(

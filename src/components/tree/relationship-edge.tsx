@@ -1,7 +1,11 @@
 "use client";
 
 import { BaseEdge, useInternalNode, type EdgeProps } from "@xyflow/react";
-import type { RelationshipFlowEdge } from "./adapters/xyflow-adapter";
+import {
+  CONNECTOR_CENTER_Y,
+  type PersonFlowNode,
+  type RelationshipFlowEdge,
+} from "./adapters/xyflow-adapter";
 import { roundedOrthogonalPath } from "./orthogonal-path";
 
 /**
@@ -60,7 +64,7 @@ export function RelationshipEdge({
         path={path}
         style={{
           strokeWidth: isOnTracePath ? 3 : 2,
-          stroke: isOnTracePath ? TRACE_COLOR : "var(--border)",
+          stroke: isOnTracePath ? TRACE_COLOR : "var(--muted-foreground)",
         }}
       />
     );
@@ -102,25 +106,30 @@ function PartnershipEdgeLine({
   isOnTracePath: boolean;
   tracedPartnerId?: string;
 }) {
-  const sourceNode = useInternalNode(source);
-  const targetNode = useInternalNode(target);
+  const sourceNode = useInternalNode<PersonFlowNode>(source);
+  const targetNode = useInternalNode<PersonFlowNode>(target);
   if (!sourceNode || !targetNode) return null;
 
   const sourceWidth = sourceNode.measured?.width ?? sourceNode.width ?? 0;
-  const sourceHeight = sourceNode.measured?.height ?? sourceNode.height ?? 0;
-  const targetHeight = targetNode.measured?.height ?? targetNode.height ?? 0;
+  const targetWidth = targetNode.measured?.width ?? targetNode.width ?? 0;
   const sourceLeft = sourceNode.internals.positionAbsolute.x;
   const targetLeft = targetNode.internals.positionAbsolute.x;
   const sourceIsLeft = sourceLeft <= targetLeft;
 
-  const y = sourceNode.internals.positionAbsolute.y + sourceHeight / 2;
-  const x1 = sourceIsLeft ? sourceLeft + sourceWidth : sourceLeft;
-  const x2 = sourceIsLeft
-    ? targetLeft
-    : targetLeft + (targetNode.measured?.width ?? targetNode.width ?? 0);
-  // Both cards are the same cardStyle/height in practice, but average the
-  // two just in case a future layout ever mixes sizes within a row.
-  const yTarget = targetNode.internals.positionAbsolute.y + targetHeight / 2;
+  // The avatar/photo's own vertical center, not the card's overall center —
+  // compact's round avatar (and portrait's square photo) doesn't span the
+  // card's full height, so centering on the whole card would draw the line
+  // through the name/years text below the avatar instead of through it.
+  const sourceCenterY = CONNECTOR_CENTER_Y[sourceNode.data.cardStyle];
+  const targetCenterY = CONNECTOR_CENTER_Y[targetNode.data.cardStyle];
+  const y = sourceNode.internals.positionAbsolute.y + sourceCenterY;
+  // Each card's own horizontal center — not its edge — so the line visibly
+  // runs "through" each card to the avatar's center (compact's round avatar
+  // sits centered inside the card), instead of stopping short at the card's
+  // outer border with a gap that reads as disconnected from either avatar.
+  const x1 = sourceLeft + sourceWidth / 2;
+  const x2 = targetLeft + targetWidth / 2;
+  const yTarget = targetNode.internals.positionAbsolute.y + targetCenterY;
 
   const dashStyle = {
     strokeDasharray: isPastPartnership ? "2 4" : "5 3",

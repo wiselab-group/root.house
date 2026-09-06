@@ -114,27 +114,28 @@ const ENGINE_GENERATION_GAP = 240; // CARD_HEIGHT (176) + 64
 // components/tree/adapters/xyflow-adapter.ts's COMPACT_X_SPACING/
 // COMPACT_Y_SPACING (that file doesn't export them, so keep these two pairs
 // of constants in sync by hand if either side ever changes).
-const PROD_PARTNER_X_SPACING = 260; // xyflow-adapter.ts COMPACT_X_SPACING
-const PROD_GENERATION_Y_SPACING = 180; // xyflow-adapter.ts COMPACT_Y_SPACING
+const PROD_PARTNER_X_SPACING = 184; // xyflow-adapter.ts COMPACT_X_SPACING
+const PROD_GENERATION_Y_SPACING = 230; // xyflow-adapter.ts COMPACT_Y_SPACING
 
 const ENGINE_PARTNER_X_SPACING = ENGINE_CARD_WIDTH + ENGINE_SPOUSE_GAP; // 208
 
 /**
  * Uniform per-axis rescale from the engine's own coordinate space (tuned for
- * its 176x176 cards) to production's coordinate space (220x88 compact
- * cards). A uniform scale preserves every pairwise distance proportionally,
- * so the engine's collision-free guarantee survives the rescale: X_SCALE is
- * exactly the ratio that maps the engine's tightest legal horizontal gap
- * (direct partners, 208px) onto production's tightest gap (260px, built for
- * a 220px compact card) — 208*1.25=260 >= 220, exactly at the boundary, no
- * slack. Every wider engine gap (siblings, unrelated units) scales to
- * something even wider than 220px. Y_SCALE shrinks the engine's taller
- * vertical rhythm (240px, built for its 176px-tall cards) down to
- * production's 180px — production's compact card is only 88px tall, so
- * 91px of clearance remains, strictly safer than the engine's own margin.
+ * its 176x176 cards) to production's coordinate space (160x200 compact
+ * cards, as of the round-avatar compact redesign — previously 220x88). A
+ * uniform scale preserves every pairwise distance proportionally, so the
+ * engine's collision-free guarantee survives the rescale: X_SCALE maps the
+ * engine's tightest legal horizontal gap (direct partners, 208px) onto
+ * production's tightest gap (184px, built for a 160px compact card) —
+ * 208*0.885=184 >= 160, with 24px of clearance. Every wider engine gap
+ * (siblings, unrelated units) scales to something even wider than 160px.
+ * Y_SCALE shrinks the engine's taller vertical rhythm (240px, built for its
+ * 176px-tall cards) down to production's 230px — production's compact card
+ * is 200px tall (large round avatar + name/years), so 30px of clearance
+ * remains.
  */
-const X_SCALE = PROD_PARTNER_X_SPACING / ENGINE_PARTNER_X_SPACING; // 1.25
-const Y_SCALE = PROD_GENERATION_Y_SPACING / ENGINE_GENERATION_GAP; // 0.75
+const X_SCALE = PROD_PARTNER_X_SPACING / ENGINE_PARTNER_X_SPACING; // 0.885
+const Y_SCALE = PROD_GENERATION_Y_SPACING / ENGINE_GENERATION_GAP; // 0.958
 
 /**
  * Converts the layout engine's TreeLayoutResult back into the shared
