@@ -3,14 +3,17 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { PhotoPreviewCard } from "@/components/media/photo-preview-card";
 import { uploadPhoto } from "@/lib/upload-photo";
 
 /**
- * Uploads via fetch() to /api/media/upload (a Route Handler, not a Server
- * Action) so the file passes through our server as multipart form data
- * rather than needing Server Actions' more restrictive body-size handling
- * or Vercel Blob's client-token flow (which only supports public blobs —
- * see the route handler's doc comment for why that's a non-starter here).
+ * Picking a file only stages it for review (PhotoPreviewCard) — it does
+ * NOT upload immediately. Uploading happens through fetch() to
+ * /api/media/upload (a Route Handler, not a Server Action) so the file
+ * passes through our server as multipart form data rather than needing
+ * Server Actions' more restrictive body-size handling or Vercel Blob's
+ * client-token flow (which only supports public blobs — see the route
+ * handler's doc comment for why that's a non-starter here).
  */
 export function PhotoUploadForm({
   familyId,
@@ -21,18 +24,32 @@ export function PhotoUploadForm({
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setError(null);
+    setPendingFile(file);
+  }
+
+  function cancel() {
+    setPendingFile(null);
+    setError(null);
+    if (inputRef.current) inputRef.current.value = "";
+  }
+
+  async function confirm() {
+    if (!pendingFile) return;
 
     setIsUploading(true);
     setError(null);
 
     try {
-      await uploadPhoto({ familyId, personIds: [personId], file });
+      await uploadPhoto({ familyId, personIds: [personId], file: pendingFile });
+      setPendingFile(null);
       router.refresh();
     } catch (err) {
       setError(
@@ -44,6 +61,18 @@ export function PhotoUploadForm({
     }
   }
 
+  if (pendingFile) {
+    return (
+      <PhotoPreviewCard
+        file={pendingFile}
+        isUploading={isUploading}
+        error={error}
+        onConfirm={confirm}
+        onCancel={cancel}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <input
@@ -51,7 +80,6 @@ export function PhotoUploadForm({
         type="file"
         accept="image/jpeg,image/png,image/webp,image/heic"
         onChange={handleFileChange}
-        disabled={isUploading}
         className="hidden"
         id="photo-upload-input"
       />
@@ -59,13 +87,10 @@ export function PhotoUploadForm({
         type="button"
         variant="outline"
         size="sm"
-        disabled={isUploading}
-        aria-busy={isUploading}
         onClick={() => inputRef.current?.click()}
       >
-        {isUploading ? "Загружаем…" : "Добавить фото"}
+        Добавить фото
       </Button>
-      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }
