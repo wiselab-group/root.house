@@ -36,7 +36,7 @@ export function CompactCardBody({
           // variant (avatar.tsx) otherwise wins over a plain size-* utility
           // regardless of source order (see avatar-editor.tsx/people-list.tsx
           // for the same pattern already used elsewhere in this codebase).
-          "size-18! text-lg",
+          "size-22! text-xl",
           data.isPlaceholder && "outline-dashed outline-muted-foreground",
         )}
         // Generation color-coding (DESIGN.md): one warm hue, lightness/

@@ -144,8 +144,8 @@ const NODE_DIMENSIONS: Record<
  * the trunk line hanging off it) through each avatar's own center rather
  * than the card's overall center. The two differ because neither card style
  * has its photo spanning the card's full height:
- * - compact: a 72px round avatar (size-18, compact-card-body.tsx) flush
- *   against the card's top edge (no top padding) → center at 72/2 = 36.
+ * - compact: an 88px round avatar (size-22, compact-card-body.tsx) flush
+ *   against the card's top edge (no top padding) → center at 88/2 = 44.
  * - portrait: a full-width square photo (aspect-square, portrait-card-
  *   body.tsx) — height equals the card's own width (160px) → center at
  *   160/2 = 80.
@@ -154,7 +154,7 @@ const NODE_DIMENSIONS: Record<
  * avatar/photo size in each *-card-body.tsx if either ever changes.
  */
 export const CONNECTOR_CENTER_Y: Record<TreeCardStyle, number> = {
-  compact: 36,
+  compact: 44,
   portrait: 80,
 };
 
