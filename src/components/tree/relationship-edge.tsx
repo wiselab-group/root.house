@@ -19,6 +19,16 @@ import { roundedOrthogonalPath } from "./orthogonal-path";
 export const TRACE_COLOR = "var(--chart-2)";
 
 /**
+ * How far above a compact-style child's own card top edge the connector's
+ * horizontal bend sits (see ParentChildEdgeLine) — a fixed pixel length, not
+ * a proportional split of the parent/child gap: that gap is only ~30px
+ * (COMPACT_Y_SPACING minus card height), so a proportional split barely
+ * moves the bend at all. A fixed tail reads as a clear, deliberate line
+ * into the avatar regardless of how tall the gap happens to be.
+ */
+export const COMPACT_CHILD_TAIL_LENGTH = 56;
+
+/**
  * Renders parent_child edges as a solid line and partnership edges as
  * dashed — the visual distinction between "descent" and "union" the plan's
  * DESIGN.md calls for, without needing separate label text on every edge.
@@ -51,21 +61,15 @@ export function RelationshipEdge({
   // (not just rounded) for short/near-zero segments — a union trunk's start
   // point routinely produces exactly that case.
   if (!isPartnership) {
-    const midY = (sourceY + targetY) / 2;
-    const path = roundedOrthogonalPath([
-      { x: sourceX, y: sourceY },
-      { x: sourceX, y: midY },
-      { x: targetX, y: midY },
-      { x: targetX, y: targetY },
-    ]);
     return (
-      <BaseEdge
+      <ParentChildEdgeLine
         id={id}
-        path={path}
-        style={{
-          strokeWidth: isOnTracePath ? 3 : 2,
-          stroke: isOnTracePath ? TRACE_COLOR : "var(--muted-foreground)",
-        }}
+        target={target}
+        sourceX={sourceX}
+        sourceY={sourceY}
+        targetX={targetX}
+        targetY={targetY}
+        isOnTracePath={isOnTracePath}
       />
     );
   }
@@ -78,6 +82,51 @@ export function RelationshipEdge({
       isPastPartnership={isPastPartnership}
       isOnTracePath={isOnTracePath}
       tracedPartnerId={data?.tracedPartnerId}
+    />
+  );
+}
+
+function ParentChildEdgeLine({
+  id,
+  target,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  isOnTracePath,
+}: {
+  id: string;
+  target: string;
+  sourceX: number;
+  sourceY: number;
+  targetX: number;
+  targetY: number;
+  isOnTracePath: boolean;
+}) {
+  const targetNode = useInternalNode<PersonFlowNode>(target);
+  // Portrait's square photo already fills the card from its very top edge,
+  // so the plain midpoint bend already reads fine there and a fixed tail
+  // would look arbitrary against a square corner — only compact's round
+  // avatar (which sits well clear of the card's top edge, see
+  // CONNECTOR_CENTER_Y) needs the fixed-length tail below.
+  const isCompactChild = targetNode?.data.cardStyle === "compact";
+  const midY = isCompactChild
+    ? Math.max(sourceY, targetY - COMPACT_CHILD_TAIL_LENGTH)
+    : (sourceY + targetY) / 2;
+  const path = roundedOrthogonalPath([
+    { x: sourceX, y: sourceY },
+    { x: sourceX, y: midY },
+    { x: targetX, y: midY },
+    { x: targetX, y: targetY },
+  ]);
+  return (
+    <BaseEdge
+      id={id}
+      path={path}
+      style={{
+        strokeWidth: isOnTracePath ? 3 : 2,
+        stroke: isOnTracePath ? TRACE_COLOR : "var(--muted-foreground)",
+      }}
     />
   );
 }

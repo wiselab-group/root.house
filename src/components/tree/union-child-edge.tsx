@@ -6,7 +6,7 @@ import {
   type PersonFlowNode,
   type UnionChildFlowEdge,
 } from "./adapters/xyflow-adapter";
-import { TRACE_COLOR } from "./relationship-edge";
+import { COMPACT_CHILD_TAIL_LENGTH, TRACE_COLOR } from "./relationship-edge";
 import { roundedOrthogonalPath } from "./orthogonal-path";
 
 /**
@@ -25,12 +25,14 @@ import { roundedOrthogonalPath } from "./orthogonal-path";
  */
 export function UnionChildEdge({
   id,
+  target,
   targetX,
   targetY,
   data,
 }: EdgeProps<UnionChildFlowEdge>) {
   const parentA = useInternalNode<PersonFlowNode>(data?.parentAId ?? "");
   const parentB = useInternalNode<PersonFlowNode>(data?.parentBId ?? "");
+  const targetNode = useInternalNode<PersonFlowNode>(target);
   const isOnTracePath = data?.isOnTracePath === true;
 
   if (!parentA || !parentB) return null;
@@ -94,7 +96,14 @@ export function UnionChildEdge({
         ? { x: centerXB, y: centerYB }
         : null;
 
-  const midY = (clearY + targetY) / 2;
+  // The horizontal bend sits a fixed distance above the child, not at the
+  // midpoint — matching RelationshipEdge's plain parent_child lines (see
+  // there for why: only compact's round avatar needs this fixed tail;
+  // portrait's square photo already fills the card from its top edge).
+  const isCompactChild = targetNode?.data.cardStyle === "compact";
+  const midY = isCompactChild
+    ? Math.max(clearY, targetY - COMPACT_CHILD_TAIL_LENGTH)
+    : (clearY + targetY) / 2;
   const trunkPoints = [
     { x: sourceX, y: sourceY },
     { x: sourceX, y: clearY },
