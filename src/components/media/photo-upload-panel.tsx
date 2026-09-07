@@ -17,19 +17,21 @@ import { uploadPhoto } from "@/lib/upload-photo";
 export function PhotoUploadPanel({
   familyId,
   albums,
+  defaultAlbums = [],
 }: {
   familyId: string;
   /** The family's existing albums, for AlbumMultiCombobox — fetched once by the parent page, not re-fetched per upload. */
   albums: { id: string; name: string }[];
+  /** Pre-selected albums — e.g. the album this panel is rendered inside of on /photos/[albumId], so an upload from that page defaults to landing in it. */
+  defaultAlbums?: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [taggedPeople, setTaggedPeople] = useState<
     { id: string; name: string }[]
   >([]);
-  const [taggedAlbums, setTaggedAlbums] = useState<
-    { id: string; name: string }[]
-  >([]);
+  const [taggedAlbums, setTaggedAlbums] =
+    useState<{ id: string; name: string }[]>(defaultAlbums);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,7 +50,7 @@ export function PhotoUploadPanel({
         file,
       });
       setTaggedPeople([]);
-      setTaggedAlbums([]);
+      setTaggedAlbums(defaultAlbums);
       router.refresh();
     } catch (err) {
       setError(

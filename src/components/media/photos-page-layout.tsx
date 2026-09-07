@@ -39,6 +39,16 @@ export function PhotosPageLayout({
   activeAlbumName: string | null;
   photos: GalleryPhotoView[];
 }) {
+  // Uploading from an album's own page ("Добавить фото" on
+  // /photos/[albumId]) should default to tagging the new photo into THIS
+  // album — without this, a photo uploaded here silently ends up in no
+  // album at all unless the user separately re-picks it in the combobox,
+  // which reads as "the upload didn't work" from the album page.
+  const defaultAlbums =
+    activeAlbumId && activeAlbumName
+      ? [{ id: activeAlbumId, name: activeAlbumName }]
+      : [];
+
   const pageTitle = activeAlbumName ?? "Фото";
 
   return (
@@ -94,7 +104,11 @@ export function PhotosPageLayout({
       {canEdit && (
         <div className="flex flex-col gap-3">
           <CollapsibleForm triggerLabel="Добавить фото">
-            <PhotoUploadPanel familyId={familyId} albums={albums} />
+            <PhotoUploadPanel
+              familyId={familyId}
+              albums={albums}
+              defaultAlbums={defaultAlbums}
+            />
           </CollapsibleForm>
           <CollapsibleForm triggerLabel="Альбом">
             <CreateAlbumForm familyId={familyId} />
