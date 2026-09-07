@@ -118,13 +118,6 @@ function sanitizeFilename(filename: string): string {
   return filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100);
 }
 
-export async function getPersonGallery(
-  personId: string,
-  familyId: string,
-): Promise<MediaRecord[]> {
-  return getMediaForPerson(personId, familyId);
-}
-
 export interface GalleryPhoto {
   media: MediaRecord;
   people: MediaTaggedPerson[];
@@ -135,8 +128,8 @@ export interface GalleryPhoto {
  * Pairs a flat photo list with who's tagged on each one and which albums it
  * belongs to, both batch-fetched (see getPeopleForMedia/getAlbumsForMedia)
  * so rendering the grid/lightbox never issues one query per photo. Shared
- * by getFamilyGallery and getAlbumGallery — both just differ in which
- * photo list they start from.
+ * by getFamilyGallery, getAlbumGallery, and getPersonGallery — they only
+ * differ in which photo list they start from.
  */
 async function buildGalleryPhotos(
   photos: MediaRecord[],
@@ -152,6 +145,20 @@ async function buildGalleryPhotos(
     people: peopleByMedia.get(photo.id) ?? [],
     albums: albumsByMedia.get(photo.id) ?? [],
   }));
+}
+
+/**
+ * A Person's own photo gallery (their profile page) — same GalleryPhoto
+ * shape as the family/album galleries so PersonMediaGallery can reuse
+ * PhotoGrid/PhotoLightbox instead of a separate, simpler grid with no
+ * lightbox at all.
+ */
+export async function getPersonGallery(
+  personId: string,
+  familyId: string,
+): Promise<GalleryPhoto[]> {
+  const photos = await getMediaForPerson(personId, familyId);
+  return buildGalleryPhotos(photos, familyId);
 }
 
 /** The family-wide photo gallery (/families/[slug]/photos). */
