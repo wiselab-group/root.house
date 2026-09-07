@@ -34,17 +34,31 @@ export async function POST(request: Request): Promise<Response> {
 
   const formData = await request.formData();
   const familyId = formData.get("familyId");
+  // Avatar upload is always exactly one person and never touches albums
+  // (see isAvatar branch below); a regular gallery photo may tag zero, one,
+  // or several people, and belong to zero, one, or several albums —
+  // formData.getAll returns [] when a field is absent entirely, so an
+  // untagged/unalbumed upload from the family-wide gallery works without a
+  // fallback.
   const personId = formData.get("personId");
+  const personIds = formData
+    .getAll("personIds")
+    .filter((value): value is string => typeof value === "string");
+  const albumIds = formData
+    .getAll("albumIds")
+    .filter((value): value is string => typeof value === "string");
   const file = formData.get("file");
   const isAvatar = formData.get("isAvatar") === "true";
 
-  if (
-    typeof familyId !== "string" ||
-    typeof personId !== "string" ||
-    !(file instanceof File)
-  ) {
+  if (typeof familyId !== "string" || !(file instanceof File)) {
     return NextResponse.json(
-      { error: "Missing familyId, personId, or file" },
+      { error: "Missing familyId or file" },
+      { status: 400 },
+    );
+  }
+  if (isAvatar && typeof personId !== "string") {
+    return NextResponse.json(
+      { error: "Missing personId for avatar upload" },
       { status: 400 },
     );
   }
@@ -74,21 +88,23 @@ export async function POST(request: Request): Promise<Response> {
   const buffer = Buffer.from(await file.arrayBuffer());
 
   if (isAvatar) {
+    // personId is guaranteed a string here by the isAvatar check above.
+    const avatarPersonId = personId as string;
+
     // Replacing an existing avatar: upload+assign the new one first, then
     // remove the old Media row — never leave the person without any avatar
     // between the two steps if something below fails.
-    const previousPerson = await getPerson(personId, familyId);
+    const previousPerson = await getPerson(avatarPersonId, familyId);
     const previousAvatarMediaId = previousPerson?.photoMediaId ?? null;
 
     const avatarMedia = await uploadPersonAvatar({
       familyId,
-      personId,
       uploadedBy: session.user.id,
       file: buffer,
       contentType: file.type,
       originalFilename: file.name,
     });
-    await setPersonAvatar(personId, familyId, avatarMedia.id);
+    await setPersonAvatar(avatarPersonId, familyId, avatarMedia.id);
 
     if (previousAvatarMediaId) {
       await removeMedia(previousAvatarMediaId, familyId);
@@ -99,7 +115,8 @@ export async function POST(request: Request): Promise<Response> {
 
   const media = await uploadPersonPhoto({
     familyId,
-    personId,
+    personIds,
+    albumIds,
     uploadedBy: session.user.id,
     file: buffer,
     contentType: file.type,

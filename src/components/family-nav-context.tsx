@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import {
   Network,
   Users,
+  Images,
   MapPin,
   Settings,
   type LucideIcon,
@@ -20,6 +21,7 @@ import {
 const NAV_ICONS = {
   tree: Network,
   people: Users,
+  photos: Images,
   places: MapPin,
   settings: Settings,
 } as const satisfies Record<string, LucideIcon>;

@@ -3,14 +3,7 @@ import { getPersonGallery } from "@/domain/media/media.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhotoUploadForm } from "@/components/forms/photo-upload-form";
 import { DeleteMediaButton } from "@/components/forms/delete-media-button";
-
-// A tiny solid warm-muted-tone PNG used as the blur placeholder — photos are
-// served through our own authenticated /api/media/[id] route (see below),
-// which Next.js's image optimizer can't treat as a cacheable static source,
-// so `unoptimized` is required and a static blurDataURL is the only way to
-// get a placeholder at all (no on-the-fly blur generation is possible here).
-const BLUR_PLACEHOLDER =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEUlEQVR4nGN49/wBHDEQxwEAZ3ArUaHgM3YAAAAASUVORK5CYII=";
+import { BLUR_PLACEHOLDER } from "@/components/media/blur-placeholder";
 
 /**
  * A Person's photo gallery — server component fetching its own data (same
@@ -23,10 +16,12 @@ const BLUR_PLACEHOLDER =
  */
 export async function PersonMediaGallery({
   familyId,
+  familySlug,
   personId,
   canEdit,
 }: {
   familyId: string;
+  familySlug: string;
   personId: string;
   canEdit: boolean;
 }) {
@@ -61,6 +56,7 @@ export async function PersonMediaGallery({
                   <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                     <DeleteMediaButton
                       familyId={familyId}
+                      familySlug={familySlug}
                       personId={personId}
                       mediaId={photo.id}
                     />

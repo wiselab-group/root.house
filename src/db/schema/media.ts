@@ -15,6 +15,7 @@ import { events } from "./event";
 import { places } from "./place";
 import { stories } from "./story";
 import { persons } from "./person";
+import { albums } from "./album";
 import { privacyLevelEnum } from "./privacy";
 
 export const mediaKindEnum = pgEnum("media_kind", [
@@ -111,6 +112,23 @@ export const mediaPlace = pgTable(
   },
   (table) => [
     uniqueIndex("media_place_unique").on(table.mediaId, table.placeId),
+  ],
+);
+
+export const mediaAlbum = pgTable(
+  "media_album",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    mediaId: uuid("media_id")
+      .notNull()
+      .references(() => media.id, { onDelete: "cascade" }),
+    albumId: uuid("album_id")
+      .notNull()
+      .references(() => albums.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("media_album_unique").on(table.mediaId, table.albumId),
+    index("media_album_album_idx").on(table.albumId),
   ],
 );
 

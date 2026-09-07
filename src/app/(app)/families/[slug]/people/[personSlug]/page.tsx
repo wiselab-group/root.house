@@ -111,6 +111,7 @@ export default async function PersonProfilePage({
       />
       <PersonMediaGallery
         familyId={familyId}
+        familySlug={slug}
         personId={personId}
         canEdit={canEdit}
       />

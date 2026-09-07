@@ -2,19 +2,28 @@ import { vercelBlobStorageService } from "./storage.vercel-blob";
 import {
   createMedia,
   deleteMediaRow,
+  getAlbumsForMedia,
   getMediaById,
+  getMediaForAlbum,
+  getMediaForFamily,
   getMediaForPerson,
+  getPeopleForMedia,
   type CreateMediaData,
   type MediaRecord,
+  type MediaTaggedAlbum,
+  type MediaTaggedPerson,
 } from "./media.repository";
 
-export type { MediaRecord };
+export type { MediaRecord, MediaTaggedAlbum, MediaTaggedPerson };
 
 const storage = vercelBlobStorageService;
 
 export interface UploadPhotoInput {
   familyId: string;
-  personId: string;
+  /** People to tag this photo with — may be empty (untagged) or several (a group photo). */
+  personIds: string[];
+  /** Albums to add this photo to — may be empty (unalbumed) or several. */
+  albumIds: string[];
   uploadedBy: string;
   file: Buffer;
   contentType: string;
@@ -24,7 +33,8 @@ export interface UploadPhotoInput {
 }
 
 /**
- * Uploads a photo to storage and records it as Media linked to `personId`,
+ * Uploads a photo to storage and records it as Media linked to `personIds`
+ * (0, 1, or several people — a group photo can tag everyone in it at once),
  * in that order — if the DB insert fails after a successful upload, the
  * orphaned blob is deleted so storage doesn't silently accumulate unlinked
  * files (there is no multi-statement DB transaction spanning an external
@@ -53,7 +63,8 @@ export async function uploadPersonPhoto(
       width: input.width,
       height: input.height,
       uploadedBy: input.uploadedBy,
-      personIds: [input.personId],
+      personIds: input.personIds,
+      albumIds: input.albumIds,
     });
   } catch (error) {
     await storage.delete(storageKey).catch(() => {
@@ -65,12 +76,13 @@ export async function uploadPersonPhoto(
 
 /**
  * Uploads a Person's avatar as its own Media row, deliberately NOT linked
- * via media_person — an avatar is a distinct thing from the photo gallery
- * (see person.service.ts::setPersonAvatar), not "pick one of your uploaded
- * photos", so it must never appear in getMediaForPerson/the gallery grid.
+ * via media_person or media_album — an avatar is a distinct thing from the
+ * photo gallery (see person.service.ts::setPersonAvatar), not "pick one of
+ * your uploaded photos", so it must never appear in getMediaForPerson, the
+ * family gallery, or any album.
  */
 export async function uploadPersonAvatar(
-  input: Omit<UploadPhotoInput, "personId"> & { personId: string },
+  input: Omit<UploadPhotoInput, "personIds" | "albumIds">,
 ): Promise<{ id: string }> {
   const key = `${input.familyId}/avatar-${crypto.randomUUID()}-${sanitizeFilename(input.originalFilename)}`;
 
@@ -92,6 +104,7 @@ export async function uploadPersonAvatar(
       height: input.height,
       uploadedBy: input.uploadedBy,
       personIds: [], // not linked to the gallery — see doc comment above
+      albumIds: [], // not linked to any album — see doc comment above
     });
   } catch (error) {
     await storage.delete(storageKey).catch(() => {
@@ -112,11 +125,83 @@ export async function getPersonGallery(
   return getMediaForPerson(personId, familyId);
 }
 
+export interface GalleryPhoto {
+  media: MediaRecord;
+  people: MediaTaggedPerson[];
+  albums: MediaTaggedAlbum[];
+}
+
+/**
+ * Pairs a flat photo list with who's tagged on each one and which albums it
+ * belongs to, both batch-fetched (see getPeopleForMedia/getAlbumsForMedia)
+ * so rendering the grid/lightbox never issues one query per photo. Shared
+ * by getFamilyGallery and getAlbumGallery — both just differ in which
+ * photo list they start from.
+ */
+async function buildGalleryPhotos(
+  photos: MediaRecord[],
+  familyId: string,
+): Promise<GalleryPhoto[]> {
+  const photoIds = photos.map((photo) => photo.id);
+  const [peopleByMedia, albumsByMedia] = await Promise.all([
+    getPeopleForMedia(photoIds, familyId),
+    getAlbumsForMedia(photoIds, familyId),
+  ]);
+  return photos.map((photo) => ({
+    media: photo,
+    people: peopleByMedia.get(photo.id) ?? [],
+    albums: albumsByMedia.get(photo.id) ?? [],
+  }));
+}
+
+/** The family-wide photo gallery (/families/[slug]/photos). */
+export async function getFamilyGallery(
+  familyId: string,
+): Promise<GalleryPhoto[]> {
+  const photos = await getMediaForFamily(familyId);
+  return buildGalleryPhotos(photos, familyId);
+}
+
+/** One album's photos (/families/[slug]/photos/[albumId]). */
+export async function getAlbumGallery(
+  albumId: string,
+  familyId: string,
+): Promise<GalleryPhoto[]> {
+  const photos = await getMediaForAlbum(albumId, familyId);
+  return buildGalleryPhotos(photos, familyId);
+}
+
 export async function getMedia(
   mediaId: string,
   familyId: string,
 ): Promise<MediaRecord | null> {
   return getMediaById(mediaId, familyId);
+}
+
+/**
+ * Who's tagged on a single photo — used by deleteMediaAction to know which
+ * profile pages to revalidate before the underlying media_person rows are
+ * cascade-deleted along with the Media row itself.
+ */
+export async function getTaggedPeopleForMedia(
+  mediaId: string,
+  familyId: string,
+): Promise<MediaTaggedPerson[]> {
+  const peopleByMedia = await getPeopleForMedia([mediaId], familyId);
+  return peopleByMedia.get(mediaId) ?? [];
+}
+
+/**
+ * Which albums a single photo belongs to — used by deleteMediaAction to
+ * know which album pages to revalidate before the underlying media_album
+ * rows are cascade-deleted along with the Media row itself.
+ */
+export async function getAlbumsForSingleMedia(
+  mediaId: string,
+  familyId: string,
+): Promise<MediaTaggedAlbum[]> {
+  const albumsByMedia = await getAlbumsForMedia([mediaId], familyId);
+  return albumsByMedia.get(mediaId) ?? [];
 }
 
 export async function getMediaStream(mediaId: string, familyId: string) {

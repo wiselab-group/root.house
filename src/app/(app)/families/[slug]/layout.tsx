@@ -72,7 +72,7 @@ export default async function FamilyLayout({
           : null,
       }}
     >
-      {/* Same 4 destinations as the dashboard's FamilyNavCard grid
+      {/* Same 5 destinations as the dashboard's FamilyNavCard grid
           (families/[slug]/page.tsx) — published here so they're available in
           AppHeader's mobile panel on every page under this family section,
           not just the dashboard itself. */}
@@ -84,6 +84,7 @@ export default async function FamilyLayout({
             label: "Семейное дерево",
           },
           { href: `/families/${slug}/people`, icon: "people", label: "Люди" },
+          { href: `/families/${slug}/photos`, icon: "photos", label: "Фото" },
           { href: `/families/${slug}/places`, icon: "places", label: "Места" },
           {
             href: `/families/${slug}/settings`,

@@ -6,4 +6,5 @@ export * from "./person";
 export * from "./relationship";
 export * from "./event";
 export * from "./story";
+export * from "./album";
 export * from "./media";

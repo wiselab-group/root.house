@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { uploadPhoto } from "@/lib/upload-photo";
 
 /**
  * Uploads via fetch() to /api/media/upload (a Route Handler, not a Server
@@ -31,20 +32,7 @@ export function PhotoUploadForm({
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.set("familyId", familyId);
-      formData.set("personId", personId);
-      formData.set("file", file);
-
-      const response = await fetch("/api/media/upload", {
-        method: "POST",
-        body: formData,
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.error ?? "Не удалось загрузить фото");
-      }
-
+      await uploadPhoto({ familyId, personIds: [personId], file });
       router.refresh();
     } catch (err) {
       setError(

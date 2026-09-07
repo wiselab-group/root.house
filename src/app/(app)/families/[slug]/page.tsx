@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Network, Users, MapPin, Settings } from "lucide-react";
+import { Network, Users, Images, MapPin, Settings } from "lucide-react";
 import { FamilyNavCard } from "@/components/family/family-nav-card";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
@@ -50,6 +50,12 @@ export default async function FamilyDashboardPage({
           icon={Users}
           label="Люди"
           description="Профили, поиск по имени и году"
+        />
+        <FamilyNavCard
+          href={`/families/${slug}/photos`}
+          icon={Images}
+          label="Фото"
+          description="Все фотографии семьи в одном месте"
         />
         <FamilyNavCard
           href={`/families/${slug}/places`}
