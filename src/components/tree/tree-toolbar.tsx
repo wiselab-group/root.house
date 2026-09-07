@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { FilterIcon, Users2Icon } from "lucide-react";
+import { FilterIcon, RouteIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TreeCanvas } from "./tree-canvas";
 import { TreeFilterPanel } from "./tree-filter-panel";
@@ -108,7 +108,7 @@ export function TreeToolbar({
         className="absolute top-3 left-3 z-10 rounded-full shadow-md"
         onClick={() => setTracePanelOpen(true)}
       >
-        <Users2Icon />
+        <RouteIcon />
       </Button>
 
       <Button
