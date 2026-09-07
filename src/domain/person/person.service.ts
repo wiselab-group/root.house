@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { PartialDate } from "@/domain/shared/partial-date";
 import {
   ensureUniqueSlug,
@@ -118,12 +119,14 @@ export async function addPlaceholderPerson(
   });
 }
 
-export async function getPerson(
-  personId: string,
-  familyId: string,
-): Promise<PersonRecord | null> {
-  return getPersonById(personId, familyId);
-}
+/** Wrapped in React.cache so a page's generateMetadata and its own render
+ *  (both calling this with the same personId/familyId) share one query per
+ *  request instead of fetching the same row twice. */
+export const getPerson = cache(
+  async (personId: string, familyId: string): Promise<PersonRecord | null> => {
+    return getPersonById(personId, familyId);
+  },
+);
 
 /**
  * Resolves the /families/[familySlug]/people/[slug] URL segment to a

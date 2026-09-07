@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -12,6 +13,17 @@ import { listPlaces } from "@/domain/place/place.service";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 import { personDisplayName } from "@/domain/person/display-name";
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/families/[slug]/people/[personSlug]/edit">): Promise<Metadata> {
+  const { slug, personSlug } = await params;
+  const familyId = await resolveFamilyIdBySlug(slug);
+  const personId = await resolvePersonIdBySlug(personSlug, familyId);
+  const person = await getPerson(personId, familyId);
+  if (!person) notFound();
+  return { title: `Редактировать — ${personDisplayName(person)}` };
+}
 
 export default async function EditPersonPage({
   params,

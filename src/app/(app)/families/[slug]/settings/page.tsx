@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
   Card,
   CardContent,
@@ -12,6 +13,10 @@ import { FamilySettingsDeleteRow } from "@/components/family/family-settings-del
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
+
+export const metadata: Metadata = {
+  title: "Настройки",
+};
 
 export default async function FamilySettingsPage({
   params,

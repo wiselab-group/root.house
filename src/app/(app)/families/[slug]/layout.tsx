@@ -9,6 +9,11 @@ import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { FamilyProvider } from "@/components/family/family-context";
 import { SetFamilyNav } from "@/components/family-nav-context";
 
+// No generateMetadata here — every page under /families/[slug] sets its own
+// short `title` (e.g. "Дерево", "Люди", a person's own name) and inherits
+// the root layout's title.template ("%s — Root house") as-is, so a browser
+// tab reads "Дерево — Root house", not "Дерево — {family name}".
+
 export default async function FamilyLayout({
   children,
   params,

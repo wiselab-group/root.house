@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { AuthBrand } from "@/components/auth/auth-brand";
 import { LoginForm } from "@/components/forms/login-form";
@@ -10,6 +11,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+
+export const metadata: Metadata = {
+  title: "Вход",
+};
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const { error } = await searchParams;

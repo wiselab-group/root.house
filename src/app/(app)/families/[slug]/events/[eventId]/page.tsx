@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -14,6 +15,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/families/[slug]/events/[eventId]">): Promise<Metadata> {
+  const { slug, eventId } = await params;
+  const familyId = await resolveFamilyIdBySlug(slug);
+  const event = await getEvent(eventId, familyId);
+  if (!event) notFound();
+  return { title: event.title };
+}
 
 export default async function EventDetailsPage({
   params,

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { PersonForm } from "@/components/forms/person-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createPersonAction } from "@/actions/person.actions";
@@ -5,6 +6,10 @@ import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { listPlaces } from "@/domain/place/place.service";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
+
+export const metadata: Metadata = {
+  title: "Добавить человека",
+};
 
 export default async function NewPersonPage({
   params,

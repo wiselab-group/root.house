@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { LinkButton } from "@/components/ui/link-button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,10 @@ import {
 } from "@/components/ui/card";
 import { listFamiliesForUser } from "@/domain/family/family.service";
 import { personCountLabel } from "@/domain/shared/pluralize-ru";
+
+export const metadata: Metadata = {
+  title: "Мои семьи",
+};
 
 export default async function FamiliesPage() {
   const session = await auth();

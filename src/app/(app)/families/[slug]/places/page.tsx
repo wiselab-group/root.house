@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { listPlaces } from "@/domain/place/place.service";
@@ -14,6 +15,10 @@ import { DeletePlaceButton } from "@/components/forms/delete-place-button";
 import { CollapsibleForm } from "@/components/forms/collapsible-form";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
+
+export const metadata: Metadata = {
+  title: "Места",
+};
 
 export default async function PlacesPage({
   params,

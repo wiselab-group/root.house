@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -16,6 +17,20 @@ import { PersonProfileHeader } from "@/components/person/person-profile-header";
 import { InfoRow } from "@/components/person/person-info-row";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/families/[slug]/people/[personSlug]">): Promise<Metadata> {
+  const { slug, personSlug } = await params;
+  // Both resolvers call notFound() themselves for an unknown slug (supported
+  // inside generateMetadata) — person can still be null if the row was
+  // deleted between resolving the slug and fetching it.
+  const familyId = await resolveFamilyIdBySlug(slug);
+  const personId = await resolvePersonIdBySlug(personSlug, familyId);
+  const person = await getPerson(personId, familyId);
+  if (!person) notFound();
+  return { title: personDisplayName(person) };
+}
 
 export default async function PersonProfilePage({
   params,

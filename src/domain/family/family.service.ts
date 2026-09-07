@@ -1,4 +1,5 @@
 import { and, eq, ne, sql } from "drizzle-orm";
+import { cache } from "react";
 import { db } from "@/db/client";
 import { families, familyMembers, persons } from "@/db/schema";
 import { getPerson } from "@/domain/person/person.service";
@@ -46,16 +47,19 @@ export async function listFamiliesForUser(
 
 /** Fetches a family's own summary fields — NOT scoped by user, callers must
  *  already hold a validated FamilyMember row (e.g. via requireFamilyAccess)
- *  before calling this to render family name/description. */
-export async function getFamilySummary(
-  familyId: string,
-): Promise<FamilySummary | null> {
-  const row = await db.query.families.findFirst({
-    where: eq(families.id, familyId),
-    columns: { id: true, name: true, slug: true, description: true },
-  });
-  return row ?? null;
-}
+ *  before calling this to render family name/description. Wrapped in
+ *  React.cache so a page's generateMetadata and its own render (both calling
+ *  this with the same familyId) share one query per request instead of
+ *  fetching the same row twice. */
+export const getFamilySummary = cache(
+  async (familyId: string): Promise<FamilySummary | null> => {
+    const row = await db.query.families.findFirst({
+      where: eq(families.id, familyId),
+      columns: { id: true, name: true, slug: true, description: true },
+    });
+    return row ?? null;
+  },
+);
 
 /**
  * Resolves a public slug (the /families/[slug] URL segment) to a familyId —

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { CreateFamilyForm } from "@/components/forms/create-family-form";
 import {
   Card,
@@ -7,6 +8,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
+
+export const metadata: Metadata = {
+  title: "Новая семья",
+};
 
 export default function NewFamilyPage() {
   return (

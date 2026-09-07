@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { listPeople } from "@/domain/person/person.service";
@@ -18,6 +19,10 @@ import {
 import { LinkButton } from "@/components/ui/link-button";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
+
+export const metadata: Metadata = {
+  title: "Дерево",
+};
 
 /** Parses the toolbar's `?filter=<json>` param — malformed/absent input is treated as "no filter", never an error. */
 function parseFilterParam(raw: string | undefined): PersonFilter {

@@ -1,8 +1,18 @@
+import type { Metadata } from "next";
 import { Network, Users, MapPin, Settings } from "lucide-react";
 import { FamilyNavCard } from "@/components/family/family-nav-card";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/families/[slug]">): Promise<Metadata> {
+  const { slug } = await params;
+  const familyId = await resolveFamilyIdBySlug(slug);
+  const family = await getFamilySummary(familyId);
+  return { title: family?.name ?? slug };
+}
 
 export default async function FamilyDashboardPage({
   params,

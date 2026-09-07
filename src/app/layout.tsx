@@ -23,7 +23,13 @@ const lora = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "Root house",
+  title: {
+    // template applies to every page that sets its own `title` below this
+    // layout; `default` is the fallback for the few that don't (the root
+    // redirect page, auth pages that set their own absolute title).
+    template: "%s — Root house",
+    default: "Root house",
+  },
   description:
     "Семейный архив: родословная, дерево, профили, события и фотографии одной семьи.",
 };

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { comparePartialDates } from "@/domain/shared/partial-date";
 import { getPersonById } from "@/domain/person/person.repository";
 import { personDisplayName } from "@/domain/person/display-name";
@@ -46,12 +47,14 @@ export async function addEvent(data: CreateEventData): Promise<{ id: string }> {
   return createEvent(data);
 }
 
-export async function getEvent(
-  eventId: string,
-  familyId: string,
-): Promise<EventRecord | null> {
-  return getEventById(eventId, familyId);
-}
+/** Wrapped in React.cache so a page's generateMetadata and its own render
+ *  (both calling this with the same eventId/familyId) share one query per
+ *  request instead of fetching the same row twice. */
+export const getEvent = cache(
+  async (eventId: string, familyId: string): Promise<EventRecord | null> => {
+    return getEventById(eventId, familyId);
+  },
+);
 
 export async function removeEvent(
   eventId: string,

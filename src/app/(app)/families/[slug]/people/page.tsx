@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { listPeople } from "@/domain/person/person.service";
@@ -14,6 +15,10 @@ import { PeopleList } from "@/components/person/people-list";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 import { personCountLabel } from "@/domain/shared/pluralize-ru";
+
+export const metadata: Metadata = {
+  title: "Люди",
+};
 
 export default async function PeoplePage({
   params,
