@@ -1,7 +1,6 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
-import { generationColor } from "./person-node";
 
 /** Photo-forward tree card: a large portrait photo (or an initials tile when none is set) with name/years below — for browsing faces rather than scanning structure. */
 export function PortraitCardBody({
@@ -50,12 +49,6 @@ export function PortraitCardBody({
             {initials}
           </div>
         )}
-        {/* Generation color-coding (DESIGN.md): one warm hue, lightness/chroma
-            fading with distance from focus — never a rainbow per generation. */}
-        <div
-          className="absolute inset-x-0 top-0 h-1"
-          style={{ backgroundColor: generationColor(data.generation) }}
-        />
       </div>
       <div className="px-2.5 py-2">
         <p
