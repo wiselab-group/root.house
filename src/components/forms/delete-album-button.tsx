@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { Trash2Icon } from "lucide-react";
 import { deleteAlbumAction } from "@/actions/album.actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,16 +18,20 @@ import {
 /**
  * Deletes the album itself (never its photos — see deleteAlbumAction's doc
  * comment). Navigates back to /photos afterward since the current
- * /photos/[albumId] page stops existing once the album is gone.
+ * /photos/[albumId] page stops existing once the album is gone. Icon-only
+ * trigger — pairs with RenameAlbumButton next to the album's own title
+ * instead of living as a full-width button in the page footer.
  */
 export function DeleteAlbumButton({
   familyId,
   familySlug,
   albumId,
+  albumName,
 }: {
   familyId: string;
   familySlug: string;
   albumId: string;
+  albumName: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -46,16 +51,17 @@ export function DeleteAlbumButton({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-destructive"
+            size="icon-xs"
+            aria-label="Удалить альбом"
+            className="rounded-full text-muted-foreground hover:text-destructive"
           />
         }
       >
-        Удалить альбом
+        <Trash2Icon />
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Удалить альбом?</DialogTitle>
+          <DialogTitle>Удалить альбом «{albumName}»?</DialogTitle>
           <DialogDescription>
             Это действие нельзя отменить. Сами фото останутся в семейной галерее
             — удаляется только альбом.

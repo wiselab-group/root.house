@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { PersonRecord } from "@/domain/person/person.service";
 import { personDisplayName } from "@/domain/person/display-name";
+import { useCollapsibleFormClose } from "./collapsible-form";
 
 const initialState: RelationshipFormState = {};
 
@@ -42,6 +43,7 @@ export function AddRelativeForm({
   candidates: PersonRecord[];
   label: string;
 }) {
+  const close = useCollapsibleFormClose();
   const [mode, setMode] = useState<"existing" | "new">(
     candidates.length > 0 ? "existing" : "new",
   );
@@ -125,7 +127,12 @@ export function AddRelativeForm({
 
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
-      <SubmitButton label={label} />
+      <div className="flex gap-2">
+        <SubmitButton label={label} />
+        <Button type="button" variant="ghost" size="sm" onClick={close}>
+          Отмена
+        </Button>
+      </div>
     </form>
   );
 }

@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useCollapsibleFormClose } from "./collapsible-form";
 
 const initialState: AlbumFormState = {};
 
@@ -21,7 +22,14 @@ function SubmitButton() {
   );
 }
 
-export function CreateAlbumForm({ familyId }: { familyId: string }) {
+/**
+ * New-album form — always offers Cancel via the ambient CollapsibleForm
+ * close (opening this is never a one-way door). Renaming an existing album
+ * is a separate, lighter inline editor (AlbumTitleEditor) that takes over
+ * the album's own title instead of duplicating it in a form card.
+ */
+export function AlbumForm({ familyId }: { familyId: string }) {
+  const close = useCollapsibleFormClose();
   const boundAction = createAlbumAction.bind(null, familyId);
   const [state, formAction] = useActionState(boundAction, initialState);
 
@@ -56,7 +64,12 @@ export function CreateAlbumForm({ familyId }: { familyId: string }) {
 
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
-      <SubmitButton />
+      <div className="flex gap-2">
+        <SubmitButton />
+        <Button type="button" variant="ghost" size="sm" onClick={close}>
+          Отмена
+        </Button>
+      </div>
     </form>
   );
 }

@@ -13,6 +13,7 @@ import { PersonDateFields } from "./person-date-fields";
 import { PlaceSelect } from "./place-select";
 import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 import type { PlaceRecord } from "@/domain/place/place.service";
+import { useCollapsibleFormClose } from "./collapsible-form";
 
 const initialState: EventFormState = {};
 
@@ -34,6 +35,7 @@ export function AddEventForm({
   personId: string;
   places?: PlaceRecord[];
 }) {
+  const close = useCollapsibleFormClose();
   const boundAction = createEventAction.bind(null, familyId, personId);
   const [state, formAction] = useActionState(boundAction, initialState);
   const [showRange, setShowRange] = useState(false);
@@ -108,7 +110,12 @@ export function AddEventForm({
           </p>
         ))}
 
-      <SubmitButton />
+      <div className="flex gap-2">
+        <SubmitButton />
+        <Button type="button" variant="ghost" size="sm" onClick={close}>
+          Отмена
+        </Button>
+      </div>
     </form>
   );
 }

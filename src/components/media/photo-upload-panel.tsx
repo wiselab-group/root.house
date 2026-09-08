@@ -7,6 +7,7 @@ import { PersonMultiCombobox } from "./person-multi-combobox";
 import { AlbumMultiCombobox } from "./album-multi-combobox";
 import { PhotoPreviewCard } from "./photo-preview-card";
 import { uploadPhoto } from "@/lib/upload-photo";
+import { useCollapsibleFormClose } from "@/components/forms/collapsible-form";
 
 /**
  * Upload panel for the family-wide gallery (/families/[slug]/photos) —
@@ -30,6 +31,10 @@ export function PhotoUploadPanel({
   defaultAlbums?: { id: string; name: string }[];
 }) {
   const router = useRouter();
+  // Collapses the whole panel back to its trigger button — offered next to
+  // "Выбрать фото" only, since a staged file already has its own Cancel via
+  // PhotoPreviewCard.
+  const close = useCollapsibleFormClose();
   const inputRef = useRef<HTMLInputElement>(null);
   const [taggedPeople, setTaggedPeople] = useState<
     { id: string; name: string }[]
@@ -103,7 +108,7 @@ export function PhotoUploadPanel({
           onCancel={cancel}
         />
       ) : (
-        <>
+        <div className="flex gap-2">
           <input
             ref={inputRef}
             type="file"
@@ -117,11 +122,13 @@ export function PhotoUploadPanel({
             variant="outline"
             size="sm"
             onClick={() => inputRef.current?.click()}
-            className="self-start"
           >
             Выбрать фото
           </Button>
-        </>
+          <Button type="button" variant="ghost" size="sm" onClick={close}>
+            Отмена
+          </Button>
+        </div>
       )}
     </div>
   );

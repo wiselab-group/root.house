@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { getFamilySlugById } from "@/domain/family/family.service";
 import { createAlbumSchema } from "@/lib/validation/album";
-import { addAlbum, removeAlbum } from "@/domain/album/album.service";
+import { addAlbum, editAlbum, removeAlbum } from "@/domain/album/album.service";
 
 export interface AlbumFormState {
   error?: string;
@@ -43,6 +43,42 @@ export async function createAlbumAction(
 
   const slug = await getFamilySlugById(familyId);
   revalidatePath(`/families/${slug}/photos`);
+  return {};
+}
+
+export async function updateAlbumAction(
+  familyId: string,
+  albumId: string,
+  _prevState: AlbumFormState,
+  formData: FormData,
+): Promise<AlbumFormState> {
+  const session = await auth();
+  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+
+  await requireFamilyAccess(familyId, session.user.id, "editor");
+
+  const parsed = createAlbumSchema.safeParse({
+    name: formData.get("name"),
+    description: formData.get("description"),
+  });
+
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      fieldErrors[String(issue.path[0])] = issue.message;
+    }
+    return { fieldErrors };
+  }
+
+  const updated = await editAlbum(albumId, familyId, {
+    name: parsed.data.name,
+    description: parsed.data.description || undefined,
+  });
+  if (!updated) return { error: "Альбом не найден." };
+
+  const slug = await getFamilySlugById(familyId);
+  revalidatePath(`/families/${slug}/photos`);
+  revalidatePath(`/families/${slug}/photos/${albumId}`);
   return {};
 }
 

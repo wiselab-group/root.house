@@ -20,3 +20,8 @@ export function pluralizeRu(
 export function personCountLabel(count: number): string {
   return `${count} ${pluralizeRu(count, "человек", "человека", "человек")}`;
 }
+
+/** "1 фото" / "2 фото" / "5 фото" — "фото" is invariant in Russian across all counts. */
+export function photoCountLabel(count: number): string {
+  return `${count} фото`;
+}

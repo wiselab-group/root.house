@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useCollapsibleFormClose } from "./collapsible-form";
 
 const initialState: PlaceFormState = {};
 
@@ -22,6 +23,7 @@ function SubmitButton() {
 }
 
 export function CreatePlaceForm({ familyId }: { familyId: string }) {
+  const close = useCollapsibleFormClose();
   const boundAction = createPlaceAction.bind(null, familyId);
   const [state, formAction] = useActionState(boundAction, initialState);
 
@@ -71,7 +73,12 @@ export function CreatePlaceForm({ familyId }: { familyId: string }) {
 
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
-      <SubmitButton />
+      <div className="flex gap-2">
+        <SubmitButton />
+        <Button type="button" variant="ghost" size="sm" onClick={close}>
+          Отмена
+        </Button>
+      </div>
     </form>
   );
 }

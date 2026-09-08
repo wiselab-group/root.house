@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { getFamilyGallery } from "@/domain/media/media.service";
-import { listAlbums } from "@/domain/album/album.service";
+import { listAlbumsWithCover } from "@/domain/album/album.service";
 import { getFamilySummary } from "@/domain/family/family.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { PhotosPageLayout } from "@/components/media/photos-page-layout";
@@ -24,7 +24,7 @@ export default async function PhotosPage({
 
   const [photos, albums, family] = await Promise.all([
     getFamilyGallery(familyId),
-    listAlbums(familyId),
+    listAlbumsWithCover(familyId),
     getFamilySummary(familyId),
   ]);
 
@@ -37,6 +37,7 @@ export default async function PhotosPage({
       albums={albums}
       activeAlbumId={null}
       activeAlbumName={null}
+      activeAlbumDescription={null}
       photos={photos}
     />
   );

@@ -6,7 +6,6 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { ChevronLeftIcon, ChevronRightIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { DeleteMediaButton } from "@/components/forms/delete-media-button";
 import { personDisplayName } from "@/domain/person/display-name";
 import { BLUR_PLACEHOLDER } from "./blur-placeholder";
 import type { GalleryPhotoView } from "./gallery-photo";
@@ -17,7 +16,9 @@ import type { GalleryPhotoView } from "./gallery-photo";
  * capped at sm:max-w-sm) so it gets focus-trap/Escape/scroll-lock "for
  * free" while filling the viewport edge to edge. Shows who's tagged on the
  * current photo (linking to their profile) and lets the user step through
- * the gallery with prev/next without closing the overlay.
+ * the gallery with prev/next without closing the overlay. Delete lives on
+ * the grid thumbnail (PhotoGrid), not here — a full-screen viewer isn't the
+ * place for a destructive action that's one hover away on the grid itself.
  */
 export function PhotoLightbox({
   photos,
@@ -26,7 +27,6 @@ export function PhotoLightbox({
   onClose,
   familyId,
   familySlug,
-  canEdit,
 }: {
   photos: GalleryPhotoView[];
   index: number;
@@ -34,7 +34,6 @@ export function PhotoLightbox({
   onClose: () => void;
   familyId: string;
   familySlug: string;
-  canEdit: boolean;
 }) {
   const photo = photos[index];
   if (!photo) return null;
@@ -57,13 +56,6 @@ export function PhotoLightbox({
           </DialogPrimitive.Title>
 
           <div className="flex items-center justify-end gap-2 p-3">
-            {canEdit && (
-              <DeleteMediaButton
-                familyId={familyId}
-                familySlug={familySlug}
-                mediaId={photo.media.id}
-              />
-            )}
             <DialogPrimitive.Close
               render={
                 <Button

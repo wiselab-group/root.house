@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Trash2Icon } from "lucide-react";
 import { deleteMediaAction } from "@/actions/media.actions";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -15,22 +16,25 @@ import {
 } from "@/components/ui/dialog";
 
 /**
- * Small overlay control on a gallery photo. Uses a trash icon (not an X) so
- * it's never confused with a nearby close button — PhotoLightbox renders
- * this right next to its own X close control. Gated behind a confirm dialog
- * like every other delete action, since a misclick on a gallery grid is easy.
+ * Small overlay control pinned to the top-right corner of a gallery photo
+ * thumbnail (PhotoGrid) — destructive-red so it reads as delete at a
+ * glance, distinct from any neutral control nearby. Gated behind a confirm
+ * dialog like every other delete action, since a misclick on a gallery grid
+ * is easy.
  */
 export function DeleteMediaButton({
   familyId,
   familySlug,
   mediaId,
   personId,
+  className,
 }: {
   familyId: string;
   familySlug: string;
   mediaId: string;
   /** Pass when deleting from a specific person's profile gallery — omit on the family-wide gallery, where a photo may be untagged or tagged to several people. */
   personId?: string;
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -48,10 +52,10 @@ export function DeleteMediaButton({
         render={
           <Button
             type="button"
-            variant="secondary"
-            size="icon-xs"
+            variant="destructive"
+            size="icon-sm"
             aria-label="Удалить фото"
-            className="rounded-full shadow-sm"
+            className={cn("rounded-full shadow-sm [&_svg]:size-4.5", className)}
           />
         }
       >
