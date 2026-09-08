@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { familyMembers, families, users } from "@/db/schema";
@@ -15,16 +14,11 @@ import {
   type InvitationRecord,
 } from "./invitation.repository";
 import { sendInvitationEmail } from "@/lib/email/send-invitation";
+import { generateToken, hashToken } from "@/domain/shared/token";
 
 export type { InvitationRecord };
 
 const INVITATION_TTL_DAYS = 7;
-
-function generateToken(): { token: string; tokenHash: string } {
-  const token = crypto.randomBytes(32).toString("base64url");
-  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-  return { token, tokenHash };
-}
 
 export class InvitationInvalidError extends Error {
   constructor(message: string) {
@@ -176,7 +170,7 @@ export interface InvitationPreview {
 export async function getInvitationPreview(
   token: string,
 ): Promise<InvitationPreview | null> {
-  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const tokenHash = hashToken(token);
   const invitation = await findInvitationByTokenHash(tokenHash);
   if (!invitation) return null;
 
@@ -229,7 +223,7 @@ export async function acceptInvitation(
   userId: string,
   userEmail: string,
 ): Promise<AcceptInvitationResult | AcceptInvitationError> {
-  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+  const tokenHash = hashToken(token);
   const invitation = await findInvitationByTokenHash(tokenHash);
   if (!invitation) return { ok: false, reason: "not_found" };
 

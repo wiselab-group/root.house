@@ -119,47 +119,57 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
     </>
   );
 
+  const cardFrameClassName = cn(
+    "w-40 origin-center",
+    "animate-tree-node-enter",
+    "transition-opacity duration-200 ease-(--ease-tree-focus)",
+    data.cardStyle === "compact"
+      ? // No card frame at all for compact — the round avatar itself
+        // carries the border/ring states (see compact-card-body.tsx's
+        // isHighlighted/isSelected/isPlaceholder handling) so the
+        // parent_child connector line, anchored to this div's own
+        // top/bottom edges via the Handles above, visibly touches the
+        // avatar instead of stopping at an invisible card boundary.
+        "overflow-visible"
+      : cn(
+          "overflow-hidden rounded-lg border bg-card shadow-sm hover:shadow-md",
+          data.isFocus || isTraceHighlighted
+            ? "border-primary ring-2 ring-primary/30"
+            : "border-border",
+          selected && "ring-2 ring-ring",
+          data.isPlaceholder && "border-dashed opacity-70",
+        ),
+    isDimmed && "opacity-35 hover:opacity-70",
+    !data.readOnly && "cursor-pointer",
+  );
+  const cardFrameStyle = {
+    // Entrance stagger, per DESIGN.md's "смена focus-person — stagger
+    // пропорционально расстоянию от нового focus" — a full page navigation
+    // replaces the whole node set (no shared identity across the old/new
+    // layout for XYFlow to interpolate positions between), so the honest
+    // version of that spec is staggering how each node enters the new
+    // layout, not sliding it from its old position.
+    animationDelay: `${Math.min(Math.abs(data.generation), 4) * 60}ms`,
+  };
+
+  // Read-only (Share Link) view: no popover at all — both of its actions
+  // are already suppressed for readOnly (see PersonNodePopoverActions'
+  // own doc comment), so wrapping the card in a Popover/PopoverTrigger
+  // would only ever open an empty panel on click. A plain non-interactive
+  // div renders the exact same card body with no click affordance.
+  if (data.readOnly) {
+    return (
+      <div className={cardFrameClassName} style={cardFrameStyle}>
+        {cardBody}
+      </div>
+    );
+  }
+
   return (
     <Popover>
       <PopoverTrigger
         nativeButton={false}
-        render={
-          <div
-            className={cn(
-              "w-40 origin-center cursor-pointer",
-              "animate-tree-node-enter",
-              "transition-opacity duration-200 ease-(--ease-tree-focus)",
-              data.cardStyle === "compact"
-                ? // No card frame at all for compact — the round avatar
-                  // itself carries the border/ring states (see
-                  // compact-card-body.tsx's isHighlighted/isSelected/
-                  // isPlaceholder handling) so the parent_child connector
-                  // line, anchored to this div's own top/bottom edges via
-                  // the Handles above, visibly touches the avatar instead
-                  // of stopping at an invisible card boundary.
-                  "overflow-visible"
-                : cn(
-                    "overflow-hidden rounded-lg border bg-card shadow-sm hover:shadow-md",
-                    data.isFocus || isTraceHighlighted
-                      ? "border-primary ring-2 ring-primary/30"
-                      : "border-border",
-                    selected && "ring-2 ring-ring",
-                    data.isPlaceholder && "border-dashed opacity-70",
-                  ),
-              isDimmed && "opacity-35 hover:opacity-70",
-            )}
-            style={{
-              // Entrance stagger, per DESIGN.md's "смена focus-person —
-              // stagger пропорционально расстоянию от нового focus" — a full
-              // page navigation replaces the whole node set (no shared
-              // identity across the old/new layout for XYFlow to interpolate
-              // positions between), so the honest version of that spec is
-              // staggering how each node enters the new layout, not sliding
-              // it from its old position.
-              animationDelay: `${Math.min(Math.abs(data.generation), 4) * 60}ms`,
-            }}
-          />
-        }
+        render={<div className={cardFrameClassName} style={cardFrameStyle} />}
       >
         {cardBody}
       </PopoverTrigger>
@@ -175,24 +185,26 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
   );
 }
 
-/** The two actions offered by a card's click popover — kept separate from PersonNode so its already-long JSX doesn't grow a third nesting level. */
+/** The two actions offered by a card's click popover — kept separate from PersonNode so its already-long JSX doesn't grow a third nesting level. Both are suppressed in read-only mode (see PersonNodeData.readOnly): "Посмотреть профиль" links into the auth-gated, editable profile page, which has no reason to exist on the anonymous Share Link surface; "Сделать фокус-персоной" is already omitted upstream (xyflow-adapter.ts never passes onFocusPerson when readOnly). */
 function PersonNodePopoverActions({ data }: { data: PersonFlowNode["data"] }) {
   return (
     <div className="flex flex-col">
-      <PopoverClose
-        nativeButton={false}
-        render={
-          <Link
-            href={`/families/${data.familySlug}/people/${data.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[0.8rem] hover:bg-accent hover:text-accent-foreground"
-          />
-        }
-      >
-        <UserIcon className="size-3.5 shrink-0 text-muted-foreground" />
-        Посмотреть профиль
-      </PopoverClose>
+      {!data.readOnly && (
+        <PopoverClose
+          nativeButton={false}
+          render={
+            <Link
+              href={`/families/${data.familySlug}/people/${data.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[0.8rem] hover:bg-accent hover:text-accent-foreground"
+            />
+          }
+        >
+          <UserIcon className="size-3.5 shrink-0 text-muted-foreground" />
+          Посмотреть профиль
+        </PopoverClose>
+      )}
       {data.onFocusPerson && (
         <PopoverClose
           render={

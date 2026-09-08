@@ -25,6 +25,15 @@ export interface PersonNodeData extends Record<string, unknown> {
   birthYear: number | null;
   deathYear: number | null;
   photoMediaId: string | null;
+  /** Already-built avatar image URL (null when photoMediaId is null) —
+   *  computed once in toFlowNode below, since which endpoint serves it
+   *  differs between the authenticated tree (/api/media/[id]?familyId=...,
+   *  gated by requireFamilyAccess) and the anonymous Share Link view
+   *  (/api/share/[token]/media/[id], gated by resolveShareLinkAccess + the
+   *  link's own visibilityScope — see app/api/share/[token]/media/[mediaId]/route.ts).
+   *  Card bodies render this directly and never need to know which case
+   *  they're in. */
+  photoUrl: string | null;
   /** Needed alongside photoMediaId to build the /api/media/[id] URL — every
    *  photo request is family-scoped (see media.service.ts), so the node
    *  can't fetch its own avatar without knowing which family it belongs to. */
@@ -40,6 +49,8 @@ export interface PersonNodeData extends Record<string, unknown> {
   isOnTracePath?: boolean;
   /** Re-centers the tree on this person (pushes ?focus= to the URL) — wired from TreeCanvas so PersonNode's click popover can offer "сделать фокус-персоной" without importing routing itself. Undefined for the currently-focused person, who has nothing to focus onto. */
   onFocusPerson?: (personId: string) => void;
+  /** True only for the anonymous Share Link view (components/share-link/public-tree-view.tsx) — suppresses PersonNode's entire click popover (both "Посмотреть профиль", a doorway into the auth-gated edit surface, and "Сделать фокус-персоной", a DB write via updateDefaultFocusPersonAction). Undefined/false for every authenticated rendering of the tree. */
+  readOnly?: boolean;
 }
 
 export interface RelationshipEdgeData extends Record<string, unknown> {
@@ -158,6 +169,23 @@ export const CONNECTOR_CENTER_Y: Record<TreeCardStyle, number> = {
   portrait: 80,
 };
 
+/**
+ * The avatar image endpoint differs between the authenticated tree (family-
+ * membership gated) and the anonymous Share Link view (token + scope
+ * gated, no session at all) — see PersonNodeData.photoUrl's own doc
+ * comment. shareToken is undefined for every authenticated rendering.
+ */
+function buildPhotoUrl(
+  photoMediaId: string | null,
+  familyId: string,
+  shareToken: string | undefined,
+): string | null {
+  if (!photoMediaId) return null;
+  return shareToken
+    ? `/api/share/${shareToken}/media/${photoMediaId}`
+    : `/api/media/${photoMediaId}?familyId=${familyId}`;
+}
+
 function toFlowNode(
   node: LayoutNode,
   familyId: string,
@@ -165,6 +193,8 @@ function toFlowNode(
   cardStyle: TreeCardStyle,
   highlight: TreeHighlightState,
   onFocusPerson: (personId: string) => void,
+  readOnly: boolean,
+  shareToken: string | undefined,
 ): PersonFlowNode {
   const xScale =
     cardStyle === "portrait" ? PORTRAIT_X_SPACING / COMPACT_X_SPACING : 1;
@@ -186,6 +216,7 @@ function toFlowNode(
       birthYear: node.person.birthYear,
       deathYear: node.person.deathYear,
       photoMediaId: node.person.photoMediaId,
+      photoUrl: buildPhotoUrl(node.person.photoMediaId, familyId, shareToken),
       familyId,
       familySlug,
       isFocus: node.isFocus,
@@ -200,7 +231,9 @@ function toFlowNode(
       // Focusing the already-focused person would be a no-op navigation —
       // omitting the callback entirely (rather than passing one that no-ops)
       // lets the popover hide "сделать фокус-персоной" for that one card.
-      onFocusPerson: node.isFocus ? undefined : onFocusPerson,
+      // Also omitted outright in read-only mode (see PersonNodeData.readOnly).
+      onFocusPerson: node.isFocus || readOnly ? undefined : onFocusPerson,
+      readOnly,
     },
     // XYFlow needs explicit dimensions before layout/fitView math is
     // reliable; matches the fixed size PersonNode renders each style at.
@@ -363,6 +396,9 @@ export function toReactFlow(
   cardStyle: TreeCardStyle,
   highlight: TreeHighlightState = {},
   onFocusPerson: (personId: string) => void = () => {},
+  readOnly: boolean = false,
+  /** Present only for the anonymous Share Link view — see buildPhotoUrl. */
+  shareToken: string | undefined = undefined,
 ): { nodes: PersonFlowNode[]; edges: TreeFlowEdge[] } {
   const edges = toFlowEdges(graph, highlight);
   // Array order does NOT control paint order here — XYFlow's default
@@ -394,6 +430,8 @@ export function toReactFlow(
         cardStyle,
         highlight,
         onFocusPerson,
+        readOnly,
+        shareToken,
       ),
     ),
     edges: elevatedEdges,

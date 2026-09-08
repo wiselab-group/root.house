@@ -57,12 +57,7 @@ export function CompactCardBody({
               : `0 0 0 3px ${generationColor(data.generation)}`,
         }}
       >
-        {data.photoMediaId && (
-          <AvatarImage
-            src={`/api/media/${data.photoMediaId}?familyId=${data.familyId}`}
-            alt=""
-          />
-        )}
+        {data.photoUrl && <AvatarImage src={data.photoUrl} alt="" />}
         <AvatarFallback>{initials}</AvatarFallback>
       </Avatar>
       <div className="min-w-0">

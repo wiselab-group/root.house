@@ -1,0 +1,2 @@
+CREATE TYPE "public"."share_link_visibility_scope" AS ENUM('public_only', 'family_and_public');--> statement-breakpoint
+ALTER TABLE "share_links" ADD COLUMN "visibility_scope" "share_link_visibility_scope" DEFAULT 'family_and_public' NOT NULL;

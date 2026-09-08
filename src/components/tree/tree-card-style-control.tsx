@@ -23,8 +23,11 @@ export function TreeCardStyleControl({
 }: {
   cardStyle: TreeCardStyle;
   setCardStyle: (style: TreeCardStyle) => void;
-  draggable: boolean;
-  setDraggable: (draggable: boolean) => void;
+  /** Omit both (read-only Share Link view, dragging is force-disabled
+   *  upstream) to hide the drag-lock button entirely — nothing left for it
+   *  to toggle. */
+  draggable?: boolean;
+  setDraggable?: (draggable: boolean) => void;
   showZoom: boolean;
 }) {
   return (
@@ -68,24 +71,26 @@ export function TreeCardStyleControl({
           <CircleIcon className="fill-none!" />
         )}
       </ControlButton>
-      <ControlButton
-        onClick={() => setDraggable(!draggable)}
-        title={
-          draggable
-            ? "Заблокировать перетаскивание карточек"
-            : "Разблокировать перетаскивание карточек"
-        }
-        aria-pressed={!draggable}
-      >
-        {/* Closed padlock = locked (default) = cards can't be dragged; open
-            padlock = unlocked = dragging enabled — same icon/state mapping
-            xyflow's own built-in lock button uses. */}
-        {draggable ? (
-          <LockOpenIcon className="fill-none!" />
-        ) : (
-          <LockIcon className="fill-none!" />
-        )}
-      </ControlButton>
+      {setDraggable && (
+        <ControlButton
+          onClick={() => setDraggable(!draggable)}
+          title={
+            draggable
+              ? "Заблокировать перетаскивание карточек"
+              : "Разблокировать перетаскивание карточек"
+          }
+          aria-pressed={!draggable}
+        >
+          {/* Closed padlock = locked (default) = cards can't be dragged; open
+              padlock = unlocked = dragging enabled — same icon/state mapping
+              xyflow's own built-in lock button uses. */}
+          {draggable ? (
+            <LockOpenIcon className="fill-none!" />
+          ) : (
+            <LockIcon className="fill-none!" />
+          )}
+        </ControlButton>
+      )}
     </Controls>
   );
 }

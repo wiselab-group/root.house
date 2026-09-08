@@ -2,6 +2,7 @@ export * from "./auth";
 export * from "./privacy";
 export * from "./family";
 export * from "./invitation";
+export * from "./share-link";
 export * from "./place";
 export * from "./person";
 export * from "./relationship";

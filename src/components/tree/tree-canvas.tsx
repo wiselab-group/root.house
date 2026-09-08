@@ -23,6 +23,7 @@ import { RelationshipEdge } from "./relationship-edge";
 import { UnionChildEdge } from "./union-child-edge";
 import { useTreeCardStyle } from "./use-tree-card-style";
 import { useCoarsePointer } from "./use-coarse-pointer";
+import { useHasMounted } from "./use-has-mounted";
 import { TreeCardStyleControl } from "./tree-card-style-control";
 
 const nodeTypes = { person: PersonNode };
@@ -82,6 +83,8 @@ export function TreeCanvas({
   familyId,
   familySlug,
   highlight,
+  readOnly = false,
+  shareToken,
 }: {
   graph: TreeLayoutGraph;
   familyId: string;
@@ -89,6 +92,17 @@ export function TreeCanvas({
   familySlug: string;
   /** Filter/Focus (tree-filter.ts) + Relationship Trace (tree-trace.ts) state to render — see xyflow-adapter.ts's TreeHighlightState. Omit when neither is active. */
   highlight?: TreeHighlightState;
+  /** Anonymous Share Link view (see app/share/[token]/page.tsx) — forces
+   *  dragging off, never wires focus-switching (no updateDefaultFocusPersonAction
+   *  call, no URL ?focus= navigation — the link shows exactly the tree its
+   *  owner configured), and hides the drag-lock control entirely since
+   *  there's nothing left for it to toggle. */
+  readOnly?: boolean;
+  /** The Share Link's own token — required when readOnly, used to build
+   *  each card's avatar URL against /api/share/[token]/media/[mediaId]
+   *  instead of the auth-gated /api/media/[mediaId] (see
+   *  xyflow-adapter.ts::buildPhotoUrl). */
+  shareToken?: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -107,6 +121,17 @@ export function TreeCanvas({
   // silently disabling the popover while drag was locked, which had no
   // relation to dragging at all.
   const [nodesDraggable, setNodesDraggable] = useState(false);
+
+  // XYFlow's own <MiniMap> picks its shapeRendering attribute from
+  // `typeof window === 'undefined' || !!window.chrome` at render time (see
+  // @xyflow/react's MiniMap source) — on the server that's always
+  // "crispEdges" (no window), but a non-Chrome browser's first client
+  // render computes "geometricPrecision" instead, a guaranteed hydration
+  // mismatch this component has no way to control since the check lives
+  // inside the library. Mounting MiniMap only after hydration (empty on the
+  // server, appended client-side once mounted) sidesteps it — the minimap
+  // briefly not being there for one paint is invisible in practice.
+  const mounted = useHasMounted();
 
   const setFocus = useCallback(
     (personId: string) => {
@@ -127,8 +152,26 @@ export function TreeCanvas({
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
     () =>
-      toReactFlow(graph, familyId, familySlug, cardStyle, highlight, setFocus),
-    [graph, familyId, familySlug, cardStyle, highlight, setFocus],
+      toReactFlow(
+        graph,
+        familyId,
+        familySlug,
+        cardStyle,
+        highlight,
+        setFocus,
+        readOnly,
+        shareToken,
+      ),
+    [
+      graph,
+      familyId,
+      familySlug,
+      cardStyle,
+      highlight,
+      setFocus,
+      readOnly,
+      shareToken,
+    ],
   );
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -168,8 +211,8 @@ export function TreeCanvas({
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        nodesDraggable={nodesDraggable}
-        nodesConnectable={nodesDraggable}
+        nodesDraggable={!readOnly && nodesDraggable}
+        nodesConnectable={!readOnly && nodesDraggable}
         proOptions={{ hideAttribution: true }}
         // No fitView here — InitialFocusViewport below centers on the focus
         // person at a fixed 85% zoom instead (per the family's "opens with
@@ -201,13 +244,24 @@ export function TreeCanvas({
       >
         <InitialFocusViewport focusNode={focusNode} />
         <Background gap={24} />
-        <TreeCardStyleControl
-          cardStyle={cardStyle}
-          setCardStyle={setCardStyle}
-          draggable={nodesDraggable}
-          setDraggable={setNodesDraggable}
-          showZoom={!isCoarsePointer}
-        />
+        {readOnly ? (
+          // No drag-lock toggle to show (dragging is force-disabled above);
+          // card style (compact/portrait) is still a harmless viewing
+          // preference, offered without the drag control.
+          <TreeCardStyleControl
+            cardStyle={cardStyle}
+            setCardStyle={setCardStyle}
+            showZoom={!isCoarsePointer}
+          />
+        ) : (
+          <TreeCardStyleControl
+            cardStyle={cardStyle}
+            setCardStyle={setCardStyle}
+            draggable={nodesDraggable}
+            setDraggable={setNodesDraggable}
+            showZoom={!isCoarsePointer}
+          />
+        )}
         {/* Minimap needs room to read as a map, not a smudge — skip it below
             md where the canvas itself is already cramped (plan §6/§13), and
             skip it on any touch/coarse-pointer device regardless of width:
@@ -215,11 +269,13 @@ export function TreeCanvas({
             phone, and a tiny floating minimap there is more clutter than a
             map. pointer-fine (mouse/trackpad) is the actual "desktop"
             signal, not viewport width alone. */}
-        <MiniMap
-          pannable
-          zoomable
-          className="hidden bg-card! md:pointer-fine:block"
-        />
+        {mounted && (
+          <MiniMap
+            pannable
+            zoomable
+            className="hidden bg-card! md:pointer-fine:block"
+          />
+        )}
       </ReactFlow>
     </div>
   );

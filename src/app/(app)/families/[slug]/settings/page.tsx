@@ -11,6 +11,7 @@ import { FamilySettingsSlugRow } from "@/components/family/family-settings-slug-
 import { FamilySettingsFocusRow } from "@/components/family/family-settings-focus-row";
 import { FamilySettingsDeleteRow } from "@/components/family/family-settings-delete-row";
 import { FamilyMembersSection } from "@/components/family/family-members-section";
+import { ShareLinkSection } from "@/components/family/share-link-section";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -19,6 +20,7 @@ import {
   listFamilyMembersWithUsers,
 } from "@/domain/family/family.service";
 import { listPendingInvitationsForFamily } from "@/domain/invitation/invitation.service";
+import { listShareLinksForFamilyWithStatus } from "@/domain/share-link/share-link.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 
 export const metadata: Metadata = {
@@ -40,10 +42,11 @@ export default async function FamilySettingsPage({
     : null;
   const isOwner = member?.role === "owner";
 
-  const [family, members, pendingInvitations] = await Promise.all([
+  const [family, members, pendingInvitations, shareLinks] = await Promise.all([
     getFamilySummary(familyId),
     isOwner ? listFamilyMembersWithUsers(familyId) : Promise.resolve([]),
     isOwner ? listPendingInvitationsForFamily(familyId) : Promise.resolve([]),
+    isOwner ? listShareLinksForFamilyWithStatus(familyId) : Promise.resolve([]),
   ]);
 
   return (
@@ -100,6 +103,21 @@ export default async function FamilySettingsPage({
               members={members}
               pendingInvitations={pendingInvitations}
             />
+          </CardContent>
+        </Card>
+      )}
+
+      {isOwner && member && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Ссылки для общего доступа</CardTitle>
+            <CardDescription>
+              Анонимный доступ только для чтения к публичным данным семьи — без
+              регистрации и без прав редактирования.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ShareLinkSection familyId={familyId} shareLinks={shareLinks} />
           </CardContent>
         </Card>
       )}

@@ -71,6 +71,20 @@
       "when": 1788867061913,
       "tag": "0009_empty_layla_miller",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788883926679,
+      "tag": "0010_condemned_imperial_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788884614204,
+      "tag": "0011_lying_tarantula",
+      "breakpoints": true
     }
   ]
 }

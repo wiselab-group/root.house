@@ -17,9 +17,9 @@ export function PortraitCardBody({
   return (
     <>
       <div className="relative aspect-square w-full bg-muted">
-        {data.photoMediaId ? (
+        {data.photoUrl ? (
           <Image
-            src={`/api/media/${data.photoMediaId}?familyId=${data.familyId}`}
+            src={data.photoUrl}
             alt=""
             fill
             sizes="160px"
