@@ -72,7 +72,7 @@ export async function PersonFamilyPanel({
       <CardHeader>
         <CardTitle>Семья</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-6">
+      <CardContent className="flex min-w-0 flex-col gap-6">
         <RelativeGroup
           familyId={familyId}
           familySlug={familySlug}
@@ -162,7 +162,7 @@ function RelativeGroup({
   canEdit?: boolean;
 }) {
   return (
-    <div>
+    <div className="min-w-0">
       <h3 className="mb-2 text-sm font-medium text-muted-foreground">
         {title}
       </h3>
@@ -173,11 +173,15 @@ function RelativeGroup({
           {people.map((person) => (
             <li
               key={person.id}
-              className="flex items-center gap-1 rounded-full border border-border pl-3 pr-1 py-1"
+              className={`flex max-w-full items-center gap-1 rounded-full border border-border py-1 pl-3 ${
+                canEdit && relationshipKind && person.relationshipId
+                  ? "pr-1"
+                  : "pr-3"
+              }`}
             >
               <Link
                 href={`/families/${familySlug}/people/${person.slug}`}
-                className="text-sm hover:underline"
+                className="truncate text-sm hover:underline"
               >
                 {personDisplayName(person)}
               </Link>
