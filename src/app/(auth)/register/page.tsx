@@ -16,7 +16,14 @@ export const metadata: Metadata = {
   title: "Регистрация",
 };
 
-export default function RegisterPage() {
+export default async function RegisterPage({
+  searchParams,
+}: PageProps<"/register">) {
+  const { callbackUrl } = await searchParams;
+  const callbackUrlValue = Array.isArray(callbackUrl)
+    ? callbackUrl[0]
+    : callbackUrl;
+
   return (
     <main className="flex min-h-svh flex-col items-center justify-center p-4">
       <AuthBrand />
@@ -28,7 +35,7 @@ export default function RegisterPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
-          <GoogleSignInButton />
+          <GoogleSignInButton callbackUrl={callbackUrlValue} />
 
           <div className="flex items-center gap-3">
             <Separator className="flex-1" />
@@ -36,7 +43,7 @@ export default function RegisterPage() {
             <Separator className="flex-1" />
           </div>
 
-          <RegisterForm />
+          <RegisterForm callbackUrl={callbackUrlValue} />
 
           <p className="text-center text-sm text-muted-foreground">
             Уже есть аккаунт?{" "}

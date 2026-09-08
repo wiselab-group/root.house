@@ -1,6 +1,13 @@
 import { and, desc, eq, inArray, isNotNull, notInArray } from "drizzle-orm";
 import { db } from "@/db/client";
-import { media, mediaPerson, mediaAlbum, persons, albums } from "@/db/schema";
+import {
+  media,
+  mediaPerson,
+  mediaAlbum,
+  persons,
+  albums,
+  type PrivacyLevel,
+} from "@/db/schema";
 
 export interface MediaRecord {
   id: string;
@@ -14,7 +21,7 @@ export interface MediaRecord {
   height: number | null;
   title: string | null;
   description: string | null;
-  privacyLevel: "private" | "family" | "public";
+  privacyLevel: PrivacyLevel;
   uploadedBy: string;
   createdAt: Date;
 }
@@ -231,6 +238,7 @@ export interface CreateMediaData {
   title?: string | null;
   description?: string | null;
   uploadedBy: string;
+  privacyLevel?: PrivacyLevel;
   /** Person ids to link this Media to, created atomically with the row. */
   personIds: string[];
   /** Album ids to link this Media to, created atomically with the row. */
@@ -254,6 +262,7 @@ export async function createMedia(
       title: data.title ?? null,
       description: data.description ?? null,
       uploadedBy: data.uploadedBy,
+      privacyLevel: data.privacyLevel ?? "family",
     })
     .returning({ id: media.id });
 

@@ -1,4 +1,6 @@
 import { vercelBlobStorageService } from "./storage.vercel-blob";
+import { canView, type ActingMember } from "@/domain/family/permissions";
+import type { PrivacyLevel } from "@/db/schema";
 import {
   createMedia,
   deleteMediaRow,
@@ -30,6 +32,7 @@ export interface UploadPhotoInput {
   originalFilename: string;
   width?: number;
   height?: number;
+  privacyLevel?: PrivacyLevel;
 }
 
 /**
@@ -63,6 +66,7 @@ export async function uploadPersonPhoto(
       width: input.width,
       height: input.height,
       uploadedBy: input.uploadedBy,
+      privacyLevel: input.privacyLevel,
       personIds: input.personIds,
       albumIds: input.albumIds,
     });
@@ -183,6 +187,51 @@ export async function getMedia(
   familyId: string,
 ): Promise<MediaRecord | null> {
   return getMediaById(mediaId, familyId);
+}
+
+/** Filters a list of Media down to what `member` may see per the PRIVATE
+ *  visibility rule — see event.service.ts::filterVisibleEvents for the
+ *  identical shape/rationale. */
+export function filterVisibleMedia(
+  items: MediaRecord[],
+  member: ActingMember,
+): MediaRecord[] {
+  return items.filter((m) =>
+    canView(member, { privacyLevel: m.privacyLevel, createdBy: m.uploadedBy }),
+  );
+}
+
+/** Same as filterVisibleMedia, but for a gallery grid's GalleryPhoto shape
+ *  (media wrapped with its tagged people/albums) — used by the family/album/
+ *  person photo grids before rendering. */
+export function filterVisibleGalleryPhotos(
+  photos: GalleryPhoto[],
+  member: ActingMember,
+): GalleryPhoto[] {
+  return photos.filter((p) =>
+    canView(member, {
+      privacyLevel: p.media.privacyLevel,
+      createdBy: p.media.uploadedBy,
+    }),
+  );
+}
+
+/** Same IDOR-safe-preserving contract as getVisiblePerson: returns null both
+ *  when the Media doesn't exist in this family AND when it exists but
+ *  `member` isn't entitled to see it. */
+export async function getVisibleMedia(
+  mediaId: string,
+  familyId: string,
+  member: ActingMember,
+): Promise<MediaRecord | null> {
+  const record = await getMediaById(mediaId, familyId);
+  if (!record) return null;
+  return canView(member, {
+    privacyLevel: record.privacyLevel,
+    createdBy: record.uploadedBy,
+  })
+    ? record
+    : null;
 }
 
 /**

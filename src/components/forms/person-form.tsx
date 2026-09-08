@@ -9,6 +9,7 @@ import { PersonNameFields } from "./person-name-fields";
 import { PersonDateFields } from "./person-date-fields";
 import { PersonGenderLivingFields } from "./person-gender-living-fields";
 import { PlaceSelect } from "./place-select";
+import { PrivacyLevelSelect } from "./privacy-level-select";
 import type { PersonFormState } from "@/actions/person.actions";
 import type { PersonRecord } from "@/domain/person/person.service";
 import type { PlaceRecord } from "@/domain/place/place.service";
@@ -135,6 +136,8 @@ export function PersonForm({
           className="rounded-md border border-input bg-transparent px-3 py-2 text-sm"
         />
       </div>
+
+      <PrivacyLevelSelect defaultValue={person?.privacyLevel ?? "family"} />
 
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
       {state.fieldErrors &&

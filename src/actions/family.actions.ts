@@ -15,11 +15,14 @@ import {
   deleteFamily,
   getFamilySlugById,
   getFamilySummary,
+  removeFamilyMember,
   updateFamilyDetails,
   updateFamilySlug,
   updateDefaultFocusPerson,
 } from "@/domain/family/family.service";
-import { SlugTakenError } from "@/domain/family/errors";
+import { updateMemberRole } from "@/domain/family/family.repository";
+import { SlugTakenError, ForbiddenError } from "@/domain/family/errors";
+import type { FamilyRole } from "@/domain/family/roles";
 
 export interface CreateFamilyFormState {
   error?: string;
@@ -236,5 +239,58 @@ export async function updateDefaultFocusPersonAction(
   if (!result.ok) return result;
 
   revalidatePath(`/families`, "layout");
+  return { ok: true };
+}
+
+/**
+ * Changes another member's role — owner-only (spec §15: "OWNER может
+ * изменить роль"). Refuses to demote the last remaining owner (see
+ * domain/family/member-guard.ts::isLastOwnerDemotion).
+ */
+export async function updateMemberRoleAction(
+  familyId: string,
+  memberUserId: string,
+  newRole: FamilyRole,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await auth();
+  if (!session?.user)
+    return { ok: false, error: "Сессия истекла — войдите заново." };
+
+  await requireFamilyAccess(familyId, session.user.id, "owner");
+
+  const result = await updateMemberRole(familyId, memberUserId, newRole);
+  if (!result.ok) return result;
+
+  const slug = await getFamilySlugById(familyId);
+  if (slug) revalidatePath(`/families/${slug}/settings`);
+  return { ok: true };
+}
+
+/**
+ * Removes a member from the family — owner-only (spec §16). Wraps the
+ * already-existing removeFamilyMember (family.service.ts), which refuses to
+ * remove the last remaining owner.
+ */
+export async function removeMemberAction(
+  familyId: string,
+  memberUserId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await auth();
+  if (!session?.user)
+    return { ok: false, error: "Сессия истекла — войдите заново." };
+
+  await requireFamilyAccess(familyId, session.user.id, "owner");
+
+  try {
+    await removeFamilyMember(familyId, memberUserId);
+  } catch (error) {
+    if (error instanceof ForbiddenError) {
+      return { ok: false, error: error.message };
+    }
+    throw error;
+  }
+
+  const slug = await getFamilySlugById(familyId);
+  if (slug) revalidatePath(`/families/${slug}/settings`);
   return { ok: true };
 }

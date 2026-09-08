@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
+import { ForbiddenError } from "@/domain/family/errors";
+import { canEdit } from "@/domain/family/permissions";
 import { getFamilySlugById } from "@/domain/family/family.service";
 import {
   createPersonSchema,
@@ -13,6 +15,7 @@ import {
   addPerson,
   addPlaceholderPerson,
   editPerson,
+  getPerson,
   getPersonSlugById,
   removePerson,
 } from "@/domain/person/person.service";
@@ -47,6 +50,7 @@ export async function createPersonAction(
     birthPlaceId: formData.get("birthPlaceId"),
     deathPlaceId: formData.get("deathPlaceId"),
     deathCause: formData.get("deathCause"),
+    privacyLevel: formData.get("privacyLevel") || undefined,
   });
 
   if (!parsed.success) {
@@ -73,6 +77,7 @@ export async function createPersonAction(
     birthPlaceId: parsed.data.birthPlaceId || undefined,
     deathPlaceId: parsed.data.deathPlaceId || undefined,
     deathCause: parsed.data.deathCause || undefined,
+    privacyLevel: parsed.data.privacyLevel,
   });
 
   const familySlug = await getFamilySlugById(familyId);
@@ -121,7 +126,24 @@ export async function deletePersonAction(
   const session = await auth();
   if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
 
-  await requireFamilyAccess(familyId, session.user.id, "editor");
+  const member = await requireFamilyAccess(familyId, session.user.id, "editor");
+
+  // Person stays editor-and-up for the create/edit/delete floor (no
+  // CONTRIBUTOR nuance — Person isn't a ContributableEntity), but PRIVATE
+  // visibility must still apply uniformly across every entity type (spec
+  // §6): an editor who is neither owner nor creator must not be able to
+  // mutate a PRIVATE Person just because they know/guess its id.
+  const person = await getPerson(personId, familyId);
+  if (!person) return;
+  if (
+    !canEdit(
+      { userId: session.user.id, role: member.role },
+      { privacyLevel: person.privacyLevel, createdBy: person.createdBy },
+    )
+  ) {
+    throw new ForbiddenError("У вас нет прав на удаление этой записи.");
+  }
+
   await removePerson(personId, familyId);
 
   const slug = await getFamilySlugById(familyId);
@@ -138,7 +160,21 @@ export async function updatePersonAction(
   const session = await auth();
   if (!session?.user) return { error: "Сессия истекла — войдите заново." };
 
-  await requireFamilyAccess(familyId, session.user.id, "editor");
+  const member = await requireFamilyAccess(familyId, session.user.id, "editor");
+
+  const existingPerson = await getPerson(personId, familyId);
+  if (!existingPerson) return { error: "Человек не найден." };
+  if (
+    !canEdit(
+      { userId: session.user.id, role: member.role },
+      {
+        privacyLevel: existingPerson.privacyLevel,
+        createdBy: existingPerson.createdBy,
+      },
+    )
+  ) {
+    return { error: "У вас нет прав на редактирование этой записи." };
+  }
 
   const parsed = createPersonSchema.safeParse({
     firstName: formData.get("firstName"),
@@ -154,6 +190,7 @@ export async function updatePersonAction(
     birthPlaceId: formData.get("birthPlaceId"),
     deathPlaceId: formData.get("deathPlaceId"),
     deathCause: formData.get("deathCause"),
+    privacyLevel: formData.get("privacyLevel") || undefined,
   });
 
   if (!parsed.success) {
@@ -180,6 +217,7 @@ export async function updatePersonAction(
     birthPlaceId: parsed.data.birthPlaceId || null,
     deathPlaceId: parsed.data.deathPlaceId || null,
     deathCause: parsed.data.deathCause || null,
+    privacyLevel: parsed.data.privacyLevel,
   });
 
   if (!updated) {

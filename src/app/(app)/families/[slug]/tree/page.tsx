@@ -24,6 +24,17 @@ export const metadata: Metadata = {
   title: "Дерево",
 };
 
+// KNOWN GAP: the tree visualization does not yet filter PRIVATE persons out
+// of the graph (unlike the /people list, profile pages, and photo/story/
+// event views, which do — see domain/family/permissions.ts::canView and its
+// filterVisibleX/getVisibleX call sites). The tree's layout algorithm
+// (domain/tree/layout/ — see CLAUDE.md's TREE LAYOUT RULES) treats every
+// node as always-present for connector-line/spacing invariants; removing a
+// node conditionally would need genealogy-aware re-layout (routing lines
+// around a hidden ancestor, or promoting a hidden node's children) that is
+// out of scope for this iteration. Flagged explicitly rather than papered
+// over with a naive filter that would break those invariants.
+
 /** Parses the toolbar's `?filter=<json>` param — malformed/absent input is treated as "no filter", never an error. */
 function parseFilterParam(raw: string | undefined): PersonFilter {
   if (!raw) return {};

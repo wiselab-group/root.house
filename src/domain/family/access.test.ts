@@ -36,6 +36,17 @@ describe("roleSatisfies", () => {
     expect(roleSatisfies("viewer", "editor")).toBe(false);
     expect(roleSatisfies("viewer", "owner")).toBe(false);
   });
+
+  it("contributor satisfies viewer/contributor but not editor/owner", () => {
+    expect(roleSatisfies("contributor", "viewer")).toBe(true);
+    expect(roleSatisfies("contributor", "contributor")).toBe(true);
+    expect(roleSatisfies("contributor", "editor")).toBe(false);
+    expect(roleSatisfies("contributor", "owner")).toBe(false);
+  });
+
+  it("editor satisfies contributor too (rank sits between viewer and editor)", () => {
+    expect(roleSatisfies("editor", "contributor")).toBe(true);
+  });
 });
 
 describe("requireFamilyAccess", () => {
@@ -73,5 +84,23 @@ describe("requireFamilyAccess", () => {
     await expect(
       requireFamilyAccess("nonexistent-family", userId, "viewer", db),
     ).rejects.toThrow(ForbiddenError);
+  });
+
+  // Owner-only member-management gate (invite/resend/revoke/change-role/
+  // remove) — spec scenario "non-owner attempting these actions → DENY".
+  it.each(["contributor", "editor", "viewer"] as const)(
+    "throws ForbiddenError for a %s attempting an owner-only action",
+    async (role) => {
+      const db = fakeDb([{ id: "m1", familyId, userId, role }]);
+      await expect(
+        requireFamilyAccess(familyId, userId, "owner", db),
+      ).rejects.toThrow(ForbiddenError);
+    },
+  );
+
+  it("resolves for an owner attempting an owner-only action", async () => {
+    const db = fakeDb([{ id: "m1", familyId, userId, role: "owner" }]);
+    const member = await requireFamilyAccess(familyId, userId, "owner", db);
+    expect(member.role).toBe("owner");
   });
 });

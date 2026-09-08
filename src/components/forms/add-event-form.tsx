@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PersonDateFields } from "./person-date-fields";
 import { PlaceSelect } from "./place-select";
+import { PrivacyLevelSelect } from "./privacy-level-select";
 import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 import type { PlaceRecord } from "@/domain/place/place.service";
 import { useCollapsibleFormClose } from "./collapsible-form";
@@ -89,6 +90,7 @@ export function AddEventForm({
       )}
 
       <PlaceSelect id="placeId" name="placeId" label="Место" places={places} />
+      <PrivacyLevelSelect />
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="description" className="text-xs text-muted-foreground">

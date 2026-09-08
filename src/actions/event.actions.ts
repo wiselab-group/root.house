@@ -3,10 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
+import { ForbiddenError } from "@/domain/family/errors";
+import { canCreate, canDelete } from "@/domain/family/permissions";
 import { getFamilySlugById } from "@/domain/family/family.service";
 import { getPersonSlugById } from "@/domain/person/person.service";
 import { createEventSchema } from "@/lib/validation/event";
-import { addEvent, removeEvent } from "@/domain/event/event.service";
+import { addEvent, getEvent, removeEvent } from "@/domain/event/event.service";
 import { partialDateFromFormData } from "@/domain/shared/partial-date";
 
 export interface EventFormState {
@@ -29,13 +31,21 @@ export async function createEventAction(
   const session = await auth();
   if (!session?.user) return { error: "Сессия истекла — войдите заново." };
 
-  await requireFamilyAccess(familyId, session.user.id, "editor");
+  const member = await requireFamilyAccess(
+    familyId,
+    session.user.id,
+    "contributor",
+  );
+  if (!canCreate(member.role, "event")) {
+    return { error: "У вас нет прав на добавление событий." };
+  }
 
   const parsed = createEventSchema.safeParse({
     type: formData.get("type"),
     title: formData.get("title"),
     description: formData.get("description"),
     placeId: formData.get("placeId"),
+    privacyLevel: formData.get("privacyLevel") || undefined,
   });
 
   if (!parsed.success) {
@@ -55,6 +65,7 @@ export async function createEventAction(
     date: partialDateFromFormData(formData, "date"),
     endDate: partialDateFromFormData(formData, "endDate"),
     placeId: parsed.data.placeId || undefined,
+    privacyLevel: parsed.data.privacyLevel,
     participants: [{ personId, role: "subject" }],
   });
 
@@ -72,7 +83,23 @@ export async function deleteEventAction(
   const session = await auth();
   if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
 
-  await requireFamilyAccess(familyId, session.user.id, "editor");
+  const member = await requireFamilyAccess(
+    familyId,
+    session.user.id,
+    "contributor",
+  );
+
+  const event = await getEvent(eventId, familyId);
+  if (!event) return;
+  if (
+    !canDelete(
+      { userId: session.user.id, role: member.role },
+      { privacyLevel: event.privacyLevel, createdBy: event.createdBy ?? "" },
+    )
+  ) {
+    throw new ForbiddenError("У вас нет прав на удаление этого события.");
+  }
+
   await removeEvent(eventId, familyId);
   const familySlug = await getFamilySlugById(familyId);
   const personSlug = await getPersonSlugById(personId, familyId);

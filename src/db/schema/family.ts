@@ -13,6 +13,7 @@ export const familyRoleEnum = pgEnum("family_role", [
   "owner",
   "editor",
   "viewer",
+  "contributor",
 ]);
 export const planTierEnum = pgEnum("plan_tier", ["free"]); // extended later (premium, lifetime, ...)
 

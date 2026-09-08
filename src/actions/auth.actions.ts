@@ -13,6 +13,20 @@ export interface RegisterFormState {
   fieldErrors?: Partial<Record<"name" | "email" | "password", string>>;
 }
 
+/** Only ever redirect to a same-origin relative path — a `callbackUrl` is
+ *  user/URL-controlled input (query param or hidden form field), so this
+ *  guards against it being abused as an open redirect to an external host. */
+function safeRedirectTarget(callbackUrl: FormDataEntryValue | null): string {
+  if (
+    typeof callbackUrl === "string" &&
+    callbackUrl.startsWith("/") &&
+    !callbackUrl.startsWith("//")
+  ) {
+    return callbackUrl;
+  }
+  return "/families";
+}
+
 export async function registerAction(
   _prevState: RegisterFormState,
   formData: FormData,
@@ -45,10 +59,12 @@ export async function registerAction(
 
   // Registration succeeded — sign the user in immediately via the same
   // Credentials provider rather than making them log in a second time.
+  // callbackUrl (e.g. /invite/[token]) lets an invite-then-register flow
+  // resume exactly where it started, instead of always landing on /families.
   await signIn("credentials", {
     email: parsed.data.email,
     password: parsed.data.password,
-    redirectTo: "/families",
+    redirectTo: safeRedirectTarget(formData.get("callbackUrl")),
   });
 
   return {};
@@ -58,8 +74,12 @@ export async function signOutAction(): Promise<void> {
   await signOut({ redirectTo: "/login" });
 }
 
-export async function signInWithGoogleAction(): Promise<void> {
-  await signIn("google", { redirectTo: "/families" });
+export async function signInWithGoogleAction(
+  callbackUrl?: string,
+): Promise<void> {
+  await signIn("google", {
+    redirectTo: safeRedirectTarget(callbackUrl ?? null),
+  });
 }
 
 export interface LoginFormState {
@@ -83,7 +103,7 @@ export async function loginAction(
     await signIn("credentials", {
       email: parsed.data.email,
       password: parsed.data.password,
-      redirectTo: "/families",
+      redirectTo: safeRedirectTarget(formData.get("callbackUrl")),
     });
   } catch (error) {
     if (error instanceof AuthError) {

@@ -1,8 +1,12 @@
-import { getPersonStories } from "@/domain/story/story.service";
+import {
+  getPersonStories,
+  filterVisibleStories,
+} from "@/domain/story/story.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddStoryForm } from "@/components/forms/add-story-form";
 import { DeleteStoryButton } from "@/components/forms/delete-story-button";
 import { CollapsibleForm } from "@/components/forms/collapsible-form";
+import { canDelete, type ActingMember } from "@/domain/family/permissions";
 
 /**
  * A Person's family stories/memories — server component, same pattern as
@@ -12,12 +16,19 @@ export async function PersonStories({
   familyId,
   personId,
   canEdit,
+  canContribute = canEdit,
+  member,
 }: {
   familyId: string;
   personId: string;
   canEdit: boolean;
+  /** May add Stories — owner/editor/contributor. Defaults to canEdit for
+   *  any caller not yet passing this explicitly. */
+  canContribute?: boolean;
+  member: ActingMember;
 }) {
-  const stories = await getPersonStories(personId, familyId);
+  const allStories = await getPersonStories(personId, familyId);
+  const stories = filterVisibleStories(allStories, member);
 
   return (
     <Card>
@@ -38,7 +49,10 @@ export async function PersonStories({
                 <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
                   {story.body}
                 </p>
-                {canEdit && (
+                {canDelete(member, {
+                  privacyLevel: story.privacyLevel,
+                  createdBy: story.authorId,
+                }) && (
                   <div className="mt-1">
                     <DeleteStoryButton
                       familyId={familyId}
@@ -52,7 +66,7 @@ export async function PersonStories({
           </ul>
         )}
 
-        {canEdit && (
+        {canContribute && (
           <CollapsibleForm triggerLabel="Добавить историю">
             <AddStoryForm familyId={familyId} personId={personId} />
           </CollapsibleForm>

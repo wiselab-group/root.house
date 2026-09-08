@@ -8,6 +8,8 @@ import { AlbumMultiCombobox } from "./album-multi-combobox";
 import { PhotoPreviewCard } from "./photo-preview-card";
 import { uploadPhoto } from "@/lib/upload-photo";
 import { useCollapsibleFormClose } from "@/components/forms/collapsible-form";
+import { PrivacyLevelSelect } from "@/components/forms/privacy-level-select";
+import type { PrivacyLevel } from "@/db/schema";
 
 /**
  * Upload panel for the family-wide gallery (/families/[slug]/photos) —
@@ -44,6 +46,7 @@ export function PhotoUploadPanel({
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [privacyLevel, setPrivacyLevel] = useState<PrivacyLevel>("family");
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -70,6 +73,7 @@ export function PhotoUploadPanel({
         personIds: taggedPeople.map((person) => person.id),
         albumIds: taggedAlbums.map((album) => album.id),
         file: pendingFile,
+        privacyLevel,
       });
       setTaggedPeople([]);
       setTaggedAlbums(defaultAlbums);
@@ -98,6 +102,7 @@ export function PhotoUploadPanel({
         value={taggedAlbums}
         onChange={setTaggedAlbums}
       />
+      <PrivacyLevelSelect value={privacyLevel} onChange={setPrivacyLevel} />
 
       {pendingFile ? (
         <PhotoPreviewCard

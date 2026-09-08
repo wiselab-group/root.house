@@ -1,11 +1,13 @@
 import { cache } from "react";
 import type { PartialDate } from "@/domain/shared/partial-date";
+import type { PrivacyLevel } from "@/db/schema";
 import {
   ensureUniqueSlug,
   isValidPersonSlugFormat,
   slugifyPerson,
 } from "@/domain/person/slug";
 import { reconcileLivingStatus } from "@/domain/person/reconcile-living-status";
+import { canView, type ActingMember } from "@/domain/family/permissions";
 import {
   createPerson,
   deletePerson,
@@ -47,6 +49,7 @@ export interface CreatePersonInput {
   birthPlaceId?: string;
   deathPlaceId?: string;
   deathCause?: string;
+  privacyLevel?: PrivacyLevel;
 }
 
 /** Placeholder id used only to seed a fallback slug before the real row (and
@@ -158,6 +161,41 @@ export async function getPersonSlugById(
 
 export async function listPeople(familyId: string): Promise<PersonRecord[]> {
   return listPersonsByFamily(familyId);
+}
+
+/** Filters a list of Persons down to what `member` may see per the PRIVATE
+ *  visibility rule (owner sees everything; everyone else sees non-private
+ *  plus their own). Filtering happens in application code, not SQL, for
+ *  now — see domain/family/permissions.ts's module doc comment. */
+export function filterVisiblePersons(
+  people: PersonRecord[],
+  member: ActingMember,
+): PersonRecord[] {
+  return people.filter((p) =>
+    canView(member, { privacyLevel: p.privacyLevel, createdBy: p.createdBy }),
+  );
+}
+
+/** Same IDOR-safe-preserving contract used throughout: returns null both
+ *  when the Person doesn't exist in this family AND when it exists but
+ *  `member` isn't entitled to see it — never leaks which, same as a plain
+ *  404. Page/route handlers rendering a single Person to the end user must
+ *  call this, not the raw getPerson — internal domain code that needs the
+ *  record regardless of privacy (e.g. resolving a slug, an FK reference)
+ *  keeps using getPerson directly. */
+export async function getVisiblePerson(
+  personId: string,
+  familyId: string,
+  member: ActingMember,
+): Promise<PersonRecord | null> {
+  const person = await getPerson(personId, familyId);
+  if (!person) return null;
+  return canView(member, {
+    privacyLevel: person.privacyLevel,
+    createdBy: person.createdBy,
+  })
+    ? person
+    : null;
 }
 
 export async function editPerson(

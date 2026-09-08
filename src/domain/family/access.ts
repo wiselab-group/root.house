@@ -16,6 +16,13 @@ import {
  * member whose role doesn't satisfy `minRole`. Never returns null/undefined
  * on failure — callers should let the error propagate (Next.js will render
  * the nearest error boundary), not silently swallow it.
+ *
+ * NOTE: for entities where CONTRIBUTOR has a non-monotonic permission shape
+ * (Event/Media/Story: create yes, edit/delete someone else's — no), calling
+ * this with minRole alone is NOT sufficient — see domain/family/permissions.ts
+ * for the additional per-object capability checks (canCreate/canEdit/
+ * canDelete) those actions must layer on top of the membership check this
+ * function performs.
  */
 export async function requireFamilyAccess(
   familyId: string,

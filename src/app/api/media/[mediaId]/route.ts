@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { ForbiddenError } from "@/domain/family/errors";
-import { getMedia, getMediaStream } from "@/domain/media/media.service";
+import { getVisibleMedia, getMediaStream } from "@/domain/media/media.service";
 
 /**
  * Streams a private Media file's bytes back to the browser, after checking
@@ -33,8 +33,9 @@ export async function GET(
     );
   }
 
+  let member;
   try {
-    await requireFamilyAccess(familyId, session.user.id, "viewer");
+    member = await requireFamilyAccess(familyId, session.user.id, "viewer");
   } catch (error) {
     if (error instanceof ForbiddenError) {
       return NextResponse.json({ error: error.message }, { status: 403 });
@@ -42,7 +43,14 @@ export async function GET(
     throw error;
   }
 
-  const media = await getMedia(mediaId, familyId);
+  // getVisibleMedia treats "exists but PRIVATE and not owner/creator" the
+  // same as "doesn't exist" — a 404 either way, no leak of which — this is
+  // what stops a family member without visibility from streaming a PRIVATE
+  // photo's raw bytes just by knowing its mediaId.
+  const media = await getVisibleMedia(mediaId, familyId, {
+    userId: session.user.id,
+    role: member.role,
+  });
   if (!media) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

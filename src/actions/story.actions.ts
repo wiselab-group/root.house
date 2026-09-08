@@ -3,10 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
+import { ForbiddenError } from "@/domain/family/errors";
+import { canCreate, canDelete } from "@/domain/family/permissions";
 import { getFamilySlugById } from "@/domain/family/family.service";
 import { getPersonSlugById } from "@/domain/person/person.service";
 import { createStorySchema } from "@/lib/validation/story";
-import { addStory, removeStory } from "@/domain/story/story.service";
+import { addStory, getStory, removeStory } from "@/domain/story/story.service";
 
 export interface StoryFormState {
   error?: string;
@@ -28,11 +30,19 @@ export async function createStoryAction(
   const session = await auth();
   if (!session?.user) return { error: "Сессия истекла — войдите заново." };
 
-  await requireFamilyAccess(familyId, session.user.id, "editor");
+  const member = await requireFamilyAccess(
+    familyId,
+    session.user.id,
+    "contributor",
+  );
+  if (!canCreate(member.role, "story")) {
+    return { error: "У вас нет прав на добавление историй." };
+  }
 
   const parsed = createStorySchema.safeParse({
     title: formData.get("title"),
     body: formData.get("body"),
+    privacyLevel: formData.get("privacyLevel") || undefined,
   });
 
   if (!parsed.success) {
@@ -48,6 +58,7 @@ export async function createStoryAction(
     authorId: session.user.id,
     title: parsed.data.title,
     body: parsed.data.body,
+    privacyLevel: parsed.data.privacyLevel,
     personIds: [personId],
   });
 
@@ -65,7 +76,23 @@ export async function deleteStoryAction(
   const session = await auth();
   if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
 
-  await requireFamilyAccess(familyId, session.user.id, "editor");
+  const member = await requireFamilyAccess(
+    familyId,
+    session.user.id,
+    "contributor",
+  );
+
+  const story = await getStory(storyId, familyId);
+  if (!story) return;
+  if (
+    !canDelete(
+      { userId: session.user.id, role: member.role },
+      { privacyLevel: story.privacyLevel, createdBy: story.authorId },
+    )
+  ) {
+    throw new ForbiddenError("У вас нет прав на удаление этой истории.");
+  }
+
   await removeStory(storyId, familyId);
   const familySlug = await getFamilySlugById(familyId);
   const personSlug = await getPersonSlugById(personId, familyId);

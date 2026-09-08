@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
-import { getPerson } from "@/domain/person/person.service";
+import { getVisiblePerson } from "@/domain/person/person.service";
 import { getPlace } from "@/domain/place/place.service";
 import { personDisplayName } from "@/domain/person/display-name";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
@@ -22,12 +22,21 @@ export async function generateMetadata({
   params,
 }: PageProps<"/families/[slug]/people/[personSlug]">): Promise<Metadata> {
   const { slug, personSlug } = await params;
+  const session = await auth();
+  if (!session?.user) return {};
+
   // Both resolvers call notFound() themselves for an unknown slug (supported
   // inside generateMetadata) — person can still be null if the row was
-  // deleted between resolving the slug and fetching it.
+  // deleted between resolving the slug and fetching it, or if it exists but
+  // isn't visible to this caller (getVisiblePerson treats both the same,
+  // so a PRIVATE person's name never leaks into the page <title>).
   const familyId = await resolveFamilyIdBySlug(slug);
+  const member = await requireFamilyAccess(familyId, session.user.id, "viewer");
   const personId = await resolvePersonIdBySlug(personSlug, familyId);
-  const person = await getPerson(personId, familyId);
+  const person = await getVisiblePerson(personId, familyId, {
+    userId: session.user.id,
+    role: member.role,
+  });
   if (!person) notFound();
   return { title: personDisplayName(person) };
 }
@@ -42,10 +51,17 @@ export default async function PersonProfilePage({
   const familyId = await resolveFamilyIdBySlug(slug);
   const member = await requireFamilyAccess(familyId, session.user.id, "viewer");
   const personId = await resolvePersonIdBySlug(personSlug, familyId);
-  const person = await getPerson(personId, familyId);
+  const person = await getVisiblePerson(personId, familyId, {
+    userId: session.user.id,
+    role: member.role,
+  });
   if (!person) notFound();
 
   const canEdit = member.role === "owner" || member.role === "editor";
+  // Broader than canEdit: a contributor may add Event/Media/Story (see
+  // domain/family/permissions.ts::canCreate) even though they can't edit
+  // the Person itself or anyone else's past contributions.
+  const canContribute = canEdit || member.role === "contributor";
 
   const [birthPlace, deathPlace, family] = await Promise.all([
     person.birthPlaceId ? getPlace(person.birthPlaceId, familyId) : null,
@@ -114,17 +130,23 @@ export default async function PersonProfilePage({
         familySlug={slug}
         personId={personId}
         canEdit={canEdit}
+        canContribute={canContribute}
+        member={{ userId: session.user.id, role: member.role }}
       />
       <PersonTimeline
         familyId={familyId}
         familySlug={slug}
         personId={personId}
         canEdit={canEdit}
+        canContribute={canContribute}
+        member={{ userId: session.user.id, role: member.role }}
       />
       <PersonStories
         familyId={familyId}
         personId={personId}
+        canContribute={canContribute}
         canEdit={canEdit}
+        member={{ userId: session.user.id, role: member.role }}
       />
     </main>
   );

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { privacyLevelSchema } from "./event";
 
 const datePrecisionSchema = z.enum(["exact", "year_only", "decade", "unknown"]);
 
@@ -50,6 +51,7 @@ export const createPersonSchema = z.object({
     .optional()
     .nullable()
     .or(z.literal("")),
+  privacyLevel: privacyLevelSchema.default("family"),
 });
 
 export type CreatePersonInput = z.infer<typeof createPersonSchema>;

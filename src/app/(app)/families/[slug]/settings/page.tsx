@@ -10,8 +10,15 @@ import { FamilySettingsDetailsRow } from "@/components/family/family-settings-de
 import { FamilySettingsSlugRow } from "@/components/family/family-settings-slug-row";
 import { FamilySettingsFocusRow } from "@/components/family/family-settings-focus-row";
 import { FamilySettingsDeleteRow } from "@/components/family/family-settings-delete-row";
+import { FamilyMembersSection } from "@/components/family/family-members-section";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
-import { getFamilySummary } from "@/domain/family/family.service";
+import { auth } from "@/lib/auth";
+import { requireFamilyAccess } from "@/domain/family/access";
+import {
+  getFamilySummary,
+  listFamilyMembersWithUsers,
+} from "@/domain/family/family.service";
+import { listPendingInvitationsForFamily } from "@/domain/invitation/invitation.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 
 export const metadata: Metadata = {
@@ -23,7 +30,21 @@ export default async function FamilySettingsPage({
 }: PageProps<"/families/[slug]/settings">) {
   const { slug } = await params;
   const familyId = await resolveFamilyIdBySlug(slug);
-  const family = await getFamilySummary(familyId);
+  const session = await auth();
+  // Session/membership are already validated by the family layout above
+  // this page (requireFamilyAccess, 'viewer' floor) — re-derived here only
+  // to know the caller's role, needed to decide whether to render the
+  // Members management controls (owner-only) at all.
+  const member = session?.user
+    ? await requireFamilyAccess(familyId, session.user.id, "viewer")
+    : null;
+  const isOwner = member?.role === "owner";
+
+  const [family, members, pendingInvitations] = await Promise.all([
+    getFamilySummary(familyId),
+    isOwner ? listFamilyMembersWithUsers(familyId) : Promise.resolve([]),
+    isOwner ? listPendingInvitationsForFamily(familyId) : Promise.resolve([]),
+  ]);
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
@@ -63,6 +84,25 @@ export default async function FamilySettingsPage({
           <FamilySettingsFocusRow />
         </CardContent>
       </Card>
+
+      {isOwner && member && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Участники</CardTitle>
+            <CardDescription>
+              Управление доступом к семейному архиву.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FamilyMembersSection
+              familyId={familyId}
+              currentUserId={member.userId}
+              members={members}
+              pendingInvitations={pendingInvitations}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="border-destructive/30">
         <CardHeader>

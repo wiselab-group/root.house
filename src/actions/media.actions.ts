@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
+import { ForbiddenError } from "@/domain/family/errors";
+import { canDelete } from "@/domain/family/permissions";
 import { getFamilySlugById } from "@/domain/family/family.service";
 import {
   getPerson,
@@ -11,6 +13,7 @@ import {
 } from "@/domain/person/person.service";
 import {
   getAlbumsForSingleMedia,
+  getMedia,
   getTaggedPeopleForMedia,
   removeMedia,
 } from "@/domain/media/media.service";
@@ -39,7 +42,25 @@ export async function deleteMediaAction(
   const session = await auth();
   if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
 
-  await requireFamilyAccess(familyId, session.user.id, "editor");
+  const member = await requireFamilyAccess(
+    familyId,
+    session.user.id,
+    "contributor",
+  );
+
+  const mediaRecord = await getMedia(mediaId, familyId);
+  if (!mediaRecord) return;
+  if (
+    !canDelete(
+      { userId: session.user.id, role: member.role },
+      {
+        privacyLevel: mediaRecord.privacyLevel,
+        createdBy: mediaRecord.uploadedBy,
+      },
+    )
+  ) {
+    throw new ForbiddenError("У вас нет прав на удаление этого файла.");
+  }
 
   // Fetched before removeMedia — media_person/media_album rows cascade-
   // delete with the Media row, so this must run first or there'd be

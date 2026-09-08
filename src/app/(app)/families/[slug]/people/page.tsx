@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
-import { listPeople } from "@/domain/person/person.service";
+import {
+  listPeople,
+  filterVisiblePersons,
+} from "@/domain/person/person.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { LinkButton } from "@/components/ui/link-button";
 import { Badge } from "@/components/ui/badge";
@@ -28,11 +31,15 @@ export default async function PeoplePage({
   if (!session?.user) return null;
 
   const familyId = await resolveFamilyIdBySlug(slug);
-  await requireFamilyAccess(familyId, session.user.id, "viewer");
-  const [people, family] = await Promise.all([
+  const member = await requireFamilyAccess(familyId, session.user.id, "viewer");
+  const [allPeople, family] = await Promise.all([
     listPeople(familyId),
     getFamilySummary(familyId),
   ]);
+  const people = filterVisiblePersons(allPeople, {
+    userId: session.user.id,
+    role: member.role,
+  });
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">

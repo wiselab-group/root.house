@@ -4,7 +4,9 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PhotoPreviewCard } from "@/components/media/photo-preview-card";
+import { PrivacyLevelSelect } from "@/components/forms/privacy-level-select";
 import { uploadPhoto } from "@/lib/upload-photo";
+import type { PrivacyLevel } from "@/db/schema";
 
 /**
  * Picking a file only stages it for review (PhotoPreviewCard) — it does
@@ -27,6 +29,7 @@ export function PhotoUploadForm({
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [privacyLevel, setPrivacyLevel] = useState<PrivacyLevel>("family");
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -48,7 +51,12 @@ export function PhotoUploadForm({
     setError(null);
 
     try {
-      await uploadPhoto({ familyId, personIds: [personId], file: pendingFile });
+      await uploadPhoto({
+        familyId,
+        personIds: [personId],
+        file: pendingFile,
+        privacyLevel,
+      });
       setPendingFile(null);
       router.refresh();
     } catch (err) {
@@ -63,13 +71,16 @@ export function PhotoUploadForm({
 
   if (pendingFile) {
     return (
-      <PhotoPreviewCard
-        file={pendingFile}
-        isUploading={isUploading}
-        error={error}
-        onConfirm={confirm}
-        onCancel={cancel}
-      />
+      <div className="flex flex-col gap-3">
+        <PrivacyLevelSelect value={privacyLevel} onChange={setPrivacyLevel} />
+        <PhotoPreviewCard
+          file={pendingFile}
+          isUploading={isUploading}
+          error={error}
+          onConfirm={confirm}
+          onCancel={cancel}
+        />
+      </div>
     );
   }
 

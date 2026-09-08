@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCollapsibleFormClose } from "./collapsible-form";
+import { PrivacyLevelSelect } from "./privacy-level-select";
 
 const initialState: StoryFormState = {};
 
@@ -65,6 +66,8 @@ export function AddStoryForm({
           <p className="text-sm text-destructive">{state.fieldErrors.body}</p>
         )}
       </div>
+
+      <PrivacyLevelSelect />
 
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 

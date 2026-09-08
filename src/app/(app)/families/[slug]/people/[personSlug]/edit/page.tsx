@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
-import { getPerson } from "@/domain/person/person.service";
+import { getVisiblePerson } from "@/domain/person/person.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { resolvePersonIdBySlug } from "@/lib/resolve-person-slug";
 import { PersonForm } from "@/components/forms/person-form";
@@ -18,9 +18,16 @@ export async function generateMetadata({
   params,
 }: PageProps<"/families/[slug]/people/[personSlug]/edit">): Promise<Metadata> {
   const { slug, personSlug } = await params;
+  const session = await auth();
+  if (!session?.user) return {};
+
   const familyId = await resolveFamilyIdBySlug(slug);
+  const member = await requireFamilyAccess(familyId, session.user.id, "editor");
   const personId = await resolvePersonIdBySlug(personSlug, familyId);
-  const person = await getPerson(personId, familyId);
+  const person = await getVisiblePerson(personId, familyId, {
+    userId: session.user.id,
+    role: member.role,
+  });
   if (!person) notFound();
   return { title: `Редактировать — ${personDisplayName(person)}` };
 }
@@ -33,9 +40,12 @@ export default async function EditPersonPage({
   if (!session?.user) return null;
 
   const familyId = await resolveFamilyIdBySlug(slug);
-  await requireFamilyAccess(familyId, session.user.id, "editor");
+  const member = await requireFamilyAccess(familyId, session.user.id, "editor");
   const personId = await resolvePersonIdBySlug(personSlug, familyId);
-  const person = await getPerson(personId, familyId);
+  const person = await getVisiblePerson(personId, familyId, {
+    userId: session.user.id,
+    role: member.role,
+  });
   if (!person) notFound();
   const [places, family] = await Promise.all([
     listPlaces(familyId),

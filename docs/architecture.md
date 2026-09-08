@@ -178,8 +178,18 @@ families
 
 family_members
   id PK, family_id FK->families CASCADE, user_id FK->users CASCADE,
-  role CHECK(owner|editor|viewer), invited_by FK->users SET NULL, joined_at
+  role CHECK(owner|editor|contributor|viewer), invited_by FK->users SET NULL, joined_at
   UNIQUE(family_id, user_id); INDEX(user_id); INDEX(family_id)
+
+family_invitations
+  id PK, family_id FK->families CASCADE, email,
+  role CHECK(owner|editor|contributor|viewer) default 'viewer',
+  token_hash (SHA-256 of plaintext token — plaintext never stored),
+  invited_by FK->users CASCADE, expires_at,
+  accepted_at NULL, revoked_at NULL, created_at
+  UNIQUE(token_hash); INDEX(family_id); INDEX(family_id, email)
+  -- status (pending/accepted/revoked/expired) derived from the 3 timestamps,
+  -- not a separate column — see domain/invitation/invitation.service.ts::invitationStatus
 
 places
   id PK, family_id FK->families CASCADE, name, description,
@@ -413,6 +423,49 @@ public без явного действия" — особенно для фот�
   (`src/domain/family/access.test.ts`) для всех комбинаций роль×minRole.
 - Все repository `getById`-методы фильтруют `WHERE id = :id AND family_id = :familyId`
   **в одном запросе** — подмена id из чужой Family возвращает `null`, не утечку.
+
+## Roles, Privacy, Invitations
+
+Три независимых понятия, намеренно не смешиваются:
+
+- **Role** (`domain/family/roles.ts`) — что участник может делать. Enum
+  `family_role`: `owner | editor | contributor | viewer`, линейный ранг
+  (`ROLE_RANK`) используется `roleSatisfies`/`requireFamilyAccess` для
+  простых гейтов «минимум роль X». CONTRIBUTOR — единственная роль с
+  немонотонной формой прав (может создавать Event/Media/Story, но
+  редактировать/удалять только своё) — для неё линейного ранга
+  недостаточно, поверх накладываются capability-функции
+  `domain/family/permissions.ts` (`canCreate`/`canEdit`/`canDelete`).
+  Person/Relationship остаются строго editor-и-выше без нюансов
+  (`permissions.ts` для них не вызывается).
+- **Visibility** (`db/schema/privacy.ts`) — что участник может видеть,
+  независимо от роли. Enum `privacy_level`: `private | family | public`,
+  колонка на `persons`/`events`/`stories`/`media` (Document — это
+  `media.kind = 'document'`, отдельной таблицы нет). Правило `canView`:
+  PRIVATE видно только owner(ам) семьи и создателю объекта; FAMILY/PUBLIC —
+  любому участнику. Фильтрация происходит в TS на уровне service
+  (`filterVisibleX`/`getVisibleX` в `person.service.ts`/`event.service.ts`/
+  `media.service.ts`/`story.service.ts`), не в SQL — минимальный по риску
+  подход при текущих объёмах данных; `getVisibleX` возвращает `null` и для
+  «не существует», и для «существует, но не видно», сохраняя тот же
+  no-leak контракт, что и `requireFamilyAccess`+`notFound()`.
+  **Известный пробел**: визуализация дерева (`/families/[slug]/tree`) пока
+  не фильтрует PRIVATE-персон из графа — layout-алгоритм
+  (`domain/tree/layout/`) считает каждый узел всегда присутствующим ради
+  инвариантов линий-коннекторов; условное удаление узла потребовало бы
+  genealogy-aware перекомпоновки, вне скоупа текущей итерации.
+- **Invitation** (`domain/invitation/`, таблица `family_invitations`) — как
+  участник получил доступ. Только OWNER может пригласить/повторно
+  отправить/отозвать. Токен — `crypto.randomBytes(32)`, хранится только
+  SHA-256 хэш (`tokenHash`), plaintext существует лишь в URL приглашения.
+  Статус (`pending|accepted|revoked|expired`) выводится из трёх
+  timestamp-колонок (`invitationStatus()`), не отдельным enum. Resend =
+  отзыв старой строки + новый токен (старая ссылка перестаёт работать).
+  Email отправляется через Resend best-effort (`lib/email/send-invitation.ts`)
+  — при отсутствии `RESEND_API_KEY` приглашение всё равно работает, UI
+  всегда показывает копируемую ссылку. Приём — `/invite/[token]`, вне
+  `(app)`-layout (тот форсит логин), чтобы неавторизованный гость видел
+  превью (семья/роль/пригласивший) до входа/регистрации.
 
 ## Риски и принятые митигации
 

@@ -32,7 +32,7 @@ function GoogleIcon() {
   );
 }
 
-export function GoogleSignInButton() {
+export function GoogleSignInButton({ callbackUrl }: { callbackUrl?: string }) {
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -42,7 +42,7 @@ export function GoogleSignInButton() {
       className="w-full"
       disabled={isPending}
       aria-busy={isPending}
-      onClick={() => startTransition(() => signInWithGoogleAction())}
+      onClick={() => startTransition(() => signInWithGoogleAction(callbackUrl))}
     >
       <GoogleIcon />
       {isPending ? "Открываем Google…" : "Продолжить с Google"}

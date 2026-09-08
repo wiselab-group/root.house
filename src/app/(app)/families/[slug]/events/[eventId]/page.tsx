@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import {
-  getEvent,
+  getVisibleEvent,
   getParticipantsWithNames,
 } from "@/domain/event/event.service";
 import { getPlace } from "@/domain/place/place.service";
@@ -20,8 +20,15 @@ export async function generateMetadata({
   params,
 }: PageProps<"/families/[slug]/events/[eventId]">): Promise<Metadata> {
   const { slug, eventId } = await params;
+  const session = await auth();
+  if (!session?.user) return {};
+
   const familyId = await resolveFamilyIdBySlug(slug);
-  const event = await getEvent(eventId, familyId);
+  const member = await requireFamilyAccess(familyId, session.user.id, "viewer");
+  const event = await getVisibleEvent(eventId, familyId, {
+    userId: session.user.id,
+    role: member.role,
+  });
   if (!event) notFound();
   return { title: event.title };
 }
@@ -34,8 +41,11 @@ export default async function EventDetailsPage({
   if (!session?.user) return null;
 
   const familyId = await resolveFamilyIdBySlug(slug);
-  await requireFamilyAccess(familyId, session.user.id, "viewer");
-  const event = await getEvent(eventId, familyId);
+  const member = await requireFamilyAccess(familyId, session.user.id, "viewer");
+  const event = await getVisibleEvent(eventId, familyId, {
+    userId: session.user.id,
+    role: member.role,
+  });
   if (!event) notFound();
 
   const [participants, place, family] = await Promise.all([

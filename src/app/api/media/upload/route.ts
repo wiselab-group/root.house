@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { ForbiddenError } from "@/domain/family/errors";
+import { canCreate } from "@/domain/family/permissions";
 import {
   uploadPersonPhoto,
   uploadPersonAvatar,
@@ -49,6 +50,13 @@ export async function POST(request: Request): Promise<Response> {
     .filter((value): value is string => typeof value === "string");
   const file = formData.get("file");
   const isAvatar = formData.get("isAvatar") === "true";
+  const rawPrivacyLevel = formData.get("privacyLevel");
+  const privacyLevel =
+    rawPrivacyLevel === "private" ||
+    rawPrivacyLevel === "family" ||
+    rawPrivacyLevel === "public"
+      ? rawPrivacyLevel
+      : undefined;
 
   if (typeof familyId !== "string" || !(file instanceof File)) {
     return NextResponse.json(
@@ -63,8 +71,21 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
+  // Avatar assignment is a Person-profile concern (editor-only, same as
+  // editing the Person itself); an ordinary gallery upload is open to
+  // contributor-and-up (see domain/family/permissions.ts::canCreate).
   try {
-    await requireFamilyAccess(familyId, session.user.id, "editor");
+    const member = await requireFamilyAccess(
+      familyId,
+      session.user.id,
+      isAvatar ? "editor" : "contributor",
+    );
+    if (!isAvatar && !canCreate(member.role, "media")) {
+      return NextResponse.json(
+        { error: "У вас нет прав на добавление медиа." },
+        { status: 403 },
+      );
+    }
   } catch (error) {
     if (error instanceof ForbiddenError) {
       return NextResponse.json({ error: error.message }, { status: 403 });
@@ -121,6 +142,7 @@ export async function POST(request: Request): Promise<Response> {
     file: buffer,
     contentType: file.type,
     originalFilename: file.name,
+    privacyLevel,
   });
 
   return NextResponse.json({ id: media.id }, { status: 201 });

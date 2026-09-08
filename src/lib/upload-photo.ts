@@ -12,11 +12,13 @@ export async function uploadPhoto({
   personIds,
   albumIds = [],
   file,
+  privacyLevel,
 }: {
   familyId: string;
   personIds: string[];
   albumIds?: string[];
   file: File;
+  privacyLevel?: "private" | "family" | "public";
 }): Promise<{ id: string }> {
   const formData = new FormData();
   formData.set("familyId", familyId);
@@ -26,6 +28,7 @@ export async function uploadPhoto({
   for (const albumId of albumIds) {
     formData.append("albumIds", albumId);
   }
+  if (privacyLevel) formData.set("privacyLevel", privacyLevel);
   formData.set("file", file);
 
   const response = await fetch("/api/media/upload", {

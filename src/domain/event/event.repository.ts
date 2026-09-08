@@ -1,6 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { events, eventParticipants } from "@/db/schema";
+import { events, eventParticipants, type PrivacyLevel } from "@/db/schema";
 import {
   fromColumns,
   toColumns,
@@ -31,7 +31,8 @@ export interface EventRecord {
   date: PartialDate | null;
   endDate: PartialDate | null;
   placeId: string | null;
-  privacyLevel: "private" | "family" | "public";
+  privacyLevel: PrivacyLevel;
+  createdBy: string | null;
 }
 
 export interface EventParticipantRecord {
@@ -64,6 +65,7 @@ function toRecord(row: typeof events.$inferSelect): EventRecord {
     }),
     placeId: row.placeId,
     privacyLevel: row.privacyLevel,
+    createdBy: row.createdBy,
   };
 }
 
@@ -125,6 +127,7 @@ export interface CreateEventData {
   endDate?: PartialDate | null;
   placeId?: string | null;
   createdBy: string;
+  privacyLevel?: PrivacyLevel;
   /** Person ids + role to link as participants, created atomically with the event. */
   participants: Array<{ personId: string; role: string }>;
 }
@@ -144,6 +147,7 @@ export async function createEvent(
       description: data.description ?? null,
       placeId: data.placeId ?? null,
       createdBy: data.createdBy,
+      privacyLevel: data.privacyLevel ?? "family",
       dateYear: dateCols.year,
       dateMonth: dateCols.month,
       dateDay: dateCols.day,

@@ -1,11 +1,13 @@
 import { and, eq, ne, sql } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "@/db/client";
-import { families, familyMembers, persons } from "@/db/schema";
+import { families, familyMembers, persons, users } from "@/db/schema";
 import { getPerson } from "@/domain/person/person.service";
 import { ForbiddenError, SlugTakenError } from "./errors";
 import { setDefaultFocusPerson } from "./family.repository";
+import { isLastOwnerDemotion } from "./member-guard";
 import { ensureUniqueSlug, isValidSlugFormat, slugify } from "./slug";
+import type { FamilyRole } from "./roles";
 
 export interface FamilySummary {
   id: string;
@@ -256,11 +258,7 @@ export async function removeFamilyMember(
   const target = members.find((m) => m.userId === memberUserId);
   if (!target) return; // already not a member — nothing to do
 
-  const remainingOwners = members.filter(
-    (m) => m.role === "owner" && m.userId !== memberUserId,
-  );
-
-  if (target.role === "owner" && remainingOwners.length === 0) {
+  if (isLastOwnerDemotion(members, memberUserId, null)) {
     throw new ForbiddenError("A family must always have at least one owner.");
   }
 
@@ -272,4 +270,35 @@ export async function removeFamilyMember(
         eq(familyMembers.userId, memberUserId),
       ),
     );
+}
+
+export interface FamilyMemberWithUser {
+  id: string;
+  userId: string;
+  role: FamilyRole;
+  joinedAt: Date;
+  name: string | null;
+  email: string;
+}
+
+/** Every member of a family, joined with their User row for display —
+ *  caller must already hold a validated FamilyMember row
+ *  (requireFamilyAccess). Used by the Family Settings → Members UI. */
+export async function listFamilyMembersWithUsers(
+  familyId: string,
+): Promise<FamilyMemberWithUser[]> {
+  const rows = await db
+    .select({
+      id: familyMembers.id,
+      userId: familyMembers.userId,
+      role: familyMembers.role,
+      joinedAt: familyMembers.joinedAt,
+      name: users.name,
+      email: users.email,
+    })
+    .from(familyMembers)
+    .innerJoin(users, eq(familyMembers.userId, users.id))
+    .where(eq(familyMembers.familyId, familyId))
+    .orderBy(familyMembers.joinedAt);
+  return rows;
 }

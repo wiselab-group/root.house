@@ -90,3 +90,6 @@ system, реальный GEDCOM import/export (структура полей э�
 10. Search (готово)
 11. Story + Place (минимально) (готово)
 12. Полировка design/motion (premium visual pass — см. DESIGN.md) (готово)
+13. CONTRIBUTOR роль + object-level privacy enforcement + Invitations +
+    Members UI (готово — см. docs/architecture.md § Roles, Privacy, Invitations;
+    известный пробел: /tree ещё не фильтрует PRIVATE-персон из графа)

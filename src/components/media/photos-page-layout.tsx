@@ -25,6 +25,7 @@ export function PhotosPageLayout({
   familySlug,
   familyName,
   canEdit,
+  canUpload = canEdit,
   albums,
   activeAlbumId,
   activeAlbumName,
@@ -34,7 +35,11 @@ export function PhotosPageLayout({
   familyId: string;
   familySlug: string;
   familyName: string;
+  /** May edit album metadata / delete arbitrary photos — owner/editor only. */
   canEdit: boolean;
+  /** May upload new photos — owner/editor/contributor (defaults to canEdit
+   *  when omitted, for any caller not yet passing this explicitly). */
+  canUpload?: boolean;
   albums: AlbumWithCoverRecord[];
   activeAlbumId: string | null;
   activeAlbumName: string | null;
@@ -107,7 +112,7 @@ export function PhotosPageLayout({
         />
       )}
 
-      {canEdit && (
+      {canUpload && (
         <PhotosPageActions
           familyId={familyId}
           albums={albums}

@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { getPersonTimeline } from "@/domain/event/event.service";
+import {
+  getPersonTimeline,
+  filterVisibleEvents,
+} from "@/domain/event/event.service";
 import { listPlaces } from "@/domain/place/place.service";
 import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 import { formatPartialDate } from "@/domain/shared/partial-date";
@@ -7,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AddEventForm } from "@/components/forms/add-event-form";
 import { CollapsibleForm } from "@/components/forms/collapsible-form";
+import type { ActingMember } from "@/domain/family/permissions";
 
 /**
  * A Person's chronological timeline of events — server component, fetches
@@ -18,16 +22,23 @@ export async function PersonTimeline({
   familySlug,
   personId,
   canEdit,
+  canContribute = canEdit,
+  member,
 }: {
   familyId: string;
   familySlug: string;
   personId: string;
   canEdit: boolean;
+  /** May add Events — owner/editor/contributor. Defaults to canEdit for any
+   *  caller not yet passing this explicitly. */
+  canContribute?: boolean;
+  member: ActingMember;
 }) {
-  const [timeline, places] = await Promise.all([
+  const [allTimeline, places] = await Promise.all([
     getPersonTimeline(personId, familyId),
     listPlaces(familyId),
   ]);
+  const timeline = filterVisibleEvents(allTimeline, member);
   const placeNameById = new Map(places.map((place) => [place.id, place.name]));
 
   return (
@@ -66,7 +77,7 @@ export async function PersonTimeline({
           </ol>
         )}
 
-        {canEdit && (
+        {canContribute && (
           <CollapsibleForm triggerLabel="Добавить событие">
             <AddEventForm
               familyId={familyId}

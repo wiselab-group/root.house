@@ -1,6 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { persons } from "@/db/schema";
+import { persons, type PrivacyLevel } from "@/db/schema";
 import {
   fromColumns,
   toColumns,
@@ -28,7 +28,7 @@ export interface PersonRecord {
   religion: string | null;
   nationality: string | null;
   photoMediaId: string | null;
-  privacyLevel: "private" | "family" | "public";
+  privacyLevel: PrivacyLevel;
   createdBy: string;
 }
 
@@ -148,6 +148,7 @@ export interface CreatePersonData {
   birthPlaceId?: string | null;
   deathPlaceId?: string | null;
   deathCause?: string | null;
+  privacyLevel?: PrivacyLevel;
 }
 
 export async function createPerson(
@@ -186,6 +187,7 @@ export async function createPerson(
       birthPlaceId: data.birthPlaceId ?? null,
       deathPlaceId: data.deathPlaceId ?? null,
       deathCause: data.deathCause ?? null,
+      privacyLevel: data.privacyLevel ?? "family",
     })
     .returning({ id: persons.id });
 
@@ -226,6 +228,7 @@ export async function updatePerson(
   if (data.birthPlaceId !== undefined) patch.birthPlaceId = data.birthPlaceId;
   if (data.deathPlaceId !== undefined) patch.deathPlaceId = data.deathPlaceId;
   if (data.deathCause !== undefined) patch.deathCause = data.deathCause;
+  if (data.privacyLevel !== undefined) patch.privacyLevel = data.privacyLevel;
 
   if (data.deathDate !== undefined) {
     const cols = toColumns(data.deathDate);

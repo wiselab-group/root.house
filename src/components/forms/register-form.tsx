@@ -23,11 +23,14 @@ function SubmitButton() {
   );
 }
 
-export function RegisterForm() {
+export function RegisterForm({ callbackUrl }: { callbackUrl?: string } = {}) {
   const [state, formAction] = useActionState(registerAction, initialState);
 
   return (
     <form action={formAction} className="flex flex-col gap-4" noValidate>
+      {callbackUrl && (
+        <input type="hidden" name="callbackUrl" value={callbackUrl} />
+      )}
       <div className="flex flex-col gap-2">
         <Label htmlFor="name">Имя</Label>
         <Input id="name" name="name" type="text" autoComplete="name" required />

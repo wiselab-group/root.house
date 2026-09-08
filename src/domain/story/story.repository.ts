@@ -1,13 +1,13 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { stories, storyPerson } from "@/db/schema";
+import { stories, storyPerson, type PrivacyLevel } from "@/db/schema";
 
 export interface StoryRecord {
   id: string;
   familyId: string;
   title: string;
   body: string;
-  privacyLevel: "private" | "family" | "public";
+  privacyLevel: PrivacyLevel;
   authorId: string;
 }
 
@@ -65,6 +65,7 @@ export interface CreateStoryData {
   title: string;
   body: string;
   authorId: string;
+  privacyLevel?: PrivacyLevel;
   /** Person ids to link this Story to, created atomically with the row. */
   personIds: string[];
 }
@@ -79,6 +80,7 @@ export async function createStory(
       title: data.title,
       body: data.body,
       authorId: data.authorId,
+      privacyLevel: data.privacyLevel ?? "family",
     })
     .returning({ id: stories.id });
 

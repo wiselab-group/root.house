@@ -1,7 +1,11 @@
-import { getPersonGallery } from "@/domain/media/media.service";
+import {
+  getPersonGallery,
+  filterVisibleGalleryPhotos,
+} from "@/domain/media/media.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhotoUploadForm } from "@/components/forms/photo-upload-form";
 import { PhotoGrid } from "@/components/media/photo-grid";
+import type { ActingMember } from "@/domain/family/permissions";
 
 /**
  * A Person's photo gallery — server component fetching its own data (same
@@ -18,13 +22,21 @@ export async function PersonMediaGallery({
   familySlug,
   personId,
   canEdit,
+  canContribute = canEdit,
+  member,
 }: {
   familyId: string;
   familySlug: string;
   personId: string;
   canEdit: boolean;
+  /** May upload new photos — owner/editor/contributor (see
+   *  domain/family/permissions.ts::canCreate). Defaults to canEdit for any
+   *  caller not yet passing this explicitly. */
+  canContribute?: boolean;
+  member: ActingMember;
 }) {
-  const photos = await getPersonGallery(personId, familyId);
+  const allPhotos = await getPersonGallery(personId, familyId);
+  const photos = filterVisibleGalleryPhotos(allPhotos, member);
 
   return (
     <Card>
@@ -43,7 +55,9 @@ export async function PersonMediaGallery({
           />
         )}
 
-        {canEdit && <PhotoUploadForm familyId={familyId} personId={personId} />}
+        {canContribute && (
+          <PhotoUploadForm familyId={familyId} personId={personId} />
+        )}
       </CardContent>
     </Card>
   );

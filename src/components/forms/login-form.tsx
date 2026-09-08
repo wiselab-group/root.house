@@ -46,7 +46,7 @@ function SubmitButton({ children }: { children: React.ReactNode }) {
  * one-shot loginAction and browser autocomplete keep working unchanged —
  * only which step is visible changes, via a client step flag.
  */
-export function LoginForm() {
+export function LoginForm({ callbackUrl }: { callbackUrl?: string } = {}) {
   const [state, formAction] = useActionState(loginAction, initialState);
   const [step, setStep] = useState<"email" | "password">("email");
   const [email, setEmail] = useState("");
@@ -96,6 +96,9 @@ export function LoginForm() {
         }
       }}
     >
+      {callbackUrl && (
+        <input type="hidden" name="callbackUrl" value={callbackUrl} />
+      )}
       {step === "email" ? (
         <div className="flex flex-col gap-2">
           <Label htmlFor="email">Email</Label>

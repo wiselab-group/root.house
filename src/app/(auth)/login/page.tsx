@@ -17,7 +17,10 @@ export const metadata: Metadata = {
 };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  const { error } = await searchParams;
+  const { error, callbackUrl } = await searchParams;
+  const callbackUrlValue = Array.isArray(callbackUrl)
+    ? callbackUrl[0]
+    : callbackUrl;
 
   return (
     <main className="flex min-h-svh flex-col items-center justify-center p-4">
@@ -35,7 +38,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
               Ваша сессия устарела — войдите заново.
             </p>
           )}
-          <GoogleSignInButton />
+          <GoogleSignInButton callbackUrl={callbackUrlValue} />
 
           <div className="flex items-center gap-3">
             <Separator className="flex-1" />
@@ -43,7 +46,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             <Separator className="flex-1" />
           </div>
 
-          <LoginForm />
+          <LoginForm callbackUrl={callbackUrlValue} />
 
           <p className="text-center text-sm text-muted-foreground">
             Ещё нет аккаунта?{" "}
