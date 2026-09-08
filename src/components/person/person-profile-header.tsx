@@ -28,7 +28,7 @@ export function PersonProfileHeader({
   const canEdit = role === "owner" || role === "editor";
 
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex items-center gap-4">
         <PersonAvatar
           person={person}
@@ -53,6 +53,7 @@ export function PersonProfileHeader({
             variant="outline"
             size="sm"
             href={`/families/${familySlug}/people/${personSlug}/edit`}
+            className="flex-1 sm:flex-none"
           >
             Редактировать
           </LinkButton>
@@ -64,6 +65,7 @@ export function PersonProfileHeader({
               familyId={familyId}
               personId={person.id}
               personName={personDisplayName(person)}
+              className="flex-1 sm:flex-none"
             />
           )}
         </div>

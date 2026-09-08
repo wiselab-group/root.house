@@ -23,10 +23,12 @@ export function DeletePersonButton({
   familyId,
   personId,
   personName,
+  className,
 }: {
   familyId: string;
   personId: string;
   personName: string;
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -39,7 +41,11 @@ export function DeletePersonButton({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="destructive" size="sm" />}>
+      <DialogTrigger
+        render={
+          <Button variant="destructive" size="sm" className={className} />
+        }
+      >
         Удалить
       </DialogTrigger>
       <DialogContent>

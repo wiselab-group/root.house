@@ -25,14 +25,16 @@ export default async function FamiliesPage() {
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-heading text-2xl font-medium">Мои семьи</h1>
           <p className="text-muted-foreground">
             Выберите архив или создайте новый.
           </p>
         </div>
-        <LinkButton href="/families/new">Создать семью</LinkButton>
+        <LinkButton href="/families/new" className="w-full sm:w-auto">
+          Создать семью
+        </LinkButton>
       </div>
 
       {families.length === 0 ? (
