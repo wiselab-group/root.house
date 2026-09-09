@@ -12,6 +12,7 @@ import {
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { cn } from "@/lib/utils";
 import { updateDefaultFocusPersonAction } from "@/actions/family.actions";
 import type { TreeLayoutGraph } from "@/domain/tree/tree-layout.builder";
 import {
@@ -202,8 +203,28 @@ export function TreeCanvas({
     // column" reads as adrift, not "here's my family"). Matches the
     // full-bleed treatment mobile already had; the page (FamilyTreePage)
     // drops its own max-width/padding around this element so nothing
-    // constrains it from the outside either.
-    <div className="h-[calc(100svh-4.5rem)] w-full overflow-hidden">
+    // constrains it from the outside either. The 4.5rem subtracted is
+    // AppHeader's own height (border-b + px-6 py-3, see app-header.tsx) —
+    // only present above this canvas inside the (app) layout, whose own
+    // wrapper is a plain block div, so a plain `h-[calc(100svh-4.5rem)]`
+    // resolves cleanly there.
+    //
+    // The anonymous Share Link page (app/share/[token]/page.tsx) renders
+    // no header, but its own ancestor chain up to <body> is `flex
+    // flex-col` (see app/layout.tsx) — a `height: 100svh` on a plain flex
+    // item inside a column flex container measured as 0 there (observed:
+    // ReactFlow logged "parent container needs a width and a height" and
+    // the tree never painted, even though the exact same class resolves
+    // fine for the non-readOnly, non-flex-parented case). `fixed inset-0`
+    // sidesteps the whole question by taking this element out of flow
+    // entirely and sizing it straight off the viewport, independent of
+    // whatever flex/block context its parent happens to be.
+    <div
+      className={cn(
+        "w-full overflow-hidden",
+        readOnly ? "fixed inset-0" : "h-[calc(100svh-4.5rem)]",
+      )}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
