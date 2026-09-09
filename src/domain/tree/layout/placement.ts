@@ -1292,3 +1292,276 @@ export function findStrandedOnlyChildren(
   }
   return stranded;
 }
+
+// ---------------------------------------------------------------------------
+// Straightening a couple's own left/right when it clips an ancestor's
+// descending connector (see layout.ts's post-placement pass).
+// ---------------------------------------------------------------------------
+
+/**
+ * True when NONE of `personId`'s recorded blood siblings ended up placed on
+ * the SAME row (same resolved y) as `personId` currently is. Distinguishes
+ * "the ancestor's connector aims at exactly one point on this row, this
+ * person's own card" (straightening a mispositioned spouse here genuinely
+ * fixes a clipped line) from "this person is one of several siblings
+ * sharing a row, legitimately far from the parents' own midpoint simply
+ * because the row has other members" (Lyubov Baidovskaya, 8th of 9 sisters
+ * sharing one row — NOT a line-clipping bug, just normal row spread;
+ * swapping her with her husband Vladimir here was a real regression this
+ * guard fixes). Checking actual resolved rows rather than graph-level
+ * sibling existence matters: a full sibling can exist in the graph but land
+ * on a DIFFERENT row than expected (e.g. Elena Ushkar's sister Elizaveta
+ * Kupchik ends up one row further down after the stranded-only-child retry
+ * raises Elena's own ancestry — see layout.ts — so she never actually
+ * shares Elena's row and never contributes any row-spread there).
+ */
+function hasNoBloodSiblingOnSameRow(
+  graph: NormalizedGraph,
+  personId: string,
+  parentIds: string[],
+  positionByPerson: Map<string, Point>,
+): boolean {
+  const ownY = positionByPerson.get(personId)?.y;
+  if (ownY === undefined) return false;
+
+  const siblingIds = new Set<string>();
+  for (const parentId of parentIds) {
+    const parent = graph.personById.get(parentId);
+    if (!parent) continue;
+    for (const partnershipId of parent.partnershipIds) {
+      const p = graph.partnershipById.get(partnershipId);
+      if (p) for (const childId of p.childrenIds) siblingIds.add(childId);
+    }
+    const solo = graph.soloParentByPersonId.get(parentId);
+    if (solo) for (const childId of solo.childrenIds) siblingIds.add(childId);
+  }
+  siblingIds.delete(personId);
+
+  return [...siblingIds].every(
+    (siblingId) => positionByPerson.get(siblingId)?.y !== ownY,
+  );
+}
+
+/**
+ * A couple qualifies for the ancestor-line straightening pass only when the
+ * fix is provably safe to apply as a plain "swap these two x values" (no
+ * subtree to drag along): exactly one spouse has parents recorded (the
+ * "blood" spouse — the other is an in-law with none), that blood spouse has
+ * no OTHER blood sibling sharing their resolved row (see
+ * hasNoBloodSiblingOnSameRow — otherwise this couple's position is
+ * legitimately shaped by sibling row spread, not a clipped connector), and
+ * NEITHER spouse has any OTHER partnership of their own (no remarriage
+ * branch anchored off either one's current x, which a naive swap would
+ * leave behind, misaligned). Their shared children are unaffected by the
+ * swap either way — placeChildrenRow/growPersonDescendants center them on
+ * the partnership's junction midpoint, which stays fixed regardless of
+ * which spouse is left vs right.
+ */
+function findSwappableBloodInLawPairs(
+  graph: NormalizedGraph,
+  positionByPerson: Map<string, Point>,
+): { bloodId: string; inLawId: string }[] {
+  const pairs: { bloodId: string; inLawId: string }[] = [];
+  for (const partnership of graph.partnershipById.values()) {
+    const left = graph.personById.get(partnership.leftPersonId);
+    const right = graph.personById.get(partnership.rightPersonId);
+    if (!left || !right) continue;
+    const leftHasParents = left.parentIds.length > 0;
+    const rightHasParents = right.parentIds.length > 0;
+    if (leftHasParents === rightHasParents) continue; // both or neither — no line to straighten
+
+    const [bloodPerson, inLawPerson] = leftHasParents
+      ? [left, right]
+      : [right, left];
+    if (bloodPerson.partnershipIds.length > 1) continue; // remarriage — swap would strand a branch
+    if (inLawPerson.partnershipIds.length > 1) continue;
+    if (
+      !hasNoBloodSiblingOnSameRow(
+        graph,
+        bloodPerson.id,
+        bloodPerson.parentIds,
+        positionByPerson,
+      )
+    )
+      continue;
+
+    pairs.push({ bloodId: bloodPerson.id, inLawId: inLawPerson.id });
+  }
+  return pairs;
+}
+
+/**
+ * The x a blood spouse's own ancestor line will descend through: the
+ * midpoint of their recorded parents' own resolved positions (mirrors
+ * exactly what the UI's UnionChildEdge/ParentChildEdgeLine actually draws
+ * from — see union-child-edge.tsx's sourceX — so this is the real target,
+ * not an approximation), or a single parent's own x for a solo-parent link.
+ * Null when the parent(s) aren't placed.
+ */
+function ancestorLineAnchorX(
+  parentIds: string[],
+  positionByPerson: Map<string, Point>,
+): number | null {
+  const parentPositions = parentIds
+    .map((id) => positionByPerson.get(id))
+    .filter((p): p is Point => Boolean(p));
+  if (parentPositions.length === 0) return null;
+  return (
+    parentPositions.reduce((sum, p) => sum + p.x, 0) / parentPositions.length
+  );
+}
+
+/**
+ * Fixes the exact bug the user reported with Nikolai/Elena Ushkar: an
+ * ancestor pair's descending connector aims at the blood spouse's own card,
+ * but ordinary gender-based left/right (the correct DEFAULT everywhere else
+ * — see shouldBeLeft) can coincidentally put the CHILDLESS in-law spouse on
+ * the side physically closer to that connector's straight-down path,
+ * reading as "the line clips through the wrong person's card" even though
+ * neither card technically collides with anything.
+ *
+ * Whether swapping helps is a fact about the ACTUAL resolved coordinates,
+ * not a property of gender or blood alone (a blanket "blood spouse always
+ * left/toward branch direction" rule was tried and regressed other,
+ * already-correct pairs of the identical shape) — so this runs as a genuine
+ * post-placement measurement, after placeGraph (and the stranded-only-child
+ * retry) have resolved every position, and only swaps a pair when the
+ * in-law is STRICTLY closer to the blood spouse's own ancestor line than the
+ * blood spouse currently is.
+ *
+ * Mutates positionByPerson in place. Never changes the partnership's own
+ * junction (the swap is symmetric around the same midpoint), so children
+ * centered on that junction do not need to move.
+ */
+export function straightenAncestorConnectors(
+  graph: NormalizedGraph,
+  positionByPerson: Map<string, Point>,
+  junctionByPartnership: Map<string, Point>,
+): void {
+  for (const { bloodId, inLawId } of findSwappableBloodInLawPairs(
+    graph,
+    positionByPerson,
+  )) {
+    const bloodPerson = graph.personById.get(bloodId);
+    const bloodPos = positionByPerson.get(bloodId);
+    const inLawPos = positionByPerson.get(inLawId);
+    if (!bloodPerson || !bloodPos || !inLawPos) continue;
+
+    const anchorXBefore = ancestorLineAnchorX(
+      bloodPerson.parentIds,
+      positionByPerson,
+    );
+    if (anchorXBefore === null) continue;
+
+    const bloodDistance = Math.abs(bloodPos.x - anchorXBefore);
+    const inLawDistance = Math.abs(inLawPos.x - anchorXBefore);
+    if (inLawDistance >= bloodDistance) continue; // already the straighter arrangement (or a tie) — leave it
+
+    // Junction is the midpoint of these two x's — unchanged by the swap
+    // itself, so this couple's OWN junctionByPartnership entry and any
+    // already-placed children centered on it do not need to move.
+    positionByPerson.set(bloodId, { x: inLawPos.x, y: bloodPos.y });
+    positionByPerson.set(inLawId, { x: bloodPos.x, y: inLawPos.y });
+
+    // The swap moved the blood spouse's OWN x (even though the couple's own
+    // center stayed put) — and the blood spouse's parents were originally
+    // centered via preferredAncestorX on the AVERAGE of every one of their
+    // placed children's x, including this one's OLD x. Leaving the parents
+    // exactly where they were now means they're centered on a position this
+    // child no longer occupies — visibly off-center from their own
+    // children's actual row (real bug the user caught: Grigory/Elizaveta
+    // Krivusha's line to Elizaveta Kupchik gained a kink, and their own
+    // pair no longer sat over the true midpoint of Elena + Elizaveta
+    // Kupchik, after Elena/Nikolai were swapped). Recenter the parent PAIR
+    // (both spouses, preserving their own SPOUSE_GAP, and their own
+    // junctionByPartnership entry) by the exact delta between their old and
+    // new ideal centers — a rigid shift, not a fresh placeAncestorUnit call,
+    // so it can't introduce a new collision the original collision-
+    // resolution pass didn't already clear for this pair at its old
+    // position (a same-direction shift of a pair that was already the
+    // leftmost/rightmost thing on its own row only ever moves it further
+    // from its neighbors on that row, never into them, since this
+    // recentering is always toward the OTHER child's side — the child that
+    // did NOT move — never past it).
+    recenterParentsOnChildren(
+      graph,
+      bloodPerson.parentIds,
+      positionByPerson,
+      junctionByPartnership,
+    );
+  }
+}
+
+/**
+ * Rigidly shifts a parent pair (both spouses, keeping their own SPOUSE_GAP
+ * and junctionByPartnership entry intact) so their midpoint matches the
+ * current average x of ALL their placed children — not just the one that
+ * triggered this recenter. A solo parent (single id in parentIds) is
+ * shifted the same way, alone. No-op if the parents aren't both placed, or
+ * if they're already centered (avoids introducing floating-point churn on
+ * every call).
+ */
+function recenterParentsOnChildren(
+  graph: NormalizedGraph,
+  parentIds: string[],
+  positionByPerson: Map<string, Point>,
+  junctionByPartnership: Map<string, Point>,
+): void {
+  if (parentIds.length === 0) return;
+  const parentPositions = parentIds
+    .map((id) => positionByPerson.get(id))
+    .filter((p): p is Point => Boolean(p));
+  if (parentPositions.length !== parentIds.length) return; // not all parents placed — leave as is
+
+  // Re-derive the exact same child list preferredAncestorX would use (every
+  // partnership's children plus any solo-parent children), across ALL of
+  // this parent pair's members — not just the one blood spouse that
+  // triggered this call — so a parent with children from more than one
+  // partnership still recenters on their true full row.
+  const childIds = new Set<string>();
+  for (const parentId of parentIds) {
+    const parent = graph.personById.get(parentId);
+    if (!parent) continue;
+    for (const partnershipId of parent.partnershipIds) {
+      const p = graph.partnershipById.get(partnershipId);
+      if (p) for (const childId of p.childrenIds) childIds.add(childId);
+    }
+    const solo = graph.soloParentByPersonId.get(parentId);
+    if (solo) for (const childId of solo.childrenIds) childIds.add(childId);
+  }
+  const childXs = [...childIds]
+    .map((id) => positionByPerson.get(id)?.x)
+    .filter((x): x is number => typeof x === "number");
+  if (childXs.length === 0) return;
+  const newAnchorX = childXs.reduce((a, b) => a + b, 0) / childXs.length;
+
+  const oldAnchorX =
+    parentPositions.reduce((sum, p) => sum + p.x, 0) / parentPositions.length;
+  const delta = newAnchorX - oldAnchorX;
+  if (Math.abs(delta) < 0.001) return; // already centered
+
+  for (const parentId of parentIds) {
+    const pos = positionByPerson.get(parentId);
+    if (!pos) continue;
+    positionByPerson.set(parentId, { x: pos.x + delta, y: pos.y });
+
+    // Shift this parent's OWN partnership junction(s) by the same delta —
+    // needed for the (rarer) case where this parent has their own further
+    // ancestors above, whose descending connector reads junctionByPartnership
+    // rather than re-deriving it, and for LaidOutPartnership.x/y's own
+    // correctness as data (even though the production xyflow renderer
+    // recomputes junctions live from node positions and never reads this
+    // field — see union-child-edge.tsx).
+    const parent = graph.personById.get(parentId);
+    if (!parent) continue;
+    for (const partnershipId of parent.partnershipIds) {
+      const junction = junctionByPartnership.get(partnershipId);
+      if (junction) {
+        junctionByPartnership.set(partnershipId, {
+          x: junction.x + delta,
+          y: junction.y,
+        });
+      }
+    }
+  }
+}

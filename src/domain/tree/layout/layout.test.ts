@@ -543,30 +543,70 @@ describe("layout engine — real data (Alexander/Eleonora/Eva + Viktor/Galina/Da
     );
   });
 
-  it("Elizaveta Kupchik's blood-sibling gap from her sister Elena Ushkar widens by the exact same formula, at the same generation as Vladimir/Marfa's own row (regression: same spouse-toward-anchor widening one level further up the tree)", () => {
-    // Elena Ushkar (Elizaveta Kupchik's full sister, another daughter of
-    // Grigory/Elizaveta Krivusha) has her own husband Nikolai Ushkar, who
-    // must be leftPersonId (male < female) — same shape as Marina/Viktor
-    // Ravbetsky above, one generation further up (Krivusha's own children
-    // row instead of Galina's sisters' row). Nikolai Ushkar unavoidably
-    // lands BETWEEN Elizaveta and Elena, so the blood gap must widen by
-    // exactly CARD_WIDTH+SPOUSE_GAP over the plain CARD_WIDTH+SIBLING_GAP —
-    // not merely "wider than usual" (a loose bound would silently accept a
-    // further regression), but the EXACT extra width Nikolai Ushkar's own
-    // card + spouse gap require.
+  it("Elena Ushkar's ancestor connector (from Grigory/Elizaveta Krivusha) reaches her own card cleanly — her husband Nikolai Ushkar sits on the far side, not sandwiched between her and the Krivushas' trunk", () => {
+    // Elena Ushkar and her full sister Elizaveta Kupchik (another daughter
+    // of Grigory/Elizaveta Krivusha) end up on DIFFERENT rows once the
+    // stranded-only-child retry raises Elena's own ancestry one generation
+    // (to fit Elena's daughter Natalya beside her — see
+    // findStrandedOnlyChildren/raiseAncestryOneGeneration) — Elizaveta
+    // Kupchik isn't in that raised chain, so she stays behind. That means
+    // Elena has no blood sibling actually sharing her row, and the ordinary
+    // gender default (Nikolai Ushkar, no parentIds, male < female) can
+    // coincidentally land him CLOSER to the Krivushas' own descending
+    // connector than Elena herself — reading as "the line clips through the
+    // wrong person's card" even though neither card technically overlaps
+    // anything (real bug, reported by the user from a screenshot: Nikolai's
+    // card sat almost exactly under the vertical run of the line meant for
+    // Elena). straightenAncestorConnectors (placement.ts) swaps the two
+    // post-placement whenever the in-law ends up strictly closer to the
+    // blood spouse's own ancestor line than the blood spouse — but only when
+    // no blood sibling shares that row (see hasNoBloodSiblingOnSameRow),
+    // so it does NOT fire for couples where the "clipping" side is just
+    // normal sibling-row spread (e.g. Lyubov Baidovskaya, 8th of 9 sisters).
     const result = buildTreeLayout(initialFamilyGraph, realFocusId);
-    const elizaveta = personById(result, "elizaveta-kupchik");
+    const grigory = personById(result, "grigory-krivusha");
+    const elizavetaKrivusha = personById(result, "elizaveta-krivusha");
     const elena = personById(result, "elena-ushkar");
     const nikolaiUshkar = personById(result, "nikolai-ushkar");
-    expect(nikolaiUshkar.x).toBeGreaterThan(elizaveta.x);
-    expect(nikolaiUshkar.x).toBeLessThan(elena.x);
-    const elizavetaElenaGap = elena.x - elizaveta.x;
-    expect(elizavetaElenaGap).toBeCloseTo(
-      CARD_WIDTH + SIBLING_GAP + (CARD_WIDTH + SPOUSE_GAP),
+    const anchorX = (grigory.x + elizavetaKrivusha.x) / 2;
+    expect(Math.abs(elena.x - anchorX)).toBeLessThan(
+      Math.abs(nikolaiUshkar.x - anchorX),
+    );
+    // Standard spouse gap is preserved either way — only which one is on
+    // which side changes.
+    expect(Math.abs(elena.x - nikolaiUshkar.x)).toBeCloseTo(
+      CARD_WIDTH + SPOUSE_GAP,
       5,
     );
-    const nikolaiUshkarElenaGap = elena.x - nikolaiUshkar.x;
-    expect(nikolaiUshkarElenaGap).toBeCloseTo(CARD_WIDTH + SPOUSE_GAP, 5);
+  });
+
+  it("Grigory/Elizaveta Krivusha stay centered over BOTH their daughters (Elena Ushkar + Elizaveta Kupchik) after the Nikolai/Elena swap, not left over Elena's OLD position", () => {
+    // Real bug the user caught from a screenshot: straightenAncestorConnectors
+    // swaps Elena's own x with Nikolai's (previous test), but Grigory/
+    // Elizaveta Krivusha were originally centered by placeAncestorUnit on
+    // the AVERAGE of Elena's and Elizaveta Kupchik's positions AT THE TIME —
+    // i.e. Elena's OLD x. Leaving the Krivushas exactly where they were
+    // after the swap moved Elena's x out from under them: their own pair
+    // visibly drifted off-center from the true midpoint of their two
+    // daughters, and the connector down to Elizaveta Kupchik gained a kink
+    // it didn't have before. straightenAncestorConnectors must also recenter
+    // the parent pair (recenterParentsOnChildren) by the exact delta between
+    // their old and new ideal centers, preserving their own SPOUSE_GAP.
+    const result = buildTreeLayout(initialFamilyGraph, realFocusId);
+    const grigory = personById(result, "grigory-krivusha");
+    const elizavetaKrivusha = personById(result, "elizaveta-krivusha");
+    const elena = personById(result, "elena-ushkar");
+    const elizavetaKupchik = personById(result, "elizaveta-kupchik");
+
+    const parentMidpoint = (grigory.x + elizavetaKrivusha.x) / 2;
+    const childrenMidpoint = (elena.x + elizavetaKupchik.x) / 2;
+    expect(parentMidpoint).toBeCloseTo(childrenMidpoint, 5);
+    // Their own SPOUSE_GAP is untouched by the recenter — only their shared
+    // midpoint moves, not the distance between them.
+    expect(elizavetaKrivusha.x - grigory.x).toBeCloseTo(
+      CARD_WIDTH + SPOUSE_GAP,
+      5,
+    );
   });
 
   it("EVERY married couple in this real dataset sits at the EXACT SAME standard spouse gap (CARD_WIDTH+SPOUSE_GAP=208px), regardless of which code path placed them (regression: three different paths gave three different gaps — 192/208/236px)", () => {
@@ -603,7 +643,16 @@ describe("layout engine — real data (Alexander/Eleonora/Eva + Viktor/Galina/Da
     for (const [husbandId, wifeId] of pairs) {
       const husband = personById(result, husbandId);
       const wife = personById(result, wifeId);
-      expect(wife.x - husband.x).toBeCloseTo(CARD_WIDTH + SPOUSE_GAP, 5);
+      // Nikolai/Elena Ushkar are a deliberate exception to husband-left: see
+      // straightenAncestorConnectors (placement.ts) and the dedicated test
+      // above — Nikolai (no parentIds) sits on whichever side keeps Elena's
+      // own ancestor connector from clipping his card, which puts him on
+      // Elena's RIGHT here. The gap magnitude must still be the exact
+      // standard spouse gap either way — only the sign differs.
+      expect(Math.abs(wife.x - husband.x)).toBeCloseTo(
+        CARD_WIDTH + SPOUSE_GAP,
+        5,
+      );
     }
   });
 

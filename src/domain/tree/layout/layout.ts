@@ -5,7 +5,11 @@ import type {
   TreeLayoutResult,
 } from "./types";
 import { normalizeGraph, raiseAncestryOneGeneration } from "./graph";
-import { placeGraph, findStrandedOnlyChildren } from "./placement";
+import {
+  placeGraph,
+  findStrandedOnlyChildren,
+  straightenAncestorConnectors,
+} from "./placement";
 import { buildEdgeSpecs } from "./edges";
 import { assertNoOverlaps, assertOnePositionPerPerson } from "./collision";
 
@@ -55,6 +59,21 @@ export function buildTreeLayout(
     }
     ({ positionByPerson, junctionByPartnership } = placeGraph(normalized));
   }
+
+  // Final pass, once every position (including the stranded-only-child
+  // retry above) is fully resolved: when a couple has exactly one blood
+  // spouse (parents recorded above them) and one in-law (none), and the
+  // in-law happens to have landed physically closer to that ancestor pair's
+  // own descending connector than the blood spouse did, swap the two so the
+  // line reaches the blood spouse's card cleanly instead of clipping the
+  // unrelated in-law's, then recenter that blood spouse's own parents over
+  // their (now different) full sibling row. See placement.ts's
+  // straightenAncestorConnectors.
+  straightenAncestorConnectors(
+    normalized,
+    positionByPerson,
+    junctionByPartnership,
+  );
 
   assertOnePositionPerPerson(normalized, positionByPerson);
   assertNoOverlaps(positionByPerson);
