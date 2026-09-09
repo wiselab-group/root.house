@@ -68,6 +68,14 @@ export interface RelationshipEdgeData extends Record<string, unknown> {
    * accent-colored trunk it feeds.
    */
   tracedPartnerId?: string;
+  /**
+   * parent_child only (meaningless on a partnership edge) — see
+   * UnionChildEdgeData.isMiddleSibling for the full explanation. True when
+   * this child has at least one sibling on BOTH sides of it (by x) on the
+   * same row — its own turn down into its card is a sideways jog flanked by
+   * other jogs, so it's drawn as a sharp corner instead of a rounded one.
+   */
+  isMiddleSibling?: boolean;
 }
 
 /**
@@ -93,6 +101,25 @@ export interface UnionChildEdgeData extends Record<string, unknown> {
    * other.
    */
   tracedParentId?: string;
+  /**
+   * True when this child has at least one sibling (off the same
+   * union/parent, same row) on BOTH sides of it by x — a "middle" sibling,
+   * as opposed to the leftmost or rightmost child in the row.
+   *
+   * Real bug the user caught (screenshot arrows): each child's own turn
+   * down into its own card sits at that child's own (targetX, midY) — never
+   * literally the same point as a sibling's turn, so rounding it is
+   * perfectly correct in isolation. But a MIDDLE sibling's turn is
+   * necessarily a sideways jog (it can't sit directly under the parent
+   * trunk with siblings flanking it on both sides) — sitting between two
+   * OTHER similarly-jogging lines, a rounded arc there reads as an ugly
+   * zigzag knot. An EDGE sibling's identical rounded turn reads fine
+   * because nothing flanks it on its outer side. Squaring off just the
+   * middle siblings' turns (leaving edge siblings rounded, see
+   * findMiddleSiblingEdgeIds in xyflow-adapter.ts) is what actually cleans
+   * up the row.
+   */
+  isMiddleSibling?: boolean;
 }
 
 export type PersonFlowNode = Node<PersonNodeData, "person">;
@@ -288,11 +315,89 @@ function findUnionParentPairs(
   return unionByChild;
 }
 
+/**
+ * Groups every parent_child edge by its actual bend-point source — a plain
+ * parent (edge.source) or, for a union child, the shared partnership
+ * (union.partnershipEdgeId) — and, within each group (a row of siblings off
+ * the same parent/union), returns the ids of every child EXCEPT the
+ * leftmost and rightmost by x. Generation (a stable BFS integer), not the
+ * node's own y, is what actually decides whether two children sit on the
+ * same row — y can differ slightly by card style/scale, generation cannot.
+ *
+ * This is NOT about a bend point literally shared between siblings — each
+ * child's own turn down into its own card sits at that child's own
+ * (targetX, midY), always a distinct point from every sibling's. The real
+ * bug (screenshot arrows) is that a MIDDLE sibling's turn — necessarily a
+ * sideways jog either way, since it can't sit directly under the parent
+ * trunk when siblings flank it on both sides — reads as an ugly zigzag
+ * sitting between two other similarly-jogging lines, while an EDGE
+ * sibling's identical turn reads fine because nothing flanks it on its
+ * outer side. Rounding only the two edge siblings' turns and squaring off
+ * every middle sibling's turn is what actually cleans up the row — matching
+ * literal bend-point coordinates (this function's previous approach) never
+ * fires here since those coordinates are never actually equal.
+ */
+function findMiddleSiblingEdgeIds(
+  graph: TreeLayoutGraph,
+  unionByChild: ReturnType<typeof findUnionParentPairs>,
+): Set<string> {
+  const nodeById = new Map(graph.nodes.map((n) => [n.id, n]));
+  // bendSourceKey::generation -> every child in that row, so we can sort by
+  // x and drop the two edges. A Map keyed by emittedId (not an array of
+  // childId) matters: a union child appears TWICE in graph.edges (one
+  // parent_child row per parent) — dedup by emittedId before sorting so it
+  // isn't counted twice when deciding who's "leftmost/rightmost".
+  const childrenByBendKey = new Map<
+    string,
+    Map<string, { childId: string; x: number }>
+  >();
+
+  for (const edge of graph.edges) {
+    if (edge.kind !== "parent_child") continue;
+    const union = unionByChild.get(edge.target);
+    // A union child's row groups by the shared partnership, not by either
+    // individual parent edge (which is dropped entirely — see toFlowEdges)
+    // — key on the partnership so this child groups correctly with
+    // siblings sharing that same union, not with this one parent's OTHER,
+    // non-union children.
+    const bendSourceKey =
+      union && union.parentIds.includes(edge.source)
+        ? `union:${union.partnershipEdgeId}`
+        : `parent:${edge.source}`;
+    const childNode = nodeById.get(edge.target);
+    if (!childNode) continue;
+    const bendKey = `${bendSourceKey}::${childNode.generation}`;
+
+    // The actual emitted edge id differs for a union child (see toFlowEdges'
+    // `union-${partnershipEdgeId}-${childId}`) vs a plain parent_child edge
+    // (edge.id itself) — track both id shapes here so the lookup in
+    // toFlowEdges below matches regardless of which one this child becomes.
+    const emittedId =
+      union && union.parentIds.includes(edge.source)
+        ? `union-${union.partnershipEdgeId}-${edge.target}`
+        : edge.id;
+    if (!childrenByBendKey.has(bendKey))
+      childrenByBendKey.set(bendKey, new Map());
+    childrenByBendKey
+      .get(bendKey)!
+      .set(emittedId, { childId: edge.target, x: childNode.x });
+  }
+
+  const middle = new Set<string>();
+  for (const children of childrenByBendKey.values()) {
+    if (children.size < 3) continue; // 1 or 2 children — none are "middle".
+    const sorted = [...children.entries()].sort((a, b) => a[1].x - b[1].x);
+    for (const [emittedId] of sorted.slice(1, -1)) middle.add(emittedId);
+  }
+  return middle;
+}
+
 function toFlowEdges(
   graph: TreeLayoutGraph,
   highlight: TreeHighlightState,
 ): (RelationshipFlowEdge | UnionChildFlowEdge)[] {
   const unionByChild = findUnionParentPairs(graph);
+  const middleSiblingEdgeIds = findMiddleSiblingEdgeIds(graph, unionByChild);
   const edges: (RelationshipFlowEdge | UnionChildFlowEdge)[] = [];
 
   for (const edge of graph.edges) {
@@ -318,6 +423,7 @@ function toFlowEdges(
           isOnTracePath: highlight.traceEdgeIds
             ? highlight.traceEdgeIds.has(edge.id)
             : undefined,
+          isMiddleSibling: middleSiblingEdgeIds.has(edge.id),
         },
       });
       continue;
@@ -381,6 +487,9 @@ function toFlowEdges(
           // parent — a sibling of theirs (same couple, not on the path)
           // keeps a plain trunk starting at the partnership midpoint.
           tracedParentId: childIsOnTracePath ? tracedPartnerId : undefined,
+          isMiddleSibling: middleSiblingEdgeIds.has(
+            `union-${edge.id}-${childId}`,
+          ),
         },
       });
     }

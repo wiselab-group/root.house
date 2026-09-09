@@ -111,8 +111,15 @@ export function UnionChildEdge({
     { x: targetX, y: midY },
     { x: targetX, y: targetY },
   ];
+  // (targetX, midY) is this child's own turn down into its card — for a
+  // middle sibling (flanked by others on both sides, see
+  // xyflow-adapter.ts's isMiddleSibling) that turn is a sideways jog that
+  // reads as an ugly zigzag when rounded, so it's drawn sharp instead. The
+  // OTHER bend, (sourceX, midY), is the T-off-the-trunk point — already a
+  // clean rounded corner regardless of sibling count, left untouched.
   const path = roundedOrthogonalPath(
     tracedStart ? [tracedStart, ...trunkPoints] : trunkPoints,
+    data?.isMiddleSibling ? [{ x: targetX, y: midY }] : [],
   );
 
   return (

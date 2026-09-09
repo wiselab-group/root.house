@@ -70,6 +70,7 @@ export function RelationshipEdge({
         targetX={targetX}
         targetY={targetY}
         isOnTracePath={isOnTracePath}
+        isMiddleSibling={data?.isMiddleSibling === true}
       />
     );
   }
@@ -94,6 +95,7 @@ function ParentChildEdgeLine({
   targetX,
   targetY,
   isOnTracePath,
+  isMiddleSibling,
 }: {
   id: string;
   target: string;
@@ -102,6 +104,7 @@ function ParentChildEdgeLine({
   targetX: number;
   targetY: number;
   isOnTracePath: boolean;
+  isMiddleSibling: boolean;
 }) {
   const targetNode = useInternalNode<PersonFlowNode>(target);
   // Portrait's square photo already fills the card from its very top edge,
@@ -113,12 +116,21 @@ function ParentChildEdgeLine({
   const midY = isCompactChild
     ? Math.max(sourceY, targetY - COMPACT_CHILD_TAIL_LENGTH)
     : (sourceY + targetY) / 2;
-  const path = roundedOrthogonalPath([
-    { x: sourceX, y: sourceY },
-    { x: sourceX, y: midY },
-    { x: targetX, y: midY },
-    { x: targetX, y: targetY },
-  ]);
+  // (targetX, midY) is this child's own turn down into its card — for a
+  // middle sibling (flanked by others on both sides, see
+  // xyflow-adapter.ts's isMiddleSibling) that turn is a sideways jog that
+  // reads as an ugly zigzag when rounded, so it's drawn sharp instead. The
+  // OTHER bend, (sourceX, midY), is the T-off-the-trunk point — already a
+  // clean rounded corner regardless of sibling count, left untouched.
+  const path = roundedOrthogonalPath(
+    [
+      { x: sourceX, y: sourceY },
+      { x: sourceX, y: midY },
+      { x: targetX, y: midY },
+      { x: targetX, y: targetY },
+    ],
+    isMiddleSibling ? [{ x: targetX, y: midY }] : [],
+  );
   return (
     <BaseEdge
       id={id}
