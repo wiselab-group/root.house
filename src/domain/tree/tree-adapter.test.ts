@@ -31,6 +31,7 @@ function personRecord(
     photoMediaId: null,
     privacyLevel: "family",
     createdBy: "user-1",
+    createdAt: new Date("2020-01-01T00:00:00Z"),
     ...overrides,
   };
 }

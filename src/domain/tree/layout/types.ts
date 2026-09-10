@@ -25,6 +25,14 @@ export type RelationshipKind = "spouse" | "parent-child";
 export type PartnershipStatus =
   "married" | "partnered" | "divorced" | "widowed";
 
+/**
+ * DB parentRole has 5 values; step/foster/unknown are lumped with adoptive
+ * for rendering purposes (all "not a recorded biological line") — see
+ * tree layout rules in CLAUDE.md. Not yet consumed anywhere in the engine
+ * (added ahead of the render-side dashed-line work — see rewrite plan §5.1).
+ */
+export type ParentRole = "biological" | "adoptive" | "step" | "foster" | "unknown";
+
 export interface Relationship {
   id: string;
   kind: RelationshipKind;
@@ -33,11 +41,20 @@ export interface Relationship {
   to: string;
   /** Only meaningful for kind "spouse". Defaults to "married" when absent. */
   status?: PartnershipStatus;
+  /** Only meaningful for kind "parent-child". Defaults to "biological" when absent. Not yet read anywhere — see rewrite plan §5.1. */
+  parentRole?: ParentRole;
 }
 
 export interface FamilyGraph {
   persons: Person[];
   relationships: Relationship[];
+  /**
+   * Deterministic entry-order tie-break for same-gender spouse pairs and
+   * multi-marriage chronological ordering — lower sorts first (left /
+   * earlier marriage). Falls back to id when absent or when two people's
+   * keys are equal. Not yet consumed by shouldBeLeft — see rewrite plan §1.6.
+   */
+  orderingKeyByPersonId?: Map<string, string>;
 }
 
 // ---------------------------------------------------------------------------
@@ -62,6 +79,14 @@ export interface Partnership {
   status: PartnershipStatus;
   /** Children born specifically within this partnership (both parents match, or the other parent is absent from the graph). */
   childrenIds: string[];
+  /**
+   * Chronological marriage order for one person relative to their OTHER
+   * partnerships — 0 = earliest, ties broken by partnership id. NOT global
+   * across the family; only meaningful for ordering one person's own
+   * side-by-side partnership branches left-to-right. Not yet computed by
+   * normalizeGraph — see rewrite plan §1.4 (defaults to 0 until then).
+   */
+  marriageOrder: number;
 }
 
 /** A person's children without a recorded partnership (other parent unknown/absent from graph). */

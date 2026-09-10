@@ -30,6 +30,10 @@ export interface PersonRecord {
   photoMediaId: string | null;
   privacyLevel: PrivacyLevel;
   createdBy: string;
+  /** Used by the tree layout engine as a deterministic same-sex-couple/
+   *  multi-marriage ordering tie-break (orderingKeyByPersonId) — see
+   *  tree-adapter.ts::toTreeFamilyGraph. Not shown anywhere in the UI. */
+  createdAt: Date;
 }
 
 function toRecord(row: typeof persons.$inferSelect): PersonRecord {
@@ -68,6 +72,7 @@ function toRecord(row: typeof persons.$inferSelect): PersonRecord {
     photoMediaId: row.photoMediaId,
     privacyLevel: row.privacyLevel,
     createdBy: row.createdBy,
+    createdAt: row.createdAt,
   };
 }
 

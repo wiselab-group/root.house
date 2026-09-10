@@ -49,7 +49,11 @@ export async function getPublicTreeLayout(
     listPersonsByFamily(familyId),
     db.query.relationshipsParentChild.findMany({
       where: eq(relationshipsParentChild.familyId, familyId),
-      columns: { id: true, parentId: true, childId: true },
+      // parentRole/startDate* added ahead of the dashed-line and
+      // chronological multi-marriage work — see rewrite plan §1.4/§1.6/§5.1/
+      // §5.4. Not yet consumed downstream. Kept in sync with
+      // tree.service.ts::getFocusTreeLayout's own column picks.
+      columns: { id: true, parentId: true, childId: true, parentRole: true },
     }),
     db.query.relationshipsPartnership.findMany({
       where: eq(relationshipsPartnership.familyId, familyId),
@@ -59,6 +63,10 @@ export async function getPublicTreeLayout(
         person2Id: true,
         status: true,
         isCurrent: true,
+        startDateYear: true,
+        startDateMonth: true,
+        startDateDay: true,
+        startDateApproximate: true,
       },
     }),
   ]);

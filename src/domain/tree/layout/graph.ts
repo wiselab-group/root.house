@@ -97,6 +97,12 @@ export function normalizeGraph(
       rightPersonId,
       status: rel.status ?? "married",
       childrenIds,
+      // Real chronological ordering (by startDate, falling back to the
+      // partnership row's own createdAt) lands with multi-marriage support —
+      // see rewrite plan §1.4/§1.6. Every partnership defaults to 0 until
+      // then, which preserves today's behavior (array/insertion order) since
+      // nothing reads marriageOrder yet.
+      marriageOrder: 0,
     };
     partnershipById.set(partnership.id, partnership);
     personById.get(leftPersonId)!.partnershipIds.push(partnership.id);
