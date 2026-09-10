@@ -6,15 +6,8 @@ import type {
 } from "./types";
 import { normalizeGraph } from "./graph";
 import { placeGraph } from "./placement";
-import { buildEdgeSpecs } from "./edges";
 import { assertNoOverlaps, assertOnePositionPerPerson } from "./collision";
 
-export { buildEdgeSpecs };
-export type {
-  EdgeSpecs,
-  PartnershipEdgeSpec,
-  ParentChildEdgeSpec,
-} from "./edges";
 export type { NormalizedGraph } from "./types";
 export * from "./types";
 
