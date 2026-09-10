@@ -79,17 +79,37 @@ export function normalizeGraph(
     const leftPersonId = aLeft ? a.id : b.id;
     const rightPersonId = aLeft ? b.id : a.id;
 
-    const leftChildren = new Set(childrenOf.get(leftPersonId) ?? []);
-    const rightChildren = childrenOf.get(rightPersonId) ?? [];
+    const leftChildrenAll = childrenOf.get(leftPersonId) ?? [];
+    const rightChildrenAll = childrenOf.get(rightPersonId) ?? [];
+    const leftChildren = new Set(leftChildrenAll);
+    const rightChildren = rightChildrenAll;
     const sharedChildren = rightChildren.filter((c) => leftChildren.has(c));
-    // If neither side individually has recorded children, fall back to the
-    // union so partnerships with only one parent's child-edges recorded
-    // still show their children (defensive — real graphs are rarely this
-    // sparse, but incomplete data shouldn't silently orphan children).
+    // The union fallback exists ONLY for the genuinely sparse-data case: a
+    // child recorded under just ONE of these two parents, where the OTHER
+    // parent (of the two forming THIS partnership) was never linked to that
+    // child at all — e.g. only the mother's parent-child edge was entered
+    // into the DB, the father's never was. That is different from "this
+    // child belongs to one of this person's OTHER partnerships" — checking
+    // per child, not per side, is what tells them apart: a child unclaimed
+    // by the union fallback must have recorded parentIds that are a SUBSET
+    // of {leftPersonId, rightPersonId} (at most one of the two, and nothing
+    // outside the pair), never a child whose recorded parentIds point at a
+    // THIRD person entirely (that third person is this child's real other
+    // parent, from a different partnership). Real bug this replaces: a
+    // person P married to A (childless with P), B (childless with P), and C
+    // (P's actual child C1's other parent) — the old per-side "does either
+    // side have ANY children at all" check let A's and B's partnerships each
+    // wrongly inherit C1 too, since P (one side of every pairing) always has
+    // children recorded, just never in common with A or B specifically.
+    const unionCandidates = [...new Set([...leftChildrenAll, ...rightChildrenAll])];
+    const sparseDataUnion = unionCandidates.filter((childId) => {
+      const recordedParents = parentsOf.get(childId) ?? [];
+      return recordedParents.every(
+        (p) => p === leftPersonId || p === rightPersonId,
+      );
+    });
     const childrenIds =
-      sharedChildren.length > 0
-        ? sharedChildren
-        : [...new Set([...leftChildren, ...rightChildren])];
+      sharedChildren.length > 0 ? sharedChildren : sparseDataUnion;
 
     const partnership: Partnership = {
       id: rel.id,

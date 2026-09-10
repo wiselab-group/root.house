@@ -14,6 +14,8 @@ import {
   SPOUSE_GAP,
   measurePartnershipWidth,
   measurePersonWidth,
+  createGrowthContext,
+  growBranch,
 } from "./subtree";
 import { OccupancyModel } from "./occupancy";
 
@@ -45,22 +47,18 @@ type SubtreeMemo = Map<string, SubtreeMeasurement>;
  * lookup, not a repeated shove-and-recheck loop.
  */
 export function placeGraph(graph: NormalizedGraph): PlacementResult {
-  const occupancy = new OccupancyModel();
-  const positionByPerson = new Map<string, Point>();
-  const junctionByPartnership = new Map<string, Point>();
-  const memo: SubtreeMemo = new Map();
+  // Rewrite Stage 1 (see the tree-layout-rewrite plan): the focus's own
+  // downward growth now runs through subtree.ts's unified growBranch("down")
+  // primitive instead of this file's own placePersonBranch — behaviorally
+  // identical, sharing the same occupancy/positionByPerson/
+  // junctionByPartnership/memo state so the ancestor passes below (still
+  // this file's own placeAncestors/placeInLawAncestors, pending Stage 3)
+  // see every reservation growBranch made.
+  const ctx = createGrowthContext(graph);
+  const { occupancy, positionByPerson, junctionByPartnership } = ctx;
 
   const focusId = graph.focusPersonId;
-  placePersonBranch(
-    graph,
-    focusId,
-    0,
-    0,
-    occupancy,
-    positionByPerson,
-    junctionByPartnership,
-    memo,
-  );
+  growBranch(ctx, focusId, "down", { x: 0, y: 0 });
 
   placeAncestors(graph, occupancy, positionByPerson, junctionByPartnership);
 
@@ -1522,6 +1520,28 @@ function findSwappableBloodInLawPairs(
         bloodPerson.id,
         bloodPerson.parentIds,
         positionByPerson,
+      )
+    )
+      continue;
+    // recenterParentsOnChildren (called after a swap, below) rigidly shifts
+    // the blood person's own PARENT pair by a delta to keep them centered
+    // over their children — safe when that parent pair has only ONE
+    // partnership each (the ordinary case this whole pass was built for),
+    // but not when a parent themselves has remarried: shifting a remarried
+    // parent's x can push their card into their OWN other spouse's card
+    // from a different partnership, which recenterParentsOnChildren has no
+    // way to know about or avoid (it only reasons about this one parent
+    // pair's own children, not the parent's other, unrelated partnerships).
+    // Real card-overlap bug found via property-based random-graph testing
+    // (rewrite plan §8a): a person remarried (partnership A, no children;
+    // partnership B, one child C) whose child C herself married an in-law —
+    // straightening C's line recentered the remarried parent, shifting them
+    // into their OTHER (partnership A) spouse's card. Guard against it the
+    // same way remarriage is already guarded for the swapped pair itself.
+    if (
+      bloodPerson.parentIds.some(
+        (parentId) =>
+          (graph.personById.get(parentId)?.partnershipIds.length ?? 0) > 1,
       )
     )
       continue;
