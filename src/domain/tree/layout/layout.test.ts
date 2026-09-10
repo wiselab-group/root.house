@@ -15,6 +15,7 @@ import {
   case8DivorceRemarriageDeep,
   case9ManySiblings,
   case10ManyGenerations,
+  case11InLawParents,
 } from "./test-fixtures";
 import type { TreeLayoutResult } from "./types";
 
@@ -1297,6 +1298,40 @@ describe("CASE 10 — several generations both directions", () => {
   });
 });
 
+describe("CASE 11 — a descendant's spouse has their own recorded parents (in-law ancestors)", () => {
+  const result = buildTreeLayout(case11InLawParents, "focus");
+
+  it("every person gets a position (no assertOnePositionPerPerson throw)", () => {
+    expect(result.persons.length).toBe(case11InLawParents.persons.length);
+  });
+
+  it("no overlaps", () => {
+    expect(detectOverlaps(positionMap(result))).toEqual([]);
+  });
+
+  it("childSpouse's parents are placed one generation above her, not left at the origin", () => {
+    const childSpouse = personById(result, "childSpouse");
+    const parent1 = personById(result, "childSpouseParent1");
+    const parent2 = personById(result, "childSpouseParent2");
+    expect(parent1.y).toBeCloseTo(childSpouse.y - GENERATION_GAP, 5);
+    expect(parent2.y).toBeCloseTo(childSpouse.y - GENERATION_GAP, 5);
+  });
+
+  it("childSpouse's parents are horizontally close to childSpouse (pulled by her, not defaulted to x=0 far away)", () => {
+    const childSpouse = personById(result, "childSpouse");
+    const parent1 = personById(result, "childSpouseParent1");
+    const parent2 = personById(result, "childSpouseParent2");
+    const parentMidX = (parent1.x + parent2.x) / 2;
+    expect(Math.abs(parentMidX - childSpouse.x)).toBeLessThan(CARD_WIDTH * 3);
+  });
+
+  it("childSpouse's full sibling lands beside her parents, not stranded", () => {
+    const parent1 = personById(result, "childSpouseParent1");
+    const sibling = personById(result, "childSpouseSibling");
+    expect(sibling.y).toBeCloseTo(parent1.y + GENERATION_GAP, 5);
+  });
+});
+
 describe("global invariants across every case", () => {
   const cases: Array<[string, Parameters<typeof buildTreeLayout>[0], string]> =
     [
@@ -1311,6 +1346,7 @@ describe("global invariants across every case", () => {
       ["case8", case8DivorceRemarriageDeep, "a"],
       ["case9", case9ManySiblings, "p1"],
       ["case10", case10ManyGenerations, "focus"],
+      ["case11", case11InLawParents, "focus"],
     ];
 
   it.each(cases)(

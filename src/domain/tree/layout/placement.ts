@@ -64,7 +64,148 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
 
   placeAncestors(graph, occupancy, positionByPerson, junctionByPartnership);
 
+  // placeAncestors above only walks the focus's OWN ancestor rows (negative
+  // generation, y = gen * GENERATION_GAP measured from the focus). But a
+  // descendant branch can carry an IN-LAW spouse who has real parentIds of
+  // their own recorded in the graph — e.g. Viktor Kupchik (a descendant of
+  // the focus) partners Galina Kupchik, whose own parents (Nikolai/Nadezhda
+  // Kozlovsky) are real, graphed people. Galina is reached via a downward
+  // path from the focus, so her `generation` (BFS distance) is POSITIVE, not
+  // negative — her parents' generation is one less, e.g. +1, which
+  // placeAncestors's `for (let gen = -1; ...)` loop never visits (it only
+  // walks negative gen). No other code path grows parents from an
+  // already-placed descendant either (placeChildrenRow/
+  // growSpouseOwnPartnerships only ever grow downward) — so Nikolai/Nadezhda
+  // silently never got a position at all, and assertOnePositionPerPerson
+  // below would throw. Real bug found while debugging the Kupchik family's
+  // real Neon data (per this file's own rule: reproduce on real data, not
+  // just synthetic fixtures) — Vera Artyukh (another of Nikolai/Nadezhda's
+  // children) surfaced it first as "person has no position".
+  placeInLawAncestors(
+    graph,
+    occupancy,
+    positionByPerson,
+    junctionByPartnership,
+  );
+
   return { positionByPerson, junctionByPartnership };
+}
+
+/**
+ * Places the recorded parents of anyone ALREADY placed (by any path —
+ * descendant growth, remarriage, or the focus's own ancestor rows) whose own
+ * parents don't have a position yet — regardless of that person's BFS
+ * `generation` sign. This is what catches an in-law spouse's own parents
+ * (see placeGraph's doc comment above): placeAncestors only walks the
+ * focus's negative-generation rows, so a descendant's spouse's parents
+ * (positive generation, reached sideways through the descendant tree, not
+ * through the focus's own ancestor chain) are otherwise never visited by
+ * anything.
+ *
+ * Iterates to a fixed point (not a single pass) because placing one
+ * generation of in-law parents can itself surface a grandparent generation
+ * needing the same treatment (e.g. Nikolai Kozlovsky's own parents, if
+ * recorded) — a family tree's parentIds edges are inherently acyclic (a
+ * person can never be their own ancestor), so this always terminates; the
+ * `placed` visited-set additionally guards against reprocessing the same
+ * person, in case of any malformed/cyclic input data.
+ */
+function placeInLawAncestors(
+  graph: NormalizedGraph,
+  occupancy: OccupancyModel,
+  positionByPerson: Map<string, Point>,
+  junctionByPartnership: Map<string, Point>,
+): void {
+  const processed = new Set<string>();
+
+  while (true) {
+    // Snapshot the current placed-person ids before this pass — placing a
+    // parent unit below adds new entries to positionByPerson, and those
+    // newly-placed parents' OWN parentIds must wait for the NEXT pass, not
+    // be picked up mid-iteration (their sibling row / spouse gap needs the
+    // same "resolve every ideal first" treatment placeAncestors itself
+    // relies on, not one-at-a-time as they happen to appear).
+    const placedIds = [...positionByPerson.keys()];
+    let placedAnyThisPass = false;
+
+    for (const personId of placedIds) {
+      if (processed.has(personId)) continue;
+      processed.add(personId);
+
+      const person = graph.personById.get(personId);
+      if (!person || person.parentIds.length === 0) continue;
+      if (person.parentIds.every((id) => positionByPerson.has(id))) continue;
+
+      const childPos = positionByPerson.get(personId);
+      if (!childPos) continue; // not actually placed (shouldn't happen — placedIds came from positionByPerson)
+
+      // Every full sibling of this person (same parentIds) that's already
+      // placed pulls the parent unit's ideal center — mirrors
+      // preferredAncestorX's own "average of placed children" logic, just
+      // scoped to siblings sharing THESE parentIds specifically (a half-
+      // sibling from the other parent's other partnership doesn't belong in
+      // this average).
+      const siblingIds = [...graph.personById.values()]
+        .filter(
+          (p) =>
+            p.id !== personId &&
+            p.parentIds.length === person.parentIds.length &&
+            p.parentIds.every((id) => person.parentIds.includes(id)),
+        )
+        .map((p) => p.id);
+      const pullXs = [personId, ...siblingIds]
+        .map((id) => positionByPerson.get(id)?.x)
+        .filter((x): x is number => typeof x === "number");
+      const idealX =
+        pullXs.length > 0
+          ? pullXs.reduce((a, b) => a + b, 0) / pullXs.length
+          : childPos.x;
+
+      const parentY = childPos.y - GENERATION_GAP;
+
+      // parentIds.length === 1 is a SoloParent link (the other parent isn't
+      // recorded at all) — place that one parent alone, same as
+      // placeAncestorUnit would for a solo ancestor, rather than assuming a
+      // pair.
+      const primaryParentId = person.parentIds[0];
+      if (positionByPerson.has(primaryParentId)) continue; // already placed via a sibling processed earlier this same pass
+
+      placeAncestorUnit(
+        graph,
+        primaryParentId,
+        idealX,
+        parentY,
+        occupancy,
+        positionByPerson,
+        junctionByPartnership,
+      );
+      placedAnyThisPass = true;
+
+      // placeAncestorUnit only completes THIS person's own sibling row if
+      // called from placeAncestors' own siblings pass — called standalone
+      // here, any other not-yet-placed sibling (full sibling sharing both
+      // parentIds) still needs placing beside the parent unit it just
+      // resolved, exactly like placeUnplacedSiblings does for the focus's
+      // own ancestor rows.
+      const unplacedSiblingIds = siblingIds.filter(
+        (id) => !positionByPerson.has(id),
+      );
+      if (unplacedSiblingIds.length > 0) {
+        const parentX = positionByPerson.get(primaryParentId)?.x ?? idealX;
+        placeUnplacedSiblings(
+          graph,
+          [personId, ...siblingIds],
+          childPos.y,
+          occupancy,
+          positionByPerson,
+          junctionByPartnership,
+          parentX,
+        );
+      }
+    }
+
+    if (!placedAnyThisPass) break;
+  }
 }
 
 // ---------------------------------------------------------------------------
