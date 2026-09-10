@@ -27,6 +27,11 @@ import { useTreeCardStyle, type TreeCardStyle } from "./use-tree-card-style";
 import { useCoarsePointer } from "./use-coarse-pointer";
 import { useHasMounted } from "./use-has-mounted";
 import { TreeCardStyleControl } from "./tree-card-style-control";
+import { useCollapsedBranches } from "./use-collapsed-branches";
+import {
+  pruneCollapsedDescendants,
+  personIdsWithChildren,
+} from "./prune-collapsed";
 
 const nodeTypes = { person: PersonNode };
 const edgeTypes = {
@@ -240,10 +245,27 @@ export function TreeCanvas({
     [familyId, pathname, router, searchParams],
   );
 
+  // Collapse/expand (rewrite plan §7 Stage 5) — purely client-side, ephemeral
+  // (see use-collapsed-branches.ts). `graph` itself (the server-computed,
+  // already-positioned TreeLayoutGraph) is never mutated — pruneCollapsedDescendants
+  // returns a NEW graph with the collapsed subtrees' nodes/edges filtered
+  // out, leaving every remaining node's own x/y exactly as the server
+  // computed it (no client-side re-layout — see prune-collapsed.ts's own
+  // doc comment for why). `withChildren` is computed off the FULL graph
+  // (before pruning) so a currently-collapsed person's badge doesn't
+  // disappear just because their own children are no longer in the pruned
+  // edge list.
+  const { collapsedIds, toggleCollapse } = useCollapsedBranches();
+  const withChildren = useMemo(() => personIdsWithChildren(graph), [graph]);
+  const prunedGraph = useMemo(
+    () => pruneCollapsedDescendants(graph, collapsedIds),
+    [graph, collapsedIds],
+  );
+
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
     () =>
       toReactFlow(
-        graph,
+        prunedGraph,
         familyId,
         familySlug,
         cardStyle,
@@ -251,9 +273,11 @@ export function TreeCanvas({
         setFocus,
         readOnly,
         shareToken,
+        readOnly ? undefined : toggleCollapse,
+        withChildren,
       ),
     [
-      graph,
+      prunedGraph,
       familyId,
       familySlug,
       cardStyle,
@@ -261,6 +285,8 @@ export function TreeCanvas({
       setFocus,
       readOnly,
       shareToken,
+      toggleCollapse,
+      withChildren,
     ],
   );
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);

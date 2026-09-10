@@ -1,19 +1,21 @@
 "use client";
 
-import Link from "next/link";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { UserIcon, FocusIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { personInitials } from "@/domain/person/display-name";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  PopoverClose,
-} from "@/components/ui/popover";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
 import { CompactCardBody } from "./compact-card-body";
 import { PortraitCardBody } from "./portrait-card-body";
+import {
+  buildCardFrameClassName,
+  CollapseBadge,
+  InvisibleConnectorHandles,
+  personLabel,
+  yearRange,
+} from "./person-node-parts";
+import { PersonNodePopoverActions } from "./person-node-popover-actions";
+
+export { generationColor } from "./person-node-parts";
 
 /**
  * Custom XYFlow node rendering a person card. States per DESIGN.md § Person
@@ -43,6 +45,11 @@ import { PortraitCardBody } from "./portrait-card-body";
  * accident while just browsing the tree; the popover makes both actions
  * explicit and lets a plain click also serve as "read this card" without
  * side effects.
+ *
+ * Also carries the collapse/expand "+N" badge (rewrite plan §7 Stage 5, see
+ * person-node-parts.tsx's CollapseBadge) — floating at the card's own
+ * bottom-center, outside the popover trigger so a click there toggles
+ * collapse state instead of opening the profile menu.
  */
 export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
   const name = personLabel(data);
@@ -54,45 +61,7 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
 
   const cardBody = (
     <>
-      {/* Handles are invisible (opacity-0) — RelationshipEdge/UnionChildEdge
-       *  compute every edge's actual geometry themselves from live node
-       *  positions (see relationship-edge.tsx, union-child-edge.tsx), not
-       *  from where a handle's own CSS anchor sits, so XYFlow's default
-       *  visible dot no longer means anything to point at. top/bottom still
-       *  need to exist and keep their ids — plain parent_child edges (no
-       *  shared union trunk) still anchor to them via sourceHandle/
-       *  targetHandle in xyflow-adapter.ts. left/right have no remaining
-       *  consumer but stay for layout symmetry / a future direct anchor. */}
-      <Handle
-        type="target"
-        id="top"
-        position={Position.Top}
-        className="opacity-0!"
-      />
-      <Handle
-        type="source"
-        id="left"
-        position={Position.Left}
-        className="opacity-0!"
-      />
-      <Handle
-        type="target"
-        id="left"
-        position={Position.Left}
-        className="opacity-0!"
-      />
-      <Handle
-        type="source"
-        id="right"
-        position={Position.Right}
-        className="opacity-0!"
-      />
-      <Handle
-        type="target"
-        id="right"
-        position={Position.Right}
-        className="opacity-0!"
-      />
+      <InvisibleConnectorHandles />
       {data.cardStyle === "portrait" ? (
         <PortraitCardBody
           data={data}
@@ -119,29 +88,14 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
     </>
   );
 
-  const cardFrameClassName = cn(
-    "w-40 origin-center",
-    "animate-tree-node-enter",
-    "transition-opacity duration-200 ease-(--ease-tree-focus)",
-    data.cardStyle === "compact"
-      ? // No card frame at all for compact — the round avatar itself
-        // carries the border/ring states (see compact-card-body.tsx's
-        // isHighlighted/isSelected/isPlaceholder handling) so the
-        // parent_child connector line, anchored to this div's own
-        // top/bottom edges via the Handles above, visibly touches the
-        // avatar instead of stopping at an invisible card boundary.
-        "overflow-visible"
-      : cn(
-          "overflow-hidden rounded-lg border bg-card shadow-sm hover:shadow-md",
-          data.isFocus || isTraceHighlighted
-            ? "border-primary ring-2 ring-primary/30"
-            : "border-border",
-          selected && "ring-2 ring-ring",
-          data.isPlaceholder && "border-dashed opacity-70",
-        ),
-    isDimmed && "opacity-35 hover:opacity-70",
-    !data.readOnly && "cursor-pointer",
-  );
+  const cardFrameClassName = buildCardFrameClassName({
+    cardStyle: data.cardStyle,
+    isFocusOrTraced: data.isFocus || isTraceHighlighted,
+    isSelected: Boolean(selected),
+    isPlaceholder: data.isPlaceholder,
+    isDimmed,
+    readOnly: Boolean(data.readOnly),
+  });
   const cardFrameStyle = {
     // Entrance stagger, per DESIGN.md's "смена focus-person — stagger
     // пропорционально расстоянию от нового focus" — a full page navigation
@@ -152,20 +106,32 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
     animationDelay: `${Math.min(Math.abs(data.generation), 4) * 60}ms`,
   };
 
+  // Collapse/expand (rewrite plan §7 Stage 5) — only rendered when this
+  // person actually has a child to hide (hasChildren) AND a toggle handler
+  // exists (never in read-only mode — see xyflow-adapter.ts). Shows "+N"
+  // once collapsed (collapsedDescendantCount set by prune-collapsed.ts);
+  // shows a plain "−" affordance while expanded, so there's always a
+  // visible way back in either state, not just a badge that vanishes once
+  // clicked.
+  const collapseBadge =
+    data.hasChildren && data.onToggleCollapse ? (
+      <CollapseBadge
+        personId={data.personId}
+        collapsedDescendantCount={data.collapsedDescendantCount}
+        onToggleCollapse={data.onToggleCollapse}
+      />
+    ) : null;
+
   // Read-only (Share Link) view: no popover at all — both of its actions
   // are already suppressed for readOnly (see PersonNodePopoverActions'
   // own doc comment), so wrapping the card in a Popover/PopoverTrigger
   // would only ever open an empty panel on click. A plain non-interactive
   // div renders the exact same card body with no click affordance.
-  if (data.readOnly) {
-    return (
-      <div className={cardFrameClassName} style={cardFrameStyle}>
-        {cardBody}
-      </div>
-    );
-  }
-
-  return (
+  const cardFrame = data.readOnly ? (
+    <div className={cardFrameClassName} style={cardFrameStyle}>
+      {cardBody}
+    </div>
+  ) : (
     <Popover>
       <PopoverTrigger
         nativeButton={false}
@@ -183,62 +149,11 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
       </PopoverContent>
     </Popover>
   );
-}
 
-/** The two actions offered by a card's click popover — kept separate from PersonNode so its already-long JSX doesn't grow a third nesting level. Both are suppressed in read-only mode (see PersonNodeData.readOnly): "Посмотреть профиль" links into the auth-gated, editable profile page, which has no reason to exist on the anonymous Share Link surface; "Сделать фокус-персоной" is already omitted upstream (xyflow-adapter.ts never passes onFocusPerson when readOnly). */
-function PersonNodePopoverActions({ data }: { data: PersonFlowNode["data"] }) {
   return (
-    <div className="flex flex-col">
-      {!data.readOnly && (
-        <PopoverClose
-          nativeButton={false}
-          render={
-            <Link
-              href={`/families/${data.familySlug}/people/${data.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[0.8rem] hover:bg-accent hover:text-accent-foreground"
-            />
-          }
-        >
-          <UserIcon className="size-3.5 shrink-0 text-muted-foreground" />
-          Посмотреть профиль
-        </PopoverClose>
-      )}
-      {data.onFocusPerson && (
-        <PopoverClose
-          render={
-            <button
-              type="button"
-              onClick={() => data.onFocusPerson?.(data.personId)}
-              className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-[0.8rem] hover:bg-accent hover:text-accent-foreground"
-            />
-          }
-        >
-          <FocusIcon className="size-3.5 shrink-0 text-muted-foreground" />
-          Сделать фокус-персоной
-        </PopoverClose>
-      )}
+    <div className="relative">
+      {cardFrame}
+      {collapseBadge}
     </div>
   );
-}
-
-/** Maps a node's generation offset (0 = focus's own generation) to the matching --chart-N token. */
-export function generationColor(generation: number): string {
-  const distance = Math.min(Math.abs(generation), 4);
-  return `var(--chart-${distance + 1})`;
-}
-
-function personLabel(data: PersonFlowNode["data"]): string {
-  const parts = [data.firstName, data.lastName].filter(Boolean);
-  if (parts.length > 0) return parts.join(" ");
-  if (data.nickname) return data.nickname;
-  return data.isPlaceholder ? "Неизвестный родственник" : "Без имени";
-}
-
-function yearRange(data: PersonFlowNode["data"]): string | null {
-  if (!data.birthYear && !data.deathYear) return null;
-  const birth = data.birthYear ?? "?";
-  if (data.isLiving) return `${birth}`;
-  return `${birth} — ${data.deathYear ?? "?"}`;
 }

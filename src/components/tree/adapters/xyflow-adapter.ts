@@ -4,6 +4,7 @@ import type {
   LayoutNode,
 } from "@/domain/tree/tree-layout.builder";
 import type { TreeCardStyle } from "../use-tree-card-style";
+import { personIdsWithChildren } from "../prune-collapsed";
 
 /**
  * The ONLY module in the codebase allowed to import @xyflow/react types.
@@ -51,6 +52,17 @@ export interface PersonNodeData extends Record<string, unknown> {
   onFocusPerson?: (personId: string) => void;
   /** True only for the anonymous Share Link view (components/share-link/public-tree-view.tsx) — suppresses PersonNode's entire click popover (both "Посмотреть профиль", a doorway into the auth-gated edit surface, and "Сделать фокус-персоной", a DB write via updateDefaultFocusPersonAction). Undefined/false for every authenticated rendering of the tree. */
   readOnly?: boolean;
+  /**
+   * Collapse/expand (rewrite plan §7 Stage 5) — true when this person has at
+   * least one recorded child, i.e. there's something a collapse toggle could
+   * ever hide. A childless leaf gets no badge/toggle at all. Always false in
+   * read-only (Share Link) mode — see onToggleCollapse below.
+   */
+  hasChildren?: boolean;
+  /** Present (and non-zero) only while this person's own descendants are currently hidden — see prune-collapsed.ts's collapsedDescendantCount. Renders the "+N" badge. */
+  collapsedDescendantCount?: number;
+  /** Toggles this person's collapsed state (see use-collapsed-branches.ts) — undefined in read-only mode, matching onFocusPerson's own pattern (no collapse state exists to toggle on the anonymous Share Link view, which renders a static snapshot). */
+  onToggleCollapse?: (personId: string) => void;
 }
 
 export interface RelationshipEdgeData extends Record<string, unknown> {
@@ -243,6 +255,8 @@ function toFlowNode(
   onFocusPerson: (personId: string) => void,
   readOnly: boolean,
   shareToken: string | undefined,
+  withChildren: ReadonlySet<string>,
+  onToggleCollapse: ((personId: string) => void) | undefined,
 ): PersonFlowNode {
   const xScale =
     cardStyle === "portrait" ? PORTRAIT_X_SPACING / COMPACT_X_SPACING : 1;
@@ -282,6 +296,9 @@ function toFlowNode(
       // Also omitted outright in read-only mode (see PersonNodeData.readOnly).
       onFocusPerson: node.isFocus || readOnly ? undefined : onFocusPerson,
       readOnly,
+      hasChildren: !readOnly && withChildren.has(node.id),
+      collapsedDescendantCount: node.collapsedDescendantCount,
+      onToggleCollapse: readOnly ? undefined : onToggleCollapse,
     },
     // XYFlow needs explicit dimensions before layout/fitView math is
     // reliable; matches the fixed size PersonNode renders each style at.
@@ -529,7 +546,20 @@ export function toReactFlow(
   readOnly: boolean = false,
   /** Present only for the anonymous Share Link view — see buildPhotoUrl. */
   shareToken: string | undefined = undefined,
+  /** Collapse/expand (rewrite plan §7 Stage 5) — undefined in read-only mode. */
+  onToggleCollapse: ((personId: string) => void) | undefined = undefined,
+  /**
+   * Which person ids have at least one recorded child — computed from the
+   * FULL (pre-collapse) graph by the caller when `graph` here has already
+   * been pruned by prune-collapsed.ts (a currently-collapsed person's own
+   * children are gone from THIS graph's edges by the time toReactFlow sees
+   * it, so deriving it from `graph` directly would wrongly hide the badge on
+   * a person who's already collapsed). Defaults to deriving it from `graph`
+   * itself, correct whenever no collapse is active.
+   */
+  personIdsWithChildrenOverride: ReadonlySet<string> | undefined = undefined,
 ): { nodes: PersonFlowNode[]; edges: TreeFlowEdge[] } {
+  const withChildren = personIdsWithChildrenOverride ?? personIdsWithChildren(graph);
   const edges = toFlowEdges(graph, highlight);
   // Array order does NOT control paint order here — XYFlow's default
   // zIndexMode ('basic') assigns every edge the same CSS z-index (its own
@@ -562,6 +592,8 @@ export function toReactFlow(
         onFocusPerson,
         readOnly,
         shareToken,
+        withChildren,
+        onToggleCollapse,
       ),
     ),
     edges: elevatedEdges,

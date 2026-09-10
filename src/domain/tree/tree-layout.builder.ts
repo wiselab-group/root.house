@@ -75,6 +75,15 @@ export interface LayoutNode {
   generation: number;
   isFocus: boolean;
   person: PersonNode;
+  /**
+   * Set only by the client-side collapse/expand prune (rewrite plan §7
+   * Stage 5, components/tree/prune-collapsed.ts) — the count of descendants
+   * currently hidden below this person, rendered as a "+N" badge on their
+   * card. Undefined for every node the server itself produces (collapse
+   * state never reaches the server — see use-collapsed-branches.ts) and for
+   * any node here that isn't currently collapsed.
+   */
+  collapsedDescendantCount?: number;
 }
 
 export type LayoutEdgeKind = "parent_child" | "partnership";
