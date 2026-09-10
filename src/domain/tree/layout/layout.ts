@@ -42,9 +42,11 @@ export function buildTreeLayout(
   // complete sibling row BEFORE placing them (no mis-centered intermediate
   // state to later detect and fix), and resolves competing ancestor units by
   // ordinary occupancy collision search rather than a separate symmetric
-  // pre-pass. The only remaining gap — an only child's natural row being
-  // entirely owned by an unrelated family — is a Y-axis rigidity problem
-  // that properly belongs to Stage 4 (elastic Y), not Stage 3.
+  // pre-pass. The remaining gap from Stage 3 — an only child's natural row
+  // being entirely owned by an unrelated family — is resolved by Stage 4
+  // (elastic Y): placeGraph's own repairSideConstraintViolations call (see
+  // its doc comment in subtree.ts) is a bounded, local, post-placement Y
+  // nudge that replaces the old discrete whole-generation retry.
 
   assertOnePositionPerPerson(normalized, positionByPerson);
   assertNoOverlaps(positionByPerson);

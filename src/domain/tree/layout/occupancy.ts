@@ -1,4 +1,4 @@
-import type { Rect } from "./types";
+import type { Point, Rect } from "./types";
 
 /**
  * OccupancyModel — the spatial index the layout engine consults BEFORE
@@ -102,6 +102,124 @@ export class OccupancyModel {
       for (const candidateX of candidates) {
         const rect: Rect = { x: candidateX, y, width, height };
         if (!this.intersects(rect, gap)) return candidateX;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Elastic-Y search (rewrite plan §7 Stage 4): tries `findFreeInterval` at
+   * `preferredY` first (identical to today's rigid-row behavior — the common
+   * case never pays for a Y search it doesn't need), and only if THAT whole
+   * X search radius is exhausted (or every candidate it finds fails the
+   * optional `validate` check, see below) does it retry the SAME X search at
+   * `preferredY` nudged up/down by `yStep`, growing the nudge outward
+   * (`yStep`, `2*yStep`, ...) until `maxYNudge` is reached.
+   *
+   * This is what replaces `raiseAncestryOneGeneration` (graph.ts, deleted —
+   * see git history) and the old `findStrandedOnlyChildren` retry pass
+   * (placement.ts, deleted in Stage 3): instead of detecting a stranded
+   * branch AFTER the fact and re-running placement on a mutated `generation`
+   * field for the WHOLE ancestor chain, a branch that can't find room on its
+   * natural row now tries a small Y offset AS PART OF ITS OWN placement
+   * search — bounded, local, and no second full placement pass.
+   *
+   * `validate` (optional): a caller-supplied predicate over a candidate
+   * `{x, y}`, checked in addition to plain occupancy-freedom. Needed for a
+   * class of conflict occupancy alone can't see: two mutually unrelated
+   * same-branch clusters (see placeAncestorUnit's own doc comment) can each
+   * compute an `idealX` that is individually occupancy-free — neither one's
+   * search ever intersects the other's reserved rectangles — yet still land
+   * in the WRONG RELATIVE ORDER on the shared row (paternal ending up right
+   * of maternal, or a foreign cluster's card ending up between two blood
+   * siblings), because occupancy-freedom only rules out overlapping space,
+   * never "which side" two non-overlapping reservations end up on. Plain
+   * `findFreeInterval`/the no-`validate` path above literally cannot detect
+   * this — there is nothing to search past. `validate` lets the caller
+   * reject an otherwise-free candidate for this reason, so the search moves
+   * on (more X offset, then Y nudge) to a candidate that satisfies BOTH.
+   *
+   * Returns null if the whole nudge range is exhausted too — same "caller
+   * falls back to a forced placement, assertNoOverlaps is the final
+   * backstop" contract as findFreeInterval.
+   */
+  findFreeSlot(
+    preferredY: number,
+    height: number,
+    width: number,
+    gap: number,
+    preferredX: number,
+    searchRadius: number,
+    bias: -1 | 0 | 1,
+    yStep: number,
+    maxYNudge: number,
+    validate?: (candidate: Point) => boolean,
+  ): Point | null {
+    const atPreferredY = this.findFreeIntervalValidated(
+      preferredY,
+      height,
+      width,
+      gap,
+      preferredX,
+      searchRadius,
+      bias,
+      validate,
+    );
+    if (atPreferredY !== null) return { x: atPreferredY, y: preferredY };
+
+    for (let yOffset = yStep; yOffset <= maxYNudge; yOffset += yStep) {
+      for (const candidateY of [preferredY + yOffset, preferredY - yOffset]) {
+        const x = this.findFreeIntervalValidated(
+          candidateY,
+          height,
+          width,
+          gap,
+          preferredX,
+          searchRadius,
+          bias,
+          validate,
+        );
+        if (x !== null) return { x, y: candidateY };
+      }
+    }
+    return null;
+  }
+
+  /** findFreeInterval, but each occupancy-free candidate is also run through `validate` (if given) before being accepted — see findFreeSlot's own doc comment for why this is needed. */
+  private findFreeIntervalValidated(
+    y: number,
+    height: number,
+    width: number,
+    gap: number,
+    preferredX: number,
+    searchRadius: number,
+    bias: -1 | 0 | 1,
+    validate?: (candidate: Point) => boolean,
+  ): number | null {
+    if (!validate) {
+      return this.findFreeInterval(
+        y,
+        height,
+        width,
+        gap,
+        preferredX,
+        searchRadius,
+        bias,
+      );
+    }
+    const step = Math.max(8, Math.round(width / 4));
+    for (let offset = 0; offset <= searchRadius; offset += step) {
+      const candidates =
+        offset === 0
+          ? [preferredX]
+          : bias === 0
+            ? [preferredX + offset, preferredX - offset]
+            : [preferredX + bias * offset];
+      for (const candidateX of candidates) {
+        const rect: Rect = { x: candidateX, y, width, height };
+        if (this.intersects(rect, gap)) continue;
+        if (!validate({ x: candidateX, y })) continue;
+        return candidateX;
       }
     }
     return null;

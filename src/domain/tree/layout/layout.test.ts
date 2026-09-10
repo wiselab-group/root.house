@@ -3,7 +3,6 @@ import { buildTreeLayout } from "./layout";
 import { detectOverlaps } from "./collision";
 import { CARD_WIDTH, GENERATION_GAP, SIBLING_GAP, SPOUSE_GAP } from "./subtree";
 import { initialFamilyGraph, focusPersonId as realFocusId } from "./fixture";
-import { normalizeGraph, raiseAncestryOneGeneration } from "./graph";
 import {
   case1SimpleFamily,
   case2DeepChain,
@@ -261,7 +260,7 @@ describe("layout engine — real data (Alexander/Eleonora/Eva + Viktor/Galina/Da
     expect(grigory.x).toBeLessThan(elizavetaKrivusha.x);
   });
 
-  it("Grigory/Elizaveta Krivusha are above Elizaveta Kupchik, at the SAME generation as Vladimir/Marfa (rewrite plan Stage 3: the stranded-only-child retry that used to raise them an extra generation for Natalya Ushkar's sake is Stage-4 scope, not yet reinstated)", () => {
+  it("Grigory/Elizaveta Krivusha are above Elizaveta Kupchik, at the SAME generation as Vladimir/Marfa", () => {
     // Grigory/Elizaveta Krivusha's natural BFS generation (one above
     // Nikolai/Elizaveta Kupchik, same row as Vladimir/Marfa) is where
     // growBranch("up") places them — the OLD engine additionally detected
@@ -270,12 +269,12 @@ describe("layout engine — real data (Alexander/Eleonora/Eva + Viktor/Galina/Da
     // retried the whole layout with Krivusha's ancestry raised one further
     // generation to fix it (findStrandedOnlyChildren +
     // raiseAncestryOneGeneration, both removed in Stage 3 — see placeGraph's
-    // own doc comment). That retry mechanism is explicitly Stage 4 (elastic
-    // Y) scope in the rewrite plan, not reinstated here — Natalya Ushkar's
-    // own stranding is covered by a dedicated, explicitly-marked-as-a-known-
-    // gap test further down in this file. This test only re-asserts what
-    // Stage 3 DOES guarantee: Krivusha sits above Elizaveta Kupchik, at
-    // exactly Vladimir/Marfa's own generation.
+    // own doc comment). Stage 4's repairSideConstraintViolations
+    // (subtree.ts) now rescues Natalya's own row-sharing directly (see her
+    // own dedicated test further down in this file) WITHOUT needing to raise
+    // Krivusha's own row — this test confirms that: Krivusha still sits
+    // exactly where growBranch("up") naturally places them, undisturbed by
+    // the repair happening several generations below.
     const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const elizaveta = personById(result, "elizaveta-kupchik");
     const grigory = personById(result, "grigory-krivusha");
@@ -569,7 +568,7 @@ describe("layout engine — real data (Alexander/Eleonora/Eva + Viktor/Galina/Da
     );
   });
 
-  it("Elena Ushkar and her full sister Elizaveta Kupchik stay on the SAME row, adjacent, as full siblings of Grigory/Elizaveta Krivusha (rewrite plan Stage 3: no stranded-only-child retry yet — see the Natalya Ushkar known-gap test further below)", () => {
+  it("Elena Ushkar and her full sister Elizaveta Kupchik stay on the SAME row, adjacent, as full siblings of Grigory/Elizaveta Krivusha", () => {
     // Pre-Stage-3, findStrandedOnlyChildren + raiseAncestryOneGeneration
     // (both removed — see placeGraph's own doc comment) split Elena and
     // Elizaveta Kupchik onto DIFFERENT rows once Elena's own daughter
@@ -582,7 +581,10 @@ describe("layout engine — real data (Alexander/Eleonora/Eva + Viktor/Galina/Da
     // sibling row) — husband-left/wife-right is a structural placement rule
     // here (Nikolai Ushkar is placed via growPersonBranchDown same as any
     // other spouse), not a coincidental default that could clip a line and
-    // need correcting after the fact.
+    // need correcting after the fact. Stage 4's repairSideConstraintViolations
+    // rescues Natalya's OWN row-sharing directly (she has no children of her
+    // own, so her whole "moving unit" is just herself) without needing to
+    // split Elena/Elizaveta Kupchik apart again — confirmed here.
     const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const elena = personById(result, "elena-ushkar");
     const nikolaiUshkar = personById(result, "nikolai-ushkar");
@@ -986,29 +988,37 @@ describe("layout engine — real data (Alexander/Eleonora/Eva + Viktor/Galina/Da
     expect(lyudmilaRedko.x).toBeGreaterThan(galina.x);
   });
 
-  it("KNOWN GAP (rewrite plan Stage 4, not yet implemented): Natalya Ushkar still lands on her natural BFS row (Viktor/Galina's), sharing it with unrelated family, rather than beside her own parents", () => {
+  it("Natalya Ushkar (rewrite plan Stage 4: elastic Y): the crowded-row gap is resolved — she is nudged OFF Galina's crowded natural-BFS row onto a row of her own", () => {
     // Pre-Stage-3, buildTreeLayout retried the WHOLE layout once
     // (findStrandedOnlyChildren + raiseAncestryOneGeneration, both removed —
     // see placeGraph's own doc comment) specifically to rescue an unpulled
     // only child like Natalya Ushkar from landing on a natural-BFS-distance
     // row that already belongs entirely to an unrelated family, by raising
-    // her whole ancestry one generation. The rewrite plan explicitly assigns
-    // that class of fix to Stage 4 (elastic Y — a bounded LOCAL Y-nudge,
-    // replacing the old discrete whole-generation retry), not Stage 3
-    // (ancestor placement via growBranch("up")). This test exists to make
-    // the gap EXPLICIT and tracked, not to silently regress: Natalya is
-    // still placed correctly by every invariant Stage 3 does own (her own
-    // position doesn't overlap anyone, her connector to Nikolai/Elena Ushkar
-    // is a valid, non-crossing line) — she just isn't YET moved off a row
-    // that happens to be crowded with Viktor/Galina's own large family.
-    // Once Stage 4 lands, this test should be rewritten back to asserting
-    // she's close to her own parents (see git history / this file's
-    // pre-Stage-3 version for the exact shape that assertion took).
+    // her whole ancestry one discrete generation and re-running the ENTIRE
+    // layout. Stage 3 replaced ancestor placement with growBranch("up") but
+    // deliberately left this specific class of bug as a documented KNOWN GAP
+    // (Natalya still shared Galina's row, unrescued) — explicitly assigned to
+    // Stage 4 (elastic Y). Stage 4's repairSideConstraintViolations
+    // (subtree.ts) is a general post-placement repair pass for "two
+    // unrelated clusters sharing a row", not built FOR Natalya specifically —
+    // but her case is exactly an instance of that same shape (her row is
+    // entirely Viktor/Galina's unrelated family), so the general repair
+    // rescues her too, without a special-cased retry. The rescue here is a
+    // BOUNDED LOCAL nudge (MAX_Y_NUDGE, a fraction of one GENERATION_GAP),
+    // not a full re-layout pinning her exactly beside her parents' row like
+    // the old discrete raise-and-retry did — she lands on a DIFFERENT row
+    // from Galina's crowded one (the actual bug: sharing a row with an
+    // unrelated family), still collision-free and with a valid connector.
+    // Note: the nudge does NOT guarantee she ends up numerically CLOSER to
+    // her own parents' row than the old crowded row was — MAX_Y_NUDGE is a
+    // bounded search for a row that resolves the violation, not a "move
+    // toward blood family" heuristic — so this test only asserts the actual
+    // bug (row-sharing) is gone, not a specific direction/distance.
     const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const natalya = personById(result, "natalya-ushkar");
     const galina = personById(result, "galina-kupchik");
-    expect(natalya.y).toBe(galina.y); // still her natural BFS row, not yet rescued
-    expect(detectOverlaps(positionMap(result))).toEqual([]); // but still collision-free
+    expect(natalya.y).not.toBe(galina.y); // rescued off the crowded row
+    expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
   it("no overlaps anywhere in the tree with Natalya Ushkar present", () => {
@@ -1016,23 +1026,6 @@ describe("layout engine — real data (Alexander/Eleonora/Eva + Viktor/Galina/Da
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
-  it("raiseAncestryOneGeneration also raises the STARTING person's own generation, not just their ancestors (unit test on graph.ts directly — this bug wouldn't manifest via buildTreeLayout's positions alone, since placeUnplacedSiblings anchors on the parent's resolved y directly rather than re-reading the child's own stored generation field)", () => {
-    // Real bug in an earlier version: raiseAncestryOneGeneration walked
-    // UP from startPersonId's parentIds and raised every ancestor found,
-    // but never touched startPersonId's own `generation` field. In THIS
-    // dataset that happened to cause no visible symptom (Natalya's y comes
-    // from her parent's resolved position at placement time, not from her
-    // own stored generation, once she's routed through
-    // placeUnplacedSiblings) — but `generation` is still a real,
-    // independently-read field (used for peopleInRow's row grouping
-    // elsewhere), so leaving it stale is a correctness bug on the function
-    // itself, one a different graph shape could easily expose.
-    const graph = normalizeGraph(initialFamilyGraph, realFocusId);
-    const before = graph.personById.get("natalya-ushkar")!.generation;
-    raiseAncestryOneGeneration(graph, "natalya-ushkar");
-    const after = graph.personById.get("natalya-ushkar")!.generation;
-    expect(after).toBe(before - 1);
-  });
 });
 
 describe("CASE 1 — simple nuclear family (A+B -> C, D, E)", () => {
@@ -1394,19 +1387,9 @@ describe("layout engine — Stage 2: real fixture through hybrid engine, invaria
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
-  it("no foreign person interleaved between full siblings on the real family, EXCEPT the KNOWN Stage 4 gap (Natalya Ushkar landing on Galina's own crowded sibling row — see the dedicated known-gap test above)", () => {
-    // Natalya Ushkar's own row-sharing (see the dedicated "KNOWN GAP" test
-    // above, in the same describe block) is the one place this invariant
-    // does not hold yet: she lands between two of Galina Kupchik's OWN
-    // siblings, since Stage 4 (elastic Y) hasn't landed to rescue her off
-    // that unrelated, crowded row. Every OTHER sibling group in this dense
-    // real fixture must still hold the ordinary invariant.
+  it("no foreign person interleaved between full siblings on the real family (rewrite plan Stage 4: repairSideConstraintViolations rescues Natalya Ushkar off Galina's crowded row, the one gap this invariant used to tolerate)", () => {
     const result = buildTreeLayout(initialFamilyGraph, realFocusId);
-    const violation = findInterleavedSiblingViolation(result);
-    expect(
-      violation === null ||
-        violation.includes("nadezhda-kozlovskaya|nikolai-kozlovsky"),
-    ).toBe(true);
+    expect(findInterleavedSiblingViolation(result)).toBeNull();
   });
 
   it("Eva (focus's own child) is centered directly under Alexander+Eleonora's partnership, with no crossed trunk", () => {

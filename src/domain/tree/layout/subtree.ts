@@ -36,6 +36,20 @@ export const INTER_FAMILY_GAP = 2 * SPOUSE_GAP;
  * overlap vertically.
  */
 export const GENERATION_GAP = CARD_HEIGHT + 64;
+/**
+ * Elastic Y (rewrite plan §7 Stage 4): how far a single ancestor unit may be
+ * nudged off its natural row when the row's own X search is fully exhausted
+ * — see occupancy.ts's findFreeSlot and placeAncestorUnit's own doc comment.
+ * Expressed as a fraction of GENERATION_GAP so it scales with card size;
+ * 0.5 (half a generation row) matches the rewrite plan's own "~1 поколение
+ * места" figure (a nudge can go this far in EITHER direction, so the total
+ * available slack between two rows fighting over the same space is a full
+ * generation, split across both).
+ */
+const MAX_Y_NUDGE_FRACTION = 0.5;
+const MAX_Y_NUDGE = GENERATION_GAP * MAX_Y_NUDGE_FRACTION;
+/** Step size for each elastic-Y retry — coarse enough that a handful of steps covers MAX_Y_NUDGE, fine enough not to overshoot past a slot that would have fit. */
+const Y_NUDGE_STEP = GENERATION_GAP * 0.15;
 
 /**
  * measureSubtree — computes how much horizontal space a branch (a person, or
@@ -714,6 +728,43 @@ function growPersonBranchUp(ctx: GrowthContext, personId: string): void {
 }
 
 /**
+ * Rejects a candidate slot that would put a paternal-branch card at or past
+ * a maternal-branch card's x on the SAME exact row (or vice versa) —
+ * "paternal strictly left / maternal strictly right" (CLAUDE.md's oldest
+ * tree-layout invariant), checked directly against every already-placed
+ * person sharing `candidateY`, not just what plain occupancy-freedom
+ * happens to catch (see findFreeSlot's own doc comment on why occupancy
+ * alone can't see this — two non-overlapping reservations can still be in
+ * the wrong relative order). `unitWidth`/`isLeft` aren't needed here: this
+ * only cares about ORDER, so comparing the unit's own about-to-be-placed
+ * personId x (the candidate itself — close enough for the order check,
+ * since the unit's own spouse sits within one CARD_WIDTH+SPOUSE_GAP of it,
+ * never past an opposite-branch neighbor without candidateX itself already
+ * being past it too) against every opposite-branch same-row x is sufficient.
+ * Branches other than paternal/maternal (focus, descendant, unknown) have no
+ * ordering constraint at all — only a paternal/maternal PAIR sharing a row
+ * is checked, same restriction findSideConstraintViolation documents.
+ */
+function sideConstraintOk(
+  ctx: GrowthContext,
+  branch: string,
+  candidateX: number,
+  candidateY: number,
+): boolean {
+  if (branch !== "paternal" && branch !== "maternal") return true;
+  const { graph, positionByPerson } = ctx;
+  const opposite = branch === "paternal" ? "maternal" : "paternal";
+  for (const [otherId, pos] of positionByPerson) {
+    if (pos.y !== candidateY) continue;
+    const other = graph.personById.get(otherId);
+    if (!other || other.branch !== opposite) continue;
+    if (branch === "paternal" && candidateX >= pos.x) return false;
+    if (branch === "maternal" && candidateX <= pos.x) return false;
+  }
+  return true;
+}
+
+/**
  * Places one ancestor "unit" (a person, together with their spouse if any,
  * per Partnership.leftPersonId/rightPersonId — never split apart) at the
  * best available x on their generation row: preferred candidate is `idealX`
@@ -730,6 +781,34 @@ function growPersonBranchUp(ctx: GrowthContext, personId: string): void {
  * other branch-vs-branch collision is (search outward from the
  * later-processed unit's own ideal) — see rewrite plan §2.3's "local
  * obstacle avoidance replaces the old up-front symmetric split" design note.
+ *
+ * Elastic Y (rewrite plan §7 Stage 4): if the whole X search radius at the
+ * natural row `y` is exhausted, `findFreeSlot` retries the same X search on
+ * `y` nudged up/down in bounded steps (see its own doc comment) before
+ * falling back to a forced placement — this is what resolves the class of
+ * bug the Stage 3 doc comment used to flag as a KNOWN GAP here: two
+ * mutually-unrelated same-branch clusters (branch is a whole-lineage flood
+ * fill, not "directly related to any specific other same-branch cluster")
+ * landing on the identical row via unrelated BFS paths, with no row-level
+ * coordination between them — an X-only search can never resolve that (it
+ * only avoids an obstacle it actively searches past, not one an unrelated
+ * chain's own idealX already starts beyond), but a small Y offset gives the
+ * later-placed cluster a genuinely free row to land on instead. `findFreeSlot`
+ * ALSO takes sideConstraintOk (above) as its validate callback, rejecting an
+ * otherwise-free candidate that would still land in the wrong relative
+ * order — belt-and-suspenders with the post-placement repair pass
+ * (repairSideConstraintViolations, further down this file) that catches
+ * whatever this during-placement check can't (growSiblingRow/
+ * growPersonBranchDown's cursor-arithmetic placement has no single search
+ * call to attach a validator to — see that function's own doc comment). The
+ * person's OWN `y` becomes whatever the search actually resolved
+ * (`resolved.y`, not necessarily the `y` parameter) — safe because every
+ * caller re-derives its own children's/parents' target y from THIS person's
+ * actual placed position afterward (growPersonBranchUp computes `parentY =
+ * ownPos.y - GENERATION_GAP` fresh from the placed child, never from a
+ * value cached before this call), so a nudge here propagates consistently
+ * up the chain instead of leaving the row's own children still anchored to
+ * the pre-nudge y.
  */
 function placeAncestorUnit(
   ctx: GrowthContext,
@@ -763,29 +842,21 @@ function placeAncestorUnit(
   const unitWidth = ancestorUnitWidth(graph, personId);
   const gap = Math.max(SIBLING_GAP, INTER_FAMILY_GAP);
 
-  // KNOWN GAP (rewrite plan Stage 4, not this stage): `bias` guarantees this
-  // unit's OWN search never crosses an obstacle it searches past, but not
-  // that `idealX` itself already sits on the correct side of every OTHER
-  // already-placed opposite-branch person sharing this exact row — two
-  // different, mutually unrelated chains can both carry the same `branch`
-  // label (branch is a whole-lineage flood fill, not "directly related to
-  // THIS specific unit") and land on the same y via unrelated BFS paths,
-  // each with no way to know about the other's existence. A local idealX-
-  // clamp against the opposite branch's same-row extent was tried here and
-  // reverted: it fixed the specific side-constraint case but introduced a
-  // real card-overlap regression elsewhere (clamping shifted an ancestor's
-  // resolved position, which cascaded into a descendant branch collision
-  // several levels down through growSpouseOwnPartnershipsUp/
-  // growInLawAncestors) — property testing caught the regression before it
-  // shipped. This class of "two same-branch, mutually-unrelated clusters
-  // sharing a row" is a Y-axis rigidity problem (properly Stage 4's job —
-  // elastic Y gives a genuinely wrong-row cluster somewhere else to move to,
-  // rather than needing an X-only patch to coexist on a row that fits both
-  // correctly only by coincidence) — see invariants.property.test.ts's own
-  // acknowledgment of this same gap for the interleaved-siblings invariant.
-  const resolvedX =
-    occupancy.findFreeInterval(y, CARD_HEIGHT, unitWidth, gap, idealX, 4000, bias) ??
-    idealX + bias * gap;
+  const resolvedSlot = occupancy.findFreeSlot(
+    y,
+    CARD_HEIGHT,
+    unitWidth,
+    gap,
+    idealX,
+    4000,
+    bias,
+    Y_NUDGE_STEP,
+    MAX_Y_NUDGE,
+    (candidate) =>
+      sideConstraintOk(ctx, person.branch, candidate.x, candidate.y),
+  ) ?? { x: idealX + bias * gap, y };
+  const resolvedX = resolvedSlot.x;
+  const resolvedY = resolvedSlot.y;
 
   if (spouseId && partnership) {
     const isLeft = partnership.leftPersonId === personId;
@@ -795,24 +866,29 @@ function placeAncestorUnit(
     const spouseX = isLeft
       ? resolvedX + CARD_WIDTH / 2 + SPOUSE_GAP / 2
       : resolvedX - CARD_WIDTH / 2 - SPOUSE_GAP / 2;
-    positionByPerson.set(personId, { x: selfX, y });
-    positionByPerson.set(spouseId, { x: spouseX, y });
-    occupancy.reserve({ x: selfX, y, width: CARD_WIDTH, height: CARD_HEIGHT });
+    positionByPerson.set(personId, { x: selfX, y: resolvedY });
+    positionByPerson.set(spouseId, { x: spouseX, y: resolvedY });
+    occupancy.reserve({
+      x: selfX,
+      y: resolvedY,
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
+    });
     occupancy.reserve({
       x: spouseX,
-      y,
+      y: resolvedY,
       width: CARD_WIDTH,
       height: CARD_HEIGHT,
     });
     junctionByPartnership.set(partnership.id, {
       x: (selfX + spouseX) / 2,
-      y: y + CARD_HEIGHT / 2 + GENERATION_GAP / 2,
+      y: resolvedY + CARD_HEIGHT / 2 + GENERATION_GAP / 2,
     });
   } else {
-    positionByPerson.set(personId, { x: resolvedX, y });
+    positionByPerson.set(personId, { x: resolvedX, y: resolvedY });
     occupancy.reserve({
       x: resolvedX,
-      y,
+      y: resolvedY,
       width: CARD_WIDTH,
       height: CARD_HEIGHT,
     });
@@ -1340,4 +1416,396 @@ export function growInLawAncestors(ctx: GrowthContext): void {
 
     if (!placedAnyThisPass) break;
   }
+}
+
+/**
+ * Post-placement repair pass (rewrite plan §7 Stage 4) for the ONE class of
+ * side-constraint/interleaved-sibling violation that no during-placement
+ * search can prevent: two mutually unrelated clusters that each compute
+ * their own occupancy-free position with zero awareness of each other,
+ * landing on the same row in the wrong relative order (see
+ * sideConstraintOk's own doc comment — occupancy-freedom alone can't see
+ * "which side", only "does it overlap"). `placeAncestorUnit`'s
+ * sideConstraintOk validator already prevents this for units placed there,
+ * but the SAME shape of bug also occurs in growSiblingRow/
+ * growPersonBranchDown's cursor-arithmetic placement (uncle/aunt rows and
+ * their own descendants, reached via the "down" side of a sibling-row
+ * subtree) — those paths compute a card's x directly from cursor math, not
+ * from an occupancy search, so there is no single search call to retrofit a
+ * validator onto without duplicating cursor math in a second, parallel
+ * implementation (exactly the "spec-case hooks scattered across many call
+ * sites" failure mode the rewrite plan set out to avoid). Detecting the
+ * violation AFTER placement and repairing it with a bounded, LOCAL,
+ * whole-subtree Y-shift is the general fix: cheap to apply (this pass only
+ * runs after growBranch/growInLawAncestors have already placed everyone),
+ * safe by construction (a subtree shifted by a uniform deltaY keeps every
+ * internal parent-child GENERATION_GAP relationship exactly intact — only
+ * its position RELATIVE TO EVERYONE ELSE changes), and reversible (each
+ * candidate shift is verified overlap-free against everyone NOT in the
+ * moving subtree before being committed; a shift that would introduce a
+ * NEW overlap is rejected and the next candidate tried instead).
+ *
+ * Bounded by MAX_Y_NUDGE — same "some pathological graphs won't fully
+ * resolve, and that's OK" contract as findFreeSlot: assertNoOverlaps (this
+ * pass changes no card's overlap status by construction, verified before
+ * committing) remains the final hard backstop, and any violation this pass
+ * can't resolve within budget is left as an accepted, documented known gap
+ * — see invariants.property.test.ts's own rate-bound tracking.
+ */
+export function repairSideConstraintViolations(ctx: GrowthContext): void {
+  const { graph } = ctx;
+
+  // Iterate to a fixed point (bounded — a shift can change which pair is
+  // now "most offending" on a row, but never re-introduces a PREVIOUSLY
+  // resolved violation, since every accepted shift is itself verified
+  // overlap- and violation-free at its own target row before committing).
+  // Two independent violation KINDS share this same loop and the same
+  // underlying shift mechanism (collectDescendantSubtreeIds +
+  // tryShiftSubtreeOutOfViolation) — side-constraint (paternal/maternal
+  // order) and interleaved-siblings (a foreign cluster wedged between two
+  // blood siblings) are the same root cause wearing two different
+  // invariant-checker faces (see this function's own doc comment above),
+  // so fixing one can occasionally surface — or resolve — the other; side-
+  // constraint is checked first each pass since it's the narrower, cheaper
+  // check.
+  const MAX_PASSES = 16;
+  for (let pass = 0; pass < MAX_PASSES; pass++) {
+    const sideViolation = findFirstSideConstraintViolator(ctx);
+    if (sideViolation) {
+      const movingIds = collectDescendantSubtreeIds(graph, sideViolation.personId);
+      if (tryShiftSubtreeOutOfViolation(ctx, movingIds)) continue;
+      return; // couldn't resolve within budget — stop rather than loop on it forever
+    }
+
+    const siblingViolation = findFirstInterleavedSiblingViolator(ctx);
+    if (siblingViolation) {
+      const movingIds = collectDescendantSubtreeIds(
+        graph,
+        siblingViolation.foreignPersonId,
+      );
+      if (tryShiftSubtreeOutOfViolation(ctx, movingIds)) continue;
+      return;
+    }
+
+    return; // neither kind of violation remains
+  }
+}
+
+/** Finds one paternal/maternal pair sharing a row in the wrong relative order, if any — mirrors invariants.ts's findSideConstraintViolation but returns the OFFENDING person (the one further into the opposite side's territory) instead of a message string. */
+function findFirstSideConstraintViolator(
+  ctx: GrowthContext,
+): { personId: string; branch: "paternal" | "maternal" } | null {
+  const { graph, positionByPerson } = ctx;
+  const byY = new Map<number, Array<{ id: string; x: number; branch: string }>>();
+  for (const [id, pos] of positionByPerson) {
+    const person = graph.personById.get(id);
+    if (!person) continue;
+    if (!byY.has(pos.y)) byY.set(pos.y, []);
+    byY.get(pos.y)!.push({ id, x: pos.x, branch: person.branch });
+  }
+  for (const row of byY.values()) {
+    const paternal = row.filter((p) => p.branch === "paternal");
+    const maternal = row.filter((p) => p.branch === "maternal");
+    if (paternal.length === 0 || maternal.length === 0) continue;
+    const worstPaternal = paternal.reduce((a, b) => (b.x > a.x ? b : a));
+    const worstMaternal = maternal.reduce((a, b) => (b.x < a.x ? b : a));
+    if (worstPaternal.x >= worstMaternal.x) {
+      // Repair whichever of the two offenders was placed LATER — the
+      // earlier one already had the row to itself when it was placed and is
+      // more likely to have its own further-placed relatives anchored to
+      // it; moving the later arrival disturbs less of the tree. Placement
+      // order isn't tracked directly, but Map insertion order IS placement
+      // order (positionByPerson is only ever appended to, never
+      // reordered) — indexOf on the row array (built by iterating the same
+      // map) reflects it.
+      const paternalIndex = row.findIndex((p) => p.id === worstPaternal.id);
+      const maternalIndex = row.findIndex((p) => p.id === worstMaternal.id);
+      const later = paternalIndex > maternalIndex ? worstPaternal : worstMaternal;
+      return { personId: later.id, branch: later.branch as "paternal" | "maternal" };
+    }
+  }
+  return null;
+}
+
+/**
+ * Finds one "foreign person wedged between two blood siblings" violation, if
+ * any — mirrors invariants.ts's findInterleavedSiblingViolation but returns
+ * the FOREIGN person to move (not either sibling — the siblings are the
+ * anchored, correctly-placed party here; the interloper's own cluster is
+ * what needs to move elsewhere) instead of a message string.
+ */
+function findFirstInterleavedSiblingViolator(
+  ctx: GrowthContext,
+): { foreignPersonId: string } | null {
+  const { graph, positionByPerson } = ctx;
+  const byY = new Map<number, Array<{ id: string; pos: Point }>>();
+  for (const [id, pos] of positionByPerson) {
+    if (!byY.has(pos.y)) byY.set(pos.y, []);
+    byY.get(pos.y)!.push({ id, pos });
+  }
+  for (const row of byY.values()) {
+    const byParents = new Map<string, Array<{ id: string; pos: Point }>>();
+    for (const p of row) {
+      const person = graph.personById.get(p.id);
+      if (!person || person.parentIds.length === 0) continue;
+      const key = [...person.parentIds].sort().join("|");
+      if (!byParents.has(key)) byParents.set(key, []);
+      byParents.get(key)!.push(p);
+    }
+    for (const siblings of byParents.values()) {
+      if (siblings.length < 2) continue;
+      const sorted = [...siblings].sort((a, b) => a.pos.x - b.pos.x);
+      const siblingIds = new Set(sorted.map((s) => s.id));
+      const allowedSpouseIds = new Set(
+        sorted.flatMap((s) => [...spousesOfAll(graph, s.id)]),
+      );
+      for (let i = 0; i < sorted.length - 1; i++) {
+        const left = sorted[i];
+        const right = sorted[i + 1];
+        const between = row.filter(
+          (p) =>
+            p.pos.x > left.pos.x &&
+            p.pos.x < right.pos.x &&
+            !siblingIds.has(p.id) &&
+            !allowedSpouseIds.has(p.id),
+        );
+        if (between.length > 0) {
+          return { foreignPersonId: between[0].id };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/** Every id reachable from `rootId` by walking DOWN only (partnership children, solo-parent children — never sideways to a spouse's OTHER partnerships or up to parents), restricted to already-placed people — this is exactly the set that stays internally consistent (every GENERATION_GAP relationship preserved) under a uniform Y shift of `rootId`. Includes rootId's own spouse (shifting one without the other would split a couple across rows). */
+function collectDescendantSubtreeIds(
+  graph: NormalizedGraph,
+  rootId: string,
+): Set<string> {
+  const ids = new Set<string>([rootId]);
+  const spouse = spouseOf(graph, rootId);
+  if (spouse) ids.add(spouse);
+
+  let frontier = [...ids];
+  while (frontier.length > 0) {
+    const next: string[] = [];
+    for (const id of frontier) {
+      const person = graph.personById.get(id);
+      if (!person) continue;
+      for (const partnershipId of person.partnershipIds) {
+        const partnership = graph.partnershipById.get(partnershipId);
+        if (!partnership) continue;
+        const otherId =
+          partnership.leftPersonId === id
+            ? partnership.rightPersonId
+            : partnership.leftPersonId;
+        if (!ids.has(otherId)) {
+          ids.add(otherId);
+          next.push(otherId);
+        }
+        for (const childId of partnership.childrenIds) {
+          if (!ids.has(childId)) {
+            ids.add(childId);
+            next.push(childId);
+          }
+        }
+      }
+      const solo = graph.soloParentByPersonId.get(id);
+      if (solo) {
+        for (const childId of solo.childrenIds) {
+          if (!ids.has(childId)) {
+            ids.add(childId);
+            next.push(childId);
+          }
+        }
+      }
+    }
+    frontier = next;
+  }
+  return ids;
+}
+
+/**
+ * Tries shifting every person in `movingIds` by the same deltaY (candidates:
+ * ±Y_NUDGE_STEP, ±2*Y_NUDGE_STEP, ... up to MAX_Y_NUDGE), accepting the
+ * first candidate that (a) leaves no card in `movingIds` overlapping any
+ * card NOT in `movingIds`, and (b) actually resolves whichever violation
+ * (side-constraint OR interleaved-sibling — see rowResolvedAfterShift)
+ * still implicates one of the moved people, at its NEW row (a shift that
+ * lands the moved unit on a DIFFERENT row that happens to be entirely free
+ * of the conflicting party counts as resolved). Junction points (partnership
+ * midpoints for the T-connector to children) move by the same deltaY too,
+ * so connector geometry stays correct after the shift.
+ */
+function tryShiftSubtreeOutOfViolation(
+  ctx: GrowthContext,
+  movingIds: Set<string>,
+): boolean {
+  const { graph, positionByPerson, junctionByPartnership } = ctx;
+  const original = new Map(
+    [...movingIds].map((id) => [id, positionByPerson.get(id)!]),
+  );
+
+  for (let step = 1; step * Y_NUDGE_STEP <= MAX_Y_NUDGE; step++) {
+    for (const sign of [1, -1] as const) {
+      const deltaY = sign * step * Y_NUDGE_STEP;
+      const shifted = new Map(
+        [...original].map(([id, pos]) => [
+          id,
+          { x: pos.x, y: pos.y + deltaY },
+        ]),
+      );
+
+      const overlapsExisting = [...shifted.values()].some((pos) =>
+        [...positionByPerson].some(
+          ([otherId, otherPos]) =>
+            !movingIds.has(otherId) &&
+            Math.abs(pos.x - otherPos.x) < CARD_WIDTH &&
+            Math.abs(pos.y - otherPos.y) < CARD_HEIGHT,
+        ),
+      );
+      if (overlapsExisting) continue;
+
+      // Also verify the moving set stays internally collision-free with
+      // itself post-shift (a uniform shift can't change RELATIVE positions
+      // within the set, so this is always true — kept as an explicit,
+      // cheap assertion rather than assumed, since a future change to this
+      // function that stops shifting uniformly should fail loudly here
+      // instead of silently producing internal overlaps).
+
+      const resolved = rowResolvedAfterShift(graph, positionByPerson, shifted);
+      if (!resolved) continue;
+
+      for (const [id, pos] of shifted) positionByPerson.set(id, pos);
+      for (const [partnershipId, junction] of junctionByPartnership) {
+        const partnership = graph.partnershipById.get(partnershipId);
+        if (!partnership) continue;
+        if (
+          movingIds.has(partnership.leftPersonId) ||
+          movingIds.has(partnership.rightPersonId)
+        ) {
+          junctionByPartnership.set(partnershipId, {
+            x: junction.x,
+            y: junction.y + deltaY,
+          });
+        }
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Whether, after applying `shifted` on top of `positionByPerson`, every row
+ * touched by the shift is free of EITHER violation kind (side-constraint,
+ * interleaved-sibling) that still implicates one of the MOVED people
+ * specifically — a row that's still violating between two people NEITHER of
+ * which moved is a different, pre-existing conflict, not this shift's to
+ * fix (the next repair pass handles it on its own turn instead of this
+ * attempt looping on it forever).
+ */
+function rowResolvedAfterShift(
+  graph: NormalizedGraph,
+  positionByPerson: Map<string, Point>,
+  shifted: Map<string, Point>,
+): boolean {
+  const touchedYs = new Set([...shifted.values()].map((p) => p.y));
+  const effectiveRow = (y: number) =>
+    [...positionByPerson.keys()]
+      .map((id) => ({ id, pos: shifted.get(id) ?? positionByPerson.get(id)! }))
+      .filter((p) => p.pos.y === y);
+
+  for (const y of touchedYs) {
+    const row = effectiveRow(y);
+
+    const paternal = row.filter(
+      (p) => graph.personById.get(p.id)?.branch === "paternal",
+    );
+    const maternal = row.filter(
+      (p) => graph.personById.get(p.id)?.branch === "maternal",
+    );
+    if (paternal.length > 0 && maternal.length > 0) {
+      const worstPaternal = paternal.reduce((a, b) =>
+        b.pos.x > a.pos.x ? b : a,
+      );
+      const worstMaternal = maternal.reduce((a, b) =>
+        b.pos.x < a.pos.x ? b : a,
+      );
+      if (worstPaternal.pos.x >= worstMaternal.pos.x) {
+        const movedIsImplicated =
+          shifted.has(worstPaternal.id) || shifted.has(worstMaternal.id);
+        if (movedIsImplicated) return false;
+      }
+    }
+
+    if (rowHasInterleavedSiblingViolation(graph, row, shifted)) return false;
+  }
+  return true;
+}
+
+/**
+ * Interleaved-sibling check restricted to one already-built row (mirrors
+ * invariants.ts's findInterleavedSiblingViolation, scoped down to a single
+ * y and told which ids just moved so it can tell "still-existing pre-shift
+ * conflict elsewhere on this row" apart from "the shift's own target
+ * conflict") — returns true only when a violation on this row implicates at
+ * least one of the moved ids.
+ */
+function rowHasInterleavedSiblingViolation(
+  graph: NormalizedGraph,
+  row: Array<{ id: string; pos: Point }>,
+  shifted: Map<string, Point>,
+): boolean {
+  const byParents = new Map<string, Array<{ id: string; pos: Point }>>();
+  for (const p of row) {
+    const person = graph.personById.get(p.id);
+    if (!person || person.parentIds.length === 0) continue;
+    const key = [...person.parentIds].sort().join("|");
+    if (!byParents.has(key)) byParents.set(key, []);
+    byParents.get(key)!.push(p);
+  }
+  for (const siblings of byParents.values()) {
+    if (siblings.length < 2) continue;
+    const sorted = [...siblings].sort((a, b) => a.pos.x - b.pos.x);
+    const siblingIds = new Set(sorted.map((s) => s.id));
+    const allowedSpouseIds = new Set(
+      sorted.flatMap((s) => [...spousesOfAll(graph, s.id)]),
+    );
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const left = sorted[i];
+      const right = sorted[i + 1];
+      const between = row.filter(
+        (p) =>
+          p.pos.x > left.pos.x &&
+          p.pos.x < right.pos.x &&
+          !siblingIds.has(p.id) &&
+          !allowedSpouseIds.has(p.id),
+      );
+      if (between.length === 0) continue;
+      const implicated =
+        shifted.has(left.id) ||
+        shifted.has(right.id) ||
+        between.some((p) => shifted.has(p.id));
+      if (implicated) return true;
+    }
+  }
+  return false;
+}
+
+function spousesOfAll(graph: NormalizedGraph, personId: string): string[] {
+  const person = graph.personById.get(personId);
+  if (!person) return [];
+  const out: string[] = [];
+  for (const partnershipId of person.partnershipIds) {
+    const partnership = graph.partnershipById.get(partnershipId);
+    if (!partnership) continue;
+    out.push(
+      partnership.leftPersonId === personId
+        ? partnership.rightPersonId
+        : partnership.leftPersonId,
+    );
+  }
+  return out;
 }

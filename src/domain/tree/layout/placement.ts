@@ -3,6 +3,7 @@ import {
   createGrowthContext,
   growBranch,
   growInLawAncestors,
+  repairSideConstraintViolations,
 } from "./subtree";
 
 export interface PlacementResult {
@@ -60,9 +61,11 @@ export interface PlacementResult {
  *     for an unpulled only child once her natural BFS row was already
  *     entirely occupied by an unrelated family — that whole class of
  *     problem is a Y-axis rigidity question, out of scope for Stage 3
- *     (ancestor placement) and properly belongs to Stage 4 (elastic Y —
- *     rewrite plan §7), which replaces it with a bounded local Y-nudge
- *     instead of a discrete whole-generation jump + full-graph retry.
+ *     (ancestor placement). Stage 4 (elastic Y — rewrite plan §7) replaces
+ *     it with repairSideConstraintViolations (subtree.ts), a bounded local
+ *     Y-nudge applied as a post-placement repair pass (see this function's
+ *     own final step below) instead of a discrete whole-generation jump +
+ *     full-graph retry.
  */
 export function placeGraph(graph: NormalizedGraph): PlacementResult {
   const ctx = createGrowthContext(graph);
@@ -83,6 +86,15 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
   // Artyukh (another of Nikolai/Nadezhda's children) surfaced it first as
   // "person has no position".
   growInLawAncestors(ctx);
+
+  // Rewrite plan §7 Stage 4: a bounded, local, post-placement repair for the
+  // "two mutually unrelated same-branch clusters land on the same row in
+  // the wrong relative order" class of bug — see
+  // repairSideConstraintViolations' own doc comment for why this can't be
+  // prevented during placement itself (growSiblingRow/growPersonBranchDown
+  // compute positions via cursor arithmetic, not an occupancy search, so
+  // there's no single search call to validate against).
+  repairSideConstraintViolations(ctx);
 
   return { positionByPerson, junctionByPartnership };
 }
