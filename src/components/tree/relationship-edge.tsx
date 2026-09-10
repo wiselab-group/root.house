@@ -1,12 +1,12 @@
 "use client";
 
-import { BaseEdge, useInternalNode, type EdgeProps } from "@xyflow/react";
+import { BaseEdge, type EdgeProps } from "@xyflow/react";
 import {
   CONNECTOR_CENTER_Y,
-  type PersonFlowNode,
   type RelationshipFlowEdge,
 } from "./adapters/xyflow-adapter";
 import { roundedOrthogonalPath } from "./orthogonal-path";
+import { useTreeNodeGeometry } from "./tree-layout-positions-context";
 
 /**
  * Relationship Trace's line color — deliberately --chart-2, not --primary:
@@ -93,46 +93,31 @@ function ParentChildEdgeLine({
   isOnTracePath: boolean;
   isMiddleSibling: boolean;
 }) {
-  const sourceNode = useInternalNode<PersonFlowNode>(source);
-  const targetNode = useInternalNode<PersonFlowNode>(target);
+  const sourceNode = useTreeNodeGeometry(source);
+  const targetNode = useTreeNodeGeometry(target);
   if (!sourceNode || !targetNode) return null;
 
-  // Read the parent's LIVE bottom edge (positionAbsolute.y + measured.height)
-  // rather than XYFlow's own EdgeProps sourceY (which comes from where the
-  // invisible <Handle id="bottom"> sits — see person-node.tsx). That handle
-  // is positioned by CSS at the bottom of the node's DESIGN-TIME box
-  // (xyflow-adapter.ts's NODE_DIMENSIONS, currently compact: 200px), not the
-  // card's actual rendered height — compact's real content (an 88px round
-  // avatar + two lines of text) is only ~120px tall, leaving ~80px of empty
-  // space between the visible avatar and where the handle (and therefore
-  // sourceY) actually sits. The resulting line was drawn only across that
-  // last COMPACT_CHILD_TAIL_LENGTH stretch near the child, floating with a
-  // large visible gap above it instead of starting at the parent's card —
-  // real bug the user caught with screenshots, persisting even on a fresh
-  // page load with no cardStyle toggle involved at all (so the compact/
-  // portrait toggle race fixed elsewhere in this file was a red herring for
-  // THIS specific bug). measured.height matches the DOM's actual rendered
-  // box regardless of NODE_DIMENSIONS drifting out of sync with a card
-  // redesign (as it already had — see NODE_DIMENSIONS' own doc comment,
-  // written for a since-shrunk avatar), so this is self-correcting instead
-  // of needing a hand-tuned pixel constant kept in sync forever.
-  const sourceBottomY =
-    sourceNode.internals.positionAbsolute.y +
-    (sourceNode.measured?.height ?? sourceNode.height ?? 0);
-  const sourceCenterX =
-    sourceNode.internals.positionAbsolute.x +
-    (sourceNode.measured?.width ?? sourceNode.width ?? 0) / 2;
-  const targetTopY = targetNode.internals.positionAbsolute.y;
-  const targetCenterX =
-    targetNode.internals.positionAbsolute.x +
-    (targetNode.measured?.width ?? targetNode.width ?? 0) / 2;
+  // Read the parent's bottom edge from the committed layout position
+  // (TreeLayoutPositionsContext — see its own doc comment for why this
+  // replaced useInternalNode's live DOM-measured internals.positionAbsolute
+  // + measured.height). Both x/y AND width/height come from that same
+  // non-DOM-dependent source now — width/height are the static per-cardStyle
+  // dimensions (xyflow-adapter.ts's NODE_DIMENSIONS), same numbers
+  // useInternalNode's own `measured` fallback (`measured?.height ?? height`)
+  // resolved to before a real DOM measurement existed, and — unlike
+  // `measured` — never goes stale across a node unmounting/remounting under
+  // onlyRenderVisibleElements (rewrite plan §7 Stage 6).
+  const sourceBottomY = sourceNode.y + sourceNode.height;
+  const sourceCenterX = sourceNode.x + sourceNode.width / 2;
+  const targetTopY = targetNode.y;
+  const targetCenterX = targetNode.x + targetNode.width / 2;
 
   // Portrait's square photo already fills the card from its very top edge,
   // so the plain midpoint bend already reads fine there and a fixed tail
   // would look arbitrary against a square corner — only compact's round
   // avatar (which sits well clear of the card's top edge, see
   // CONNECTOR_CENTER_Y) needs the fixed-length tail below.
-  const isCompactChild = targetNode.data.cardStyle === "compact";
+  const isCompactChild = targetNode.cardStyle === "compact";
   const midY = isCompactChild
     ? Math.max(sourceBottomY, targetTopY - COMPACT_CHILD_TAIL_LENGTH)
     : (sourceBottomY + targetTopY) / 2;
@@ -187,30 +172,28 @@ function PartnershipEdgeLine({
   isOnTracePath: boolean;
   tracedPartnerId?: string;
 }) {
-  const sourceNode = useInternalNode<PersonFlowNode>(source);
-  const targetNode = useInternalNode<PersonFlowNode>(target);
+  const sourceNode = useTreeNodeGeometry(source);
+  const targetNode = useTreeNodeGeometry(target);
   if (!sourceNode || !targetNode) return null;
 
-  const sourceWidth = sourceNode.measured?.width ?? sourceNode.width ?? 0;
-  const targetWidth = targetNode.measured?.width ?? targetNode.width ?? 0;
-  const sourceLeft = sourceNode.internals.positionAbsolute.x;
-  const targetLeft = targetNode.internals.positionAbsolute.x;
+  const sourceLeft = sourceNode.x;
+  const targetLeft = targetNode.x;
   const sourceIsLeft = sourceLeft <= targetLeft;
 
   // The avatar/photo's own vertical center, not the card's overall center —
   // compact's round avatar (and portrait's square photo) doesn't span the
   // card's full height, so centering on the whole card would draw the line
   // through the name/years text below the avatar instead of through it.
-  const sourceCenterY = CONNECTOR_CENTER_Y[sourceNode.data.cardStyle];
-  const targetCenterY = CONNECTOR_CENTER_Y[targetNode.data.cardStyle];
-  const y = sourceNode.internals.positionAbsolute.y + sourceCenterY;
+  const sourceCenterY = CONNECTOR_CENTER_Y[sourceNode.cardStyle];
+  const targetCenterY = CONNECTOR_CENTER_Y[targetNode.cardStyle];
+  const y = sourceNode.y + sourceCenterY;
   // Each card's own horizontal center — not its edge — so the line visibly
   // runs "through" each card to the avatar's center (compact's round avatar
   // sits centered inside the card), instead of stopping short at the card's
   // outer border with a gap that reads as disconnected from either avatar.
-  const x1 = sourceLeft + sourceWidth / 2;
-  const x2 = targetLeft + targetWidth / 2;
-  const yTarget = targetNode.internals.positionAbsolute.y + targetCenterY;
+  const x1 = sourceLeft + sourceNode.width / 2;
+  const x2 = targetLeft + targetNode.width / 2;
+  const yTarget = targetNode.y + targetCenterY;
 
   const dashStyle = {
     strokeDasharray: isPastPartnership ? "2 4" : "5 3",

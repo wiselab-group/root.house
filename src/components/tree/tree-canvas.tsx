@@ -32,6 +32,7 @@ import {
   pruneCollapsedDescendants,
   personIdsWithChildren,
 } from "./prune-collapsed";
+import { TreeLayoutPositionsProvider } from "./tree-layout-positions-context";
 
 const nodeTypes = { person: PersonNode };
 const edgeTypes = {
@@ -338,86 +339,85 @@ export function TreeCanvas({
     // sidesteps the whole question by taking this element out of flow
     // entirely and sizing it straight off the viewport, independent of
     // whatever flex/block context its parent happens to be.
-    <div
-      className={cn(
-        "w-full overflow-hidden",
-        readOnly ? "fixed inset-0" : "h-[calc(100svh-4.5rem)]",
-      )}
-    >
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        nodesDraggable={!readOnly && nodesDraggable}
-        nodesConnectable={!readOnly && nodesDraggable}
-        proOptions={{ hideAttribution: true }}
-        // No fitView here — InitialFocusViewport below centers on the focus
-        // person at a fixed 85% zoom instead (per the family's "opens with
-        // focus on" setting), so opening the tree always lands on the
-        // requested person regardless of how large or lopsided the rest of
-        // the connected family graph is. minZoom stays low enough that a
-        // large family (page.tsx passes ancestorGenerations/
-        // descendantGenerations: Infinity) can still be zoomed/panned out
-        // to see everyone from there.
-        minZoom={0.02}
-        maxZoom={1.5}
-        // onlyRenderVisibleElements used to be enabled here (mounts only
-        // nodes/edges intersecting the current viewport, capping DOM cost on
-        // a large family regardless of zoom/pan — added after a pinch-zoom-
-        // out on a 30-100 person family, each a full PersonNode with a
-        // photo, crashed a phone Safari tab). Turned back OFF: XYFlow decides
-        // per-edge visibility from source/target node positions alone, with
-        // no notion of UnionChildEdge/PartnershipEdgeLine's own custom
-        // T-shaped geometry (both read LIVE positions via useInternalNode,
-        // not sourceX/targetX) — a card leaving and re-entering the viewport
-        // got remounted a beat before its measured size settled, so its
-        // union trunk/partnership line would render one frame with visibly
-        // offset connectors (reported: lines "съехали" after a drag that
-        // took a card off-screen and back). Losing this optimization
-        // reopens the phone-crash risk on very large families — if that
-        // resurfaces, the fix belongs in the edge components themselves
-        // (stop trusting a stale `measured` fallback mid-remount), not in
-        // silently re-enabling this flag.
-      >
-        <InitialFocusViewport focusNode={focusNode} />
-        <CardStyleInternalsSync cardStyle={cardStyle} nodeIds={nodeIds} />
-        <Background gap={24} />
-        {readOnly ? (
-          // No drag-lock toggle to show (dragging is force-disabled above);
-          // card style (compact/portrait) is still a harmless viewing
-          // preference, offered without the drag control.
-          <TreeCardStyleControl
-            cardStyle={cardStyle}
-            setCardStyle={setCardStyle}
-            showZoom={!isCoarsePointer}
-          />
-        ) : (
-          <TreeCardStyleControl
-            cardStyle={cardStyle}
-            setCardStyle={setCardStyle}
-            draggable={nodesDraggable}
-            setDraggable={setNodesDraggable}
-            showZoom={!isCoarsePointer}
-          />
+    <TreeLayoutPositionsProvider nodes={nodes}>
+      <div
+        className={cn(
+          "w-full overflow-hidden",
+          readOnly ? "fixed inset-0" : "h-[calc(100svh-4.5rem)]",
         )}
-        {/* Minimap needs room to read as a map, not a smudge — skip it below
+      >
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          nodesDraggable={!readOnly && nodesDraggable}
+          nodesConnectable={!readOnly && nodesDraggable}
+          proOptions={{ hideAttribution: true }}
+          // No fitView here — InitialFocusViewport below centers on the focus
+          // person at a fixed 85% zoom instead (per the family's "opens with
+          // focus on" setting), so opening the tree always lands on the
+          // requested person regardless of how large or lopsided the rest of
+          // the connected family graph is. minZoom stays low enough that a
+          // large family (page.tsx passes ancestorGenerations/
+          // descendantGenerations: Infinity) can still be zoomed/panned out
+          // to see everyone from there.
+          minZoom={0.02}
+          maxZoom={1.5}
+          // Re-enabled (rewrite plan §7 Stage 6) — mounts only nodes/edges
+          // intersecting the current viewport, capping DOM cost on a large
+          // family regardless of zoom/pan (previously disabled after a
+          // pinch-zoom-out on a 30-100 person family, each a full PersonNode
+          // with a photo, crashed a phone Safari tab). Was disabled because
+          // RelationshipEdge/UnionChildEdge read LIVE DOM-measured positions
+          // via useInternalNode — a card leaving and re-entering the viewport
+          // got remounted a beat before its `measured` size settled, drawing a
+          // visibly offset/detached connector for however many frames that
+          // gap lasted. Both edge components now read from
+          // TreeLayoutPositionsContext instead (see its own doc comment) —
+          // committed layout positions/dimensions, never a DOM measurement, so
+          // there's no stale-`measured` window to hit on remount anymore.
+          onlyRenderVisibleElements
+        >
+          <InitialFocusViewport focusNode={focusNode} />
+          <CardStyleInternalsSync cardStyle={cardStyle} nodeIds={nodeIds} />
+          <Background gap={24} />
+          {readOnly ? (
+            // No drag-lock toggle to show (dragging is force-disabled above);
+            // card style (compact/portrait) is still a harmless viewing
+            // preference, offered without the drag control.
+            <TreeCardStyleControl
+              cardStyle={cardStyle}
+              setCardStyle={setCardStyle}
+              showZoom={!isCoarsePointer}
+            />
+          ) : (
+            <TreeCardStyleControl
+              cardStyle={cardStyle}
+              setCardStyle={setCardStyle}
+              draggable={nodesDraggable}
+              setDraggable={setNodesDraggable}
+              showZoom={!isCoarsePointer}
+            />
+          )}
+          {/* Minimap needs room to read as a map, not a smudge — skip it below
             md where the canvas itself is already cramped (plan §6/§13), and
             skip it on any touch/coarse-pointer device regardless of width:
             a landscape phone can exceed the md breakpoint but is still a
             phone, and a tiny floating minimap there is more clutter than a
             map. pointer-fine (mouse/trackpad) is the actual "desktop"
             signal, not viewport width alone. */}
-        {mounted && (
-          <MiniMap
-            pannable
-            zoomable
-            className="hidden bg-card! md:pointer-fine:block"
-          />
-        )}
-      </ReactFlow>
-    </div>
+          {mounted && (
+            <MiniMap
+              pannable
+              zoomable
+              className="hidden bg-card! md:pointer-fine:block"
+            />
+          )}
+        </ReactFlow>
+      </div>
+    </TreeLayoutPositionsProvider>
   );
 }

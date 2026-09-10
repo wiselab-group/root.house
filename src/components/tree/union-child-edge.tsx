@@ -1,13 +1,13 @@
 "use client";
 
-import { BaseEdge, useInternalNode, type EdgeProps } from "@xyflow/react";
+import { BaseEdge, type EdgeProps } from "@xyflow/react";
 import {
   CONNECTOR_CENTER_Y,
-  type PersonFlowNode,
   type UnionChildFlowEdge,
 } from "./adapters/xyflow-adapter";
 import { COMPACT_CHILD_TAIL_LENGTH, TRACE_COLOR } from "./relationship-edge";
 import { roundedOrthogonalPath } from "./orthogonal-path";
+import { useTreeNodeGeometry } from "./tree-layout-positions-context";
 
 /**
  * The trunk line from a couple's partnership line down to one of their
@@ -17,42 +17,38 @@ import { roundedOrthogonalPath } from "./orthogonal-path";
  * Unlike every other tree edge, this one can't use its EdgeProps
  * sourceX/sourceY: there is no real node sitting at the union point, only
  * `data.parentAId`/`parentBId` naming the two actual parent nodes. Reading
- * their *live* positions with useInternalNode (rather than computing the
+ * their positions from TreeLayoutPositionsContext (rather than computing the
  * midpoint once in xyflow-adapter.ts) is what keeps this line's start point
- * glued to the partnership line if either parent card gets dragged —
- * useInternalNode re-renders this component on every position change,
- * dragged or not.
+ * glued to the partnership line if either parent card gets dragged — the
+ * context's own positions map is derived from `nodes`, which XYFlow's
+ * onNodesChange already updates every drag frame (see that context's own
+ * doc comment for why this needs no separate live/DOM-measured source, even
+ * during drag). Same context for `target`'s own position — EdgeProps'
+ * targetX/targetY (this component's own former source) come from XYFlow's
+ * handle-position DOM measurement, exactly the mechanism that goes stale on
+ * unmount/remount under onlyRenderVisibleElements (rewrite plan §7 Stage 6).
  */
 export function UnionChildEdge({
   id,
   target,
-  targetX,
-  targetY,
   data,
 }: EdgeProps<UnionChildFlowEdge>) {
-  const parentA = useInternalNode<PersonFlowNode>(data?.parentAId ?? "");
-  const parentB = useInternalNode<PersonFlowNode>(data?.parentBId ?? "");
-  const targetNode = useInternalNode<PersonFlowNode>(target);
+  const parentA = useTreeNodeGeometry(data?.parentAId ?? "");
+  const parentB = useTreeNodeGeometry(data?.parentBId ?? "");
+  const targetNode = useTreeNodeGeometry(target);
   const isOnTracePath = data?.isOnTracePath === true;
 
-  if (!parentA || !parentB) return null;
+  if (!parentA || !parentB || !targetNode) return null;
 
-  // internals.positionAbsolute + measured is the same "live, resolved"
-  // geometry XYFlow itself uses to draw handles — width/height fall back to
-  // the design-time size (set in xyflow-adapter.ts's NODE_DIMENSIONS) for
-  // the first paint, before XYFlow has measured the actual DOM node.
-  const widthA = parentA.measured?.width ?? parentA.width ?? 0;
-  const widthB = parentB.measured?.width ?? parentB.width ?? 0;
-  const heightA = parentA.measured?.height ?? parentA.height ?? 0;
-  const heightB = parentB.measured?.height ?? parentB.height ?? 0;
-  const xA = parentA.internals.positionAbsolute.x;
-  const xB = parentB.internals.positionAbsolute.x;
+  const targetX = targetNode.x + targetNode.width / 2;
+  const targetY = targetNode.y;
+
   // Midpoint between each card's own horizontal center (not its inner edge)
   // — PartnershipEdgeLine now draws its line center-to-center (through each
   // card to its avatar's center), so the trunk must start on that same
   // midpoint to land exactly on that line, not off to one side of it.
-  const centerXA = xA + widthA / 2;
-  const centerXB = xB + widthB / 2;
+  const centerXA = parentA.x + parentA.width / 2;
+  const centerXB = parentB.x + parentB.width / 2;
   const sourceX = (centerXA + centerXB) / 2;
   // Midpoint of the *two cards' own* avatar centers, not just parentA's —
   // PartnershipEdgeLine draws its line between each card's own avatar center
@@ -62,12 +58,8 @@ export function UnionChildEdge({
   // line is a diagonal, and using only parentA's Y here left the trunk's
   // start point off that diagonal entirely — this matches it at every drag
   // position, not just level ones.
-  const centerYA =
-    parentA.internals.positionAbsolute.y +
-    CONNECTOR_CENTER_Y[parentA.data.cardStyle];
-  const centerYB =
-    parentB.internals.positionAbsolute.y +
-    CONNECTOR_CENTER_Y[parentB.data.cardStyle];
+  const centerYA = parentA.y + CONNECTOR_CENTER_Y[parentA.cardStyle];
+  const centerYB = parentB.y + CONNECTOR_CENTER_Y[parentB.cardStyle];
   const sourceY = (centerYA + centerYB) / 2;
   // The trunk's own vertical run must clear both cards' bottom edges before
   // it's visible as a line — starting it at sourceY (center height) would
@@ -75,10 +67,7 @@ export function UnionChildEdge({
   // partnership line itself still runs at center height (unchanged), so this
   // is a short extra hop straight down from sourceY to the lower of the two
   // bottom edges, then the usual "down, across, down" trunk continues from there.
-  const clearY = Math.max(
-    parentA.internals.positionAbsolute.y + heightA,
-    parentB.internals.positionAbsolute.y + heightB,
-  );
+  const clearY = Math.max(parentA.y + parentA.height, parentB.y + parentB.height);
 
   // If the trace path reaches this child through only one parent, extend
   // the path's start all the way back to that parent's own card center (the
@@ -100,7 +89,7 @@ export function UnionChildEdge({
   // midpoint — matching RelationshipEdge's plain parent_child lines (see
   // there for why: only compact's round avatar needs this fixed tail;
   // portrait's square photo already fills the card from its top edge).
-  const isCompactChild = targetNode?.data.cardStyle === "compact";
+  const isCompactChild = targetNode.cardStyle === "compact";
   const midY = isCompactChild
     ? Math.max(clearY, targetY - COMPACT_CHILD_TAIL_LENGTH)
     : (clearY + targetY) / 2;
