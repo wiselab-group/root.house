@@ -17,6 +17,10 @@ import { cn } from "@/lib/utils";
 import { updateDefaultFocusPersonAction } from "@/actions/family.actions";
 import type { TreeLayoutGraph } from "@/domain/tree/tree-layout.builder";
 import {
+  buildClientTreeLayout,
+  type TreeClientGraphPayload,
+} from "@/domain/tree/tree-adapter";
+import {
   toReactFlow,
   type TreeHighlightState,
 } from "./adapters/xyflow-adapter";
@@ -25,6 +29,7 @@ import { RelationshipEdge } from "./relationship-edge";
 import { UnionChildEdge } from "./union-child-edge";
 import { useTreeCardStyle, type TreeCardStyle } from "./use-tree-card-style";
 import { useCoarsePointer } from "./use-coarse-pointer";
+import { useReducedMotion } from "./use-reduced-motion";
 import { useHasMounted } from "./use-has-mounted";
 import { TreeCardStyleControl } from "./tree-card-style-control";
 import { useCollapsedBranches } from "./use-collapsed-branches";
@@ -41,16 +46,34 @@ const edgeTypes = {
   unionChild: UnionChildEdge,
 };
 
-/** The tree always opens centered on the focus person at a fixed 85% zoom
- * — not fitView's "whatever fits the whole connected family" framing —
- * so opening the tree reliably lands on "here's the person I asked for",
- * regardless of how large or lopsided the rest of the family graph is.
- * Rendered as a child of <ReactFlow> (not a sibling) specifically so
- * useReactFlow resolves against this flow instance's own provider, which
- * <ReactFlow> sets up internally for its children — no separate
- * <ReactFlowProvider> needed. */
-function InitialFocusViewport({ focusNode }: { focusNode: Node | undefined }) {
+/**
+ * The tree always centers on the focus person at a fixed 85% zoom — not
+ * fitView's "whatever fits the whole connected family" framing — so landing
+ * on the focus person is reliable regardless of how large or lopsided the
+ * rest of the family graph is. Rendered as a child of <ReactFlow> (not a
+ * sibling) specifically so useReactFlow resolves against this flow
+ * instance's own provider, which <ReactFlow> sets up internally for its
+ * children — no separate <ReactFlowProvider> needed.
+ *
+ * Handles BOTH the tree's initial load AND every subsequent focus switch
+ * (rewrite plan §7 Stage 7: TreeCanvas's own setFocus, client-side, no page
+ * reload) — the same "re-center on the new focus" behavior either way, just
+ * animated (a smooth pan/zoom, `ANIMATION_DURATION_MS`) once the tree is
+ * already interactive, vs. instant on the very first paint (nothing to
+ * animate FROM yet).
+ */
+const FOCUS_SWITCH_ANIMATION_MS = 500;
+
+function FocusViewport({
+  focusNode,
+  isInitialLoad,
+}: {
+  focusNode: Node | undefined;
+  /** True only for the very first render — an instant jump, not an animated pan, since there's no previous viewport position to animate FROM yet. */
+  isInitialLoad: boolean;
+}) {
   const { setCenter } = useReactFlow();
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     if (!focusNode) return;
@@ -67,13 +90,22 @@ function InitialFocusViewport({ focusNode }: { focusNode: Node | undefined }) {
       focusNode.position.y + height / 2,
       {
         zoom: 0.85,
+        // CLAUDE.md ANIMATION RULES: always a prefers-reduced-motion
+        // fallback — an instant jump (duration omitted) instead of the
+        // animated pan/zoom. isInitialLoad is checked too since animating
+        // the very FIRST paint (from wherever XYFlow's default viewport
+        // happens to be) would read as a jarring unrequested pan on page
+        // load, not a deliberate focus-switch transition.
+        duration:
+          isInitialLoad || reducedMotion ? undefined : FOCUS_SWITCH_ANIMATION_MS,
       },
     );
     // Re-centers whenever the focus person itself changes (URL ?focus=...
-    // navigation) — NOT on every node reposition (card style toggle,
-    // filter/trace highlight), which would fight the user's own pan/zoom
-    // mid-session. focusNode's identity change (a new id) is what signals
-    // "the user asked to jump to someone else", not a mere prop update.
+    // navigation, or TreeCanvas's own client-side setFocus) — NOT on every
+    // node reposition (card style toggle, filter/trace highlight), which
+    // would fight the user's own pan/zoom mid-session. focusNode's identity
+    // change (a new id) is what signals "the user asked to jump to someone
+    // else", not a mere prop update.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusNode?.id, setCenter]);
 
@@ -108,8 +140,7 @@ function InitialFocusViewport({ focusNode }: { focusNode: Node | undefined }) {
  * it now" — reading the live DOM element synchronously inside its own
  * requestAnimationFrame (see @xyflow/react's implementation), instead of
  * waiting on the passive ResizeObserver path. Rendered as a child of
- * <ReactFlow> for the same provider-scoping reason as InitialFocusViewport
- * above.
+ * <ReactFlow> for the same provider-scoping reason as FocusViewport above.
  */
 function CardStyleInternalsSync({
   cardStyle,
@@ -176,6 +207,7 @@ function CardStyleInternalsSync({
  */
 export function TreeCanvas({
   graph,
+  rawGraph,
   familyId,
   familySlug,
   highlight,
@@ -183,10 +215,19 @@ export function TreeCanvas({
   shareToken,
 }: {
   graph: TreeLayoutGraph;
+  /**
+   * Rewrite plan §7 Stage 7 — the client-safe raw graph (getRawTreeGraph),
+   * used ONLY to re-run buildTreeLayout locally when the user switches
+   * focus (see setFocus below), replacing the old full-page-reload
+   * navigation. Undefined in read-only (Share Link) mode, which never
+   * wires focus-switching at all (see readOnly's own doc comment) — no
+   * client bundle cost for the whole layout engine on that surface.
+   */
+  rawGraph?: TreeClientGraphPayload;
   familyId: string;
   /** The family's URL slug — passed through to node data so each card's click popover can link to /families/[familySlug]/people/[slug]. */
   familySlug: string;
-  /** Filter/Focus (tree-filter.ts) + Relationship Trace (tree-trace.ts) state to render — see xyflow-adapter.ts's TreeHighlightState. Omit when neither is active. */
+  /** Filter/Focus (tree-filter.ts) + Relationship Trace (tree-trace.ts) state to render — see xyflow-adapter.ts's TreeHighlightState. Omit when neither is active. Reused as-is across a client-side re-focus (rewrite plan §7 Stage 7): filterMatchedIds/tracePersonIds/traceEdgeIds are person/edge ID sets, not position-dependent, and buildTreeLayout always lays out the SAME full connected family regardless of which person is the root — so a re-focus never changes who's in these sets, only where they're drawn. */
   highlight?: TreeHighlightState;
   /** Anonymous Share Link view (see app/share/[token]/page.tsx) — forces
    *  dragging off, never wires focus-switching (no updateDefaultFocusPersonAction
@@ -228,39 +269,96 @@ export function TreeCanvas({
   // server, appended client-side once mounted) sidesteps it — the minimap
   // briefly not being there for one paint is invisible in practice.
   const mounted = useHasMounted();
+  // FocusViewport reads this to skip animating the tree's OWN initial paint
+  // (nothing to pan/zoom FROM yet, see its own doc comment) — `!mounted` is
+  // true for SSR and the very first client render, flipping permanently
+  // false once hydration completes (useHasMounted's own
+  // useSyncExternalStore, not a ref/effect — see that hook's doc comment
+  // for why: reading a ref during render, or setState synchronously inside
+  // an effect body, both trip React's own lint rules against exactly that).
+  const isInitialLoad = !mounted;
+
+  // Client-side focus switch (rewrite plan §7 Stage 7) — replaces the old
+  // full-page-reload navigation. `null` means "render the server-provided
+  // `graph` prop as-is" (the common case: initial load, or after any
+  // server navigation that changes `graph` itself — filter/trace changes,
+  // a direct ?focus= link click from outside the canvas). Once set,
+  // `clientGraph` takes over rendering until either another client-side
+  // re-focus replaces it again, or a NEW `graph` prop arrives and
+  // supersedes it.
+  const [clientGraph, setClientGraph] = useState<TreeLayoutGraph | null>(
+    null,
+  );
+  // A fresh `graph` prop (server navigation — filter/trace toggled, or the
+  // browser back/forward button landing on a different ?focus=) always wins
+  // over a stale client-computed graph from a PREVIOUS focus person; without
+  // this, clicking "назад" after several client-side re-focuses would keep
+  // showing the last client-computed layout instead of the server's own.
+  // React's own documented "adjusting state when a prop changes" pattern
+  // (react.dev/learn/you-might-not-need-an-effect) — comparing during
+  // render and calling setState conditionally, rather than in a useEffect
+  // (which would cost an extra, visible render cycle showing the STALE
+  // clientGraph before the effect can clear it).
+  const [prevGraph, setPrevGraph] = useState(graph);
+  if (graph !== prevGraph) {
+    setPrevGraph(graph);
+    setClientGraph(null);
+  }
 
   const setFocus = useCallback(
     (personId: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("focus", personId);
-      router.push(`${pathname}?${params.toString()}`);
       // Persists as this user's own "tree opens focused on" default (Family
       // Settings' FamilyFocusSettings, same server action it calls) — a
       // deliberate "сделать фокус-персоной" click means "this is who I want
       // to see when I come back", not just a one-off navigation, so it
-      // should stick past this session too. Fire-and-forget: the URL
-      // navigation above is the action's own immediate, visible effect;
-      // this save trails it and has nothing useful to block on.
+      // should stick past this session too. Fire-and-forget: it has nothing
+      // useful to block the (synchronous, local) re-layout below on.
       void updateDefaultFocusPersonAction(familyId, personId);
+
+      // Keeps the URL shareable/bookmarkable (and gives the browser
+      // back-button "previous focus" navigation) without triggering a
+      // server round-trip: `replace` (not `push`) avoids piling up one
+      // history entry per click on a tree someone is casually browsing
+      // through several relatives in a row, and `scroll: false` keeps
+      // Next.js from resetting window scroll position on a page that has
+      // no scroll of its own anyway (the canvas is its own pan/zoom
+      // surface). This alone would still cost a server round-trip once
+      // Next.js re-renders the Server Component page for the new
+      // ?focus= — rawGraph, if present, sidesteps that entirely by
+      // recomputing the SAME layout locally instead, synchronously, before
+      // that navigation's own response could arrive.
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("focus", personId);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+
+      if (rawGraph) {
+        setClientGraph(buildClientTreeLayout(rawGraph, personId));
+      }
     },
-    [familyId, pathname, router, searchParams],
+    [familyId, pathname, rawGraph, router, searchParams],
   );
 
+  const effectiveGraph = clientGraph ?? graph;
+
   // Collapse/expand (rewrite plan §7 Stage 5) — purely client-side, ephemeral
-  // (see use-collapsed-branches.ts). `graph` itself (the server-computed,
-  // already-positioned TreeLayoutGraph) is never mutated — pruneCollapsedDescendants
+  // (see use-collapsed-branches.ts). `effectiveGraph` itself (server-computed
+  // or, after a client-side re-focus, buildClientTreeLayout's own output —
+  // either way, already-positioned) is never mutated — pruneCollapsedDescendants
   // returns a NEW graph with the collapsed subtrees' nodes/edges filtered
-  // out, leaving every remaining node's own x/y exactly as the server
-  // computed it (no client-side re-layout — see prune-collapsed.ts's own
-  // doc comment for why). `withChildren` is computed off the FULL graph
+  // out, leaving every remaining node's own x/y exactly as laid out (no
+  // FURTHER client-side re-layout on top of that — see prune-collapsed.ts's
+  // own doc comment for why). `withChildren` is computed off the FULL graph
   // (before pruning) so a currently-collapsed person's badge doesn't
   // disappear just because their own children are no longer in the pruned
   // edge list.
   const { collapsedIds, toggleCollapse } = useCollapsedBranches();
-  const withChildren = useMemo(() => personIdsWithChildren(graph), [graph]);
+  const withChildren = useMemo(
+    () => personIdsWithChildren(effectiveGraph),
+    [effectiveGraph],
+  );
   const prunedGraph = useMemo(
-    () => pruneCollapsedDescendants(graph, collapsedIds),
-    [graph, collapsedIds],
+    () => pruneCollapsedDescendants(effectiveGraph, collapsedIds),
+    [effectiveGraph, collapsedIds],
   );
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
@@ -310,7 +408,9 @@ export function TreeCanvas({
     setEdges(initialEdges);
   }, [initialEdges, setEdges]);
 
-  const focusNode = nodes.find((node) => node.id === graph.focusPersonId);
+  const focusNode = nodes.find(
+    (node) => node.id === effectiveGraph.focusPersonId,
+  );
   // Passed to CardStyleInternalsSync below — recomputing this plain array
   // every render is fine, that component's own effect only keys off
   // `cardStyle`, not this array's identity (see its doc comment).
@@ -356,7 +456,7 @@ export function TreeCanvas({
           nodesDraggable={!readOnly && nodesDraggable}
           nodesConnectable={!readOnly && nodesDraggable}
           proOptions={{ hideAttribution: true }}
-          // No fitView here — InitialFocusViewport below centers on the focus
+          // No fitView here — FocusViewport below centers on the focus
           // person at a fixed 85% zoom instead (per the family's "opens with
           // focus on" setting), so opening the tree always lands on the
           // requested person regardless of how large or lopsided the rest of
@@ -381,7 +481,10 @@ export function TreeCanvas({
           // there's no stale-`measured` window to hit on remount anymore.
           onlyRenderVisibleElements
         >
-          <InitialFocusViewport focusNode={focusNode} />
+          <FocusViewport
+            focusNode={focusNode}
+            isInitialLoad={isInitialLoad}
+          />
           <CardStyleInternalsSync cardStyle={cardStyle} nodeIds={nodeIds} />
           <Background gap={24} />
           {readOnly ? (

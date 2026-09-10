@@ -11,6 +11,7 @@ import { isEmptyFilter, type PersonFilter } from "@/domain/tree/tree-filter";
 import { describeTraceOutcome } from "./describe-trace-outcome";
 import type { RelationshipPathOutcome } from "@/domain/relationship/genealogy-algorithms";
 import type { TreeLayoutGraph } from "@/domain/tree/tree-layout.builder";
+import type { TreeClientGraphPayload } from "@/domain/tree/tree-adapter";
 import type { TreeHighlightState } from "./adapters/xyflow-adapter";
 
 /**
@@ -37,6 +38,7 @@ export function TreeToolbar({
   familyId,
   familySlug,
   graph,
+  rawGraph,
   highlight,
   traceA,
   traceB,
@@ -47,6 +49,8 @@ export function TreeToolbar({
   /** The family's URL slug — threaded down to TreeCanvas for each card's click-popover profile link. */
   familySlug: string;
   graph: TreeLayoutGraph;
+  /** Rewrite plan §7 Stage 7 — the client-safe raw graph (getRawTreeGraph), passed through so TreeCanvas can re-run buildTreeLayout locally on focus switch instead of a full page reload. Undefined in read-only (Share Link) contexts, which never render TreeToolbar at all. */
+  rawGraph: TreeClientGraphPayload;
   highlight?: TreeHighlightState;
   traceA: { id: string; name: string } | null;
   traceB: { id: string; name: string } | null;
@@ -96,6 +100,7 @@ export function TreeToolbar({
     <>
       <TreeCanvas
         graph={graph}
+        rawGraph={rawGraph}
         familyId={familyId}
         familySlug={familySlug}
         highlight={highlight}
