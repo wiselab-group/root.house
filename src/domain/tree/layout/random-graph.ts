@@ -9,10 +9,14 @@ import type { FamilyGraph, Gender, Relationship } from "./types";
  * failure is a one-line repro (`generateRandomFamily({ seed: 12345, ... })`),
  * not a flaky/unreproducible fuzz failure.
  *
- * Stage 1 (see rewrite plan §7) only exercises the DOWN direction — every
- * generated graph is a pure descendant tree from a single root couple, no
- * ancestors above the root and no in-law side-branches. Ancestor generation
- * lands in a later stage once growBranch("up") replaces placeAncestors.
+ * Stage 1 (see rewrite plan §7) only exercised the DOWN direction — every
+ * generated graph was a pure descendant tree from a single root couple, no
+ * ancestors above the root and no in-law side-branches. Stage 3 adds ancestor
+ * generation above the focus (growAncestors, mirroring growDescendants'
+ * shape: a parent pair, that pair's own siblings, recursing upward) plus
+ * occasional in-law ancestor branches (a descendant's spouse getting their
+ * own recorded parents, exercising growInLawAncestors) — see
+ * generateRandomFamily's own `direction` option.
  */
 
 export interface RandomFamilyOptions {
@@ -36,6 +40,31 @@ export interface RandomFamilyOptions {
    *  coin flips, not a hard cap — some branches will have more, some fewer,
    *  0 is legal and common). */
   averageChildren?: number;
+  /**
+   * "down" (default, Stage 1 behavior): pure descendant tree from the root,
+   * no ancestors, no in-laws. "up": ALSO grows ancestors above the root
+   * (growBranch("up")'s own territory — parent pairs, their own sibling
+   * rows, recursing upward) and occasionally gives a descendant's spouse
+   * their own recorded parents (growInLawAncestors' territory). "both" is an
+   * alias users may want later; not needed yet — every current call site
+   * either wants pure descendants (existing Stage 1/2 tests) or the fuller
+   * "up" shape (Stage 3's own property tests).
+   */
+  direction?: "down" | "up";
+  /** 0..1, only meaningful with direction:"up" — probability a placed
+   *  descendant's spouse (an in-law with no recorded parents by default)
+   *  gets their own parent(s) generated too, exercising
+   *  growInLawAncestors. */
+  inLawAncestorProbability?: number;
+  /** Average number of siblings-of-a-sibling generated per ancestor pair
+   *  when direction:"up" (mirrors averageChildren, just for the upward
+   *  side's own sibling rows — an ancestor pair's OTHER children besides
+   *  the one who pulled them into the graph). */
+  averageAncestorSiblings?: number;
+  /** Maximum number of generations to grow upward when direction:"up" — caps
+   *  runaway recursion on a high personCount budget the same way
+   *  randomChildCount's own cap (6) does for the downward side. */
+  maxAncestorGenerations?: number;
 }
 
 /** mulberry32 — tiny, fast, seeded PRNG. Public-domain algorithm; good enough
@@ -58,10 +87,15 @@ function nextId(prefix: string): string {
 }
 
 /**
- * Generates a random descendant-only FamilyGraph rooted at a single couple
- * (or solo person). Returns the graph plus the id to use as focusPersonId —
- * always the root, so buildTreeLayout grows the WHOLE generated graph
- * downward from a single fixed origin, matching Stage 1's "down only" scope.
+ * Generates a random FamilyGraph rooted at a single couple (or solo person).
+ * Returns the graph plus the id to use as focusPersonId — always the root,
+ * so buildTreeLayout grows the WHOLE generated graph from a single fixed
+ * origin. With `direction: "down"` (the default), the root's own ancestry is
+ * never generated — every person is a descendant of the root. With
+ * `direction: "up"`, the root ALSO gets ancestors grown above it (and
+ * descendants' spouses occasionally get their own recorded parents too),
+ * exercising growBranch("up") and growInLawAncestors as well as
+ * growBranch("down").
  */
 export function generateRandomFamily(options: RandomFamilyOptions): {
   graph: FamilyGraph;
@@ -115,6 +149,22 @@ export function generateRandomFamily(options: RandomFamilyOptions): {
     return count;
   }
 
+  const direction = options.direction ?? "down";
+  const inLawAncestorProbability = options.inLawAncestorProbability ?? 0.15;
+  const averageAncestorSiblings = options.averageAncestorSiblings ?? 1.2;
+  const maxAncestorGenerations = options.maxAncestorGenerations ?? 4;
+
+  /** Poisson-ish sibling count for an ancestor pair's OWN other children (mirrors randomChildCount, smaller default average, smaller cap). */
+  function randomAncestorSiblingCount(): number {
+    let count = 0;
+    const p = Math.min(
+      0.8,
+      averageAncestorSiblings / (averageAncestorSiblings + 1),
+    );
+    while (count < 4 && rng() < p) count++;
+    return count;
+  }
+
   // Grows one person's own descendant branch: gives them a partnership (or
   // leaves them solo per soloParentProbability), then recursively grows
   // however many children the coin flips produce, stopping once the running
@@ -135,6 +185,17 @@ export function generateRandomFamily(options: RandomFamilyOptions): {
             : randomGender();
       partnerId = makePerson(partnerGender);
       makePartnership(personId, partnerId);
+
+      // In-law ancestors (direction:"up" only — see growInLawAncestors'
+      // real-data motivation, Viktor Kupchik's wife Galina having her own
+      // recorded parents): the spouse just created has NO parentIds by
+      // default (an ordinary in-law) — occasionally give them one too,
+      // exercising the sweep that discovers ancestors reached through a
+      // DOWNWARD path from the focus rather than the focus's own upward
+      // chain.
+      if (direction === "up" && rng() < inLawAncestorProbability) {
+        growAncestors(partnerId, 1);
+      }
     }
 
     const childCount = randomChildCount();
@@ -155,9 +216,70 @@ export function generateRandomFamily(options: RandomFamilyOptions): {
     }
   }
 
+  // Grows personId's own recorded parents upward (growBranch("up")'s own
+  // territory): a parent pair (or solo parent), that pair's OWN other
+  // children (uncles/aunts — a sibling row, each possibly with their own
+  // spouse/descendants, grown via the SAME growDescendants path any
+  // ordinary child uses), recursing further up to grandparents. Stops at
+  // maxAncestorGenerations (mirrors randomChildCount's own runaway-recursion
+  // cap) — an unbounded ancestor chain would let a single seed's ancestor
+  // depth grow without limit, unlike the downward side which is naturally
+  // capped by personCount alone.
+  function growAncestors(personId: string, generationsUp: number): void {
+    if (generationsUp > maxAncestorGenerations) return;
+    if (persons.length >= options.personCount) return;
+
+    const isSoloParentLink = rng() < soloParentProbability;
+    // The primary (first-recorded) parent's own gender is randomized
+    // independently of personId's — shouldBeLeft (graph.ts) decides actual
+    // left/right by gender, not by which one is "primary" here, so there's
+    // no need to correlate it with the child's gender at all.
+    const primaryParentGender: Gender = randomGender();
+    const primaryParentId = makePerson(primaryParentGender);
+    makeParentChild(primaryParentId, personId);
+
+    let secondaryParentId: string | undefined;
+    if (!isSoloParentLink && persons.length < options.personCount) {
+      const secondaryGender: Gender =
+        primaryParentGender === "male"
+          ? "female"
+          : primaryParentGender === "female"
+            ? "male"
+            : randomGender();
+      secondaryParentId = makePerson(secondaryGender);
+      makeParentChild(secondaryParentId, personId);
+      makePartnership(primaryParentId, secondaryParentId);
+    }
+
+    // This ancestor pair's OWN other children (siblings of personId, from
+    // the pulling-descendant's perspective — "uncles/aunts") — each grown
+    // as an ORDINARY descendant branch (their own spouse/children), the
+    // same growSiblingRow discovers on the real engine side.
+    const siblingCount = randomAncestorSiblingCount();
+    for (let i = 0; i < siblingCount; i++) {
+      if (persons.length >= options.personCount) break;
+      const siblingGender = randomGender();
+      const siblingId = makePerson(siblingGender);
+      makeParentChild(primaryParentId, siblingId);
+      if (secondaryParentId) makeParentChild(secondaryParentId, siblingId);
+      growDescendants(siblingId, siblingGender);
+    }
+
+    // Recurse further up from the primary parent (mirrors growPersonBranchUp's
+    // own primaryParentId-first recursion) — the secondary parent's own
+    // ancestry is deliberately NOT also grown here (real fixtures don't
+    // always have both sides recorded arbitrarily deep either, and doubling
+    // the branching factor every generation would runaway personCount much
+    // faster than maxAncestorGenerations alone controls for).
+    growAncestors(primaryParentId, generationsUp + 1);
+  }
+
   const rootGender = randomGender();
   const rootId = makePerson(rootGender);
   growDescendants(rootId, rootGender);
+  if (direction === "up") {
+    growAncestors(rootId, 1);
+  }
 
   return { graph: { persons, relationships }, focusPersonId: rootId };
 }

@@ -4,12 +4,8 @@ import type {
   LaidOutPerson,
   TreeLayoutResult,
 } from "./types";
-import { normalizeGraph, raiseAncestryOneGeneration } from "./graph";
-import {
-  placeGraph,
-  findStrandedOnlyChildren,
-  straightenAncestorConnectors,
-} from "./placement";
+import { normalizeGraph } from "./graph";
+import { placeGraph } from "./placement";
 import { buildEdgeSpecs } from "./edges";
 import { assertNoOverlaps, assertOnePositionPerPerson } from "./collision";
 
@@ -35,45 +31,20 @@ export function buildTreeLayout(
   focusPersonId: string,
 ): TreeLayoutResult {
   const normalized = normalizeGraph(graph, focusPersonId);
-  let { positionByPerson, junctionByPartnership } = placeGraph(normalized);
+  const { positionByPerson, junctionByPartnership } = placeGraph(normalized);
 
-  // An "unpulled only child" (real parentIds, no children of her own, no
-  // sibling recorded either — see placement.ts) can land on her natural BFS
-  // generation row only to find that row already belongs entirely to an
-  // unrelated branch (e.g. Natalya Ushkar landing on Viktor/Galina's
-  // crowded row, ~1450px from her own parents). No amount of anchor-tuning
-  // within that single row can fix this — the row itself is wrong for her.
-  // Retry once: raise her AND her entire ancestry (parent + all of the
-  // parent's own recorded ancestors) one generation each, which moves her
-  // off the crowded row and lands her one row up, right beside her own
-  // (also-raised) parents instead. `generation` is
-  // documented as a "soft hint for Y, never a hardcoded row" precisely to
-  // allow this kind of per-branch adjustment. One retry only (not a loop
-  // until stable) — re-raising is not expected to be needed in practice,
-  // and looping indefinitely on a graph shape that can't stabilize would
-  // hang instead of failing loudly.
-  const stranded = findStrandedOnlyChildren(normalized, positionByPerson);
-  if (stranded.length > 0) {
-    for (const personId of stranded) {
-      raiseAncestryOneGeneration(normalized, personId);
-    }
-    ({ positionByPerson, junctionByPartnership } = placeGraph(normalized));
-  }
-
-  // Final pass, once every position (including the stranded-only-child
-  // retry above) is fully resolved: when a couple has exactly one blood
-  // spouse (parents recorded above them) and one in-law (none), and the
-  // in-law happens to have landed physically closer to that ancestor pair's
-  // own descending connector than the blood spouse did, swap the two so the
-  // line reaches the blood spouse's card cleanly instead of clipping the
-  // unrelated in-law's, then recenter that blood spouse's own parents over
-  // their (now different) full sibling row. See placement.ts's
-  // straightenAncestorConnectors.
-  straightenAncestorConnectors(
-    normalized,
-    positionByPerson,
-    junctionByPartnership,
-  );
+  // Rewrite plan §7 Stage 3: the old two-pass retry (findStrandedOnlyChildren
+  // + raiseAncestryOneGeneration, for an only child whose natural BFS row
+  // was entirely occupied by an unrelated family) and the post-hoc
+  // straightenAncestorConnectors pass are gone — placement.ts's own doc
+  // comment on placeGraph explains why each is no longer needed: the new
+  // growBranch("up") primitive computes a parent pair's center from the
+  // complete sibling row BEFORE placing them (no mis-centered intermediate
+  // state to later detect and fix), and resolves competing ancestor units by
+  // ordinary occupancy collision search rather than a separate symmetric
+  // pre-pass. The only remaining gap — an only child's natural row being
+  // entirely owned by an unrelated family — is a Y-axis rigidity problem
+  // that properly belongs to Stage 4 (elastic Y), not Stage 3.
 
   assertOnePositionPerPerson(normalized, positionByPerson);
   assertNoOverlaps(positionByPerson);

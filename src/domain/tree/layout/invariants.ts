@@ -19,6 +19,42 @@ export function positionMap(result: TreeLayoutResult) {
 }
 
 /**
+ * "Paternal line strictly left, maternal line strictly right" (CLAUDE.md's
+ * oldest tree-layout invariant) as a checkable geometric property, for the
+ * ancestor side (rewrite plan §7 Stage 3): no person with branch==="paternal"
+ * may sit to the right of ANY person with branch==="maternal" that shares
+ * their exact generation (y) — the two lineages' rows must never overlap in
+ * x once they share a row. Comparing WITHIN each shared row (not globally
+ * across all rows) is deliberate: a deep paternal ancestor several
+ * generations up can legitimately sit at a very different x than a shallow
+ * maternal one a few rows down, without that meaning the lines "crossed" —
+ * the invariant is about two lineages sharing space on the SAME row, not
+ * about absolute x ever being smaller/larger.
+ */
+export function findSideConstraintViolation(
+  result: TreeLayoutResult,
+): string | null {
+  const byY = new Map<number, typeof result.persons>();
+  for (const p of result.persons) {
+    if (!byY.has(p.y)) byY.set(p.y, []);
+    byY.get(p.y)!.push(p);
+  }
+  for (const [y, row] of byY) {
+    const paternal = row.filter((p) => p.branch === "paternal");
+    const maternal = row.filter((p) => p.branch === "maternal");
+    if (paternal.length === 0 || maternal.length === 0) continue;
+    const paternalMaxX = Math.max(...paternal.map((p) => p.x));
+    const maternalMinX = Math.min(...maternal.map((p) => p.x));
+    if (paternalMaxX >= maternalMinX) {
+      const offender = paternal.find((p) => p.x === paternalMaxX)!;
+      const other = maternal.find((p) => p.x === maternalMinX)!;
+      return `y=${y}: paternal person ${offender.id} (x=${offender.x}) is not strictly left of maternal person ${other.id} (x=${other.x})`;
+    }
+  }
+  return null;
+}
+
+/**
  * "Full siblings adjacent" as a checkable geometric property: for every pair
  * of full siblings (same exact parentIds set) on the SAME resolved y, the
  * only thing allowed to sit between two of them is one sibling's OWN spouse
