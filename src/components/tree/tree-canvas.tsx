@@ -115,7 +115,42 @@ function CardStyleInternalsSync({
   const updateNodeInternals = useUpdateNodeInternals();
 
   useEffect(() => {
-    updateNodeInternals(nodeIds);
+    // Deferred past the next paint (double requestAnimationFrame, beyond
+    // useUpdateNodeInternals' own internal rAF — see its @xyflow/react
+    // source) because of WHERE this component sits: it's rendered as a
+    // child of <ReactFlow>, which is itself a child of TreeCanvas — and
+    // TreeCanvas is what actually calls setNodes(initialNodes) to apply the
+    // new cardStyle to every node's data/width/height, in TreeCanvas's OWN
+    // separate useEffect. React runs child effects before parent effects on
+    // the same commit, so this component's useEffect (child) fires BEFORE
+    // TreeCanvas's setNodes effect (parent) even schedules its re-render —
+    // meaning updateNodeInternals here was capturing each nodeElement's
+    // height from the PREVIOUS cardStyle's DOM (PersonNode hadn't even
+    // re-rendered with the new data.cardStyle yet, let alone painted it),
+    // not the new one. Real bug the user caught, persisting (not just a
+    // single missed frame): the resulting connector edge stayed visibly
+    // short/detached from its source card even seconds after the toggle,
+    // because nothing ever re-triggered a correct remeasure afterward. One
+    // requestAnimationFrame only pushes past THIS effect's own frame, not
+    // past setNodes' re-render + browser paint (a state update scheduled
+    // from an effect is its own separate render pass, not synchronous
+    // within this one) — two nested rAFs is what actually lands after that
+    // re-render has committed AND painted, matching what
+    // useUpdateNodeInternals' own single rAF assumes is already true when
+    // IT calls updateNodeInternals (its own error case, this component
+    // exists to prevent).
+    let cancelled = false;
+    let innerFrame: number | undefined;
+    const outerFrame = requestAnimationFrame(() => {
+      innerFrame = requestAnimationFrame(() => {
+        if (!cancelled) updateNodeInternals(nodeIds);
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(outerFrame);
+      if (innerFrame !== undefined) cancelAnimationFrame(innerFrame);
+    };
     // Intentionally keyed on cardStyle, not nodeIds' own identity/content —
     // a card style toggle is the only case that needs a forced remeasure;
     // the initial mount and ordinary node-set changes (different focus

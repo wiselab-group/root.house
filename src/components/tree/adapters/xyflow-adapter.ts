@@ -160,19 +160,40 @@ export interface TreeHighlightState {
 //
 // Both card styles are the same 160px width as of the round-avatar compact
 // redesign (previously compact was a wide 220x88 row) — COMPACT_X_SPACING/
-// PORTRAIT_X_SPACING converged to the same value as a result. compact's own
-// avatar (size-36, 144px) plus name/years now makes it about as tall as
-// portrait's square photo, so the Y values converged too.
+// PORTRAIT_X_SPACING converged to the same value as a result. compact's card
+// is considerably SHORTER than portrait's though (a small 88px avatar +
+// name/years vs. a full 160px-wide square photo + name/years) — the two
+// heights don't converge, see NODE_DIMENSIONS below.
 const COMPACT_X_SPACING = 184;
 const COMPACT_Y_SPACING = 230;
 const PORTRAIT_X_SPACING = 184;
 const PORTRAIT_Y_SPACING = 260;
 
+// XYFlow stretches every node's outer .react-flow__node div to exactly this
+// height via an inline style (confirmed via the rendered DOM: `height:
+// 200px` regardless of content) — NOT just an initial-paint estimate later
+// superseded by a ResizeObserver measurement. That means `measured.height`
+// (read by relationship-edge.tsx/union-child-edge.tsx to draw connector
+// lines through each card's live bottom edge) is ALWAYS exactly this
+// number, never the real rendered content height, for a card style whose
+// actual content is shorter than what's declared here. compact's real
+// content (compact-card-body.tsx: an 88px round avatar + two lines of text,
+// no bottom padding beyond pb-3) renders at ~128px tall, not 200px — the
+// leftover ~72px was empty space the connector line's fixed
+// COMPACT_CHILD_TAIL_LENGTH tail (relationship-edge.tsx) never reached,
+// reading as a broken/disconnected line hanging in mid-air above the child
+// card. Real bug the user caught with screenshots, present even on a fresh
+// page load with no cardStyle toggle involved — this stale value (previously
+// 200) predates the round-avatar compact redesign mentioned above and was
+// simply never updated alongside it. Keep in sync by hand with
+// compact-card-body.tsx's actual rendered height if it changes again — there
+// is no way to ask XYFlow to auto-size the node to content while keeping the
+// layout engine's own predictable row spacing (COMPACT_Y_SPACING above).
 const NODE_DIMENSIONS: Record<
   TreeCardStyle,
   { width: number; height: number }
 > = {
-  compact: { width: 160, height: 200 },
+  compact: { width: 160, height: 128 },
   portrait: { width: 160, height: 220 },
 };
 

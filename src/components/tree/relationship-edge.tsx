@@ -43,10 +43,6 @@ export function RelationshipEdge({
   type,
   source,
   target,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
   data,
 }: EdgeProps<RelationshipFlowEdge>) {
   const isPartnership = type === "partnership";
@@ -64,11 +60,8 @@ export function RelationshipEdge({
     return (
       <ParentChildEdgeLine
         id={id}
+        source={source}
         target={target}
-        sourceX={sourceX}
-        sourceY={sourceY}
-        targetX={targetX}
-        targetY={targetY}
         isOnTracePath={isOnTracePath}
         isMiddleSibling={data?.isMiddleSibling === true}
       />
@@ -89,33 +82,60 @@ export function RelationshipEdge({
 
 function ParentChildEdgeLine({
   id,
+  source,
   target,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
   isOnTracePath,
   isMiddleSibling,
 }: {
   id: string;
+  source: string;
   target: string;
-  sourceX: number;
-  sourceY: number;
-  targetX: number;
-  targetY: number;
   isOnTracePath: boolean;
   isMiddleSibling: boolean;
 }) {
+  const sourceNode = useInternalNode<PersonFlowNode>(source);
   const targetNode = useInternalNode<PersonFlowNode>(target);
+  if (!sourceNode || !targetNode) return null;
+
+  // Read the parent's LIVE bottom edge (positionAbsolute.y + measured.height)
+  // rather than XYFlow's own EdgeProps sourceY (which comes from where the
+  // invisible <Handle id="bottom"> sits — see person-node.tsx). That handle
+  // is positioned by CSS at the bottom of the node's DESIGN-TIME box
+  // (xyflow-adapter.ts's NODE_DIMENSIONS, currently compact: 200px), not the
+  // card's actual rendered height — compact's real content (an 88px round
+  // avatar + two lines of text) is only ~120px tall, leaving ~80px of empty
+  // space between the visible avatar and where the handle (and therefore
+  // sourceY) actually sits. The resulting line was drawn only across that
+  // last COMPACT_CHILD_TAIL_LENGTH stretch near the child, floating with a
+  // large visible gap above it instead of starting at the parent's card —
+  // real bug the user caught with screenshots, persisting even on a fresh
+  // page load with no cardStyle toggle involved at all (so the compact/
+  // portrait toggle race fixed elsewhere in this file was a red herring for
+  // THIS specific bug). measured.height matches the DOM's actual rendered
+  // box regardless of NODE_DIMENSIONS drifting out of sync with a card
+  // redesign (as it already had — see NODE_DIMENSIONS' own doc comment,
+  // written for a since-shrunk avatar), so this is self-correcting instead
+  // of needing a hand-tuned pixel constant kept in sync forever.
+  const sourceBottomY =
+    sourceNode.internals.positionAbsolute.y +
+    (sourceNode.measured?.height ?? sourceNode.height ?? 0);
+  const sourceCenterX =
+    sourceNode.internals.positionAbsolute.x +
+    (sourceNode.measured?.width ?? sourceNode.width ?? 0) / 2;
+  const targetTopY = targetNode.internals.positionAbsolute.y;
+  const targetCenterX =
+    targetNode.internals.positionAbsolute.x +
+    (targetNode.measured?.width ?? targetNode.width ?? 0) / 2;
+
   // Portrait's square photo already fills the card from its very top edge,
   // so the plain midpoint bend already reads fine there and a fixed tail
   // would look arbitrary against a square corner — only compact's round
   // avatar (which sits well clear of the card's top edge, see
   // CONNECTOR_CENTER_Y) needs the fixed-length tail below.
-  const isCompactChild = targetNode?.data.cardStyle === "compact";
+  const isCompactChild = targetNode.data.cardStyle === "compact";
   const midY = isCompactChild
-    ? Math.max(sourceY, targetY - COMPACT_CHILD_TAIL_LENGTH)
-    : (sourceY + targetY) / 2;
+    ? Math.max(sourceBottomY, targetTopY - COMPACT_CHILD_TAIL_LENGTH)
+    : (sourceBottomY + targetTopY) / 2;
   // (targetX, midY) is this child's own turn down into its card — for a
   // middle sibling (flanked by others on both sides, see
   // xyflow-adapter.ts's isMiddleSibling) that turn is a sideways jog that
@@ -124,12 +144,12 @@ function ParentChildEdgeLine({
   // clean rounded corner regardless of sibling count, left untouched.
   const path = roundedOrthogonalPath(
     [
-      { x: sourceX, y: sourceY },
-      { x: sourceX, y: midY },
-      { x: targetX, y: midY },
-      { x: targetX, y: targetY },
+      { x: sourceCenterX, y: sourceBottomY },
+      { x: sourceCenterX, y: midY },
+      { x: targetCenterX, y: midY },
+      { x: targetCenterX, y: targetTopY },
     ],
-    isMiddleSibling ? [{ x: targetX, y: midY }] : [],
+    isMiddleSibling ? [{ x: targetCenterX, y: midY }] : [],
   );
   return (
     <BaseEdge
