@@ -14,6 +14,7 @@ function node(id: string): LayoutNode {
     y: 0,
     generation: 0,
     isFocus: false,
+    isIsolated: false,
     person: {
       id,
       slug: id,
@@ -172,6 +173,7 @@ function toMinimalLayoutGraph(seed: number, personCount: number): TreeLayoutGrap
     y: p.y,
     generation: p.generation,
     isFocus: p.id === focusPersonId,
+    isIsolated: p.isIsolated,
     person: {
       id: p.id,
       slug: p.id,

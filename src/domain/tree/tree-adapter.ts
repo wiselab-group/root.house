@@ -280,6 +280,7 @@ export function fromTreeLayout(
       // --tree-accent now).
       generation: p.generation,
       isFocus: p.id === focusPersonId,
+      isIsolated: p.isIsolated,
       person,
     };
   });

@@ -1472,6 +1472,56 @@ export function growInLawAncestors(ctx: GrowthContext): void {
 }
 
 /**
+ * placeIsolatedPersons — gives every NormalizedPerson.isIsolated a position,
+ * as one row below the entire connected graph, left-to-right in a
+ * deterministic (id) order, evenly spaced and centered on x=0. Isolated
+ * persons have no parent-child edge and no partnership at all (see
+ * NormalizedPerson.isIsolated's own doc comment) — there is no ancestor/
+ * descendant/spouse position to grow them FROM, so they never go through
+ * growBranch/growInLawAncestors at all; this is a separate, simple pass run
+ * once, after everyone else is placed, purely so this row can sit safely
+ * below the connected graph's lowest reserved Y (queried from `occupancy`,
+ * not computed from generation numbers — a person's actual card can sit off
+ * its nominal generation row after elastic-Y repairs, see subtree.ts's own
+ * MAX_Y_NUDGE doc comment, so generation * GENERATION_GAP would risk
+ * overlapping an already-placed card nudged further down than its
+ * generation implies).
+ *
+ * No connector lines are drawn for these cards (tree-adapter.ts only emits
+ * a parent_child/partnership edge per relationship, and by construction an
+ * isolated person has none) — deliberately: this row means "not yet linked
+ * into the family tree", and drawing a line would misrepresent a
+ * relationship that was never recorded.
+ */
+export function placeIsolatedPersons(ctx: GrowthContext): void {
+  const { graph, occupancy, positionByPerson } = ctx;
+
+  const isolatedIds = [...graph.personById.values()]
+    .filter((p) => p.isIsolated)
+    .map((p) => p.id)
+    .sort();
+  if (isolatedIds.length === 0) return;
+
+  const rowWidth =
+    isolatedIds.length * CARD_WIDTH +
+    (isolatedIds.length - 1) * SIBLING_GAP;
+  const startX = -rowWidth / 2 + CARD_HALF_WIDTH;
+
+  const lowestReservedMaxY = occupancy.maxReservedY();
+  const y =
+    lowestReservedMaxY === null
+      ? 0
+      : lowestReservedMaxY + CARD_HALF_HEIGHT + GENERATION_GAP;
+
+  isolatedIds.forEach((id, index) => {
+    const x = startX + index * (CARD_WIDTH + SIBLING_GAP);
+    const point: Point = { x, y };
+    positionByPerson.set(id, point);
+    occupancy.reserve({ x, y, width: CARD_WIDTH, height: CARD_HEIGHT });
+  });
+}
+
+/**
  * Post-placement repair pass (rewrite plan §7 Stage 4) for the ONE class of
  * side-constraint/interleaved-sibling violation that no during-placement
  * search can prevent: two mutually unrelated clusters that each compute

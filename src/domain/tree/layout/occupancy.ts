@@ -213,6 +213,24 @@ export class OccupancyModel {
     return null;
   }
 
+  /**
+   * The largest maxY across every reservation made so far, or null if
+   * nothing has been reserved yet — used by placeIsolatedPersons (subtree.ts)
+   * to anchor the isolated-persons row strictly below the entire already-
+   * placed graph, without assuming any relationship between Y and
+   * generation numbers (elastic-Y repairs can move a card off its nominal
+   * generation row — see MAX_Y_NUDGE's own doc comment).
+   */
+  maxReservedY(): number | null {
+    let max: number | null = null;
+    for (const reservations of this.rows.values()) {
+      for (const res of reservations) {
+        if (max === null || res.maxY > max) max = res.maxY;
+      }
+    }
+    return max;
+  }
+
   /** findFreeInterval, but each occupancy-free candidate is also run through `validate` (if given) before being accepted — see findFreeSlot's own doc comment for why this is needed. */
   private findFreeIntervalValidated(
     y: number,

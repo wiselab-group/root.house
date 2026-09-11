@@ -3,6 +3,7 @@ import {
   createGrowthContext,
   growBranch,
   growInLawAncestors,
+  placeIsolatedPersons,
   repairSideConstraintViolations,
 } from "./subtree";
 
@@ -23,6 +24,9 @@ export interface PlacementResult {
  *   3. Sweep for in-law ancestors: any already-placed person (a descendant's
  *      spouse, a newly-grown sibling) whose OWN recorded parents aren't
  *      placed yet gets their ancestry grown too, iterated to a fixed point.
+ *   4. Place any person with NO relationship at all (isIsolated) in a single
+ *      row below the whole connected graph — see placeIsolatedPersons'
+ *      (subtree.ts) own doc comment.
  *
  * Rewrite plan §7 Stage 3: both directions now share ONE recursive primitive
  * (subtree.ts's growBranch) instead of "down" being a clean measure-then-
@@ -95,6 +99,14 @@ export function placeGraph(graph: NormalizedGraph): PlacementResult {
   // compute positions via cursor arithmetic, not an occupancy search, so
   // there's no single search call to validate against).
   repairSideConstraintViolations(ctx);
+
+  // Persons with NO relationship at all (see NormalizedPerson.isIsolated's
+  // own doc comment) never enter growBranch/growInLawAncestors above — there
+  // is no edge to walk them in from. Placed last, as a single row below the
+  // whole connected graph, so they still get exactly one position each
+  // (assertOnePositionPerPerson, collision.ts, requires this) without
+  // perturbing anything already placed above.
+  placeIsolatedPersons(ctx);
 
   return { positionByPerson, junctionByPartnership };
 }

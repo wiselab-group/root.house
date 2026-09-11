@@ -54,6 +54,7 @@ function buildGraph(input: {
     y: 0,
     generation: 0,
     isFocus: p.id === input.focusPersonId,
+    isIsolated: false,
     person: p,
   }));
   const edges: LayoutEdge[] = [

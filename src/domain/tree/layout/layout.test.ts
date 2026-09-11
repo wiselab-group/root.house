@@ -1449,3 +1449,77 @@ describe("layout engine — Stage 2: real fixture through hybrid engine, invaria
     expect((focus.x + eleonora.x) / 2).toBeCloseTo(0, 5);
   });
 });
+
+describe("layout engine — isolated persons (no relationship at all)", () => {
+  // Regression test for a real production bug: a Person record with ZERO
+  // recorded relationships (no parent-child edge in either direction, no
+  // partnership) crashed getFocusTreeLayout with
+  // "assertOnePositionPerPerson: person ... has no position" — such a
+  // person is real data (e.g. added to the family but not linked into the
+  // tree yet), not a malformed graph, so the engine must place them, not
+  // throw. See NormalizedPerson.isIsolated's own doc comment (types.ts) and
+  // placeIsolatedPersons' (subtree.ts).
+  const focusId = "focus";
+  const isolatedId = "isolated-firas";
+
+  function graphWithOneIsolatedPerson() {
+    return {
+      persons: [
+        { id: focusId, firstName: "Focus", lastName: "Person", gender: "unknown" as const },
+        { id: "spouse", firstName: "Spouse", lastName: "Person", gender: "unknown" as const },
+        { id: isolatedId, firstName: "Firas", lastName: "", gender: "unknown" as const },
+      ],
+      relationships: [
+        { id: "p1", kind: "spouse" as const, from: focusId, to: "spouse" },
+      ],
+    };
+  }
+
+  it("places the isolated person instead of throwing", () => {
+    const result = buildTreeLayout(graphWithOneIsolatedPerson(), focusId);
+    expect(result.persons).toHaveLength(3);
+    expect(detectOverlaps(positionMap(result))).toEqual([]);
+  });
+
+  it("places the isolated person strictly below the rest of the connected graph", () => {
+    const result = buildTreeLayout(graphWithOneIsolatedPerson(), focusId);
+    const focus = personById(result, focusId);
+    const isolated = personById(result, isolatedId);
+    expect(isolated.y).toBeGreaterThan(focus.y);
+  });
+
+  it("places several isolated persons side by side, deterministically", () => {
+    const graph = graphWithOneIsolatedPerson();
+    graph.persons.push(
+      { id: "isolated-2", firstName: "Second", lastName: "", gender: "unknown" as const },
+      { id: "isolated-3", firstName: "Third", lastName: "", gender: "unknown" as const },
+    );
+    const result = buildTreeLayout(graph, focusId);
+    expect(result.persons).toHaveLength(5);
+    expect(detectOverlaps(positionMap(result))).toEqual([]);
+
+    const r2 = buildTreeLayout(graph, focusId);
+    expect(positionMap(result)).toEqual(positionMap(r2));
+  });
+
+  it("does not disturb the connected graph's own layout", () => {
+    // Same connected pair, with vs. without an unrelated isolated person —
+    // the focus/spouse partnership must land identically either way.
+    const withoutIsolated = buildTreeLayout(
+      {
+        persons: graphWithOneIsolatedPerson().persons.filter(
+          (p) => p.id !== isolatedId,
+        ),
+        relationships: graphWithOneIsolatedPerson().relationships,
+      },
+      focusId,
+    );
+    const withIsolated = buildTreeLayout(graphWithOneIsolatedPerson(), focusId);
+    expect(personById(withIsolated, focusId).x).toBe(
+      personById(withoutIsolated, focusId).x,
+    );
+    expect(personById(withIsolated, "spouse").x).toBe(
+      personById(withoutIsolated, "spouse").x,
+    );
+  });
+});

@@ -39,6 +39,7 @@ function node(
     y,
     generation,
     isFocus: false,
+    isIsolated: false,
     person: person(id),
   };
 }

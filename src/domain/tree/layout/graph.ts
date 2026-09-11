@@ -46,6 +46,7 @@ export function normalizeGraph(
       partnershipIds: [],
       parentIds: [],
       branch: "unknown",
+      isIsolated: false,
     });
   }
   if (!personById.has(focusPersonId)) {
@@ -146,6 +147,28 @@ export function normalizeGraph(
       personId: parentId,
       childrenIds: unattributed,
     });
+  }
+
+  // ---- isolated: no relationship at all, in either direction ------------
+  // A person with zero parent-child edges (as parent or child) and zero
+  // partnerships can never be reached by growBranch's up/down/in-law walk
+  // from any focus — see NormalizedPerson.isIsolated's own doc comment.
+  // Checked here, before assignGenerations/assignBranches run their BFS, so
+  // those two passes (which only walk graph edges) never need to know about
+  // isolated persons at all — they simply never appear in any frontier.
+  for (const [id, person] of personById) {
+    // The focus person is always placed at the origin by growBranch itself
+    // (placement.ts::placeGraph) regardless of their own edges — an
+    // edgeless focus is a valid (if lonely) tree of exactly one card, not
+    // an isolated person to be shunted into the separate row below.
+    if (id === focusPersonId) continue;
+    if (
+      person.parentIds.length === 0 &&
+      person.partnershipIds.length === 0 &&
+      (childrenOf.get(id)?.length ?? 0) === 0
+    ) {
+      person.isIsolated = true;
+    }
   }
 
   // ---- generation: BFS distance from focus (soft hint only) -------------

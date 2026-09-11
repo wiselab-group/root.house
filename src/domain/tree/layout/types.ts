@@ -105,6 +105,21 @@ export interface NormalizedPerson extends Person {
   parentIds: string[];
   /** Soft directional hint — paternal grows left, maternal grows right, propagated recursively (see graph.ts). */
   branch: Branch;
+  /**
+   * True when this person has NO recorded relationship at all — no
+   * parent-child edge (as parent or child) and no partnership, in either
+   * direction. Such a person can never be reached by growBranch's
+   * ancestor/descendant/in-law walk from any focus (there's nothing to walk
+   * along), so they are placed separately (see placement.ts's own doc
+   * comment on the isolated row) instead of participating in the graph's
+   * generation/branch/occupancy machinery at all. Distinct from merely
+   * being unREACHABLE from the current focus (a real relative in a
+   * disconnected part of the same family graph) — that case doesn't exist
+   * today since getRawTreeGraph loads one family's full graph and every
+   * person in it is expected to connect to it somehow; this flag is for the
+   * genuinely edgeless case (see tree-layout-isolated-persons memory).
+   */
+  isIsolated: boolean;
 }
 
 export interface NormalizedGraph {
