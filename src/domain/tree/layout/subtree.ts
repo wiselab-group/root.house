@@ -1489,6 +1489,16 @@ export function repairSideConstraintViolations(ctx: GrowthContext): void {
 
     const farChildId = findFirstFarFromParentViolator(ctx);
     if (farChildId) {
+      // Raising the parent's own ancestor branch is tried FIRST, not as a
+      // last resort — the user's own explicit direction (2026-09-11): the
+      // family unit (parent + child) must stay visually together under
+      // their own junction, even when a technically-closer free slot
+      // exists elsewhere for the child alone. tryMoveChildNearParent (a
+      // search for pre-existing free space) is the fallback, only used
+      // when raising the branch itself isn't possible (blocked by an
+      // overlap it can't resolve, or the parent has no recorded ancestors
+      // of their own to make room by moving).
+      if (tryRaiseAncestorBranchForChild(ctx, farChildId)) continue;
       if (tryMoveChildNearParent(ctx, farChildId)) continue;
       return;
     }
@@ -1509,6 +1519,28 @@ export function repairSideConstraintViolations(ctx: GrowthContext): void {
  * the tree-layout-downward-strand-gap memory).
  */
 const FAR_FROM_PARENT_X_THRESHOLD = CARD_WIDTH * 4;
+
+/**
+ * How far tryMoveChildNearParent's OWN search may look in X, at each
+ * candidate Y, once it's already decided a child qualifies for repair
+ * (FAR_FROM_PARENT_X_THRESHOLD above is only the TRIGGER — how far is "too
+ * far to leave alone" — this is separately how hard the repair then works
+ * to find something closer). Deliberately much wider than the trigger
+ * threshold: rewrite plan's own elastic-Y principle is that the engine is
+ * NEVER tied to discrete generation rows when a card doesn't fit — it keeps
+ * searching a CONTINUOUS Y range rather than jumping to a different
+ * generation's row (the old, deleted raiseAncestryOneGeneration's
+ * approach) — so a search that gives up too early in X just because a
+ * whole real row is densely packed edge-to-edge for thousands of px (a
+ * real, confirmed shape — see the tree-layout-downward-strand-gap memory)
+ * would leave the child stranded at its ORIGINAL far position instead of
+ * finding the genuinely nearby free space one small Y nudge away. Matches
+ * growChildrenRowDown's own original (unbounded-feeling) search radius —
+ * safe to reuse here because this repair is Y-prioritized (tries every
+ * nudged Y at increasingly wide X, not the other way around), so a nearby
+ * row still wins over a far sideways slot on the SAME row.
+ */
+const FAR_FROM_PARENT_SEARCH_X_RADIUS = 3000;
 
 /**
  * Finds one already-placed person whose x has drifted more than
@@ -1617,25 +1649,57 @@ function tryMoveChildNearParent(ctx: GrowthContext, childId: string): boolean {
     candidateYs.push(naturalY + step * Y_NUDGE_STEP, naturalY - step * Y_NUDGE_STEP);
   }
 
+  // Phase 1: prefer landing EXACTLY under the parent junction (x === same
+  // as a directly-under-parent placement always would be, zero search
+  // radius) — try every candidate Y for one where that exact spot happens
+  // to be free, before ever accepting an X offset. This is what makes the
+  // result visually indistinguishable from an ordinary (uncrowded) child
+  // row's own placement — matching the old engine's raiseAncestryOneGeneration
+  // outcome, which also always landed a rescued child EXACTLY under its
+  // parents (it worked by opening an entirely fresh row, never by nudging
+  // the child sideways).
   let resolved: Point | null = null;
   for (const candidateY of candidateYs) {
-    const x = occupancy.findFreeInterval(
-      candidateY,
-      CARD_HEIGHT,
-      CARD_WIDTH,
-      SIBLING_GAP,
-      junction.x,
-      FAR_FROM_PARENT_X_THRESHOLD,
-    );
-    if (x !== null) {
-      resolved = { x, y: candidateY };
+    const rect = { x: junction.x, y: candidateY, width: CARD_WIDTH, height: CARD_HEIGHT };
+    if (!occupancy.intersects(rect, SIBLING_GAP)) {
+      resolved = { x: junction.x, y: candidateY };
       break;
     }
   }
 
+  // Phase 2: no Y level offered an exact fit. Widen X progressively
+  // (FAR_FROM_PARENT_X_THRESHOLD, then the full
+  // FAR_FROM_PARENT_SEARCH_X_RADIUS), trying every candidate Y at each
+  // radius before widening further — Y-outer/X-inner, so a nearby row
+  // still wins over a far sideways slot on a row that was already tried at
+  // the narrower radius (never "prefer a far slot on the natural row over
+  // a near slot on a nudged row" — that was the original bug's shape).
   if (!resolved) {
-    // Nothing genuinely closer was found — put the card back exactly where
-    // it was rather than leaving it unreserved.
+    for (const xRadius of [FAR_FROM_PARENT_X_THRESHOLD, FAR_FROM_PARENT_SEARCH_X_RADIUS]) {
+      for (const candidateY of candidateYs) {
+        const x = occupancy.findFreeInterval(
+          candidateY,
+          CARD_HEIGHT,
+          CARD_WIDTH,
+          SIBLING_GAP,
+          junction.x,
+          xRadius,
+        );
+        if (x !== null) {
+          resolved = { x, y: candidateY };
+          break;
+        }
+      }
+      if (resolved) break;
+    }
+  }
+
+  if (!resolved) {
+    // Nothing genuinely closer was found even at the wide radius — put the
+    // card back exactly where it was so the caller can fall back to
+    // tryRaiseAncestorBranchForChild instead (see that function's own doc
+    // comment for why raising the PARENT branch, not searching further for
+    // the child, is the right next step here).
     occupancy.reserve({
       x: current.x,
       y: current.y,
@@ -1653,6 +1717,218 @@ function tryMoveChildNearParent(ctx: GrowthContext, childId: string): boolean {
   });
   positionByPerson.set(childId, resolved);
   return true;
+}
+
+/**
+ * Every id reachable UPWARD from `rootId`: rootId, rootId's own spouse
+ * (never split a couple), and recursively each's OWN recorded parents (plus
+ * THEIR spouses) — the direct ancestor spine, not siblings or descendants.
+ * Mirrors collectDescendantSubtreeIds's shape but walks the opposite
+ * direction (parentIds instead of partnership.childrenIds) — used by
+ * tryRaiseAncestorBranchForChild to move exactly "this person and everyone
+ * further up their own line", never a shared sibling row (siblings keep
+ * their own separate ancestor chain above THEM, untouched).
+ */
+function collectAncestorBranchIds(
+  graph: NormalizedGraph,
+  rootId: string,
+): Set<string> {
+  const ids = new Set<string>([rootId]);
+  const spouse = spouseOf(graph, rootId);
+  if (spouse) ids.add(spouse);
+
+  let frontier = [...ids];
+  while (frontier.length > 0) {
+    const next: string[] = [];
+    for (const id of frontier) {
+      const person = graph.personById.get(id);
+      if (!person) continue;
+      for (const parentId of person.parentIds) {
+        if (!ids.has(parentId)) {
+          ids.add(parentId);
+          next.push(parentId);
+        }
+        const parentSpouse = spouseOf(graph, parentId);
+        if (parentSpouse && !ids.has(parentSpouse)) {
+          ids.add(parentSpouse);
+          next.push(parentSpouse);
+        }
+      }
+    }
+    frontier = next;
+  }
+  return ids;
+}
+
+/**
+ * Last resort for a stranded childless leaf (rewrite plan §7 Stage 4
+ * extension — see findFirstFarFromParentViolator's own doc comment):
+ * tryMoveChildNearParent already tried every nearby row first (cheap,
+ * touches only the one leaf) — if EVERY row within its search budget is
+ * too densely packed to fit the child anywhere close to the junction, the
+ * user's own explicit direction (2026-09-11) is to keep the family unit
+ * visually TOGETHER by raising the PARENT's entire ancestor branch
+ * (collectAncestorBranchIds(graph, parentId) — the parent, their spouse,
+ * and everyone further up that SAME line, never touching the parent's own
+ * siblings' separate lines) by one GENERATION_GAP, opening exactly the
+ * child's natural row for the child to land on directly under the parent's
+ * NEW position — not a search for pre-existing free space elsewhere (which
+ * is what tryMoveChildNearParent already tried and failed at), an actual
+ * local re-placement, verified overlap-free before committing exactly like
+ * tryShiftSubtreeOutOfViolation. Deliberately narrower in scope than the
+ * old deleted raiseAncestryOneGeneration (which reran the ENTIRE ancestor
+ * chain's placement) — this only ever moves ONE branch (the specific
+ * parent + their own line), verified safe, and never re-invokes any
+ * placement function.
+ */
+const MAX_ANCESTOR_BRANCH_RAISE_STEPS = 3;
+
+function tryRaiseAncestorBranchForChild(
+  ctx: GrowthContext,
+  childId: string,
+): boolean {
+  const { graph, positionByPerson, junctionByPartnership } = ctx;
+  const child = graph.personById.get(childId);
+  const currentChildPos = positionByPerson.get(childId);
+  if (!child || child.parentIds.length === 0 || !currentChildPos) return false;
+
+  // The parent whose OWN branch we'd raise: prefer a parent who themselves
+  // has recorded parents (so raising them doesn't just move them past their
+  // own ancestors — collectAncestorBranchIds already includes those, so
+  // this is actually safe either way, but preferring the parent with a
+  // longer chain above them keeps the shift meaningful rather than
+  // relocating a childless, parentless solo parent by itself).
+  const parentId = child.parentIds[0];
+  const branchIds = collectAncestorBranchIds(graph, parentId);
+  // The child itself must never be part of the branch being raised — it's
+  // the one person this repair is trying to give room TO, not move away.
+  branchIds.delete(childId);
+
+  const parentPartnershipId = parentPartnershipIdFor(graph, parentId, childId);
+  const oldJunction = parentPartnershipId
+    ? junctionByPartnership.get(parentPartnershipId)
+    : undefined;
+  if (!oldJunction) return false;
+
+  // Try progressively larger raises — one GENERATION_GAP first (the common
+  // case, opens a fresh row directly above the parent's current one), then
+  // two, then three, UP before DOWN at each step (matching
+  // ancestorSideBias's own "up" framing — a branch's own ancestors reading
+  // as "further up" the tree is the natural direction; down is tried only
+  // if up is somehow blocked too, e.g. by another branch also being raised
+  // this same pass). Bounded (MAX_ANCESTOR_BRANCH_RAISE_STEPS) — same
+  // "give up rather than search forever" contract as every other repair
+  // pass here; assertNoOverlaps remains the final backstop if this returns
+  // false and the caller has no other fallback either.
+  for (let step = 1; step <= MAX_ANCESTOR_BRANCH_RAISE_STEPS; step++) {
+    for (const sign of [-1, 1] as const) {
+      const deltaY = sign * step * GENERATION_GAP;
+      const result = tryApplyAncestorBranchRaise(
+        ctx,
+        branchIds,
+        childId,
+        currentChildPos,
+        oldJunction,
+        deltaY,
+      );
+      if (result) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * One candidate shift for tryRaiseAncestorBranchForChild: moves every
+ * person in `branchIds` by `deltaY`, and the child to directly under the
+ * branch's (shifted) own partnership junction — verifying the WHOLE
+ * operation collides with nobody outside the moving set BEFORE committing
+ * anything. Returns whether this specific deltaY worked; caller tries the
+ * next one on false. This is what the first version of
+ * tryRaiseAncestorBranchForChild got wrong: it verified the branch shift
+ * alone, then unconditionally placed the child at its "ideal" spot
+ * afterward with no check at all — silently producing exactly the kind of
+ * overlap assertNoOverlaps exists to catch (real bug, caught by the real
+ * Neon fixture: the row one GENERATION_GAP up was ALSO already occupied
+ * near the branch's own x, not actually free — confirming a single fixed
+ * one-generation raise isn't always enough, hence the multi-step search in
+ * the caller).
+ */
+function tryApplyAncestorBranchRaise(
+  ctx: GrowthContext,
+  branchIds: Set<string>,
+  childId: string,
+  currentChildPos: Point,
+  oldJunction: Point,
+  deltaY: number,
+): boolean {
+  const { graph, positionByPerson, junctionByPartnership, occupancy } = ctx;
+
+  const shifted = new Map<string, Point>();
+  for (const id of branchIds) {
+    const pos = positionByPerson.get(id);
+    if (!pos) return false; // a branch member has no position yet — caller error, bail out safely
+    shifted.set(id, { x: pos.x, y: pos.y + deltaY });
+  }
+
+  const newChildPos = { x: oldJunction.x, y: oldJunction.y + deltaY + GENERATION_GAP };
+
+  const allMoved = new Map<string, Point>(shifted);
+  allMoved.set(childId, newChildPos);
+  const overlapsExisting = [...allMoved.values()].some((pos) =>
+    [...positionByPerson].some(
+      ([otherId, otherPos]) =>
+        !branchIds.has(otherId) &&
+        otherId !== childId &&
+        Math.abs(pos.x - otherPos.x) < CARD_WIDTH &&
+        Math.abs(pos.y - otherPos.y) < CARD_HEIGHT,
+    ),
+  );
+  if (overlapsExisting) return false;
+
+  for (const [id, pos] of shifted) positionByPerson.set(id, pos);
+  for (const [partnershipId, junction] of junctionByPartnership) {
+    const partnership = graph.partnershipById.get(partnershipId);
+    if (!partnership) continue;
+    if (
+      branchIds.has(partnership.leftPersonId) ||
+      branchIds.has(partnership.rightPersonId)
+    ) {
+      junctionByPartnership.set(partnershipId, {
+        x: junction.x,
+        y: junction.y + deltaY,
+      });
+    }
+  }
+
+  occupancy.release({
+    x: currentChildPos.x,
+    y: currentChildPos.y,
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+  });
+  occupancy.reserve({
+    x: newChildPos.x,
+    y: newChildPos.y,
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+  });
+  positionByPerson.set(childId, newChildPos);
+  return true;
+}
+
+/** The id of the partnership (among parentId's own) that lists childId as a child, if any. */
+function parentPartnershipIdFor(
+  graph: NormalizedGraph,
+  parentId: string,
+  childId: string,
+): string | undefined {
+  const parent = graph.personById.get(parentId);
+  if (!parent) return undefined;
+  for (const partnershipId of parent.partnershipIds) {
+    const partnership = graph.partnershipById.get(partnershipId);
+    if (partnership?.childrenIds.includes(childId)) return partnershipId;
+  }
+  return undefined;
 }
 
 /** Finds one paternal/maternal pair sharing a row in the wrong relative order, if any — mirrors invariants.ts's findSideConstraintViolation but returns the OFFENDING person (the one further into the opposite side's territory) instead of a message string. */
