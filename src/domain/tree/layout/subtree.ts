@@ -299,7 +299,12 @@ function growPersonBranchDown(
 
   if (partnerships.length === 0 && !solo) {
     positionByPerson.set(personId, { x: anchorX, y });
-    occupancy.reserve({ x: anchorX, y, width: CARD_WIDTH, height: CARD_HEIGHT });
+    occupancy.reserve({
+      x: anchorX,
+      y,
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
+    });
     return;
   }
 
@@ -352,7 +357,12 @@ function growPersonBranchDown(
 
     if (!personPlaced) {
       positionByPerson.set(personId, { x: selfX, y });
-      occupancy.reserve({ x: selfX, y, width: CARD_WIDTH, height: CARD_HEIGHT });
+      occupancy.reserve({
+        x: selfX,
+        y,
+        width: CARD_WIDTH,
+        height: CARD_HEIGHT,
+      });
       personPlaced = true;
     }
     if (!positionByPerson.has(spouseId)) {
@@ -369,7 +379,12 @@ function growPersonBranchDown(
     const junctionY = y + CARD_HEIGHT / 2 + GENERATION_GAP / 2;
     junctionByPartnership.set(partnership.id, { x: junctionX, y: junctionY });
 
-    growChildrenRowDown(ctx, partnership.childrenIds, branchCenter, y + GENERATION_GAP);
+    growChildrenRowDown(
+      ctx,
+      partnership.childrenIds,
+      branchCenter,
+      y + GENERATION_GAP,
+    );
 
     // Remarriage: the spouse just placed at spouseX may themselves have
     // OTHER partnerships (not `personId`'s) — grow those outward from the
@@ -389,7 +404,12 @@ function growPersonBranchDown(
         height: CARD_HEIGHT,
       });
     }
-    growChildrenRowDown(ctx, solo.childrenIds, branchCenter, y + GENERATION_GAP);
+    growChildrenRowDown(
+      ctx,
+      solo.childrenIds,
+      branchCenter,
+      y + GENERATION_GAP,
+    );
   }
 }
 
@@ -442,7 +462,12 @@ function growSpouseOwnPartnershipsDown(
     const junctionY = y + CARD_HEIGHT / 2 + GENERATION_GAP / 2;
     junctionByPartnership.set(partnershipId, { x: junctionX, y: junctionY });
 
-    growChildrenRowDown(ctx, partnership.childrenIds, junctionX, y + GENERATION_GAP);
+    growChildrenRowDown(
+      ctx,
+      partnership.childrenIds,
+      junctionX,
+      y + GENERATION_GAP,
+    );
   }
 }
 
@@ -647,7 +672,10 @@ function spouseOf(
  * fallback there would have silently dropped one source the moment a
  * parent had children from more than one origin).
  */
-function parentRowSiblingsOf(graph: NormalizedGraph, personId: string): string[] {
+function parentRowSiblingsOf(
+  graph: NormalizedGraph,
+  personId: string,
+): string[] {
   const person = graph.personById.get(personId);
   if (!person || person.parentIds.length === 0) return [];
 
@@ -1230,7 +1258,12 @@ function growSiblingRow(
           growRight ? 1 : -1,
         ) ?? targetNearSideCenterX);
 
-    const offset = ownCardOffsetFromAnchor(graph, siblingId, memo, siblingIsLeft);
+    const offset = ownCardOffsetFromAnchor(
+      graph,
+      siblingId,
+      memo,
+      siblingIsLeft,
+    );
     const subtreeAnchorX = resolvedOwnX - offset;
 
     // The near-side-only check above (tightFree/findFreeInterval) only ever
@@ -1492,7 +1525,10 @@ export function repairSideConstraintViolations(ctx: GrowthContext): void {
   for (let pass = 0; pass < MAX_PASSES; pass++) {
     const sideViolation = findFirstSideConstraintViolator(ctx);
     if (sideViolation) {
-      const movingIds = collectDescendantSubtreeIds(graph, sideViolation.personId);
+      const movingIds = collectDescendantSubtreeIds(
+        graph,
+        sideViolation.personId,
+      );
       if (tryShiftSubtreeOutOfViolation(ctx, movingIds)) continue;
       return; // couldn't resolve within budget — stop rather than loop on it forever
     }
@@ -1583,7 +1619,11 @@ function findFirstFarFromParentViolator(ctx: GrowthContext): string | null {
     const person = graph.personById.get(personId);
     if (!person || person.parentIds.length === 0) continue;
     if (person.partnershipIds.length > 0) continue; // has own spouse — not a lone leaf
-    if (parentRowSiblingsOf(graph, personId).some((id) => positionByPerson.has(id))) {
+    if (
+      parentRowSiblingsOf(graph, personId).some((id) =>
+        positionByPerson.has(id),
+      )
+    ) {
       continue; // part of a sibling row — must move as a block, not alone (see doc comment)
     }
 
@@ -1666,7 +1706,10 @@ function tryMoveChildNearParent(ctx: GrowthContext, childId: string): boolean {
   const maxYSearch = GENERATION_GAP * 2;
   const candidateYs = [naturalY];
   for (let step = 1; step * Y_NUDGE_STEP <= maxYSearch; step++) {
-    candidateYs.push(naturalY + step * Y_NUDGE_STEP, naturalY - step * Y_NUDGE_STEP);
+    candidateYs.push(
+      naturalY + step * Y_NUDGE_STEP,
+      naturalY - step * Y_NUDGE_STEP,
+    );
   }
 
   // Phase 1: prefer landing EXACTLY under the parent junction (x === same
@@ -1680,7 +1723,12 @@ function tryMoveChildNearParent(ctx: GrowthContext, childId: string): boolean {
   // the child sideways).
   let resolved: Point | null = null;
   for (const candidateY of candidateYs) {
-    const rect = { x: junction.x, y: candidateY, width: CARD_WIDTH, height: CARD_HEIGHT };
+    const rect = {
+      x: junction.x,
+      y: candidateY,
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
+    };
     if (!occupancy.intersects(rect, SIBLING_GAP)) {
       resolved = { x: junction.x, y: candidateY };
       break;
@@ -1695,7 +1743,10 @@ function tryMoveChildNearParent(ctx: GrowthContext, childId: string): boolean {
   // the narrower radius (never "prefer a far slot on the natural row over
   // a near slot on a nudged row" — that was the original bug's shape).
   if (!resolved) {
-    for (const xRadius of [FAR_FROM_PARENT_X_THRESHOLD, FAR_FROM_PARENT_SEARCH_X_RADIUS]) {
+    for (const xRadius of [
+      FAR_FROM_PARENT_X_THRESHOLD,
+      FAR_FROM_PARENT_SEARCH_X_RADIUS,
+    ]) {
       for (const candidateY of candidateYs) {
         const x = occupancy.findFreeInterval(
           candidateY,
@@ -1819,7 +1870,31 @@ function tryRaiseAncestorBranchForChild(
   // longer chain above them keeps the shift meaningful rather than
   // relocating a childless, parentless solo parent by itself).
   const parentId = child.parentIds[0];
-  const branchIds = collectAncestorBranchIds(graph, parentId);
+
+  // Raising ONLY the parent's own ancestor spine (collectAncestorBranchIds
+  // alone) was a real bug caught on the real fixture: it tore the parent's
+  // couple off their own generation's shared row — every OTHER person at
+  // that same generation (their own siblings/cousins, e.g. Елизавета/
+  // Николай Купчик) stayed on the old row, so the raised couple visually
+  // fell in among the row ABOVE (their own parents' generation of
+  // ROW-MATES, not their own parents), reading as "which generation is
+  // this?" confusion — exactly the same shape of problem elastic-Y is
+  // supposed to avoid, just one level up. Fix: when a row must move,
+  // EVERYONE sharing that row moves with it, together with each of THEIR
+  // own ancestor spines (so nobody in the raised row collides with their
+  // own parents above) — the row stays internally consistent, just shifted
+  // as a whole, rather than splitting one couple off it.
+  const parentPos0 = positionByPerson.get(parentId);
+  if (!parentPos0) return false;
+  const rowMateIds = [...positionByPerson.entries()]
+    .filter(([id, pos]) => id !== childId && pos.y === parentPos0.y)
+    .map(([id]) => id);
+  const branchIds = new Set<string>();
+  for (const rowMateId of rowMateIds) {
+    for (const id of collectAncestorBranchIds(graph, rowMateId)) {
+      branchIds.add(id);
+    }
+  }
   // The child itself must never be part of the branch being raised — it's
   // the one person this repair is trying to give room TO, not move away.
   branchIds.delete(childId);
@@ -1904,7 +1979,10 @@ function tryApplyAncestorBranchRaise(
     shifted.set(id, { x: pos.x, y: pos.y + deltaY });
   }
 
-  const newChildPos = { x: oldParentRow.x, y: oldParentRow.y + deltaY + GENERATION_GAP };
+  const newChildPos = {
+    x: oldParentRow.x,
+    y: oldParentRow.y + deltaY + GENERATION_GAP,
+  };
 
   const allMoved = new Map<string, Point>(shifted);
   allMoved.set(childId, newChildPos);
@@ -1955,7 +2033,10 @@ function findFirstSideConstraintViolator(
   ctx: GrowthContext,
 ): { personId: string; branch: "paternal" | "maternal" } | null {
   const { graph, positionByPerson } = ctx;
-  const byY = new Map<number, Array<{ id: string; x: number; branch: string }>>();
+  const byY = new Map<
+    number,
+    Array<{ id: string; x: number; branch: string }>
+  >();
   for (const [id, pos] of positionByPerson) {
     const person = graph.personById.get(id);
     if (!person) continue;
@@ -1979,8 +2060,12 @@ function findFirstSideConstraintViolator(
       // map) reflects it.
       const paternalIndex = row.findIndex((p) => p.id === worstPaternal.id);
       const maternalIndex = row.findIndex((p) => p.id === worstMaternal.id);
-      const later = paternalIndex > maternalIndex ? worstPaternal : worstMaternal;
-      return { personId: later.id, branch: later.branch as "paternal" | "maternal" };
+      const later =
+        paternalIndex > maternalIndex ? worstPaternal : worstMaternal;
+      return {
+        personId: later.id,
+        branch: later.branch as "paternal" | "maternal",
+      };
     }
   }
   return null;
@@ -2110,10 +2195,7 @@ function tryShiftSubtreeOutOfViolation(
     for (const sign of [1, -1] as const) {
       const deltaY = sign * step * Y_NUDGE_STEP;
       const shifted = new Map(
-        [...original].map(([id, pos]) => [
-          id,
-          { x: pos.x, y: pos.y + deltaY },
-        ]),
+        [...original].map(([id, pos]) => [id, { x: pos.x, y: pos.y + deltaY }]),
       );
 
       const overlapsExisting = [...shifted.values()].some((pos) =>
