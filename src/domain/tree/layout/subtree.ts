@@ -268,6 +268,22 @@ function growPersonBranchDown(
   personId: string,
   anchorX: number,
   y: number,
+  // Overrides which side of their FIRST partnership personId's own card
+  // sits on — set only by growSiblingRow, which already had to decide
+  // (spouseTowardAnchor) which side keeps the blood relative next to their
+  // OWN sibling row, a decision independent of shouldBeLeft's gender rule
+  // (Partnership.leftPersonId/rightPersonId). Every other caller (an
+  // ordinary descendant branch, with no "which side is the blood side"
+  // context at all) omits this and falls back to the plain gender-based
+  // partnership.leftPersonId check — unchanged behavior there. Real bug
+  // this fixes: without the override, this function silently re-derived
+  // isLeft from raw gender rank, which could (and on a real Neon family,
+  // did) contradict growSiblingRow's own already-correct decision — a
+  // blood relative sibling (Елена Ушкар) ended up on the wrong side of her
+  // own spouse relative to her ancestor row, purely because she happens to
+  // be female (shouldBeLeft: female always ranks right of male, with zero
+  // awareness of which one is this call's actual blood relative).
+  personIsLeftOverride?: boolean,
 ): void {
   const { graph, occupancy, positionByPerson, junctionByPartnership, memo } =
     ctx;
@@ -309,13 +325,27 @@ function growPersonBranchDown(
     const branchCenter = cursor + width / 2;
     cursor += width + REMARRIAGE_GAP;
 
-    const isLeft = partnership.leftPersonId === personId;
+    const isLeft =
+      i === 0 && personIsLeftOverride !== undefined
+        ? personIsLeftOverride
+        : partnership.leftPersonId === personId;
     const selfX = isLeft
       ? branchCenter - CARD_WIDTH / 2 - SPOUSE_GAP / 2
       : branchCenter + CARD_WIDTH / 2 + SPOUSE_GAP / 2;
-    const spouseId = isLeft
-      ? partnership.rightPersonId
-      : partnership.leftPersonId;
+    // Whichever of the partnership's two members is NOT personId — never
+    // simply "the other of leftPersonId/rightPersonId keyed off isLeft",
+    // which silently self-referenced personId whenever personIsLeftOverride
+    // disagreed with partnership.leftPersonId === personId (real bug caught
+    // on the real 58-person fixture: overriding Татьяна Наумович to the
+    // LEFT side, while she's actually the partnership's rightPersonId,
+    // computed spouseId as rightPersonId = Татьяна HERSELF — her actual
+    // spouse Алексей never got a position at all; personIsLeftOverride only
+    // ever controls which SIDE personId's own card lands on, it must never
+    // change who counts as "the spouse").
+    const spouseId =
+      partnership.leftPersonId === personId
+        ? partnership.rightPersonId
+        : partnership.leftPersonId;
     const spouseX = isLeft
       ? branchCenter + CARD_WIDTH / 2 + SPOUSE_GAP / 2
       : branchCenter - CARD_WIDTH / 2 - SPOUSE_GAP / 2;
@@ -921,6 +951,11 @@ function predictRowCardPositions(
   personId: string,
   anchorX: number,
   memo: Map<string, SubtreeMeasurement>,
+  // Must match whatever override growPersonBranchDown/ownCardOffsetFromAnchor
+  // will be called with for this same personId — see
+  // growPersonBranchDown's own doc comment on personIsLeftOverride. Kept in
+  // sync manually by growSiblingRow.
+  personIsLeftOverride?: boolean,
 ): number[] {
   const person = graph.personById.get(personId);
   if (!person) return [anchorX];
@@ -953,7 +988,10 @@ function predictRowCardPositions(
     const branchCenter = cursor + width / 2;
     cursor += width + REMARRIAGE_GAP;
 
-    const isLeft = partnership.leftPersonId === personId;
+    const isLeft =
+      i === 0 && personIsLeftOverride !== undefined
+        ? personIsLeftOverride
+        : partnership.leftPersonId === personId;
     const selfX = isLeft
       ? branchCenter - CARD_WIDTH / 2 - SPOUSE_GAP / 2
       : branchCenter + CARD_WIDTH / 2 + SPOUSE_GAP / 2;
@@ -995,6 +1033,13 @@ function ownCardOffsetFromAnchor(
   graph: NormalizedGraph,
   personId: string,
   memo: Map<string, SubtreeMeasurement>,
+  // Must match whatever personIsLeftOverride growPersonBranchDown will be
+  // called with for this same personId — see that parameter's own doc
+  // comment. Kept in sync manually by growSiblingRow (the only caller of
+  // either with a non-default override); a mismatch between the two would
+  // silently break the "resolvedOwnX round-trips through subtreeAnchorX"
+  // invariant this function's own doc comment describes.
+  personIsLeftOverride?: boolean,
 ): number {
   const person = graph.personById.get(personId);
   if (!person) return 0;
@@ -1025,7 +1070,8 @@ function ownCardOffsetFromAnchor(
 
   if (partnerships.length === 0) return branchCenterOffset; // solo-only — own card IS this branch's center
 
-  const isLeft = partnerships[0].leftPersonId === personId;
+  const isLeft =
+    personIsLeftOverride ?? partnerships[0].leftPersonId === personId;
   const selfOffset = isLeft
     ? -CARD_WIDTH / 2 - SPOUSE_GAP / 2
     : CARD_WIDTH / 2 + SPOUSE_GAP / 2;
@@ -1113,64 +1159,38 @@ function growSiblingRow(
 
   let anchorX = personX;
   for (const siblingId of unplacedSiblingIds) {
-    // A sibling who ALREADY has a spouse of their own needs their spouse's
-    // required side checked: growPersonBranchDown places a partnership's
-    // left/right members by gender (shouldBeLeft, an ABSOLUTE rule — husband
-    // left of wife — with no awareness of which way THIS row happens to be
-    // growing). When that required side points TOWARD the anchor (the
-    // already-placed previous sibling), the spouse's card unavoidably lands
-    // between the two blood siblings, and the tight slot must widen to fit
-    // the spouse's own card + SPOUSE_GAP too, or growPersonBranchDown would
-    // place the spouse right on top of the previous sibling's own card.
-    // When the spouse's required side points AWAY from the anchor (the
-    // common case), it needs no extra room here at all — it grows entirely
-    // on the far side, outside this tight slot, exactly like an ordinary
-    // down-branch. Mirrors placement.ts's old placeUnplacedSiblings
-    // spouseTowardAnchor handling.
-    const spouseId = spouseOf(graph, siblingId);
-    const spouseNotYetPlaced =
-      Boolean(spouseId) && !ctx.positionByPerson.has(spouseId!);
-    const partnership = spouseNotYetPlaced
-      ? graph.personById.get(siblingId)!.partnershipIds
-          .map((id) => graph.partnershipById.get(id))
-          .find(
-            (p): p is Partnership =>
-              Boolean(p) &&
-              (p!.leftPersonId === siblingId || p!.rightPersonId === siblingId),
-          )
-      : undefined;
-    // True when the spouse belongs on siblingId's side FACING the anchor —
-    // growRight means the anchor is to the LEFT of this new sibling, so a
-    // spouse required on siblingId's LEFT (siblingId is rightPersonId)
-    // points toward the anchor; symmetric for growing left.
-    const spouseGoesLeft = partnership?.rightPersonId === siblingId;
-    const spouseTowardAnchor = spouseNotYetPlaced
-      ? growRight
-        ? spouseGoesLeft
-        : !spouseGoesLeft
-      : false;
-    const extraWidth = spouseTowardAnchor ? CARD_WIDTH + SPOUSE_GAP : 0;
+    // The blood relative (siblingId) is ALWAYS placed on the side FACING
+    // the anchor (the rest of their sibling row) — their spouse ALWAYS on
+    // the far side, growing outward via growPersonBranchDown itself,
+    // exactly like an ordinary down-branch. This is independent of
+    // shouldBeLeft's plain gender rank (Partnership.leftPersonId/
+    // rightPersonId), which growPersonBranchDown would otherwise use on
+    // its own — passed explicitly as personIsLeftOverride to both
+    // ownCardOffsetFromAnchor and growPersonBranchDown below (see their own
+    // doc comments) so the blood relative stays next to their own sibling
+    // row regardless of which of the couple happens to be male/female.
+    // Real bug this replaced, caught on real Neon data: a female blood
+    // relative (Елена Ушкар) ranked right of her husband purely by gender
+    // rank — the OLD code here ("spouseTowardAnchor") treated that as an
+    // unavoidable exception and let the spouse sit between the anchor and
+    // the blood relative whenever the spouse's gender-required side
+    // happened to coincide with "toward anchor"; there is no such
+    // exception needed anymore now that growPersonBranchDown can be told
+    // directly which side the blood relative's own card goes on — the
+    // near-side reservation is therefore always exactly CARD_WIDTH (the
+    // sibling's own card only, never + the spouse's width).
+    const siblingIsLeft = growRight;
 
     // Tight target: exactly SIBLING_GAP from the previous card's edge, on
-    // the chosen side. The near-side width is normally just CARD_WIDTH
-    // (this sibling's own card) — their spouse/descendant subtree grows
-    // afterward on the FAR side by growPersonBranchDown itself — EXCEPT in
-    // the spouseTowardAnchor case above, where the spouse unavoidably sits
-    // between the two blood siblings and must be included in the near-side
-    // reservation.
-    const nearSideWidth = CARD_WIDTH + extraWidth;
+    // the chosen side — the sibling's own card only; their spouse/
+    // descendant subtree grows afterward on the FAR side by
+    // growPersonBranchDown itself.
     const targetNearEdgeX = growRight
       ? anchorX + CARD_WIDTH / 2 + SIBLING_GAP
       : anchorX - CARD_WIDTH / 2 - SIBLING_GAP;
     const targetNearSideCenterX = growRight
-      ? targetNearEdgeX + nearSideWidth / 2
-      : targetNearEdgeX - nearSideWidth / 2;
-    // (The sibling's OWN eventual card x — computed below as resolvedOwnX,
-    // after the occupancy check — sits on the FAR side of this reserved
-    // block from the anchor whenever their spouse occupies the near side:
-    // the spouse is the one immediately next to the previous sibling in
-    // that case, not this sibling. The opposite sign from what might look
-    // intuitive at first glance.)
+      ? targetNearEdgeX + CARD_WIDTH / 2
+      : targetNearEdgeX - CARD_WIDTH / 2;
 
     // A genuinely occupied tight slot (an unrelated in-law from a
     // neighboring branch, not a blood sibling — blood siblings are always
@@ -1193,27 +1213,24 @@ function growSiblingRow(
       {
         x: targetNearSideCenterX,
         y,
-        width: nearSideWidth,
+        width: CARD_WIDTH,
         height: CARD_HEIGHT,
       },
       0,
     );
-    const resolvedNearSideCenterX = tightFree
+    const resolvedOwnX = tightFree
       ? targetNearSideCenterX
       : (occupancy.findFreeInterval(
           y,
           CARD_HEIGHT,
-          nearSideWidth,
+          CARD_WIDTH,
           INTER_FAMILY_GAP,
           targetNearSideCenterX,
           3000,
           growRight ? 1 : -1,
         ) ?? targetNearSideCenterX);
-    const resolvedOwnX = growRight
-      ? resolvedNearSideCenterX + extraWidth / 2
-      : resolvedNearSideCenterX - extraWidth / 2;
 
-    const offset = ownCardOffsetFromAnchor(graph, siblingId, memo);
+    const offset = ownCardOffsetFromAnchor(graph, siblingId, memo, siblingIsLeft);
     const subtreeAnchorX = resolvedOwnX - offset;
 
     // The near-side-only check above (tightFree/findFreeInterval) only ever
@@ -1227,8 +1244,9 @@ function growSiblingRow(
     // growPersonBranchDown lays out via its own fixed left-to-right cursor
     // sequence, which can extend the sibling's actual ROW footprint well
     // beyond what the near-side check considered — even toward the ANCHOR
-    // side, independent of extraWidth's own toward-anchor logic (which only
-    // reasons about the FIRST partnership). Real bugs caught by property
+    // side, from a second/third partnership the near-side check never
+    // reasons about (it only ever checks the FIRST partnership's own
+    // near-side slot). Real bugs caught by property
     // testing (rewrite plan §8a), TWO separate ones: (1) a remarried
     // sibling's second partnership's spouse landed almost exactly on top of
     // an unrelated already-placed person, because nothing had reserved or
@@ -1252,6 +1270,7 @@ function growSiblingRow(
       siblingId,
       subtreeAnchorX,
       memo,
+      siblingIsLeft,
     );
     const allCardsFree = predictedCardXs.every(
       (cardX) =>
@@ -1279,6 +1298,7 @@ function growSiblingRow(
           siblingId,
           candidateAnchorX,
           memo,
+          siblingIsLeft,
         );
         const candidateFree = candidateCardXs.every(
           (cardX) =>
@@ -1302,7 +1322,7 @@ function growSiblingRow(
       }
     }
 
-    growPersonBranchDown(ctx, siblingId, finalSubtreeAnchorX, y);
+    growPersonBranchDown(ctx, siblingId, finalSubtreeAnchorX, y, siblingIsLeft);
 
     anchorX = finalResolvedOwnX;
   }

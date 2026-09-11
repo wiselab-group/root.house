@@ -548,24 +548,22 @@ describe("layout engine — real data (Alexander/Eleonora/Eva + Viktor/Galina/Da
     expect(svetlanaNikolaiGap).toBeCloseTo(nikolaiViktorGap, 5);
   });
 
-  it("Marina's blood-sibling gap from Nina widens to fit her husband Viktor Ravbetsky when the spouse's required side unavoidably points toward the anchor (not a bug — the opposite case from Svetlana above)", () => {
-    // Marina's husband must be leftPersonId (male < female), so when Marina
-    // is placed to the RIGHT of Nina (continuing the row's established
-    // growth direction), Viktor Ravbetsky unavoidably lands BETWEEN Marina
-    // and Nina — there is no way to keep the blood gap at plain SIBLING_GAP
-    // here without either colliding with Nina or flipping the whole row's
-    // growth direction (which is its own, worse bug — see CLAUDE.md). The
-    // gap must widen to fit Viktor Ravbetsky's card + SPOUSE_GAP inside it.
+  it("Marina's blood-sibling gap from Nina stays the plain SIBLING_GAP — her husband Viktor Ravbetsky never sits between two blood siblings", () => {
+    // Marina (the blood sibling) is always placed on the side FACING the
+    // anchor (Nina, growing this row rightward) regardless of gender —
+    // Viktor Ravbetsky (her spouse) always grows on the FAR side instead,
+    // via growPersonBranchDown's own branch layout. This replaces the old
+    // "spouseTowardAnchor" behavior (spouse unavoidably wedged between two
+    // blood siblings whenever his gender-required side happened to face the
+    // anchor) — the blood-sibling gap is now ALWAYS the plain SIBLING_GAP,
+    // never widened to fit a spouse's card in between.
     const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const nina = personById(result, "nina-tikhonovich");
     const marina = personById(result, "marina-ravbetskaya");
     const viktorRavbetsky = personById(result, "viktor-ravbetsky");
-    expect(viktorRavbetsky.x).toBeGreaterThan(nina.x);
-    expect(viktorRavbetsky.x).toBeLessThan(marina.x);
+    expect(viktorRavbetsky.x).toBeGreaterThan(marina.x); // spouse on the far side, past Marina
     const ninaMarinaGap = marina.x - nina.x;
-    expect(ninaMarinaGap).toBeGreaterThan(
-      CARD_WIDTH + SIBLING_GAP + CARD_WIDTH,
-    );
+    expect(ninaMarinaGap).toBeCloseTo(CARD_WIDTH + SIBLING_GAP, 5);
   });
 
   it("Elena Ushkar and her full sister Elizaveta Kupchik stay on the SAME row, adjacent, as full siblings of Grigory/Elizaveta Krivusha", () => {
@@ -590,7 +588,14 @@ describe("layout engine — real data (Alexander/Eleonora/Eva + Viktor/Galina/Da
     const nikolaiUshkar = personById(result, "nikolai-ushkar");
     const elizavetaKupchik = personById(result, "elizaveta-kupchik");
     expect(elena.y).toBe(elizavetaKupchik.y);
-    expect(nikolaiUshkar.x).toBeLessThan(elena.x); // husband left of wife
+    // Elena (the blood relative, sibling of Elizaveta Kupchik) stays on the
+    // side FACING the rest of her own sibling row — her spouse Nikolai
+    // Ushkar (married in) on the far side — regardless of gender rank
+    // (rewrite plan §7: personIsLeftOverride, replacing the old plain
+    // shouldBeLeft-only placement that put Nikolai left purely because
+    // he's male, independent of which of the couple is the actual blood
+    // relative here).
+    expect(nikolaiUshkar.x).toBeGreaterThan(elena.x);
     expect(Math.abs(elena.x - nikolaiUshkar.x)).toBeCloseTo(
       CARD_WIDTH + SPOUSE_GAP,
       5,
@@ -875,12 +880,14 @@ describe("layout engine — real data (Alexander/Eleonora/Eva + Viktor/Galina/Da
     const nina = personById(result, "nina-tikhonovich");
     const marina = personById(result, "marina-ravbetskaya");
     const viktorRavbetsky = personById(result, "viktor-ravbetsky");
-    // Galina's sibling row runs Galina, Nina, [Viktor Ravbetsky, Marina], ...
+    // Galina's sibling row runs Galina, Nina, [Marina, Viktor Ravbetsky], ...
     // — all increasing in x, all on Galina's own row, none of them jumping
-    // over to Viktor Kupchik's side (which is at negative x, left of Galina).
+    // over to Viktor Kupchik's side (which is at negative x, left of
+    // Galina). Marina (blood sibling) leads the pair, facing the anchor;
+    // Viktor Ravbetsky (her spouse) trails on the far side.
     expect(nina.x).toBeGreaterThan(galina.x);
-    expect(viktorRavbetsky.x).toBeGreaterThan(nina.x);
-    expect(marina.x).toBeGreaterThan(viktorRavbetsky.x);
+    expect(marina.x).toBeGreaterThan(nina.x);
+    expect(viktorRavbetsky.x).toBeGreaterThan(marina.x);
     expect(viktorRavbetsky.y).toBe(galina.y);
   });
 
@@ -896,7 +903,9 @@ describe("layout engine — real data (Alexander/Eleonora/Eva + Viktor/Galina/Da
     const marina = personById(result, "marina-ravbetskaya");
     const viktorRavbetsky = personById(result, "viktor-ravbetsky");
     expect(viktorRavbetsky.y).toBe(marina.y);
-    expect(viktorRavbetsky.x).toBeLessThan(marina.x);
+    // Marina (blood sibling) faces the anchor, Viktor Ravbetsky (spouse) on
+    // the far side.
+    expect(viktorRavbetsky.x).toBeGreaterThan(marina.x);
     expect(Math.abs(marina.x - viktorRavbetsky.x)).toBeLessThan(CARD_WIDTH * 3);
   });
 
@@ -910,11 +919,13 @@ describe("layout engine — real data (Alexander/Eleonora/Eva + Viktor/Galina/Da
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
 
-  it("the other five sisters' husbands (Alexey Naumovich, Vladimir Artyukh, Vladimir Baidovsky, Alexander Stashevsky, Sergey Shlyazhko, Oleg Redko) each stay adjacent to their own wife, on her left (male < female)", () => {
+  it("the other five sisters' husbands (Alexey Naumovich, Vladimir Artyukh, Vladimir Baidovsky, Alexander Stashevsky, Sergey Shlyazhko, Oleg Redko) each stay adjacent to their own wife, on the FAR side from the sibling row's anchor", () => {
     // Same fix as Marina/Viktor Ravbetsky, now exercised with FIVE more
     // sister-with-spouse pairs sharing the same contiguous row — confirms
     // the placeUnplacedSiblings unit-width fix generalizes past the first
-    // case it was found and fixed on.
+    // case it was found and fixed on. Each wife (the blood sibling) faces
+    // the anchor; her husband (spouse, married in) trails on the far side —
+    // independent of gender rank (rewrite plan §7: personIsLeftOverride).
     const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     const pairs: [string, string][] = [
       ["alexey-naumovich", "tatiana-naumovich"],
@@ -928,7 +939,7 @@ describe("layout engine — real data (Alexander/Eleonora/Eva + Viktor/Galina/Da
       const husband = personById(result, husbandId);
       const wife = personById(result, wifeId);
       expect(husband.y).toBe(wife.y);
-      expect(husband.x).toBeLessThan(wife.x);
+      expect(husband.x).toBeGreaterThan(wife.x);
       expect(Math.abs(wife.x - husband.x)).toBeLessThan(CARD_WIDTH * 3);
     }
     expect(detectOverlaps(positionMap(result))).toEqual([]);
