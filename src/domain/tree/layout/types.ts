@@ -148,6 +148,20 @@ export interface SubtreeMeasurement {
   ownWidth: number;
   /** Total width required by this branch's own row plus every descendant row beneath it, already including sibling/branch margins. */
   totalWidth: number;
+  /**
+   * Width of just THIS branch's own row — side-by-side remarriage
+   * partnerships/solo-parenthood included, but NEVER any descendant row
+   * beneath it (unlike totalWidth, which folds in the deepest child's
+   * width too). Used by growChildrenRowDown's compact sibling layout
+   * (CLAUDE.md TREE LAYOUT RULES §5 "родные сиблинги рядом") to keep full
+   * siblings adjacent regardless of how wide one sibling's OWN descendant
+   * subtree eventually gets many generations down — a subtree that goes
+   * wide expands away from its compact row position, not by pushing its
+   * siblings apart on their shared row. Equal to `ownWidth` for a childless
+   * person with at most one partnership; wider only when the person
+   * themselves has multiple partnerships/solo-parenthood side by side.
+   */
+  compactWidth: number;
   /** Number of descendant generations beneath this branch (0 = childless). */
   depth: number;
 }

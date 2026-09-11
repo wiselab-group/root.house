@@ -90,7 +90,12 @@ export function measurePersonWidth(
 
   const person = graph.personById.get(personId);
   if (!person) {
-    const empty: SubtreeMeasurement = { ownWidth: 0, totalWidth: 0, depth: 0 };
+    const empty: SubtreeMeasurement = {
+      ownWidth: 0,
+      totalWidth: 0,
+      compactWidth: 0,
+      depth: 0,
+    };
     memo.set(cacheKey, empty);
     return empty;
   }
@@ -105,6 +110,7 @@ export function measurePersonWidth(
     const result: SubtreeMeasurement = {
       ownWidth: CARD_WIDTH,
       totalWidth: CARD_WIDTH,
+      compactWidth: CARD_WIDTH,
       depth: 0,
     };
     memo.set(cacheKey, result);
@@ -114,25 +120,36 @@ export function measurePersonWidth(
   // Each partnership this person is in becomes its own side-by-side branch
   // (this is the concrete remarriage mechanism — Partnership §27).
   const branchWidths: number[] = [];
+  const branchCompactWidths: number[] = [];
   let maxDepth = 0;
   for (const partnership of partnerships) {
     const m = measurePartnershipWidth(graph, partnership.id, memo);
     branchWidths.push(m.totalWidth);
+    branchCompactWidths.push(m.compactWidth);
     maxDepth = Math.max(maxDepth, m.depth + 1);
   }
   if (solo) {
     const m = measureChildrenRowWidth(graph, solo.childrenIds, memo);
     branchWidths.push(Math.max(CARD_WIDTH, m.totalWidth));
+    // Solo-parenthood's compact contribution is just this person's own
+    // card — the whole point of compactWidth is to NOT fold descendant
+    // width in, and solo's only "own row" element is the person themselves
+    // (no spouse card, unlike a partnership's CARD_WIDTH*2+SPOUSE_GAP).
+    branchCompactWidths.push(CARD_WIDTH);
     maxDepth = Math.max(maxDepth, m.depth + 1);
   }
 
   const totalWidth =
     branchWidths.reduce((a, b) => a + b, 0) +
     REMARRIAGE_GAP * Math.max(0, branchWidths.length - 1);
+  const compactWidth =
+    branchCompactWidths.reduce((a, b) => a + b, 0) +
+    REMARRIAGE_GAP * Math.max(0, branchCompactWidths.length - 1);
 
   const result: SubtreeMeasurement = {
     ownWidth: CARD_WIDTH,
     totalWidth: Math.max(CARD_WIDTH, totalWidth),
+    compactWidth: Math.max(CARD_WIDTH, compactWidth),
     depth: maxDepth,
   };
   memo.set(cacheKey, result);
@@ -150,7 +167,12 @@ export function measurePartnershipWidth(
 
   const partnership = graph.partnershipById.get(partnershipId);
   if (!partnership) {
-    const empty: SubtreeMeasurement = { ownWidth: 0, totalWidth: 0, depth: 0 };
+    const empty: SubtreeMeasurement = {
+      ownWidth: 0,
+      totalWidth: 0,
+      compactWidth: 0,
+      depth: 0,
+    };
     memo.set(cacheKey, empty);
     return empty;
   }
@@ -165,6 +187,11 @@ export function measurePartnershipWidth(
   const result: SubtreeMeasurement = {
     ownWidth,
     totalWidth: Math.max(ownWidth, childrenMeasurement.totalWidth),
+    // Never folds in childrenMeasurement's width — a partnership's compact
+    // footprint is always just the two spouse cards, regardless of how wide
+    // their descendants eventually get (see SubtreeMeasurement.compactWidth's
+    // own doc comment).
+    compactWidth: ownWidth,
     depth:
       childrenMeasurement.depth + (partnership.childrenIds.length > 0 ? 1 : 0),
   };
@@ -184,14 +211,17 @@ function measureChildrenRowWidth(
   memo: Map<string, SubtreeMeasurement>,
 ): SubtreeMeasurement {
   if (childrenIds.length === 0) {
-    return { ownWidth: 0, totalWidth: 0, depth: 0 };
+    return { ownWidth: 0, totalWidth: 0, compactWidth: 0, depth: 0 };
   }
   const widths = childrenIds.map((id) => measurePersonWidth(graph, id, memo));
   const totalWidth =
     widths.reduce((sum, w) => sum + w.totalWidth, 0) +
     SIBLING_GAP * Math.max(0, widths.length - 1);
+  const compactWidth =
+    widths.reduce((sum, w) => sum + w.compactWidth, 0) +
+    SIBLING_GAP * Math.max(0, widths.length - 1);
   const depth = Math.max(...widths.map((w) => w.depth));
-  return { ownWidth: totalWidth, totalWidth, depth };
+  return { ownWidth: totalWidth, totalWidth, compactWidth, depth };
 }
 
 // ---------------------------------------------------------------------------
@@ -308,25 +338,36 @@ function growPersonBranchDown(
     return;
   }
 
-  // Lay out this person's partnership branches side by side, centered on anchorX.
-  const branchWidths = [
+  // Lay out this person's partnership branches side by side, centered on
+  // anchorX. Uses each branch's COMPACT width (own row only, never
+  // descendant depth) for the cursor here — this person's own position
+  // (anchorX) was itself handed down by a compact sibling-row cursor
+  // (growChildrenRowDown), which already measured THIS person's contribution
+  // to their row as measurePersonWidth(...).compactWidth (the sum of every
+  // partnership's own compactWidth, side by side). Using totalWidth here
+  // instead would silently disagree with that outer contract whenever any
+  // partnership already has children of its own (their totalWidth then
+  // exceeds their compactWidth) — real bug this replaces, caught on a random
+  // property-test fixture: a remarried person's SECOND partnership branch
+  // drifted away from their sibling row's compact center by exactly the
+  // difference between their combined totalWidth and compactWidth, close
+  // enough to overlap their own sibling's neighboring partnership branch.
+  const branchCompactWidths = [
     ...partnerships.map(
-      (p) => measurePartnershipWidth(graph, p.id, memo).totalWidth,
+      (p) => measurePartnershipWidth(graph, p.id, memo).compactWidth,
     ),
-    ...(solo
-      ? [Math.max(CARD_WIDTH, measureSoloWidth(graph, solo.childrenIds, memo))]
-      : []),
+    ...(solo ? [CARD_WIDTH] : []),
   ];
-  const totalWidth =
-    branchWidths.reduce((a, b) => a + b, 0) +
-    REMARRIAGE_GAP * Math.max(0, branchWidths.length - 1);
+  const compactWidth =
+    branchCompactWidths.reduce((a, b) => a + b, 0) +
+    REMARRIAGE_GAP * Math.max(0, branchCompactWidths.length - 1);
 
-  let cursor = anchorX - totalWidth / 2;
+  let cursor = anchorX - compactWidth / 2;
   let personPlaced = false;
 
   for (let i = 0; i < partnerships.length; i++) {
     const partnership = partnerships[i];
-    const width = branchWidths[i];
+    const width = branchCompactWidths[i];
     const branchCenter = cursor + width / 2;
     cursor += width + REMARRIAGE_GAP;
 
@@ -393,7 +434,7 @@ function growPersonBranchDown(
   }
 
   if (solo) {
-    const width = branchWidths[branchWidths.length - 1];
+    const width = branchCompactWidths[branchCompactWidths.length - 1];
     const branchCenter = cursor + width / 2;
     if (!personPlaced) {
       positionByPerson.set(personId, { x: branchCenter, y });
@@ -471,6 +512,34 @@ function growSpouseOwnPartnershipsDown(
   }
 }
 
+/**
+ * Places one children row. CLAUDE.md TREE LAYOUT RULES §5 ("родные сиблинги
+ * рядом") means full siblings must sit adjacent to EACH OTHER regardless of
+ * how wide any one sibling's OWN descendant subtree eventually gets many
+ * generations down (e.g. a Biblical-scale fixture: three brothers where one
+ * has a single childless line and another has a 12-generation-deep
+ * genealogy branching into thousands of descendants) — the row itself must
+ * stay compact, with any one sibling's wide subtree expanding away from
+ * their own compact slot, never by pushing their siblings apart on this
+ * shared row.
+ *
+ * This is why the cursor below advances by each child's `compactWidth`
+ * (own row only — see SubtreeMeasurement.compactWidth's own doc comment),
+ * NOT `totalWidth` (which would fold in descendant width and re-introduce
+ * exactly the multi-thousand-pixel gaps this function exists to prevent).
+ * The row is also reserved in occupancy using ONLY that same compact
+ * footprint, not the row's total descendant-inclusive width — a sibling's
+ * descendant subtree widening out happens strictly BELOW this row's Y (at
+ * y + GENERATION_GAP and deeper), a physically different occupancy row, so
+ * reserving more than the compact footprint here would reserve space this
+ * row never actually occupies. Each child is grown from its compact
+ * position; that child's OWN recursion into growPersonBranchDown/
+ * growChildrenRowDown for THEIR children still does an honest occupancy
+ * search on each deeper row, so a subtree that does go wide several
+ * generations down is caught and displaced sideways by the ordinary
+ * occupancy mechanism at the Y where it actually happens to collide with
+ * something — never by inflating the compact row above it.
+ */
 function growChildrenRowDown(
   ctx: GrowthContext,
   childrenIds: string[],
@@ -480,45 +549,37 @@ function growChildrenRowDown(
   const { graph, occupancy, memo } = ctx;
   if (childrenIds.length === 0) return;
 
-  const widths = childrenIds.map(
-    (id) => measurePersonWidth(graph, id, memo).totalWidth,
+  const measurements = childrenIds.map((id) =>
+    measurePersonWidth(graph, id, memo),
   );
-  const totalWidth =
-    widths.reduce((a, b) => a + b, 0) +
-    SIBLING_GAP * Math.max(0, widths.length - 1);
+  const compactWidths = measurements.map((m) => m.compactWidth);
+  const compactRowWidth =
+    compactWidths.reduce((a, b) => a + b, 0) +
+    SIBLING_GAP * Math.max(0, compactWidths.length - 1);
 
+  // Reserved against unrelated branches sharing THIS row (Y) using the
+  // row's actual compact footprint — a sibling's own descendant subtree
+  // widening out happens strictly BELOW this Y (at y + GENERATION_GAP and
+  // deeper), where that child's own growPersonBranchDown/growChildrenRowDown
+  // recursion does its own honest occupancy search; it has no bearing on
+  // how much space this row itself occupies at y.
   const resolvedCenterX =
     occupancy.findFreeInterval(
       y,
       CARD_HEIGHT,
-      totalWidth,
+      compactRowWidth,
       SIBLING_GAP,
       rowCenterX,
       3000,
     ) ?? rowCenterX;
 
-  let cursor = resolvedCenterX - totalWidth / 2;
+  let cursor = resolvedCenterX - compactRowWidth / 2;
   for (let i = 0; i < childrenIds.length; i++) {
-    const childWidth = widths[i];
+    const childWidth = compactWidths[i];
     const childCenter = cursor + childWidth / 2;
     cursor += childWidth + SIBLING_GAP;
     growPersonBranchDown(ctx, childrenIds[i], childCenter, y);
   }
-}
-
-function measureSoloWidth(
-  graph: NormalizedGraph,
-  childrenIds: string[],
-  memo: Map<string, SubtreeMeasurement>,
-): number {
-  if (childrenIds.length === 0) return CARD_WIDTH;
-  const widths = childrenIds.map(
-    (id) => measurePersonWidth(graph, id, memo).totalWidth,
-  );
-  return (
-    widths.reduce((a, b) => a + b, 0) +
-    SIBLING_GAP * Math.max(0, widths.length - 1)
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -959,20 +1020,23 @@ function placeAncestorUnit(
  * spouse from every partnership — never descendants, which land one full
  * GENERATION_GAP further down and can never collide with anything at THIS
  * y no matter how wide their own subtree is) — without actually placing
- * anything. Mirrors growPersonBranchDown's own cursor math EXACTLY
- * (including using each partnership's real measurePartnershipWidth
- * totalWidth for cursor SPACING between branches, since a partnership with
- * many descendants genuinely does get spaced further from its neighboring
- * branch by growPersonBranchDown, even though the descendants themselves
- * land elsewhere) — critical because an approximation using only
- * CARD_WIDTH*2+SPOUSE_GAP per branch (ignoring descendant-driven spacing
- * between REMARRIAGE branches) UNDER-predicts how far apart a remarried
- * person's second partnership's spouse actually ends up when a partnership
- * has children, causing exactly the false-negative collision check this
- * function replaces: a "the row must be free, nothing else could collide"
- * verification that quietly used the WRONG width whenever any partnership
- * had its own children, understating the true cursor advance and letting a
- * genuinely-colliding position through undetected.
+ * anything. Mirrors growPersonBranchDown's own cursor math EXACTLY,
+ * including using each partnership's compactWidth (own row only, never
+ * descendant depth — CLAUDE.md TREE LAYOUT RULES §5 "родные сиблинги рядом")
+ * for cursor SPACING between REMARRIAGE branches, same as
+ * growPersonBranchDown itself. An earlier version of both functions used
+ * totalWidth here (descendant-inclusive), which was the deliberately correct
+ * choice back when child ROWS were also spaced by totalWidth — once
+ * growChildrenRowDown switched sibling-row spacing to compactWidth so full
+ * siblings stay adjacent regardless of subtree depth, this function had to
+ * switch too or it would silently mispredict where growPersonBranchDown
+ * actually places a remarried person's second partnership branch, letting a
+ * genuinely-colliding position through this function's own check undetected
+ * (the ONE prior real bug this same doc comment used to describe was the
+ * mirror-image mistake — using flat CARD_WIDTH*2+SPOUSE_GAP back when
+ * totalWidth was the correct cursor unit; the lesson generalizes: whichever
+ * width unit growPersonBranchDown's actual cursor uses, this function must
+ * use the exact same one).
  */
 function predictRowCardPositions(
   graph: NormalizedGraph,
@@ -994,25 +1058,29 @@ function predictRowCardPositions(
   const solo = graph.soloParentByPersonId.get(personId);
   if (partnerships.length === 0 && !solo) return [anchorX];
 
-  const branchWidths = [
+  // Must use compactWidth, matching growPersonBranchDown's own cursor
+  // exactly (see that function's doc comment on why REMARRIAGE-branch
+  // cursor spacing switched from totalWidth to compactWidth) — this
+  // function's whole contract is mirroring growPersonBranchDown's real
+  // placement math so callers can check occupancy against it BEFORE
+  // actually placing anything (see this function's own doc comment).
+  const branchCompactWidths = [
     ...partnerships.map(
-      (p) => measurePartnershipWidth(graph, p.id, memo).totalWidth,
+      (p) => measurePartnershipWidth(graph, p.id, memo).compactWidth,
     ),
-    ...(solo
-      ? [Math.max(CARD_WIDTH, measureSoloWidth(graph, solo.childrenIds, memo))]
-      : []),
+    ...(solo ? [CARD_WIDTH] : []),
   ];
-  const totalWidth =
-    branchWidths.reduce((a, b) => a + b, 0) +
-    REMARRIAGE_GAP * Math.max(0, branchWidths.length - 1);
+  const compactWidth =
+    branchCompactWidths.reduce((a, b) => a + b, 0) +
+    REMARRIAGE_GAP * Math.max(0, branchCompactWidths.length - 1);
 
-  let cursor = anchorX - totalWidth / 2;
+  let cursor = anchorX - compactWidth / 2;
   const positions: number[] = [];
   let personPlaced = false;
 
   for (let i = 0; i < partnerships.length; i++) {
     const partnership = partnerships[i];
-    const width = branchWidths[i];
+    const width = branchCompactWidths[i];
     const branchCenter = cursor + width / 2;
     cursor += width + REMARRIAGE_GAP;
 
@@ -1035,7 +1103,7 @@ function predictRowCardPositions(
   }
 
   if (solo) {
-    const width = branchWidths[branchWidths.length - 1];
+    const width = branchCompactWidths[branchCompactWidths.length - 1];
     const branchCenter = cursor + width / 2;
     if (!personPlaced) positions.push(branchCenter);
   }
@@ -1078,23 +1146,24 @@ function ownCardOffsetFromAnchor(
   const solo = graph.soloParentByPersonId.get(personId);
   if (partnerships.length === 0 && !solo) return 0; // childless/unpartnered — own card IS the anchor
 
-  const branchWidths = [
+  // Must use compactWidth, matching growPersonBranchDown's own cursor
+  // exactly (see that function's doc comment on why REMARRIAGE-branch
+  // cursor spacing switched from totalWidth to compactWidth).
+  const branchCompactWidths = [
     ...partnerships.map(
-      (p) => measurePartnershipWidth(graph, p.id, memo).totalWidth,
+      (p) => measurePartnershipWidth(graph, p.id, memo).compactWidth,
     ),
-    ...(solo
-      ? [Math.max(CARD_WIDTH, measureSoloWidth(graph, solo.childrenIds, memo))]
-      : []),
+    ...(solo ? [CARD_WIDTH] : []),
   ];
-  const totalWidth =
-    branchWidths.reduce((a, b) => a + b, 0) +
-    REMARRIAGE_GAP * Math.max(0, branchWidths.length - 1);
+  const compactWidth =
+    branchCompactWidths.reduce((a, b) => a + b, 0) +
+    REMARRIAGE_GAP * Math.max(0, branchCompactWidths.length - 1);
   // The person's own card is always placed on branch i=0 (their FIRST
   // partnership, or their solo branch if that's their only branch) — see
   // growPersonBranchDown's own `personPlaced` flag, set true on the first
   // iteration and never reconsidered after.
-  const firstWidth = branchWidths[0];
-  const branchCenterOffset = -totalWidth / 2 + firstWidth / 2;
+  const firstWidth = branchCompactWidths[0];
+  const branchCenterOffset = -compactWidth / 2 + firstWidth / 2;
 
   if (partnerships.length === 0) return branchCenterOffset; // solo-only — own card IS this branch's center
 

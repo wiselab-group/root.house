@@ -17,7 +17,7 @@ import {
   case11InLawParents,
 } from "./test-fixtures";
 import { findInterleavedSiblingViolation } from "./invariants";
-import type { TreeLayoutResult } from "./types";
+import type { FamilyGraph, TreeLayoutResult } from "./types";
 
 function positionMap(result: TreeLayoutResult) {
   return new Map(result.persons.map((p) => [p.id, { x: p.x, y: p.y }]));
@@ -1545,5 +1545,90 @@ describe("layout engine — isolated persons (no relationship at all)", () => {
     expect(personById(withIsolated, "spouse").x).toBe(
       personById(withoutIsolated, "spouse").x,
     );
+  });
+});
+
+describe("layout engine — compact sibling row regardless of one sibling's deep descendant subtree", () => {
+  // Regression test for a real production bug (Biblical-scale genealogy
+  // fixture: Adam → Cain/Abel/Seth, Seth's own line running Enosh → Kenan →
+  // ... → Lamech → Noah → Shem/Ham/Japheth, several more generations deep).
+  // Before compactWidth (subtree.ts), growChildrenRowDown spaced full
+  // siblings by each child's TOTAL subtree width (descendant-inclusive), so
+  // Seth — whose line is 12 generations deep and eventually branches into
+  // Noah's three sons — got pushed thousands of pixels away from Cain and
+  // Abel even though the three are full siblings who should sit adjacent
+  // (CLAUDE.md TREE LAYOUT RULES §5). Fixed by spacing the ROW using each
+  // child's compactWidth (own row only) while each child's OWN recursion
+  // into their descendants still does an honest occupancy search several
+  // rows down — see subtree.ts's growChildrenRowDown doc comment.
+  const focusId = "adam";
+
+  function threeSiblingsOneWithDeepChain(): FamilyGraph {
+    const persons: FamilyGraph["persons"] = [
+      { id: "adam", firstName: "Adam", lastName: "", gender: "male" },
+      { id: "eve", firstName: "Eve", lastName: "", gender: "female" },
+      { id: "cain", firstName: "Cain", lastName: "", gender: "male" },
+      { id: "abel", firstName: "Abel", lastName: "", gender: "male" },
+      { id: "seth", firstName: "Seth", lastName: "", gender: "male" },
+    ];
+    const relationships: FamilyGraph["relationships"] = [
+      { id: "adam-eve", kind: "spouse", from: "adam", to: "eve" },
+      { id: "pc-cain", kind: "parent-child", from: "adam", to: "cain" },
+      { id: "pc-abel", kind: "parent-child", from: "adam", to: "abel" },
+      { id: "pc-seth", kind: "parent-child", from: "adam", to: "seth" },
+    ];
+    // A single unbranched chain of 10 solo-parent generations under Seth
+    // (no spouse recorded for any of them, matching the real fixture's
+    // sparse-data shape), THEN a branch into 3 children at the bottom —
+    // mirrors Noah fathering Shem/Ham/Japheth after a long solo chain.
+    let parent = "seth";
+    for (let i = 0; i < 10; i++) {
+      const id = `seth-desc-${i}`;
+      persons.push({ id, firstName: id, lastName: "", gender: "unknown" });
+      relationships.push({
+        id: `pc-${id}`,
+        kind: "parent-child",
+        from: parent,
+        to: id,
+      });
+      parent = id;
+    }
+    for (const child of ["branch-a", "branch-b", "branch-c"]) {
+      persons.push({
+        id: child,
+        firstName: child,
+        lastName: "",
+        gender: "unknown",
+      });
+      relationships.push({
+        id: `pc-${child}`,
+        kind: "parent-child",
+        from: parent,
+        to: child,
+      });
+    }
+    return { persons, relationships };
+  }
+
+  it("Cain, Abel, and Seth sit at exactly the standard sibling gap from each other", () => {
+    const result = buildTreeLayout(threeSiblingsOneWithDeepChain(), focusId);
+    const cain = personById(result, "cain");
+    const abel = personById(result, "abel");
+    const seth = personById(result, "seth");
+    const xs = [cain, abel, seth].sort((a, b) => a.x - b.x).map((p) => p.x);
+    expect(xs[1] - xs[0]).toBeCloseTo(CARD_WIDTH + SIBLING_GAP, 5);
+    expect(xs[2] - xs[1]).toBeCloseTo(CARD_WIDTH + SIBLING_GAP, 5);
+  });
+
+  it("has no overlaps despite Seth's 10-generation-deep, then 3-way-branching descendant chain", () => {
+    const result = buildTreeLayout(threeSiblingsOneWithDeepChain(), focusId);
+    expect(detectOverlaps(positionMap(result))).toEqual([]);
+  });
+
+  it("is deterministic", () => {
+    const graph = threeSiblingsOneWithDeepChain();
+    const r1 = buildTreeLayout(graph, focusId);
+    const r2 = buildTreeLayout(graph, focusId);
+    expect(positionMap(r1)).toEqual(positionMap(r2));
   });
 });
