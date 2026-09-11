@@ -1787,7 +1787,7 @@ function tryRaiseAncestorBranchForChild(
   ctx: GrowthContext,
   childId: string,
 ): boolean {
-  const { graph, positionByPerson, junctionByPartnership } = ctx;
+  const { graph, positionByPerson } = ctx;
   const child = graph.personById.get(childId);
   const currentChildPos = positionByPerson.get(childId);
   if (!child || child.parentIds.length === 0 || !currentChildPos) return false;
@@ -1804,11 +1804,21 @@ function tryRaiseAncestorBranchForChild(
   // the one person this repair is trying to give room TO, not move away.
   branchIds.delete(childId);
 
-  const parentPartnershipId = parentPartnershipIdFor(graph, parentId, childId);
-  const oldJunction = parentPartnershipId
-    ? junctionByPartnership.get(parentPartnershipId)
-    : undefined;
-  if (!oldJunction) return false;
+  // The parent's own ROW position — NOT junctionByPartnership (that's the
+  // T-connector midpoint HALFWAY between the parent's row and the child's
+  // row, `parentY + CARD_HEIGHT/2 + GENERATION_GAP/2` — using it as the
+  // shift anchor was a real bug caught on the real fixture: it put the
+  // child barely a half-step away from their OLD row instead of a full
+  // GENERATION_GAP, still landing near the crowded row it was meant to
+  // escape). The child's own new row is always exactly
+  // `parentRowY + deltaY + GENERATION_GAP` — the same relationship every
+  // other ordinary (non-repaired) child row in the engine has to its own
+  // parent's row.
+  const parentPos = positionByPerson.get(parentId);
+  if (!parentPos) return false;
+  const spouseId = spouseOf(graph, parentId);
+  const spousePos = spouseId ? positionByPerson.get(spouseId) : undefined;
+  const junctionX = spousePos ? (parentPos.x + spousePos.x) / 2 : parentPos.x;
 
   // Try progressively larger raises — one GENERATION_GAP first (the common
   // case, opens a fresh row directly above the parent's current one), then
@@ -1828,7 +1838,7 @@ function tryRaiseAncestorBranchForChild(
         branchIds,
         childId,
         currentChildPos,
-        oldJunction,
+        { x: junctionX, y: parentPos.y },
         deltaY,
       );
       if (result) return true;
@@ -1840,25 +1850,29 @@ function tryRaiseAncestorBranchForChild(
 /**
  * One candidate shift for tryRaiseAncestorBranchForChild: moves every
  * person in `branchIds` by `deltaY`, and the child to directly under the
- * branch's (shifted) own partnership junction — verifying the WHOLE
- * operation collides with nobody outside the moving set BEFORE committing
- * anything. Returns whether this specific deltaY worked; caller tries the
- * next one on false. This is what the first version of
- * tryRaiseAncestorBranchForChild got wrong: it verified the branch shift
- * alone, then unconditionally placed the child at its "ideal" spot
- * afterward with no check at all — silently producing exactly the kind of
- * overlap assertNoOverlaps exists to catch (real bug, caught by the real
- * Neon fixture: the row one GENERATION_GAP up was ALSO already occupied
- * near the branch's own x, not actually free — confirming a single fixed
- * one-generation raise isn't always enough, hence the multi-step search in
- * the caller).
+ * branch's (shifted) own partnership — verifying the WHOLE operation
+ * collides with nobody outside the moving set BEFORE committing anything.
+ * Returns whether this specific deltaY worked; caller tries the next one on
+ * false. This is what the first version of tryRaiseAncestorBranchForChild
+ * got wrong TWICE, both caught on the real Neon fixture, never synthetic:
+ * (1) it verified the branch shift alone, then unconditionally placed the
+ * child at its "ideal" spot afterward with no check at all — silently
+ * producing exactly the kind of overlap assertNoOverlaps exists to catch;
+ * (2) after fixing (1), it anchored the child's new position on
+ * `junctionByPartnership`'s own stored point — which is the T-connector
+ * MIDPOINT half-way between the parent's row and the child's row
+ * (`parentY + CARD_HEIGHT/2 + GENERATION_GAP/2`), not the parent's actual
+ * row — so `oldParentRow` here is deliberately the parent's own
+ * `positionByPerson` entry (row y, junction x), not a junction lookup; a
+ * child computed from the real junction point only lands ~half a
+ * GENERATION_GAP from its OLD row, not a fresh full generation away.
  */
 function tryApplyAncestorBranchRaise(
   ctx: GrowthContext,
   branchIds: Set<string>,
   childId: string,
   currentChildPos: Point,
-  oldJunction: Point,
+  oldParentRow: Point,
   deltaY: number,
 ): boolean {
   const { graph, positionByPerson, junctionByPartnership, occupancy } = ctx;
@@ -1870,7 +1884,7 @@ function tryApplyAncestorBranchRaise(
     shifted.set(id, { x: pos.x, y: pos.y + deltaY });
   }
 
-  const newChildPos = { x: oldJunction.x, y: oldJunction.y + deltaY + GENERATION_GAP };
+  const newChildPos = { x: oldParentRow.x, y: oldParentRow.y + deltaY + GENERATION_GAP };
 
   const allMoved = new Map<string, Point>(shifted);
   allMoved.set(childId, newChildPos);
@@ -1914,21 +1928,6 @@ function tryApplyAncestorBranchRaise(
   });
   positionByPerson.set(childId, newChildPos);
   return true;
-}
-
-/** The id of the partnership (among parentId's own) that lists childId as a child, if any. */
-function parentPartnershipIdFor(
-  graph: NormalizedGraph,
-  parentId: string,
-  childId: string,
-): string | undefined {
-  const parent = graph.personById.get(parentId);
-  if (!parent) return undefined;
-  for (const partnershipId of parent.partnershipIds) {
-    const partnership = graph.partnershipById.get(partnershipId);
-    if (partnership?.childrenIds.includes(childId)) return partnershipId;
-  }
-  return undefined;
 }
 
 /** Finds one paternal/maternal pair sharing a row in the wrong relative order, if any — mirrors invariants.ts's findSideConstraintViolation but returns the OFFENDING person (the one further into the opposite side's territory) instead of a message string. */
