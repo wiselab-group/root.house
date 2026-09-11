@@ -559,7 +559,8 @@ export function toReactFlow(
    */
   personIdsWithChildrenOverride: ReadonlySet<string> | undefined = undefined,
 ): { nodes: PersonFlowNode[]; edges: TreeFlowEdge[] } {
-  const withChildren = personIdsWithChildrenOverride ?? personIdsWithChildren(graph);
+  const withChildren =
+    personIdsWithChildrenOverride ?? personIdsWithChildren(graph);
   const edges = toFlowEdges(graph, highlight);
   // Array order does NOT control paint order here — XYFlow's default
   // zIndexMode ('basic') assigns every edge the same CSS z-index (its own

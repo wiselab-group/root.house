@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { listPeople } from "@/domain/person/person.service";
-import { getFocusTreeLayout, getRawTreeGraph } from "@/domain/tree/tree.service";
+import {
+  getFocusTreeLayout,
+  getRawTreeGraph,
+} from "@/domain/tree/tree.service";
 import { applyRelationshipTrace } from "@/domain/tree/tree-trace";
 import { findRelationshipPathFor } from "@/domain/relationship/relationship.service";
 import { personDisplayName } from "@/domain/person/display-name";

@@ -247,9 +247,9 @@ describe("layout engine — real data (Alexander/Eleonora/Eva + Viktor/Galina/Da
     const marfa = personById(result, "marfa-kupchik");
 
     const vladimirMarfaCenterX = (vladimir.x + marfa.x) / 2;
-    expect(
-      Math.abs(vladimirMarfaCenterX - nikolai.x),
-    ).toBeLessThan(CARD_WIDTH * 4);
+    expect(Math.abs(vladimirMarfaCenterX - nikolai.x)).toBeLessThan(
+      CARD_WIDTH * 4,
+    );
     expect(vladimir.x).toBeLessThan(marfa.x); // husband still left of wife
   });
 
@@ -1036,7 +1036,6 @@ describe("layout engine — real data (Alexander/Eleonora/Eva + Viktor/Galina/Da
     const result = buildTreeLayout(initialFamilyGraph, realFocusId);
     expect(detectOverlaps(positionMap(result))).toEqual([]);
   });
-
 });
 
 describe("CASE 1 — simple nuclear family (A+B -> C, D, E)", () => {
@@ -1433,7 +1432,7 @@ describe("layout engine — Stage 2: real fixture through hybrid engine, invaria
     expect(positionMap(r1)).toEqual(positionMap(r2));
   });
 
-  it("Alexander's focus partnership (himself + Eleonora) is still centered on x=0 after routing through the new growBranch(\"down\") primitive", () => {
+  it('Alexander\'s focus partnership (himself + Eleonora) is still centered on x=0 after routing through the new growBranch("down") primitive', () => {
     // Mirrors the pre-existing "focus person's partnership is centered on
     // the origin" test in the "real data" describe block above (unchanged
     // since before Stage 1) — the true invariant is that the MIDPOINT of
@@ -1465,9 +1464,24 @@ describe("layout engine — isolated persons (no relationship at all)", () => {
   function graphWithOneIsolatedPerson() {
     return {
       persons: [
-        { id: focusId, firstName: "Focus", lastName: "Person", gender: "unknown" as const },
-        { id: "spouse", firstName: "Spouse", lastName: "Person", gender: "unknown" as const },
-        { id: isolatedId, firstName: "Firas", lastName: "", gender: "unknown" as const },
+        {
+          id: focusId,
+          firstName: "Focus",
+          lastName: "Person",
+          gender: "unknown" as const,
+        },
+        {
+          id: "spouse",
+          firstName: "Spouse",
+          lastName: "Person",
+          gender: "unknown" as const,
+        },
+        {
+          id: isolatedId,
+          firstName: "Firas",
+          lastName: "",
+          gender: "unknown" as const,
+        },
       ],
       relationships: [
         { id: "p1", kind: "spouse" as const, from: focusId, to: "spouse" },
@@ -1491,8 +1505,18 @@ describe("layout engine — isolated persons (no relationship at all)", () => {
   it("places several isolated persons side by side, deterministically", () => {
     const graph = graphWithOneIsolatedPerson();
     graph.persons.push(
-      { id: "isolated-2", firstName: "Second", lastName: "", gender: "unknown" as const },
-      { id: "isolated-3", firstName: "Third", lastName: "", gender: "unknown" as const },
+      {
+        id: "isolated-2",
+        firstName: "Second",
+        lastName: "",
+        gender: "unknown" as const,
+      },
+      {
+        id: "isolated-3",
+        firstName: "Third",
+        lastName: "",
+        gender: "unknown" as const,
+      },
     );
     const result = buildTreeLayout(graph, focusId);
     expect(result.persons).toHaveLength(5);

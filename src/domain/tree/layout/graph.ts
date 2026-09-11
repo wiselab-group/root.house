@@ -102,7 +102,9 @@ export function normalizeGraph(
     // side have ANY children at all" check let A's and B's partnerships each
     // wrongly inherit C1 too, since P (one side of every pairing) always has
     // children recorded, just never in common with A or B specifically.
-    const unionCandidates = [...new Set([...leftChildrenAll, ...rightChildrenAll])];
+    const unionCandidates = [
+      ...new Set([...leftChildrenAll, ...rightChildrenAll]),
+    ];
     const sparseDataUnion = unionCandidates.filter((childId) => {
       const recordedParents = parentsOf.get(childId) ?? [];
       return recordedParents.every(

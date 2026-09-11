@@ -153,7 +153,9 @@ export function buildClientTreeLayout(
  */
 export function toTreeFamilyGraph<
   TPerson extends TreeAdapterInput["persons"][number],
->(input: TreeAdapterInput & { persons: TPerson[] }): {
+>(
+  input: TreeAdapterInput & { persons: TPerson[] },
+): {
   graph: FamilyGraph;
   personById: Map<string, TPerson>;
 } {
@@ -162,9 +164,10 @@ export function toTreeFamilyGraph<
   // person objects themselves (only keyed by their own id) — TypeScript's
   // generic variance rules can't express "this Map<string, TPerson> was
   // literally built from a TPerson[]" on their own, hence the assertion.
-  const personById = new Map(
-    input.persons.map((p) => [p.id, p]),
-  ) as Map<string, TPerson>;
+  const personById = new Map(input.persons.map((p) => [p.id, p])) as Map<
+    string,
+    TPerson
+  >;
 
   const persons: EngineePerson[] = input.persons.map((p) => ({
     id: p.id,

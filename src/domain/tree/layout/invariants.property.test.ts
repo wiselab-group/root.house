@@ -86,7 +86,10 @@ describe("layout engine — property-based invariants (random descendant-only gr
       const positions = positionMap(result);
       const partnershipCountByPerson = new Map<string, number>();
       for (const partnership of result.partnerships) {
-        for (const id of [partnership.leftPersonId, partnership.rightPersonId]) {
+        for (const id of [
+          partnership.leftPersonId,
+          partnership.rightPersonId,
+        ]) {
           partnershipCountByPerson.set(
             id,
             (partnershipCountByPerson.get(id) ?? 0) + 1,

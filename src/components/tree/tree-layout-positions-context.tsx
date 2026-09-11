@@ -43,9 +43,9 @@ export interface TreeNodeGeometry {
   cardStyle: TreeCardStyle;
 }
 
-const TreeLayoutPositionsContext = createContext<
-  Map<string, TreeNodeGeometry>
->(new Map());
+const TreeLayoutPositionsContext = createContext<Map<string, TreeNodeGeometry>>(
+  new Map(),
+);
 
 export function TreeLayoutPositionsProvider({
   nodes,

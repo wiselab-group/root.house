@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { TreeLayoutGraph, LayoutNode, LayoutEdge } from "@/domain/tree/tree-layout.builder";
-import { pruneCollapsedDescendants, personIdsWithChildren } from "./prune-collapsed";
+import type {
+  TreeLayoutGraph,
+  LayoutNode,
+  LayoutEdge,
+} from "@/domain/tree/tree-layout.builder";
+import {
+  pruneCollapsedDescendants,
+  personIdsWithChildren,
+} from "./prune-collapsed";
 import { buildTreeLayout } from "@/domain/tree/layout/layout";
 import { generateRandomFamily } from "@/domain/tree/layout/random-graph";
 
@@ -34,7 +41,12 @@ function node(id: string): LayoutNode {
 }
 
 function parentChildEdge(parentId: string, childId: string): LayoutEdge {
-  return { id: `pc-${parentId}-${childId}`, kind: "parent_child", source: parentId, target: childId };
+  return {
+    id: `pc-${parentId}-${childId}`,
+    kind: "parent_child",
+    source: parentId,
+    target: childId,
+  };
 }
 
 function partnershipEdge(a: string, b: string): LayoutEdge {
@@ -157,7 +169,10 @@ describe("pruneCollapsedDescendants", () => {
  * personIdsWithChildren only ever read id/x/y/generation/person.id and
  * edge.kind/source/target — nothing DB-specific).
  */
-function toMinimalLayoutGraph(seed: number, personCount: number): TreeLayoutGraph {
+function toMinimalLayoutGraph(
+  seed: number,
+  personCount: number,
+): TreeLayoutGraph {
   const { graph, focusPersonId } = generateRandomFamily({
     seed,
     personCount,

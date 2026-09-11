@@ -1503,8 +1503,7 @@ export function placeIsolatedPersons(ctx: GrowthContext): void {
   if (isolatedIds.length === 0) return;
 
   const rowWidth =
-    isolatedIds.length * CARD_WIDTH +
-    (isolatedIds.length - 1) * SIBLING_GAP;
+    isolatedIds.length * CARD_WIDTH + (isolatedIds.length - 1) * SIBLING_GAP;
   const startX = -rowWidth / 2 + CARD_HALF_WIDTH;
 
   const lowestReservedMaxY = occupancy.maxReservedY();

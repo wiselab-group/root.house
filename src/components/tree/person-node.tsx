@@ -1,7 +1,11 @@
 "use client";
 
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 import { personInitials } from "@/domain/person/display-name";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
 import { CompactCardBody } from "./compact-card-body";

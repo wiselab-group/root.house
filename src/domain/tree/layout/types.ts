@@ -31,7 +31,8 @@ export type PartnershipStatus =
  * tree layout rules in CLAUDE.md. Not yet consumed anywhere in the engine
  * (added ahead of the render-side dashed-line work — see rewrite plan §5.1).
  */
-export type ParentRole = "biological" | "adoptive" | "step" | "foster" | "unknown";
+export type ParentRole =
+  "biological" | "adoptive" | "step" | "foster" | "unknown";
 
 export interface Relationship {
   id: string;

@@ -1,4 +1,7 @@
-import type { TreeLayoutGraph, LayoutNode } from "@/domain/tree/tree-layout.builder";
+import type {
+  TreeLayoutGraph,
+  LayoutNode,
+} from "@/domain/tree/tree-layout.builder";
 
 /**
  * prune-collapsed.ts — collapse/expand (rewrite plan §7 Stage 5, §3.2).
@@ -76,7 +79,8 @@ export function pruneCollapsedDescendants(
   // subtree has no visible card left to carry a badge on — drop it from the
   // count map too (its own count would never be rendered).
   for (const collapsedId of collapsedIds) {
-    if (hiddenIds.has(collapsedId)) descendantCountByCollapsedId.delete(collapsedId);
+    if (hiddenIds.has(collapsedId))
+      descendantCountByCollapsedId.delete(collapsedId);
   }
 
   const nodes: LayoutNode[] = graph.nodes

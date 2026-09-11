@@ -89,7 +89,7 @@ function FocusViewport({
       focusNode.position.x + width / 2,
       focusNode.position.y + height / 2,
       {
-        zoom: 0.85,
+        zoom: 1.15,
         // CLAUDE.md ANIMATION RULES: always a prefers-reduced-motion
         // fallback — an instant jump (duration omitted) instead of the
         // animated pan/zoom. isInitialLoad is checked too since animating
@@ -97,7 +97,9 @@ function FocusViewport({
         // happens to be) would read as a jarring unrequested pan on page
         // load, not a deliberate focus-switch transition.
         duration:
-          isInitialLoad || reducedMotion ? undefined : FOCUS_SWITCH_ANIMATION_MS,
+          isInitialLoad || reducedMotion
+            ? undefined
+            : FOCUS_SWITCH_ANIMATION_MS,
       },
     );
     // Re-centers whenever the focus person itself changes (URL ?focus=...
@@ -286,9 +288,7 @@ export function TreeCanvas({
   // `clientGraph` takes over rendering until either another client-side
   // re-focus replaces it again, or a NEW `graph` prop arrives and
   // supersedes it.
-  const [clientGraph, setClientGraph] = useState<TreeLayoutGraph | null>(
-    null,
-  );
+  const [clientGraph, setClientGraph] = useState<TreeLayoutGraph | null>(null);
   // A fresh `graph` prop (server navigation — filter/trace toggled, or the
   // browser back/forward button landing on a different ?focus=) always wins
   // over a stale client-computed graph from a PREVIOUS focus person; without
@@ -481,10 +481,7 @@ export function TreeCanvas({
           // there's no stale-`measured` window to hit on remount anymore.
           onlyRenderVisibleElements
         >
-          <FocusViewport
-            focusNode={focusNode}
-            isInitialLoad={isInitialLoad}
-          />
+          <FocusViewport focusNode={focusNode} isInitialLoad={isInitialLoad} />
           <CardStyleInternalsSync cardStyle={cardStyle} nodeIds={nodeIds} />
           <Background gap={24} />
           {readOnly ? (

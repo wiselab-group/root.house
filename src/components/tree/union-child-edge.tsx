@@ -67,7 +67,10 @@ export function UnionChildEdge({
   // partnership line itself still runs at center height (unchanged), so this
   // is a short extra hop straight down from sourceY to the lower of the two
   // bottom edges, then the usual "down, across, down" trunk continues from there.
-  const clearY = Math.max(parentA.y + parentA.height, parentB.y + parentB.height);
+  const clearY = Math.max(
+    parentA.y + parentA.height,
+    parentB.y + parentB.height,
+  );
 
   // If the trace path reaches this child through only one parent, extend
   // the path's start all the way back to that parent's own card center (the
