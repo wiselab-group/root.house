@@ -1487,8 +1487,172 @@ export function repairSideConstraintViolations(ctx: GrowthContext): void {
       return;
     }
 
-    return; // neither kind of violation remains
+    const farChildId = findFirstFarFromParentViolator(ctx);
+    if (farChildId) {
+      if (tryMoveChildNearParent(ctx, farChildId)) continue;
+      return;
+    }
+
+    return; // no violation of any kind remains
   }
+}
+
+/**
+ * How far a childless leaf's own x may drift from its parent partnership's
+ * junction x before it reads as "not near the parent" (invariant #3 —
+ * CLAUDE.md's own known-gap note, closed by this repair). A handful of card
+ * widths — enough that an ordinary small sideways nudge from
+ * growChildrenRowDown's own search never trips this, but far short of the
+ * thousands-of-px drift growChildrenRowDown's unbounded search can produce
+ * when the child's whole natural row is owned by an unrelated branch (the
+ * actual bug: a real Neon family with a densely populated cousin row, see
+ * the tree-layout-downward-strand-gap memory).
+ */
+const FAR_FROM_PARENT_X_THRESHOLD = CARD_WIDTH * 4;
+
+/**
+ * Finds one already-placed person whose x has drifted more than
+ * FAR_FROM_PARENT_X_THRESHOLD from their own parents' partnership junction,
+ * if any. Deliberately scoped to LEAVES ONLY (no spouse, no children of
+ * their own) — a person with descendants would need their whole subtree
+ * moved together to stay internally consistent, which tryMoveChildNearParent
+ * doesn't attempt (this mirrors the known gap's own documented scope: "a
+ * childless only child", not the general case). A person with siblings on
+ * the same row is also skipped — growChildrenRowDown always places a full
+ * sibling row as one contiguous block (invariant #5), so if ANY sibling in
+ * the row is far from the junction, ALL of them structurally are, and moving
+ * just one alone would break the row's own internal adjacency instead of
+ * fixing anything; that shape isn't the bug this closes (it would need a
+ * whole-row move, out of scope here, same as the multi-child case).
+ */
+function findFirstFarFromParentViolator(ctx: GrowthContext): string | null {
+  const { graph, positionByPerson } = ctx;
+  for (const [personId, pos] of positionByPerson) {
+    const person = graph.personById.get(personId);
+    if (!person || person.parentIds.length === 0) continue;
+    if (person.partnershipIds.length > 0) continue; // has own spouse — not a lone leaf
+    if (parentRowSiblingsOf(graph, personId).some((id) => positionByPerson.has(id))) {
+      continue; // part of a sibling row — must move as a block, not alone (see doc comment)
+    }
+
+    const junction = parentJunctionOf(ctx, personId);
+    if (!junction) continue;
+
+    if (Math.abs(pos.x - junction.x) > FAR_FROM_PARENT_X_THRESHOLD) {
+      return personId;
+    }
+  }
+  return null;
+}
+
+/**
+ * The x/y a child's connector line actually originates from: the junction
+ * of whichever of their parents' partnerships lists them as a child, or (no
+ * recorded partnership — a solo parent) that parent's own card position.
+ * Mirrors fromTreeLayout's own edge-source logic one level down in the
+ * engine, before DB ids are attached.
+ */
+function parentJunctionOf(ctx: GrowthContext, childId: string): Point | null {
+  const { graph, positionByPerson, junctionByPartnership } = ctx;
+  const child = graph.personById.get(childId);
+  if (!child) return null;
+  for (const parentId of child.parentIds) {
+    const parent = graph.personById.get(parentId);
+    if (!parent) continue;
+    for (const partnershipId of parent.partnershipIds) {
+      const partnership = graph.partnershipById.get(partnershipId);
+      if (partnership?.childrenIds.includes(childId)) {
+        const junction = junctionByPartnership.get(partnershipId);
+        if (junction) return junction;
+      }
+    }
+    const solo = graph.soloParentByPersonId.get(parentId);
+    if (solo?.childrenIds.includes(childId)) {
+      const parentPos = positionByPerson.get(parentId);
+      if (parentPos) return parentPos;
+    }
+  }
+  return null;
+}
+
+/**
+ * Moves a single childless leaf (see findFirstFarFromParentViolator's own
+ * scoping doc comment) to the free 2D slot closest to their parents'
+ * junction — unlike tryShiftSubtreeOutOfViolation (Y-only, for a whole
+ * subtree that must stay internally consistent), a lone leaf has no
+ * descendants of its own to keep in sync, so both x AND y are free to
+ * search. Starts at the child's own natural row (junction.y +
+ * GENERATION_GAP — where growChildrenRowDown originally tried to place
+ * them) and nudges Y outward — closest candidate first, so the result never
+ * regresses past what growChildrenRowDown already attempted, it only
+ * searches WIDER when that wasn't enough. The Y range here is deliberately
+ * TWO full GENERATION_GAPs, not the small MAX_Y_NUDGE budget
+ * tryShiftSubtreeOutOfViolation uses for whole-subtree shifts: a lone
+ * childless leaf has no descendants whose own GENERATION_GAP spacing would
+ * be thrown off by a bigger jump, and a real Neon fixture confirmed a
+ * densely packed row can leave NO free slot within a single generation's
+ * reach either (the nearest genuine opening was two full generations away)
+ * — mirrors what the old engine's now-deleted raiseAncestryOneGeneration
+ * effectively did for this exact shape of conflict, just scoped to one
+ * stranded leaf instead of re-running placement on the whole ancestor
+ * chain.
+ */
+function tryMoveChildNearParent(ctx: GrowthContext, childId: string): boolean {
+  const { occupancy, positionByPerson } = ctx;
+  const current = positionByPerson.get(childId);
+  const junction = parentJunctionOf(ctx, childId);
+  if (!current || !junction) return false;
+
+  occupancy.release({
+    x: current.x,
+    y: current.y,
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+  });
+
+  const naturalY = junction.y + GENERATION_GAP;
+  const maxYSearch = GENERATION_GAP * 2;
+  const candidateYs = [naturalY];
+  for (let step = 1; step * Y_NUDGE_STEP <= maxYSearch; step++) {
+    candidateYs.push(naturalY + step * Y_NUDGE_STEP, naturalY - step * Y_NUDGE_STEP);
+  }
+
+  let resolved: Point | null = null;
+  for (const candidateY of candidateYs) {
+    const x = occupancy.findFreeInterval(
+      candidateY,
+      CARD_HEIGHT,
+      CARD_WIDTH,
+      SIBLING_GAP,
+      junction.x,
+      FAR_FROM_PARENT_X_THRESHOLD,
+    );
+    if (x !== null) {
+      resolved = { x, y: candidateY };
+      break;
+    }
+  }
+
+  if (!resolved) {
+    // Nothing genuinely closer was found — put the card back exactly where
+    // it was rather than leaving it unreserved.
+    occupancy.reserve({
+      x: current.x,
+      y: current.y,
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
+    });
+    return false;
+  }
+
+  occupancy.reserve({
+    x: resolved.x,
+    y: resolved.y,
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+  });
+  positionByPerson.set(childId, resolved);
+  return true;
 }
 
 /** Finds one paternal/maternal pair sharing a row in the wrong relative order, if any — mirrors invariants.ts's findSideConstraintViolation but returns the OFFENDING person (the one further into the opposite side's territory) instead of a message string. */

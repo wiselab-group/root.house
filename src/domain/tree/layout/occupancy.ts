@@ -75,6 +75,34 @@ export class OccupancyModel {
   }
 
   /**
+   * Removes the exact reservation previously made with `reserve(rect)` (same
+   * x/y/width/height) — used by post-placement repair passes that need to
+   * re-search for a BETTER slot for something already placed (e.g.
+   * tryMoveChildNearParent, subtree.ts) without that thing's own old
+   * reservation blocking the very search meant to relocate it. A no-op if no
+   * matching reservation exists (defensive — never throws on a stale rect).
+   */
+  release(rect: Rect): void {
+    const minX = rect.x - rect.width / 2;
+    const maxX = rect.x + rect.width / 2;
+    const minY = rect.y - rect.height / 2;
+    const maxY = rect.y + rect.height / 2;
+
+    for (const key of this.rowKeysFor(minY, maxY)) {
+      const reservations = this.rows.get(key);
+      if (!reservations) continue;
+      const index = reservations.findIndex(
+        (r) =>
+          r.minX === minX &&
+          r.maxX === maxX &&
+          r.minY === minY &&
+          r.maxY === maxY,
+      );
+      if (index !== -1) reservations.splice(index, 1);
+    }
+  }
+
+  /**
    * Returns the free interval [x1, x2] closest to preferredX in the given Y
    * row, or null if the whole search range is blocked. When `bias` is -1 or
    * +1, the search only extends in that direction (never crosses back past
