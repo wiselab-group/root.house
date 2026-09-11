@@ -117,7 +117,7 @@ export function UnionChildEdge({
       path={path}
       style={{
         strokeWidth: isOnTracePath ? 3 : 2,
-        stroke: isOnTracePath ? TRACE_COLOR : "var(--muted-foreground)",
+        stroke: isOnTracePath ? TRACE_COLOR : "var(--branch)",
       }}
     />
   );

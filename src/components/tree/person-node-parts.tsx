@@ -87,8 +87,13 @@ export function CollapseBadge({
       type="button"
       className={cn(
         "nodrag nopan absolute left-1/2 -bottom-2.5 z-10 flex h-5 min-w-5 -translate-x-1/2 items-center justify-center gap-0.5 rounded-full border bg-card px-1.5 text-[0.65rem] font-medium shadow-sm transition-colors",
+        // Sage (--tree-accent), not terracotta — "collapsed" is a standing
+        // property of this branch (identity/state), not something the user
+        // is doing right now, so it follows the identity color, not the
+        // action color (see buildCardFrameClassName's own comment on that
+        // split).
         isCollapsed
-          ? "border-primary text-primary hover:bg-primary/10"
+          ? "border-tree-accent text-tree-accent hover:bg-tree-accent/10"
           : "border-border text-muted-foreground opacity-60 hover:opacity-100 focus-visible:opacity-100",
       )}
       onClick={(e) => {
@@ -127,6 +132,18 @@ export function CollapseBadge({
  * connector line, anchored to this div's own top/bottom edges via
  * InvisibleConnectorHandles, visibly touches the avatar instead of stopping
  * at an invisible card boundary.
+ *
+ * Color roles are kept strictly separate (see globals.css's own comment):
+ * sage (--tree-accent) reads as this person's own identity — a permanent,
+ * always-visible border on every card, the same flat shade regardless of
+ * generation — while terracotta (--primary/--ring) is reserved for what the
+ * user is doing right now (focus, trace, keyboard selection). Mixing the
+ * two into one "highlighted" color would blur exactly the distinction that
+ * makes the accent legible: a plain sage border always means "a person"; a
+ * terracotta one always means "this is the one you're looking at". The sage
+ * border is deliberately ONE color for every card — no per-generation
+ * fade — so "sage border" reads as a single consistent signal across the
+ * whole tree, not a gradient to decode.
  */
 export function buildCardFrameClassName({
   cardStyle,
@@ -146,24 +163,20 @@ export function buildCardFrameClassName({
   return cn(
     "w-40 origin-center",
     "animate-tree-node-enter",
-    "transition-opacity duration-200 ease-(--ease-tree-focus)",
+    "transition-[opacity,box-shadow] duration-200 ease-(--ease-tree-focus)",
     cardStyle === "compact"
       ? "overflow-visible"
       : cn(
           "overflow-hidden rounded-lg border bg-card shadow-sm hover:shadow-md",
-          isFocusOrTraced ? "border-primary ring-2 ring-primary/30" : "border-border",
+          isFocusOrTraced
+            ? "border-primary ring-2 ring-primary/30"
+            : "border-tree-accent",
           isSelected && "ring-2 ring-ring",
           isPlaceholder && "border-dashed opacity-70",
         ),
     isDimmed && "opacity-35 hover:opacity-70",
     !readOnly && "cursor-pointer",
   );
-}
-
-/** Maps a node's generation offset (0 = focus's own generation) to the matching --chart-N token. */
-export function generationColor(generation: number): string {
-  const distance = Math.min(Math.abs(generation), 4);
-  return `var(--chart-${distance + 1})`;
 }
 
 export function personLabel(data: PersonFlowNode["data"]): string {

@@ -9,14 +9,17 @@ import { roundedOrthogonalPath } from "./orthogonal-path";
 import { useTreeNodeGeometry } from "./tree-layout-positions-context";
 
 /**
- * Relationship Trace's line color — deliberately --chart-2, not --primary:
- * --primary is only as muted as --chart-2 for the focus person's own card
- * (generation distance 0); every other card's top stripe fades further
- * (--chart-3, --chart-4...), so a full-strength --primary line reads as
- * louder than any card it's actually connecting. --chart-2 sits one step
- * back from full strength, matching the traced cards' own accent weight.
+ * Relationship Trace's line color — terracotta (--primary), matching the
+ * traced cards' own border (see person-node-parts.tsx's buildCardFrameClassName:
+ * isFocusOrTraced always uses --primary, never --tree-accent). Terracotta is
+ * reserved across the whole app for "what the user is doing/looking at right
+ * now" — a trace is exactly that — while sage (--tree-accent/--chart-N)
+ * means "this is a person", the tree's permanent per-card identity color
+ * (see globals.css's own comment on the three-hue role split). Also keeps
+ * the traced path visually distinct from --branch, the warm brown used for
+ * every other (non-traced) tree line.
  */
-export const TRACE_COLOR = "var(--chart-2)";
+export const TRACE_COLOR = "var(--primary)";
 
 /**
  * How far above a compact-style child's own card top edge the connector's
@@ -142,7 +145,7 @@ function ParentChildEdgeLine({
       path={path}
       style={{
         strokeWidth: isOnTracePath ? 3 : 2,
-        stroke: isOnTracePath ? TRACE_COLOR : "var(--muted-foreground)",
+        stroke: isOnTracePath ? TRACE_COLOR : "var(--branch)",
       }}
     />
   );
@@ -226,7 +229,7 @@ function PartnershipEdgeLine({
         path={`M${midX},${midY} L${plainX},${plainY}`}
         style={{
           strokeWidth: 1.5,
-          stroke: "var(--muted-foreground)",
+          stroke: "var(--branch)",
           ...dashStyle,
         }}
       />
@@ -239,7 +242,7 @@ function PartnershipEdgeLine({
       path={`M${x1},${y} L${x2},${yTarget}`}
       style={{
         strokeWidth: isOnTracePath ? 3 : 1.5,
-        stroke: isOnTracePath ? TRACE_COLOR : "var(--muted-foreground)",
+        stroke: isOnTracePath ? TRACE_COLOR : "var(--branch)",
         ...dashStyle,
       }}
     />

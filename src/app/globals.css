@@ -39,6 +39,8 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-tree-accent: var(--tree-accent);
+  --color-branch: var(--branch);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -74,14 +76,37 @@
   --border: oklch(0.89 0.012 55);
   --input: oklch(0.89 0.012 55);
   --ring: oklch(0.55 0.14 45 / 50%);
-  /* Generation color-coding (family tree): same hue as --primary, lightness
-     grows and chroma fades with |generation| distance from the focus person
-     — a single warm hue, never a rainbow across generations. */
-  --chart-1: oklch(0.55 0.14 45);
-  --chart-2: oklch(0.65 0.11 45);
-  --chart-3: oklch(0.75 0.08 45);
-  --chart-4: oklch(0.85 0.05 45);
-  --chart-5: oklch(0.9 0.03 45);
+  /* Family tree accent — a second, distinct hue (dusty sage/olive green,
+     ~126) used ONLY inside src/components/tree/: one flat card border/ring
+     color for every card, the same shade regardless of generation (no
+     per-generation fade — that was tried and explicitly removed). Hue/
+     chroma matched to the reference "Rooted" wordmark's muted olive-sage
+     (#849073, user-picked from a rendered swatch comparison — see the
+     tree-layout-rewrite conversation this hue was calibrated in), not a
+     generic saturated green. Kept separate from --primary (terracotta, hue
+     45), which stays the one accent for the rest of the app (buttons,
+     badges, brand mark) — see CLAUDE.md § DESIGN TOKENS. Reads as "root
+     house" green/brown genealogy chart against the warm cream background,
+     while every non-tree surface stays terracotta. bg vs tree-accent
+     contrast ≈ 4.03:1 (>= 3:1 UI component / border threshold, verified via
+     OKLCH→sRGB). Tree line/trunk color ("ствол дерева") — a warm brown,
+     deliberately a third hue (~55) distinct from both terracotta and sage
+     so the three read as bark/leaves/warm-light rather than clashing. bg vs
+     branch contrast ≈ 8.2:1. */
+  --tree-accent: oklch(0.58 0.05 126);
+  --branch: oklch(0.42 0.045 55);
+  /* Unused shadcn scaffolding — no generation color-coding in the tree
+     anymore (removed: every card border/ring is now flat --tree-accent,
+     regardless of |generation| distance from focus — see
+     buildCardFrameClassName/CompactCardBody). Kept as plain shadcn defaults
+     rather than deleted, for whatever future chart/stat UI needs a 5-step
+     categorical palette; not tied to the tree hue on purpose, so nobody
+     mistakes this for a live generation scale again. */
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.75rem;
   --sidebar: oklch(0.97 0.01 58);
   --sidebar-foreground: oklch(0.28 0.02 50);
@@ -118,11 +143,17 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.72 0.15 45 / 50%);
-  --chart-1: oklch(0.72 0.15 45);
-  --chart-2: oklch(0.65 0.12 45);
-  --chart-3: oklch(0.56 0.09 45);
-  --chart-4: oklch(0.46 0.06 45);
-  --chart-5: oklch(0.38 0.04 45);
+  /* Same tree-only dusty-sage/brown pair as :root, relit for the dark
+     background — see :root's own comment for why these stay separate from
+     --primary and where the hue/chroma came from. */
+  --tree-accent: oklch(0.72 0.04 126);
+  --branch: oklch(0.62 0.06 55);
+  /* Unused shadcn scaffolding, see :root's own comment — not the tree hue. */
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
   --sidebar: oklch(0.23 0.014 50);
   --sidebar-foreground: oklch(0.94 0.01 60);
   --sidebar-primary: oklch(0.72 0.15 45);

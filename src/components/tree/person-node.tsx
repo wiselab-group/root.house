@@ -15,8 +15,6 @@ import {
 } from "./person-node-parts";
 import { PersonNodePopoverActions } from "./person-node-popover-actions";
 
-export { generationColor } from "./person-node-parts";
-
 /**
  * Custom XYFlow node rendering a person card. States per DESIGN.md § Person
  * Node states: default / hover / selected / focus-center / dimmed.

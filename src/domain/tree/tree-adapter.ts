@@ -274,8 +274,10 @@ export function fromTreeLayout(
       personId: p.id,
       x: p.x * X_SCALE,
       y: p.y * Y_SCALE,
-      // 0-at-focus BFS distance — same semantics person-node.tsx's
-      // generationColor() already expects.
+      // 0-at-focus BFS distance — drives person-node.tsx's entrance-stagger
+      // animationDelay (no longer any card color coding by generation, see
+      // globals.css's own comment: every card border/ring is flat
+      // --tree-accent now).
       generation: p.generation,
       isFocus: p.id === focusPersonId,
       person,
