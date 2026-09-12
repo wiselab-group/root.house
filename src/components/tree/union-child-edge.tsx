@@ -136,6 +136,7 @@ export function UnionChildEdge({
     <BaseEdge
       id={id}
       path={path}
+      className={isOnTracePath ? "animate-tree-trace-march" : undefined}
       style={{
         strokeWidth: isOnTracePath ? 3 : 2,
         stroke: isOnTracePath ? TRACE_COLOR : "var(--branch)",

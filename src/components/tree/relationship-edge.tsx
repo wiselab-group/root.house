@@ -144,6 +144,7 @@ function ParentChildEdgeLine({
     <BaseEdge
       id={id}
       path={path}
+      className={isOnTracePath ? "animate-tree-trace-march" : undefined}
       style={{
         strokeWidth: isOnTracePath ? 3 : 2,
         stroke: isOnTracePath ? TRACE_COLOR : "var(--branch)",
@@ -259,10 +260,19 @@ function PartnershipEdgeLine({
     <BaseEdge
       id={id}
       path={`M${x1},${y} L${x2},${yTarget}`}
+      className={isOnTracePath ? "animate-tree-trace-march" : undefined}
       style={{
         strokeWidth: isOnTracePath ? 3 : 1.5,
         stroke: isOnTracePath ? TRACE_COLOR : "var(--branch)",
-        ...dashStyle,
+        // While traced, the class's own "6 4" dasharray drives the line
+        // (current/past marriage's "5 3"/"2 4" pattern is skipped here) —
+        // the marching-ants keyframe's dashoffset is a fixed multiple of
+        // "6 4"'s 10px period (see the keyframe's own comment); mixing in a
+        // different period from dashStyle would desync the loop and make
+        // the animation visibly stutter at the seam (the bug the user
+        // caught). Current/past distinction matters less mid-trace anyway —
+        // the terracotta color + motion is already the dominant signal.
+        ...(isOnTracePath ? {} : dashStyle),
       }}
     />
   );

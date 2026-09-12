@@ -206,6 +206,32 @@
   .animate-tree-node-enter {
     animation: tree-node-enter 320ms var(--ease-reveal) backwards;
   }
+
+  /* Relationship Trace "marching ants" (reactflow.dev/examples/interaction/
+     contextual-zoom's animated-edge look, user-requested) — a traced edge's
+     dashes visibly crawl along the path, reading as "flow" from Person A to
+     Person B rather than a static highlight. stroke-dashoffset isn't
+     transform/opacity (CLAUDE.md's animation rule), but it's the one
+     explicitly-allowed exception: it never triggers layout (the <path>'s
+     own geometry — its `d` — never changes, only which portion of the
+     already-painted stroke is dash vs. gap), so it's exactly as cheap as a
+     GPU-composited property despite not being one. Applied via className
+     (not the library's own react-flow__edge.animated, see
+     relationship-edge.tsx/union-child-edge.tsx) to keep this codebase's own
+     stroke-width/color choices instead of that class's fixed dasharray. */
+  @keyframes tree-trace-march {
+    to {
+      /* Must be a multiple of the dasharray's own period (6 + 4 = 10) — any
+         other value makes the pattern jump at the loop seam instead of
+         continuing smoothly, which reads as a stutter/jerk every cycle
+         (real bug the user caught: -16 was one such non-multiple). */
+      stroke-dashoffset: -20;
+    }
+  }
+  .animate-tree-trace-march {
+    stroke-dasharray: 6 4;
+    animation: tree-trace-march 0.6s linear infinite;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
