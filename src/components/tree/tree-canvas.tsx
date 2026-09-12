@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   ReactFlow,
@@ -75,20 +75,9 @@ function FocusViewport({
 }) {
   const { setCenter } = useReactFlow();
   const reducedMotion = useReducedMotion();
-  // The last focus id this effect actually centered on — distinguishes "the
-  // user switched to a DIFFERENT person" (re-center) from "the SAME focus
-  // person's card just reappeared after being hidden by a collapsed branch,
-  // then un-collapsed again" (user-confirmed 2026-09-12: no re-center here —
-  // collapsing/expanding a branch is a visibility change, not a navigation,
-  // so the viewport should stay exactly where it was). Starts at `undefined`
-  // — the very first real focus id is still a fresh center (isInitialLoad
-  // already picks the un-animated instant-jump variant for that case).
-  const lastCenteredIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (!focusNode) return;
-    if (lastCenteredIdRef.current === focusNode.id) return;
-    lastCenteredIdRef.current = focusNode.id;
     // Prefer `measured` (XYFlow's own ResizeObserver reading of the actual
     // rendered DOM node) over the static width/height passed into
     // toReactFlow's NODE_DIMENSIONS — that static height in particular is
@@ -117,11 +106,8 @@ function FocusViewport({
     // Re-centers whenever the focus person itself changes (URL ?focus=...
     // navigation, or TreeCanvas's own client-side setFocus) — NOT on every
     // node reposition (card style toggle, filter/trace highlight), which
-    // would fight the user's own pan/zoom mid-session, and NOT when the
-    // SAME focus id merely reappears after a collapse/expand round-trip
-    // (lastCenteredIdRef's own early-return above handles that case — see
-    // its doc comment). focusNode's identity change (a new id, never before
-    // centered on) is what signals "the user asked to jump to someone
+    // would fight the user's own pan/zoom mid-session. focusNode's identity
+    // change (a new id) is what signals "the user asked to jump to someone
     // else", not a mere prop update.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusNode?.id, setCenter]);

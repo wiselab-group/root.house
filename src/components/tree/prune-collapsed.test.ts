@@ -150,22 +150,24 @@ describe("pruneCollapsedDescendants", () => {
     expect(edgeIds.has("pc-c-e")).toBe(false);
   });
 
-  it("collapsing an ANCESTOR of the current focus person hides the focus person's own card too (user-confirmed 2026-09-12: no rescue, no auto-refocus)", () => {
+  it("collapsing an ANCESTOR of the current focus person never hides the focus person's own card, even though they're a descendant", () => {
     // c is a descendant of b, and c is ALSO this graph's own focusPersonId.
     const graph = buildGraph("c");
     const pruned = pruneCollapsedDescendants(graph, new Set(["b"]));
     const remainingIds = new Set(pruned.nodes.map((n) => n.id));
-    expect(remainingIds.has("c")).toBe(false); // focus hidden like any other descendant
-    expect(remainingIds.has("d")).toBe(false);
+    expect(remainingIds.has("c")).toBe(true); // rescued despite being b's descendant
+    expect(remainingIds.has("d")).toBe(false); // d (not the focus) still hidden as normal
+    // The focus's own connector back to the (visible) collapsed ancestor b
+    // must survive too, or the rescued card would render disconnected.
     const edgeIds = new Set(pruned.edges.map((e) => e.id));
-    expect(edgeIds.has("pc-b-c")).toBe(false);
+    expect(edgeIds.has("pc-b-c")).toBe(true);
   });
 
-  it("collapsing the focus person's own ancestor reports the full descendant count on the badge, focus person included", () => {
+  it("collapsing the focus person's own ancestor still reports the TRUE full descendant count on the badge, unaffected by the focus-person rescue", () => {
     const graph = buildGraph("c");
     const pruned = pruneCollapsedDescendants(graph, new Set(["b"]));
     const bNode = pruned.nodes.find((n) => n.id === "b")!;
-    expect(bNode.collapsedDescendantCount).toBe(3); // c, d, e — c (the focus) counted like everyone else
+    expect(bNode.collapsedDescendantCount).toBe(3); // c, d, e — same as the non-rescued case
   });
 
   it("collapsing a person also hides a DESCENDANT's spouse and that spouse's own ancestor branch, not just blood descendants", () => {
@@ -375,16 +377,17 @@ describe("pruneCollapsedDescendants — property sweep over random family graphs
       const pruned = pruneCollapsedDescendants(graph, collapsedIds);
       const remainingIds = new Set(pruned.nodes.map((n) => n.id));
 
-      // 1. Every remaining edge's source AND target are both still present
-      //    as nodes — no dangling edge pointing at a hidden person. (No
-      //    focus-person invariant here anymore — user-confirmed 2026-09-12,
-      //    the focus is hidden like anyone else if their branch collapses.)
+      // 1. The focus person is NEVER hidden, regardless of what got collapsed.
+      expect(remainingIds.has(graph.focusPersonId)).toBe(true);
+
+      // 2. Every remaining edge's source AND target are both still present
+      //    as nodes — no dangling edge pointing at a hidden person.
       for (const edge of pruned.edges) {
         expect(remainingIds.has(edge.source)).toBe(true);
         expect(remainingIds.has(edge.target)).toBe(true);
       }
 
-      // 2. Every node carrying a collapsedDescendantCount is one of the
+      // 3. Every node carrying a collapsedDescendantCount is one of the
       //    ids that was ACTUALLY requested to collapse (never a stray
       //    count on an unrelated node).
       for (const n of pruned.nodes) {
@@ -393,11 +396,11 @@ describe("pruneCollapsedDescendants — property sweep over random family graphs
         }
       }
 
-      // 3. Node count only ever shrinks (or stays equal) after pruning —
+      // 4. Node count only ever shrinks (or stays equal) after pruning —
       //    pruning can never ADD people.
       expect(pruned.nodes.length).toBeLessThanOrEqual(graph.nodes.length);
 
-      // 4. Idempotent: pruning the already-pruned graph with the SAME
+      // 5. Idempotent: pruning the already-pruned graph with the SAME
       //    collapsedIds again changes nothing further (every hidden id
       //    is already gone, so there's nothing left for it to find).
       const prunedAgain = pruneCollapsedDescendants(pruned, collapsedIds);
