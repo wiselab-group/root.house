@@ -49,6 +49,55 @@ export function traceMarchClassName(traceDirection: 1 | -1): string {
 }
 
 /**
+ * Draws a traced (terracotta, marching-ants) line with a solid, undashed
+ * backdrop of the same width painted first, in the canvas background color
+ * — a general fix for a whole class of bug, not a one-off: ANY two tree
+ * lines that happen to run along the exact same pixels (a union trunk's
+ * shared stem before a sibling branches off, a partnership line's plain
+ * half meeting the traced half, or any future case neither of us has hit
+ * yet) would otherwise show the plain one bleeding through the terracotta
+ * dash's gaps, no matter how carefully the plain line's own geometry is
+ * trimmed to avoid the overlap (see git history — that per-case trimming
+ * approach was tried first, in union-child-edge.tsx, and still needed a
+ * second bug-fixed revision once a same-row assumption turned out false on
+ * real data). A solid backdrop the exact width of the traced stroke, drawn
+ * BEFORE it in paint order, hides whatever's underneath unconditionally —
+ * the fix no longer depends on finding and trimming every overlapping
+ * line's geometry by hand. `--background` is used rather than transparency
+ * or a card-colored fill because the canvas's dotted Background pattern
+ * (tree-canvas.tsx) sits in its own layer below every edge; painting over
+ * it with the flat page background is the only way to fully occlude a line
+ * underneath without also punching a visible dot-pattern gap that doesn't
+ * match the surrounding canvas.
+ */
+export function TracedLine({
+  path,
+  traceDirection,
+  strokeWidth,
+}: {
+  path: string;
+  traceDirection: 1 | -1;
+  strokeWidth: number;
+}) {
+  return (
+    <>
+      <path
+        d={path}
+        fill="none"
+        stroke="var(--background)"
+        strokeWidth={strokeWidth + 2}
+        strokeLinecap="round"
+      />
+      <BaseEdge
+        path={path}
+        className={traceMarchClassName(traceDirection)}
+        style={{ strokeWidth, stroke: TRACE_COLOR }}
+      />
+    </>
+  );
+}
+
+/**
  * Renders parent_child edges as a solid line and partnership edges as
  * dashed — the visual distinction between "descent" and "union" the plan's
  * DESIGN.md calls for, without needing separate label text on every edge.
@@ -175,21 +224,24 @@ function ParentChildEdgeLine({
     ],
     isMiddleSibling ? [{ x: targetCenterX, y: midY }] : [],
   );
+  // isOnTracePath draws via TracedLine — see its own doc comment for why
+  // this is a solid backdrop + terracotta line rather than a plain
+  // <BaseEdge>: it's what makes ANY other line sharing this exact path
+  // (this component's own former overlap bugs, and any future one) get
+  // fully occluded, not just this specific overlap this component happens
+  // to know about.
+  if (isOnTracePath) {
+    return (
+      <TracedLine path={path} traceDirection={traceDirection} strokeWidth={3} />
+    );
+  }
   return (
     <BaseEdge
       id={id}
       path={path}
-      // This path is always drawn source→target (parent→child, top to
-      // bottom) — traceMarchClassName picks whichever of the two
-      // marching-ants directions (globals.css) crawls that as A→B, never
-      // B→A, regardless of which end of this specific edge A and B happen
-      // to fall on.
-      className={
-        isOnTracePath ? traceMarchClassName(traceDirection) : undefined
-      }
       style={{
-        strokeWidth: isOnTracePath ? 3 : 2,
-        stroke: isOnTracePath ? TRACE_COLOR : "var(--branch)",
+        strokeWidth: 2,
+        stroke: "var(--branch)",
         opacity: isDimmed ? 0.35 : 1,
       }}
     />
@@ -304,28 +356,28 @@ function PartnershipEdgeLine({
     );
   }
 
+  const path = `M${x1},${y} L${x2},${yTarget}`;
+  // This path is always drawn source→target (x1→x2 above) — same
+  // A→B-direction pick as ParentChildEdgeLine, see its own comment.
+  // isOnTracePath draws via TracedLine — see its own doc comment. Note this
+  // also means the current/past marriage's "5 3"/"2 4" dasharray is skipped
+  // while traced, in favor of TracedLine's own fixed marching-ants period —
+  // matters less mid-trace anyway, the terracotta color + motion is already
+  // the dominant signal.
+  if (isOnTracePath) {
+    return (
+      <TracedLine path={path} traceDirection={traceDirection} strokeWidth={3} />
+    );
+  }
   return (
     <BaseEdge
       id={id}
-      path={`M${x1},${y} L${x2},${yTarget}`}
-      // This path is always drawn source→target (x1→x2 above) — same
-      // A→B-direction pick as ParentChildEdgeLine, see its own comment.
-      className={
-        isOnTracePath ? traceMarchClassName(traceDirection) : undefined
-      }
+      path={path}
       style={{
-        strokeWidth: isOnTracePath ? 3 : 1.5,
-        stroke: isOnTracePath ? TRACE_COLOR : "var(--branch)",
+        strokeWidth: 1.5,
+        stroke: "var(--branch)",
         opacity: isDimmed ? 0.35 : 1,
-        // While traced, the class's own "6 4" dasharray drives the line
-        // (current/past marriage's "5 3"/"2 4" pattern is skipped here) —
-        // the marching-ants keyframe's dashoffset is a fixed multiple of
-        // "6 4"'s 10px period (see globals.css's own comment); mixing in a
-        // different period from dashStyle would desync the loop and make
-        // the animation visibly stutter at the seam (an earlier, separate
-        // bug). Current/past distinction matters less mid-trace anyway —
-        // the terracotta color + motion is already the dominant signal.
-        ...(isOnTracePath ? {} : dashStyle),
+        ...dashStyle,
       }}
     />
   );

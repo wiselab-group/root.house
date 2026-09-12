@@ -136,19 +136,6 @@ export interface UnionChildEdgeData extends Record<string, unknown> {
    * up the row.
    */
   isMiddleSibling?: boolean;
-  /**
-   * True when this child's own trunk is NOT on the traced path, but a
-   * sibling's (same couple's union) trunk IS — every child off the same
-   * union shares one identical vertical stem geometrically (partnership
-   * midpoint down to the row's shared bend height, see
-   * union-child-edge.tsx's sourceY→clearY), so a traced sibling's terracotta
-   * stem and this one's plain brown stem would otherwise draw on top of
-   * each other, the brown one showing through the terracotta dash gaps.
-   * Tells UnionChildEdge to skip drawing that shared segment (start its own
-   * path partway down instead) so only the traced sibling's copy is ever
-   * visible there.
-   */
-  hideSharedStem?: boolean;
 }
 
 export type PersonFlowNode = Node<PersonNodeData, "person">;
@@ -478,7 +465,6 @@ function toFlowEdges(
 ): (RelationshipFlowEdge | UnionChildFlowEdge)[] {
   const unionByChild = findUnionParentPairs(graph);
   const middleSiblingEdgeIds = findMiddleSiblingEdgeIds(graph, unionByChild);
-  const nodeById = new Map(graph.nodes.map((n) => [n.id, n]));
   const edges: (RelationshipFlowEdge | UnionChildFlowEdge)[] = [];
 
   for (const edge of graph.edges) {
@@ -550,39 +536,7 @@ function toFlowEdges(
     });
 
     // Emit this couple's children's trunk edges right alongside their
-    // partnership edge. Every one of this couple's children shares the same
-    // vertical stem (partnership midpoint down through the sibling row's
-    // shared bend height) — each one draws it independently, so if any
-    // sibling is traced, that stem is drawn twice in the exact same place:
-    // once terracotta (that sibling), once plain brown (every other
-    // sibling), the brown one showing through the terracotta dash gaps.
-    // Find the traced sibling (if any) before the loop so every OTHER
-    // sibling can skip redrawing that shared stem entirely instead of
-    // layering under it.
-    const siblingIds = [...unionByChild]
-      .filter(([, u]) => u.partnershipEdgeId === edge.id)
-      .map(([childId]) => childId);
-    const tracedSiblingId = highlight.traceEdgeIds
-      ? siblingIds.find((childId) =>
-          [
-            `pc-${unionByChild.get(childId)!.parentIds[0]}-${childId}`,
-            `pc-${unionByChild.get(childId)!.parentIds[1]}-${childId}`,
-          ].some((pcId) => highlight.traceEdgeIds!.has(pcId)),
-        )
-      : undefined;
-    // The shared vertical stem is only ACTUALLY identical pixel-for-pixel
-    // down to each sibling's own turn (union-child-edge.tsx's midY) when
-    // both siblings sit on the same row (y) — the overwhelmingly common
-    // case, but not guaranteed (e.g. after an elastic-Y repair shift moves
-    // one sibling's subtree to a different row, see CLAUDE.md's "Эластичный
-    // Y"). On a different row the two only share the shorter, always-safe
-    // run down to the parents' own card-bottom height — real data caught
-    // this: hiding all the way to midY unconditionally left a sibling on a
-    // different row with a visible gap where its own (correct, undimmed)
-    // stem used to be.
-    const tracedSiblingY = tracedSiblingId
-      ? nodeById.get(tracedSiblingId)?.y
-      : undefined;
+    // partnership edge.
     for (const [childId, union] of unionByChild) {
       if (union.partnershipEdgeId !== edge.id) continue;
       // Whichever of the two possible parent_child edge ids actually exists
@@ -614,14 +568,6 @@ function toFlowEdges(
             : undefined,
           isMiddleSibling: middleSiblingEdgeIds.has(
             `union-${edge.id}-${childId}`,
-          ),
-          // See tracedSiblingId/tracedSiblingY's own comments above — only
-          // safe once we know the two siblings actually share a row.
-          hideSharedStem: Boolean(
-            tracedSiblingId &&
-            childId !== tracedSiblingId &&
-            tracedSiblingY !== undefined &&
-            nodeById.get(childId)?.y === tracedSiblingY,
           ),
         },
       });
