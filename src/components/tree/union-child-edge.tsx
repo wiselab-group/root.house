@@ -46,6 +46,12 @@ export function UnionChildEdge({
   // undefined means no trace is active (never dim), false means a trace IS
   // active and this trunk isn't part of it.
   const isDimmed = data?.isOnTracePath === false;
+  // See UnionChildEdgeData.hideSharedStem's own comment — this sibling skips
+  // the shared sourceY→midY vertical run entirely (only set true when a
+  // traced sibling shares this exact row) rather than drawing a dimmed copy
+  // of it, since a dimmed copy would still show through the traced
+  // sibling's dash gaps sitting on the exact same pixels.
+  const hideSharedStem = data?.hideSharedStem === true;
   // This trunk is always drawn parent→child (tracedStart/trunkPoints below
   // both run toward targetX/targetY) — same meaning as
   // RelationshipEdgeData.traceDirection (xyflow-adapter.ts computes this
@@ -129,13 +135,30 @@ export function UnionChildEdge({
   const midY = isCompactChild
     ? Math.max(clearY, targetY - COMPACT_CHILD_TAIL_LENGTH)
     : (clearY + targetY) / 2;
-  const trunkPoints = [
-    { x: sourceX, y: sourceY },
-    { x: sourceX, y: clearY },
-    { x: sourceX, y: midY },
-    { x: targetX, y: midY },
-    { x: targetX, y: targetY },
-  ];
+  // hideSharedStem drops the ENTIRE sourceY→midY vertical run, not just the
+  // sourceY→clearY leg — every sibling off the same union sharing this same
+  // row (same midY, the overwhelmingly common case) has an identical
+  // vertical segment all the way down to its own turn at midY, not just up
+  // to clearY (a real bug caught on real data: clearY sits partway down
+  // that shared run, at the parents' own card-bottom height, not at the
+  // sibling row's bend height — the two only coincide when parents and
+  // children are adjacent generations with no extra vertical gap). This
+  // sibling's own visible line starts right at (sourceX, midY) instead,
+  // exactly where the shared stem (drawn once, by whichever sibling is
+  // traced) leaves off to jog sideways into each child's own card.
+  const trunkPoints = hideSharedStem
+    ? [
+        { x: sourceX, y: midY },
+        { x: targetX, y: midY },
+        { x: targetX, y: targetY },
+      ]
+    : [
+        { x: sourceX, y: sourceY },
+        { x: sourceX, y: clearY },
+        { x: sourceX, y: midY },
+        { x: targetX, y: midY },
+        { x: targetX, y: targetY },
+      ];
   // (targetX, midY) is this child's own turn down into its card — for a
   // middle sibling (flanked by others on both sides, see
   // xyflow-adapter.ts's isMiddleSibling) that turn is a sideways jog that

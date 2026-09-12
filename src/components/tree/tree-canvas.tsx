@@ -465,7 +465,7 @@ export function TreeCanvas({
           // descendantGenerations: Infinity) can still be zoomed/panned out
           // to see everyone from there.
           minZoom={0.02}
-          maxZoom={1.5}
+          maxZoom={2}
           // Re-enabled (rewrite plan §7 Stage 6) — mounts only nodes/edges
           // intersecting the current viewport, capping DOM cost on a large
           // family regardless of zoom/pan (previously disabled after a

@@ -262,3 +262,134 @@ describe("toReactFlow — isMiddleSibling", () => {
     expect(unionEdge.data?.isMiddleSibling).toBeFalsy();
   });
 });
+
+describe("toReactFlow — trace hides overlapping shared stem", () => {
+  it("hides a non-traced sibling's shared vertical stem down to their shared row's bend point when a sibling on the SAME row is traced (real bug: the two lines overlapped, the plain one showing through the traced one's dash gaps)", () => {
+    const graph: TreeLayoutGraph = {
+      focusPersonId: "alexander",
+      nodes: [
+        node("viktor", -100, 0, -1),
+        node("galina", 100, 0, -1),
+        node("alexander", 100, 100, 0),
+        node("daria", -100, 100, 0),
+      ],
+      edges: [
+        {
+          id: "spouse1",
+          kind: "partnership",
+          source: "viktor",
+          target: "galina",
+        },
+        {
+          id: "pc-viktor-alexander",
+          kind: "parent_child",
+          source: "viktor",
+          target: "alexander",
+        },
+        {
+          id: "pc-galina-alexander",
+          kind: "parent_child",
+          source: "galina",
+          target: "alexander",
+        },
+        {
+          id: "pc-viktor-daria",
+          kind: "parent_child",
+          source: "viktor",
+          target: "daria",
+        },
+        {
+          id: "pc-galina-daria",
+          kind: "parent_child",
+          source: "galina",
+          target: "daria",
+        },
+      ] as LayoutEdge[],
+    };
+
+    const highlight = {
+      tracePersonIds: new Set(["galina", "alexander"]),
+      traceEdgeIds: new Set(["pc-galina-alexander"]),
+      traceEdgeDirections: new Map([["pc-galina-alexander", 1 as const]]),
+    };
+
+    const { edges } = toReactFlow(
+      graph,
+      "fam1",
+      "fam-slug",
+      "compact",
+      highlight,
+    );
+    const unionEdges = edges.filter(
+      (e): e is UnionChildFlowEdge => e.type === "unionChild",
+    );
+    const byTarget = new Map(unionEdges.map((e) => [e.target, e]));
+    expect(byTarget.get("alexander")?.data?.isOnTracePath).toBe(true);
+    expect(byTarget.get("alexander")?.data?.hideSharedStem).toBeFalsy();
+    expect(byTarget.get("daria")?.data?.isOnTracePath).toBe(false);
+    expect(byTarget.get("daria")?.data?.hideSharedStem).toBe(true);
+  });
+
+  it("does NOT hide the shared stem when the non-traced sibling is on a DIFFERENT row (elastic-Y repair moved their subtree) — hiding unconditionally would leave a visible gap since their own turn point no longer coincides", () => {
+    const graph: TreeLayoutGraph = {
+      focusPersonId: "alexander",
+      nodes: [
+        node("viktor", -100, 0, -1),
+        node("galina", 100, 0, -1),
+        node("alexander", 100, 100, 0),
+        node("daria", -100, 330, 1), // different row (y), e.g. after a repair shift
+      ],
+      edges: [
+        {
+          id: "spouse1",
+          kind: "partnership",
+          source: "viktor",
+          target: "galina",
+        },
+        {
+          id: "pc-viktor-alexander",
+          kind: "parent_child",
+          source: "viktor",
+          target: "alexander",
+        },
+        {
+          id: "pc-galina-alexander",
+          kind: "parent_child",
+          source: "galina",
+          target: "alexander",
+        },
+        {
+          id: "pc-viktor-daria",
+          kind: "parent_child",
+          source: "viktor",
+          target: "daria",
+        },
+        {
+          id: "pc-galina-daria",
+          kind: "parent_child",
+          source: "galina",
+          target: "daria",
+        },
+      ] as LayoutEdge[],
+    };
+
+    const highlight = {
+      tracePersonIds: new Set(["galina", "alexander"]),
+      traceEdgeIds: new Set(["pc-galina-alexander"]),
+      traceEdgeDirections: new Map([["pc-galina-alexander", 1 as const]]),
+    };
+
+    const { edges } = toReactFlow(
+      graph,
+      "fam1",
+      "fam-slug",
+      "compact",
+      highlight,
+    );
+    const unionEdges = edges.filter(
+      (e): e is UnionChildFlowEdge => e.type === "unionChild",
+    );
+    const byTarget = new Map(unionEdges.map((e) => [e.target, e]));
+    expect(byTarget.get("daria")?.data?.hideSharedStem).toBeFalsy();
+  });
+});
