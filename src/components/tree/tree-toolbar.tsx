@@ -11,6 +11,7 @@ import { isEmptyFilter, type PersonFilter } from "@/domain/tree/tree-filter";
 import { describeTraceOutcome } from "./describe-trace-outcome";
 import type { RelationshipPathOutcome } from "@/domain/relationship/genealogy-algorithms";
 import type { TreeLayoutGraph } from "@/domain/tree/tree-layout.builder";
+import type { TreeClientGraphPayload } from "@/domain/tree/tree-adapter";
 import type { TreeHighlightState } from "./adapters/xyflow-adapter";
 
 /**
@@ -37,6 +38,7 @@ export function TreeToolbar({
   familyId,
   familySlug,
   graph,
+  rawGraph,
   highlight,
   traceA,
   traceB,
@@ -47,6 +49,8 @@ export function TreeToolbar({
   /** The family's URL slug — threaded down to TreeCanvas for each card's click-popover profile link. */
   familySlug: string;
   graph: TreeLayoutGraph;
+  /** Rewrite plan §7 Stage 7 — the client-safe raw graph (getRawTreeGraph), passed through so TreeCanvas can re-run buildTreeLayout locally on focus switch instead of a full page reload. Undefined in read-only (Share Link) contexts, which never render TreeToolbar at all. */
+  rawGraph: TreeClientGraphPayload;
   highlight?: TreeHighlightState;
   traceA: { id: string; name: string } | null;
   traceB: { id: string; name: string } | null;
@@ -92,10 +96,22 @@ export function TreeToolbar({
   );
   const isTraceActive = Boolean(traceA || traceB);
 
+  // A person with no recorded relationship at all (layout/types.ts's
+  // NormalizedPerson.isIsolated) is still placed on the canvas — as a
+  // connector-less card in a row below the tree (see placeIsolatedPersons,
+  // subtree.ts) — rather than crashing the page (the bug this UI hint was
+  // added for). Surfaced here so a family member notices "not yet linked"
+  // people instead of assuming the tree is complete.
+  const isolatedCount = useMemo(
+    () => graph.nodes.filter((n) => n.isIsolated).length,
+    [graph.nodes],
+  );
+
   return (
     <>
       <TreeCanvas
         graph={graph}
+        rawGraph={rawGraph}
         familyId={familyId}
         familySlug={familySlug}
         highlight={highlight}
@@ -138,6 +154,17 @@ export function TreeToolbar({
         filter={filter}
         onApply={applyFilterToUrl}
       />
+
+      {isolatedCount > 0 && (
+        <div
+          className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground shadow-md"
+          role="status"
+        >
+          {isolatedCount === 1
+            ? "1 человек не привязан к дереву"
+            : `${isolatedCount} человек не привязаны к дереву`}
+        </div>
+      )}
     </>
   );
 }

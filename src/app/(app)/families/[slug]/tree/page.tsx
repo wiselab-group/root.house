@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { listPeople } from "@/domain/person/person.service";
-import { getFocusTreeLayout } from "@/domain/tree/tree.service";
+import {
+  getFocusTreeLayout,
+  getRawTreeGraph,
+} from "@/domain/tree/tree.service";
 import { applyRelationshipTrace } from "@/domain/tree/tree-trace";
 import { findRelationshipPathFor } from "@/domain/relationship/relationship.service";
 import { personDisplayName } from "@/domain/person/display-name";
@@ -117,7 +120,7 @@ export default async function FamilyTreePage({
       ? traceB
       : null;
 
-  const [layoutGraph, traceOutcome] = await Promise.all([
+  const [layoutGraph, traceOutcome, rawGraph] = await Promise.all([
     getFocusTreeLayout(familyId, focusPersonId, {
       // Show the whole connected family, not just a 2-generation window
       // around the focus person — this app's family archives are small
@@ -130,6 +133,10 @@ export default async function FamilyTreePage({
     traceAId && traceBId
       ? findRelationshipPathFor(traceAId, traceBId, familyId)
       : Promise.resolve(null),
+    // Rewrite plan §7 Stage 7: lets TreeCanvas re-run buildTreeLayout
+    // entirely client-side when the user switches focus, instead of a full
+    // page reload — see getRawTreeGraph's own doc comment.
+    getRawTreeGraph(familyId),
   ]);
 
   const tracedGraph = applyRelationshipTrace(layoutGraph, traceOutcome);
@@ -150,6 +157,7 @@ export default async function FamilyTreePage({
         familyId={familyId}
         familySlug={slug}
         graph={tracedGraph}
+        rawGraph={rawGraph}
         highlight={{
           filterMatchedIds:
             "matchedIds" in layoutGraph ? layoutGraph.matchedIds : undefined,
@@ -160,6 +168,9 @@ export default async function FamilyTreePage({
           // computed when highlight.tracePersonIds is present at all.
           tracePersonIds: traceOutcome ? tracedGraph.tracePersonIds : undefined,
           traceEdgeIds: traceOutcome ? tracedGraph.traceEdgeIds : undefined,
+          traceEdgeDirections: traceOutcome
+            ? tracedGraph.traceEdgeDirections
+            : undefined,
         }}
         traceA={
           traceAId

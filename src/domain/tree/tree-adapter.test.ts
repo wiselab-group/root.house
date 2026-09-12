@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { PersonRecord } from "@/domain/person/person.repository";
 import { UNKNOWN_DATE } from "@/domain/shared/partial-date";
 import { buildTreeLayout } from "./layout/layout";
-import { toTreeFamilyGraph, fromTreeLayout } from "./tree-adapter";
+import {
+  toTreeFamilyGraph,
+  fromTreeLayout,
+  buildClientTreeLayout,
+  type TreeClientGraphPayload,
+} from "./tree-adapter";
 
 function personRecord(
   id: string,
@@ -31,6 +36,7 @@ function personRecord(
     photoMediaId: null,
     privacyLevel: "family",
     createdBy: "user-1",
+    createdAt: new Date("2020-01-01T00:00:00Z"),
     ...overrides,
   };
 }
@@ -291,5 +297,103 @@ describe("fromTreeLayout", () => {
         new Map(),
       ),
     ).toThrow(/missing from personById/);
+  });
+});
+
+describe("buildClientTreeLayout (rewrite plan §7 Stage 7 — client-side focus switch)", () => {
+  // Same 3-generation family as the "fromTreeLayout — full pipeline" block
+  // above (grandpa/grandma -> parent(+spouse) -> child), rebuilt directly
+  // as a TreeClientGraphPayload (the narrow, client-safe shape) rather than
+  // full PersonRecord[] — exercising the actual boundary this function
+  // crosses (getRawTreeGraph's own output shape), not just a widened
+  // PersonRecord[] that happens to satisfy the same interface.
+  function clientPayload(): TreeClientGraphPayload {
+    const ids = ["grandpa", "grandma", "parent", "spouse", "child"];
+    return {
+      persons: ids.map((id) => ({
+        id,
+        slug: id,
+        firstName: id,
+        lastName: "Test",
+        nickname: null,
+        gender: "unknown",
+        isPlaceholder: false,
+        isLiving: true,
+        birthDate: null,
+        deathDate: null,
+        photoMediaId: null,
+        religion: null,
+        nationality: null,
+      })),
+      parentChildEdges: [
+        { id: "pc-1", parentId: "grandpa", childId: "parent" },
+        { id: "pc-2", parentId: "grandma", childId: "parent" },
+        { id: "pc-3", parentId: "parent", childId: "child" },
+        { id: "pc-4", parentId: "spouse", childId: "child" },
+      ],
+      partnershipEdges: [
+        {
+          id: "rel-1",
+          person1Id: "grandpa",
+          person2Id: "grandma",
+          status: "married",
+          isCurrent: true,
+        },
+        {
+          id: "rel-2",
+          person1Id: "parent",
+          person2Id: "spouse",
+          status: "married",
+          isCurrent: true,
+        },
+      ],
+    };
+  }
+
+  it("produces a graph focused on whichever personId is passed, not the original graph's own root", () => {
+    const layout = buildClientTreeLayout(clientPayload(), "grandpa");
+    expect(layout.focusPersonId).toBe("grandpa");
+    const grandpaNode = layout.nodes.find((n) => n.id === "grandpa")!;
+    expect(grandpaNode.isFocus).toBe(true);
+    const childNode = layout.nodes.find((n) => n.id === "child")!;
+    expect(childNode.isFocus).toBe(false);
+  });
+
+  it("includes every person from the payload regardless of which one is focused — buildTreeLayout always lays out the whole connected family", () => {
+    const focusedOnChild = buildClientTreeLayout(clientPayload(), "child");
+    const focusedOnGrandpa = buildClientTreeLayout(clientPayload(), "grandpa");
+    const idsFromChild = new Set(focusedOnChild.nodes.map((n) => n.id));
+    const idsFromGrandpa = new Set(focusedOnGrandpa.nodes.map((n) => n.id));
+    expect(idsFromChild).toEqual(idsFromGrandpa);
+    expect(idsFromChild).toEqual(
+      new Set(["grandpa", "grandma", "parent", "spouse", "child"]),
+    );
+  });
+
+  it("re-centers the NEW focus person at x=0 (matches getFocusTreeLayout's own focus-at-origin invariant)", () => {
+    const layout = buildClientTreeLayout(clientPayload(), "child");
+    const childNode = layout.nodes.find((n) => n.id === "child")!;
+    // "child" has a spouse-less single partnership branch of their own?
+    // No — child is childless here, so their own card sits exactly at x=0,
+    // same invariant buildTreeLayout guarantees for any focus with no
+    // partnership of their own centering the pair instead.
+    expect(childNode.x).toBeCloseTo(0, 5);
+  });
+
+  it("preserves each person's display data (slug/name/photo) across the client-side rebuild, same as fromTreeLayout's server-side path", () => {
+    const layout = buildClientTreeLayout(clientPayload(), "parent");
+    const grandpaNode = layout.nodes.find((n) => n.id === "grandpa")!;
+    expect(grandpaNode.person).toMatchObject({
+      id: "grandpa",
+      slug: "grandpa",
+      firstName: "grandpa",
+      lastName: "Test",
+    });
+  });
+
+  it("throws the same clear layout-engine error getFocusTreeLayout's own try/catch would surface, for an unknown focusPersonId", () => {
+    expect(() =>
+      buildClientTreeLayout(clientPayload(), "nonexistent-person"),
+    ).toThrow();
   });
 });

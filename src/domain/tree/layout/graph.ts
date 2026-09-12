@@ -46,6 +46,7 @@ export function normalizeGraph(
       partnershipIds: [],
       parentIds: [],
       branch: "unknown",
+      isIsolated: false,
     });
   }
   if (!personById.has(focusPersonId)) {
@@ -79,17 +80,39 @@ export function normalizeGraph(
     const leftPersonId = aLeft ? a.id : b.id;
     const rightPersonId = aLeft ? b.id : a.id;
 
-    const leftChildren = new Set(childrenOf.get(leftPersonId) ?? []);
-    const rightChildren = childrenOf.get(rightPersonId) ?? [];
+    const leftChildrenAll = childrenOf.get(leftPersonId) ?? [];
+    const rightChildrenAll = childrenOf.get(rightPersonId) ?? [];
+    const leftChildren = new Set(leftChildrenAll);
+    const rightChildren = rightChildrenAll;
     const sharedChildren = rightChildren.filter((c) => leftChildren.has(c));
-    // If neither side individually has recorded children, fall back to the
-    // union so partnerships with only one parent's child-edges recorded
-    // still show their children (defensive — real graphs are rarely this
-    // sparse, but incomplete data shouldn't silently orphan children).
+    // The union fallback exists ONLY for the genuinely sparse-data case: a
+    // child recorded under just ONE of these two parents, where the OTHER
+    // parent (of the two forming THIS partnership) was never linked to that
+    // child at all — e.g. only the mother's parent-child edge was entered
+    // into the DB, the father's never was. That is different from "this
+    // child belongs to one of this person's OTHER partnerships" — checking
+    // per child, not per side, is what tells them apart: a child unclaimed
+    // by the union fallback must have recorded parentIds that are a SUBSET
+    // of {leftPersonId, rightPersonId} (at most one of the two, and nothing
+    // outside the pair), never a child whose recorded parentIds point at a
+    // THIRD person entirely (that third person is this child's real other
+    // parent, from a different partnership). Real bug this replaces: a
+    // person P married to A (childless with P), B (childless with P), and C
+    // (P's actual child C1's other parent) — the old per-side "does either
+    // side have ANY children at all" check let A's and B's partnerships each
+    // wrongly inherit C1 too, since P (one side of every pairing) always has
+    // children recorded, just never in common with A or B specifically.
+    const unionCandidates = [
+      ...new Set([...leftChildrenAll, ...rightChildrenAll]),
+    ];
+    const sparseDataUnion = unionCandidates.filter((childId) => {
+      const recordedParents = parentsOf.get(childId) ?? [];
+      return recordedParents.every(
+        (p) => p === leftPersonId || p === rightPersonId,
+      );
+    });
     const childrenIds =
-      sharedChildren.length > 0
-        ? sharedChildren
-        : [...new Set([...leftChildren, ...rightChildren])];
+      sharedChildren.length > 0 ? sharedChildren : sparseDataUnion;
 
     const partnership: Partnership = {
       id: rel.id,
@@ -97,6 +120,12 @@ export function normalizeGraph(
       rightPersonId,
       status: rel.status ?? "married",
       childrenIds,
+      // Real chronological ordering (by startDate, falling back to the
+      // partnership row's own createdAt) lands with multi-marriage support —
+      // see rewrite plan §1.4/§1.6. Every partnership defaults to 0 until
+      // then, which preserves today's behavior (array/insertion order) since
+      // nothing reads marriageOrder yet.
+      marriageOrder: 0,
     };
     partnershipById.set(partnership.id, partnership);
     personById.get(leftPersonId)!.partnershipIds.push(partnership.id);
@@ -120,6 +149,28 @@ export function normalizeGraph(
       personId: parentId,
       childrenIds: unattributed,
     });
+  }
+
+  // ---- isolated: no relationship at all, in either direction ------------
+  // A person with zero parent-child edges (as parent or child) and zero
+  // partnerships can never be reached by growBranch's up/down/in-law walk
+  // from any focus — see NormalizedPerson.isIsolated's own doc comment.
+  // Checked here, before assignGenerations/assignBranches run their BFS, so
+  // those two passes (which only walk graph edges) never need to know about
+  // isolated persons at all — they simply never appear in any frontier.
+  for (const [id, person] of personById) {
+    // The focus person is always placed at the origin by growBranch itself
+    // (placement.ts::placeGraph) regardless of their own edges — an
+    // edgeless focus is a valid (if lonely) tree of exactly one card, not
+    // an isolated person to be shunted into the separate row below.
+    if (id === focusPersonId) continue;
+    if (
+      person.parentIds.length === 0 &&
+      person.partnershipIds.length === 0 &&
+      (childrenOf.get(id)?.length ?? 0) === 0
+    ) {
+      person.isIsolated = true;
+    }
   }
 
   // ---- generation: BFS distance from focus (soft hint only) -------------
@@ -338,82 +389,4 @@ function orderParentsBySide(
   const genderB = personById.get(b)?.gender ?? "unknown";
   if (shouldBeLeft(genderA, genderB, a, b)) return [a, b];
   return [b, a];
-}
-
-/**
- * Raises one person AND their entire recorded ancestry (own spouse, own
- * parents, those parents' own parents and spouses, all the way up) by
- * exactly one generation (generation -= 1). Never descends into anyone
- * else's children — this only ever walks up the parentIds chain (plus
- * sideways to a spouse at each step), so a childless leaf like Natalya
- * Ushkar raises only herself and her ancestors above her, untouched by
- * whatever her (nonexistent, in her case) own descendants would otherwise
- * imply. Spouses are raised alongside whichever of the pair is the actual
- * blood ancestor in this chain, so a couple never ends up split across two
- * different rows.
- *
- * Used when a person's NATURAL BFS generation row already belongs to an
- * entirely unrelated branch (see placement.ts's findStrandedOnlyChildren) —
- * e.g. Natalya Ushkar herself, her parents Nikolai/Elena Ushkar, and
- * Elena's own parents Grigory/Elizaveta Krivusha, are ALL raised one row
- * each, so Natalya ends up on a row that belongs to her own family instead
- * of a crowded, unrelated one. Real bug in an earlier version of this
- * function: it raised startPersonId's ANCESTORS but never startPersonId's
- * own stored `generation` field — since `generation` is a value assigned
- * once during normalizeGraph's BFS (not dynamically recomputed as
- * `parent.generation + 1` at read time), Natalya's parents moved up a row
- * while her own generation field stayed exactly where it was, so she still
- * rendered on the original crowded row even though her whole ancestry had
- * moved.
- *
- * generation stays a "soft hint for Y" (see NormalizedPerson's doc comment)
- * precisely so this kind of per-branch adjustment is legitimate — it is
- * BFS-distance-from-focus by DEFAULT, not by hard invariant.
- */
-export function raiseAncestryOneGeneration(
-  graph: NormalizedGraph,
-  startPersonId: string,
-): void {
-  const visited = new Set<string>([startPersonId]);
-  const startPerson = graph.personById.get(startPersonId);
-  if (!startPerson) return;
-  startPerson.generation -= 1;
-
-  let frontier = [startPersonId];
-  while (frontier.length > 0) {
-    const next: string[] = [];
-    for (const id of frontier) {
-      const person = graph.personById.get(id);
-      if (!person) continue;
-
-      // Raise this person's own spouse alongside them, so a couple never
-      // ends up split across two rows.
-      for (const partnershipId of person.partnershipIds) {
-        const partnership = graph.partnershipById.get(partnershipId);
-        if (!partnership) continue;
-        const spouseId =
-          partnership.leftPersonId === id
-            ? partnership.rightPersonId
-            : partnership.leftPersonId;
-        if (visited.has(spouseId)) continue;
-        visited.add(spouseId);
-        const spouse = graph.personById.get(spouseId);
-        if (!spouse) continue;
-        spouse.generation -= 1;
-        // A spouse's own parentIds are NOT this chain's blood ancestry —
-        // never walk further up from them (would raise an unrelated family
-        // that happens to have married in).
-      }
-
-      for (const parentId of person.parentIds) {
-        if (visited.has(parentId)) continue;
-        visited.add(parentId);
-        const parent = graph.personById.get(parentId);
-        if (!parent) continue;
-        parent.generation -= 1;
-        next.push(parentId);
-      }
-    }
-    frontier = next;
-  }
 }

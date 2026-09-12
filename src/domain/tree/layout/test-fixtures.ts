@@ -294,3 +294,37 @@ export const case10ManyGenerations: FamilyGraph = {
     parentChild("grandchild-greatgrandchild", "grandchild", "greatgrandchild"),
   ],
 };
+
+/**
+ * CASE 11: focus -> child -> childSpouse, where childSpouse has their OWN
+ * recorded parents (in-laws-of-the-descendant) with several more children of
+ * their own (childSpouse's full siblings). Reproduces the real bug found on
+ * the Kupchik family's actual Neon data: childSpouse is reached through a
+ * downward path from focus, so her BFS `generation` is POSITIVE — the old
+ * placeAncestors only walked NEGATIVE generation rows (the focus's own
+ * ancestors), so childSpouseParent1/2 and childSpouseSibling never got a
+ * position at all, and assertOnePositionPerPerson threw "has no position".
+ * See placeGraph's placeInLawAncestors doc comment in placement.ts.
+ */
+export const case11InLawParents: FamilyGraph = {
+  persons: [
+    person("focus", "male"),
+    person("child", "male"),
+    person("childSpouse", "female"),
+    person("childSpouseParent1", "male"),
+    person("childSpouseParent2", "female"),
+    person("childSpouseSibling", "unknown"),
+    person("grandchild", "unknown"),
+  ],
+  relationships: [
+    parentChild("focus-child", "focus", "child"),
+    spouse("child-childSpouse", "child", "childSpouse"),
+    parentChild("csp1-childSpouse", "childSpouseParent1", "childSpouse"),
+    parentChild("csp2-childSpouse", "childSpouseParent2", "childSpouse"),
+    spouse("csp1-csp2", "childSpouseParent1", "childSpouseParent2"),
+    parentChild("csp1-sibling", "childSpouseParent1", "childSpouseSibling"),
+    parentChild("csp2-sibling", "childSpouseParent2", "childSpouseSibling"),
+    parentChild("child-grandchild", "child", "grandchild"),
+    parentChild("childSpouse-grandchild", "childSpouse", "grandchild"),
+  ],
+};

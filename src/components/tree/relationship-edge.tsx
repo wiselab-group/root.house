@@ -1,22 +1,26 @@
 "use client";
 
-import { BaseEdge, useInternalNode, type EdgeProps } from "@xyflow/react";
+import { BaseEdge, type EdgeProps } from "@xyflow/react";
 import {
+  AVATAR_RADIUS,
   CONNECTOR_CENTER_Y,
-  type PersonFlowNode,
   type RelationshipFlowEdge,
 } from "./adapters/xyflow-adapter";
 import { roundedOrthogonalPath } from "./orthogonal-path";
+import { useTreeNodeGeometry } from "./tree-layout-positions-context";
 
 /**
- * Relationship Trace's line color — deliberately --chart-2, not --primary:
- * --primary is only as muted as --chart-2 for the focus person's own card
- * (generation distance 0); every other card's top stripe fades further
- * (--chart-3, --chart-4...), so a full-strength --primary line reads as
- * louder than any card it's actually connecting. --chart-2 sits one step
- * back from full strength, matching the traced cards' own accent weight.
+ * Relationship Trace's line color — terracotta (--primary), matching the
+ * traced cards' own border (see person-node-parts.tsx's buildCardFrameClassName:
+ * isFocusOrTraced always uses --primary, never --tree-accent). Terracotta is
+ * reserved across the whole app for "what the user is doing/looking at right
+ * now" — a trace is exactly that — while sage (--tree-accent/--chart-N)
+ * means "this is a person", the tree's permanent per-card identity color
+ * (see globals.css's own comment on the three-hue role split). Also keeps
+ * the traced path visually distinct from --branch, the warm brown used for
+ * every other (non-traced) tree line.
  */
-export const TRACE_COLOR = "var(--chart-2)";
+export const TRACE_COLOR = "var(--primary)";
 
 /**
  * How far above a compact-style child's own card top edge the connector's
@@ -27,6 +31,19 @@ export const TRACE_COLOR = "var(--chart-2)";
  * into the avatar regardless of how tall the gap happens to be.
  */
 export const COMPACT_CHILD_TAIL_LENGTH = 56;
+
+/**
+ * Which marching-ants className (globals.css) crawls the dashes in the
+ * A→B-visible direction along THIS path, given which way this specific
+ * path's `d` was drawn relative to the A→B walk (see traceDirection's own
+ * doc comment on RelationshipEdgeData). Centralized so every call site
+ * picks between the two classes the same way.
+ */
+export function traceMarchClassName(traceDirection: 1 | -1): string {
+  return traceDirection === 1
+    ? "animate-tree-trace-march-forward"
+    : "animate-tree-trace-march-reverse";
+}
 
 /**
  * Renders parent_child edges as a solid line and partnership edges as
@@ -43,15 +60,15 @@ export function RelationshipEdge({
   type,
   source,
   target,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
   data,
 }: EdgeProps<RelationshipFlowEdge>) {
   const isPartnership = type === "partnership";
   const isPastPartnership = isPartnership && data?.isCurrent === false;
   const isOnTracePath = data?.isOnTracePath === true;
+  // Defaults to 1 (forward) — only read once isOnTracePath is true, where
+  // xyflow-adapter.ts always sets a real value (see traceDirection's own
+  // doc comment), so this fallback never actually applies in practice.
+  const traceDirection = data?.traceDirection ?? 1;
 
   // parent_child edges (including union-child trunk lines, see
   // union-child-edge.tsx) are built as an explicit "down, across, down"
@@ -64,12 +81,11 @@ export function RelationshipEdge({
     return (
       <ParentChildEdgeLine
         id={id}
+        source={source}
         target={target}
-        sourceX={sourceX}
-        sourceY={sourceY}
-        targetX={targetX}
-        targetY={targetY}
         isOnTracePath={isOnTracePath}
+        traceDirection={traceDirection}
+        isMiddleSibling={data?.isMiddleSibling === true}
       />
     );
   }
@@ -81,6 +97,7 @@ export function RelationshipEdge({
       target={target}
       isPastPartnership={isPastPartnership}
       isOnTracePath={isOnTracePath}
+      traceDirection={traceDirection}
       tracedPartnerId={data?.tracedPartnerId}
     />
   );
@@ -88,44 +105,77 @@ export function RelationshipEdge({
 
 function ParentChildEdgeLine({
   id,
+  source,
   target,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
   isOnTracePath,
+  traceDirection,
+  isMiddleSibling,
 }: {
   id: string;
+  source: string;
   target: string;
-  sourceX: number;
-  sourceY: number;
-  targetX: number;
-  targetY: number;
   isOnTracePath: boolean;
+  traceDirection: 1 | -1;
+  isMiddleSibling: boolean;
 }) {
-  const targetNode = useInternalNode<PersonFlowNode>(target);
+  const sourceNode = useTreeNodeGeometry(source);
+  const targetNode = useTreeNodeGeometry(target);
+  if (!sourceNode || !targetNode) return null;
+
+  // Read the parent's bottom edge from the committed layout position
+  // (TreeLayoutPositionsContext — see its own doc comment for why this
+  // replaced useInternalNode's live DOM-measured internals.positionAbsolute
+  // + measured.height). Both x/y AND width/height come from that same
+  // non-DOM-dependent source now — width/height are the static per-cardStyle
+  // dimensions (xyflow-adapter.ts's NODE_DIMENSIONS), same numbers
+  // useInternalNode's own `measured` fallback (`measured?.height ?? height`)
+  // resolved to before a real DOM measurement existed, and — unlike
+  // `measured` — never goes stale across a node unmounting/remounting under
+  // onlyRenderVisibleElements (rewrite plan §7 Stage 6).
+  const sourceBottomY = sourceNode.y + sourceNode.height;
+  const sourceCenterX = sourceNode.x + sourceNode.width / 2;
+  const targetTopY = targetNode.y;
+  const targetCenterX = targetNode.x + targetNode.width / 2;
+
   // Portrait's square photo already fills the card from its very top edge,
   // so the plain midpoint bend already reads fine there and a fixed tail
   // would look arbitrary against a square corner — only compact's round
   // avatar (which sits well clear of the card's top edge, see
   // CONNECTOR_CENTER_Y) needs the fixed-length tail below.
-  const isCompactChild = targetNode?.data.cardStyle === "compact";
+  const isCompactChild = targetNode.cardStyle === "compact";
   const midY = isCompactChild
-    ? Math.max(sourceY, targetY - COMPACT_CHILD_TAIL_LENGTH)
-    : (sourceY + targetY) / 2;
-  const path = roundedOrthogonalPath([
-    { x: sourceX, y: sourceY },
-    { x: sourceX, y: midY },
-    { x: targetX, y: midY },
-    { x: targetX, y: targetY },
-  ]);
+    ? Math.max(sourceBottomY, targetTopY - COMPACT_CHILD_TAIL_LENGTH)
+    : (sourceBottomY + targetTopY) / 2;
+  // (targetX, midY) is this child's own turn down into its card — for a
+  // middle sibling (flanked by others on both sides, see
+  // xyflow-adapter.ts's isMiddleSibling) that turn is a sideways jog that
+  // reads as an ugly zigzag when rounded, so it's drawn sharp instead. The
+  // OTHER bend, (sourceX, midY), is the T-off-the-trunk point — already a
+  // clean rounded corner regardless of sibling count, left untouched.
+  const path = roundedOrthogonalPath(
+    [
+      { x: sourceCenterX, y: sourceBottomY },
+      { x: sourceCenterX, y: midY },
+      { x: targetCenterX, y: midY },
+      { x: targetCenterX, y: targetTopY },
+    ],
+    isMiddleSibling ? [{ x: targetCenterX, y: midY }] : [],
+  );
   return (
     <BaseEdge
       id={id}
       path={path}
+      // This path is always drawn source→target (parent→child, top to
+      // bottom) — traceMarchClassName picks whichever of the two
+      // marching-ants directions (globals.css) crawls that as A→B, never
+      // B→A, regardless of which end of this specific edge A and B happen
+      // to fall on.
+      className={
+        isOnTracePath ? traceMarchClassName(traceDirection) : undefined
+      }
       style={{
         strokeWidth: isOnTracePath ? 3 : 2,
-        stroke: isOnTracePath ? TRACE_COLOR : "var(--muted-foreground)",
+        stroke: isOnTracePath ? TRACE_COLOR : "var(--branch)",
       }}
     />
   );
@@ -146,6 +196,7 @@ function PartnershipEdgeLine({
   target,
   isPastPartnership,
   isOnTracePath,
+  traceDirection,
   tracedPartnerId,
 }: {
   id: string;
@@ -153,32 +204,49 @@ function PartnershipEdgeLine({
   target: string;
   isPastPartnership: boolean;
   isOnTracePath: boolean;
+  traceDirection: 1 | -1;
   tracedPartnerId?: string;
 }) {
-  const sourceNode = useInternalNode<PersonFlowNode>(source);
-  const targetNode = useInternalNode<PersonFlowNode>(target);
+  const sourceNode = useTreeNodeGeometry(source);
+  const targetNode = useTreeNodeGeometry(target);
   if (!sourceNode || !targetNode) return null;
 
-  const sourceWidth = sourceNode.measured?.width ?? sourceNode.width ?? 0;
-  const targetWidth = targetNode.measured?.width ?? targetNode.width ?? 0;
-  const sourceLeft = sourceNode.internals.positionAbsolute.x;
-  const targetLeft = targetNode.internals.positionAbsolute.x;
+  const sourceLeft = sourceNode.x;
+  const targetLeft = targetNode.x;
   const sourceIsLeft = sourceLeft <= targetLeft;
 
   // The avatar/photo's own vertical center, not the card's overall center —
   // compact's round avatar (and portrait's square photo) doesn't span the
   // card's full height, so centering on the whole card would draw the line
   // through the name/years text below the avatar instead of through it.
-  const sourceCenterY = CONNECTOR_CENTER_Y[sourceNode.data.cardStyle];
-  const targetCenterY = CONNECTOR_CENTER_Y[targetNode.data.cardStyle];
-  const y = sourceNode.internals.positionAbsolute.y + sourceCenterY;
+  const sourceCenterY = CONNECTOR_CENTER_Y[sourceNode.cardStyle];
+  const targetCenterY = CONNECTOR_CENTER_Y[targetNode.cardStyle];
+  const y = sourceNode.y + sourceCenterY;
   // Each card's own horizontal center — not its edge — so the line visibly
   // runs "through" each card to the avatar's center (compact's round avatar
   // sits centered inside the card), instead of stopping short at the card's
   // outer border with a gap that reads as disconnected from either avatar.
-  const x1 = sourceLeft + sourceWidth / 2;
-  const x2 = targetLeft + targetWidth / 2;
-  const yTarget = targetNode.internals.positionAbsolute.y + targetCenterY;
+  const x1Full = sourceLeft + sourceNode.width / 2;
+  const x2Full = targetLeft + targetNode.width / 2;
+  const yTarget = targetNode.y + targetCenterY;
+
+  // ...but compact's round avatar has NO opaque card background around it
+  // (see AVATAR_RADIUS's own doc comment) — a line drawn all the way to
+  // that center would cross the fully transparent padding around the
+  // circle with nothing left to hide it. Pull each endpoint back by the
+  // avatar's own radius (toward the OTHER end, along this already-
+  // horizontal line) so the line's last visible segment always lands
+  // inside the opaque circle instead of the transparent card around it.
+  // Portrait's square photo spans the card's full width, so it has no
+  // such gap and keeps ending at the exact center.
+  const x1 =
+    sourceNode.cardStyle === "compact"
+      ? x1Full + Math.sign(x2Full - x1Full) * AVATAR_RADIUS
+      : x1Full;
+  const x2 =
+    targetNode.cardStyle === "compact"
+      ? x2Full + Math.sign(x1Full - x2Full) * AVATAR_RADIUS
+      : x2Full;
 
   const dashStyle = {
     strokeDasharray: isPastPartnership ? "2 4" : "5 3",
@@ -211,7 +279,7 @@ function PartnershipEdgeLine({
         path={`M${midX},${midY} L${plainX},${plainY}`}
         style={{
           strokeWidth: 1.5,
-          stroke: "var(--muted-foreground)",
+          stroke: "var(--branch)",
           ...dashStyle,
         }}
       />
@@ -222,10 +290,23 @@ function PartnershipEdgeLine({
     <BaseEdge
       id={id}
       path={`M${x1},${y} L${x2},${yTarget}`}
+      // This path is always drawn source→target (x1→x2 above) — same
+      // A→B-direction pick as ParentChildEdgeLine, see its own comment.
+      className={
+        isOnTracePath ? traceMarchClassName(traceDirection) : undefined
+      }
       style={{
         strokeWidth: isOnTracePath ? 3 : 1.5,
-        stroke: isOnTracePath ? TRACE_COLOR : "var(--muted-foreground)",
-        ...dashStyle,
+        stroke: isOnTracePath ? TRACE_COLOR : "var(--branch)",
+        // While traced, the class's own "6 4" dasharray drives the line
+        // (current/past marriage's "5 3"/"2 4" pattern is skipped here) —
+        // the marching-ants keyframe's dashoffset is a fixed multiple of
+        // "6 4"'s 10px period (see globals.css's own comment); mixing in a
+        // different period from dashStyle would desync the loop and make
+        // the animation visibly stutter at the seam (an earlier, separate
+        // bug). Current/past distinction matters less mid-trace anyway —
+        // the terracotta color + motion is already the dominant signal.
+        ...(isOnTracePath ? {} : dashStyle),
       }}
     />
   );

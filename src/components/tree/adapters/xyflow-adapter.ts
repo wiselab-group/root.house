@@ -4,6 +4,7 @@ import type {
   LayoutNode,
 } from "@/domain/tree/tree-layout.builder";
 import type { TreeCardStyle } from "../use-tree-card-style";
+import { personIdsWithChildren } from "../prune-collapsed";
 
 /**
  * The ONLY module in the codebase allowed to import @xyflow/react types.
@@ -51,12 +52,25 @@ export interface PersonNodeData extends Record<string, unknown> {
   onFocusPerson?: (personId: string) => void;
   /** True only for the anonymous Share Link view (components/share-link/public-tree-view.tsx) — suppresses PersonNode's entire click popover (both "Посмотреть профиль", a doorway into the auth-gated edit surface, and "Сделать фокус-персоной", a DB write via updateDefaultFocusPersonAction). Undefined/false for every authenticated rendering of the tree. */
   readOnly?: boolean;
+  /**
+   * Collapse/expand (rewrite plan §7 Stage 5) — true when this person has at
+   * least one recorded child, i.e. there's something a collapse toggle could
+   * ever hide. A childless leaf gets no badge/toggle at all. Always false in
+   * read-only (Share Link) mode — see onToggleCollapse below.
+   */
+  hasChildren?: boolean;
+  /** Present (and non-zero) only while this person's own descendants are currently hidden — see prune-collapsed.ts's collapsedDescendantCount. Renders the "+N" badge. */
+  collapsedDescendantCount?: number;
+  /** Toggles this person's collapsed state (see use-collapsed-branches.ts) — undefined in read-only mode, matching onFocusPerson's own pattern (no collapse state exists to toggle on the anonymous Share Link view, which renders a static snapshot). */
+  onToggleCollapse?: (personId: string) => void;
 }
 
 export interface RelationshipEdgeData extends Record<string, unknown> {
   isCurrent: boolean;
   /** Relationship Trace (tree-trace.ts) — true while this edge is a hop on the currently traced A-to-B path. */
   isOnTracePath?: boolean;
+  /** Only meaningful when isOnTracePath — see TreeHighlightState.traceEdgeDirections. `1`: this edge's own source→target order matches the walk from A to B; `-1`: A→B walks it target→source. Lets the marching-ants animation (relationship-edge.tsx) always crawl the same visible direction, A to B, regardless of which way this edge happens to point. */
+  traceDirection?: 1 | -1;
   /**
    * Set on a partnership edge when exactly one partner (not the couple's
    * relationship to each other) is on the traced A-to-B path — e.g. Виктор
@@ -68,6 +82,14 @@ export interface RelationshipEdgeData extends Record<string, unknown> {
    * accent-colored trunk it feeds.
    */
   tracedPartnerId?: string;
+  /**
+   * parent_child only (meaningless on a partnership edge) — see
+   * UnionChildEdgeData.isMiddleSibling for the full explanation. True when
+   * this child has at least one sibling on BOTH sides of it (by x) on the
+   * same row — its own turn down into its card is a sideways jog flanked by
+   * other jogs, so it's drawn as a sharp corner instead of a rounded one.
+   */
+  isMiddleSibling?: boolean;
 }
 
 /**
@@ -81,6 +103,8 @@ export interface UnionChildEdgeData extends Record<string, unknown> {
   parentAId: string;
   parentBId: string;
   isOnTracePath?: boolean;
+  /** Only meaningful when isOnTracePath — see RelationshipEdgeData.traceDirection. This edge is always drawn parentAId→childId (source→target, see UnionChildEdge's own doc comment on why there's no real "source" node), so `1` means A→B walks parent-to-child on this hop, `-1` means child-to-parent. */
+  traceDirection?: 1 | -1;
   /**
    * When the trace path reaches this child through only one parent (see
    * RelationshipEdgeData.tracedPartnerId — same idea, same source), naming
@@ -93,6 +117,25 @@ export interface UnionChildEdgeData extends Record<string, unknown> {
    * other.
    */
   tracedParentId?: string;
+  /**
+   * True when this child has at least one sibling (off the same
+   * union/parent, same row) on BOTH sides of it by x — a "middle" sibling,
+   * as opposed to the leftmost or rightmost child in the row.
+   *
+   * Real bug the user caught (screenshot arrows): each child's own turn
+   * down into its own card sits at that child's own (targetX, midY) — never
+   * literally the same point as a sibling's turn, so rounding it is
+   * perfectly correct in isolation. But a MIDDLE sibling's turn is
+   * necessarily a sideways jog (it can't sit directly under the parent
+   * trunk with siblings flanking it on both sides) — sitting between two
+   * OTHER similarly-jogging lines, a rounded arc there reads as an ugly
+   * zigzag knot. An EDGE sibling's identical rounded turn reads fine
+   * because nothing flanks it on its outer side. Squaring off just the
+   * middle siblings' turns (leaving edge siblings rounded, see
+   * findMiddleSiblingEdgeIds in xyflow-adapter.ts) is what actually cleans
+   * up the row.
+   */
+  isMiddleSibling?: boolean;
 }
 
 export type PersonFlowNode = Node<PersonNodeData, "person">;
@@ -116,6 +159,8 @@ export interface TreeHighlightState {
   filterMatchedIds?: Set<string>;
   tracePersonIds?: Set<string>;
   traceEdgeIds?: Set<string>;
+  /** See TracedTreeLayoutGraph.traceEdgeDirections (tree-trace.ts) — which way A→B walks each traced edge, so the marching-ants animation always crawls A→B regardless of the edge's own source/target order. */
+  traceEdgeDirections?: Map<string, 1 | -1>;
 }
 
 // Node dimensions per card style — must match what PersonNode actually
@@ -133,19 +178,40 @@ export interface TreeHighlightState {
 //
 // Both card styles are the same 160px width as of the round-avatar compact
 // redesign (previously compact was a wide 220x88 row) — COMPACT_X_SPACING/
-// PORTRAIT_X_SPACING converged to the same value as a result. compact's own
-// avatar (size-36, 144px) plus name/years now makes it about as tall as
-// portrait's square photo, so the Y values converged too.
+// PORTRAIT_X_SPACING converged to the same value as a result. compact's card
+// is considerably SHORTER than portrait's though (a small 88px avatar +
+// name/years vs. a full 160px-wide square photo + name/years) — the two
+// heights don't converge, see NODE_DIMENSIONS below.
 const COMPACT_X_SPACING = 184;
 const COMPACT_Y_SPACING = 230;
 const PORTRAIT_X_SPACING = 184;
 const PORTRAIT_Y_SPACING = 260;
 
+// XYFlow stretches every node's outer .react-flow__node div to exactly this
+// height via an inline style (confirmed via the rendered DOM: `height:
+// 200px` regardless of content) — NOT just an initial-paint estimate later
+// superseded by a ResizeObserver measurement. That means `measured.height`
+// (read by relationship-edge.tsx/union-child-edge.tsx to draw connector
+// lines through each card's live bottom edge) is ALWAYS exactly this
+// number, never the real rendered content height, for a card style whose
+// actual content is shorter than what's declared here. compact's real
+// content (compact-card-body.tsx: an 88px round avatar + two lines of text,
+// no bottom padding beyond pb-3) renders at ~128px tall, not 200px — the
+// leftover ~72px was empty space the connector line's fixed
+// COMPACT_CHILD_TAIL_LENGTH tail (relationship-edge.tsx) never reached,
+// reading as a broken/disconnected line hanging in mid-air above the child
+// card. Real bug the user caught with screenshots, present even on a fresh
+// page load with no cardStyle toggle involved — this stale value (previously
+// 200) predates the round-avatar compact redesign mentioned above and was
+// simply never updated alongside it. Keep in sync by hand with
+// compact-card-body.tsx's actual rendered height if it changes again — there
+// is no way to ask XYFlow to auto-size the node to content while keeping the
+// layout engine's own predictable row spacing (COMPACT_Y_SPACING above).
 const NODE_DIMENSIONS: Record<
   TreeCardStyle,
   { width: number; height: number }
 > = {
-  compact: { width: 160, height: 200 },
+  compact: { width: 160, height: 128 },
   portrait: { width: 160, height: 220 },
 };
 
@@ -168,6 +234,22 @@ export const CONNECTOR_CENTER_Y: Record<TreeCardStyle, number> = {
   compact: 44,
   portrait: 80,
 };
+
+/**
+ * Half-width, in px, of the one opaque element a partnership line must stop
+ * at before reaching a card's center — compact's round avatar (44px radius,
+ * see CONNECTOR_CENTER_Y above). compact-card-body.tsx's outer frame has NO
+ * background of its own (buildCardFrameClassName's own comment — so the
+ * parent_child connector visibly touches the avatar), so a straight line
+ * drawn all the way to the card's horizontal center (relationship-edge.tsx)
+ * would cross the fully transparent padding around the circle with nothing
+ * opaque left to paint over it, reading as the line "leaking" across the
+ * card instead of stopping under the photo. Clamping each endpoint to this
+ * radius keeps the line's very last segment inside the one element that
+ * actually hides it. Portrait has no equivalent — its square photo already
+ * spans the card's full width, so nothing transparent surrounds it.
+ */
+export const AVATAR_RADIUS = 44;
 
 /**
  * The avatar image endpoint differs between the authenticated tree (family-
@@ -195,6 +277,8 @@ function toFlowNode(
   onFocusPerson: (personId: string) => void,
   readOnly: boolean,
   shareToken: string | undefined,
+  withChildren: ReadonlySet<string>,
+  onToggleCollapse: ((personId: string) => void) | undefined,
 ): PersonFlowNode {
   const xScale =
     cardStyle === "portrait" ? PORTRAIT_X_SPACING / COMPACT_X_SPACING : 1;
@@ -234,10 +318,20 @@ function toFlowNode(
       // Also omitted outright in read-only mode (see PersonNodeData.readOnly).
       onFocusPerson: node.isFocus || readOnly ? undefined : onFocusPerson,
       readOnly,
+      hasChildren: !readOnly && withChildren.has(node.id),
+      collapsedDescendantCount: node.collapsedDescendantCount,
+      onToggleCollapse: readOnly ? undefined : onToggleCollapse,
     },
     // XYFlow needs explicit dimensions before layout/fitView math is
     // reliable; matches the fixed size PersonNode renders each style at.
     ...NODE_DIMENSIONS[cardStyle],
+    // zIndexMode 'basic' (see toReactFlow below) stacks nodes and edges in
+    // one shared order — a card must NEVER be drawn under a line, traced or
+    // not (a Relationship Trace line crossing behind a card it passes read
+    // as broken/backwards). Edges default to zIndex 0 and traced edges get 1
+    // (elevated only to stay above OTHER, plain crossing edges) — 2 here
+    // keeps every card above both.
+    zIndex: 2,
   };
 }
 
@@ -288,11 +382,89 @@ function findUnionParentPairs(
   return unionByChild;
 }
 
+/**
+ * Groups every parent_child edge by its actual bend-point source — a plain
+ * parent (edge.source) or, for a union child, the shared partnership
+ * (union.partnershipEdgeId) — and, within each group (a row of siblings off
+ * the same parent/union), returns the ids of every child EXCEPT the
+ * leftmost and rightmost by x. Generation (a stable BFS integer), not the
+ * node's own y, is what actually decides whether two children sit on the
+ * same row — y can differ slightly by card style/scale, generation cannot.
+ *
+ * This is NOT about a bend point literally shared between siblings — each
+ * child's own turn down into its own card sits at that child's own
+ * (targetX, midY), always a distinct point from every sibling's. The real
+ * bug (screenshot arrows) is that a MIDDLE sibling's turn — necessarily a
+ * sideways jog either way, since it can't sit directly under the parent
+ * trunk when siblings flank it on both sides — reads as an ugly zigzag
+ * sitting between two other similarly-jogging lines, while an EDGE
+ * sibling's identical turn reads fine because nothing flanks it on its
+ * outer side. Rounding only the two edge siblings' turns and squaring off
+ * every middle sibling's turn is what actually cleans up the row — matching
+ * literal bend-point coordinates (this function's previous approach) never
+ * fires here since those coordinates are never actually equal.
+ */
+function findMiddleSiblingEdgeIds(
+  graph: TreeLayoutGraph,
+  unionByChild: ReturnType<typeof findUnionParentPairs>,
+): Set<string> {
+  const nodeById = new Map(graph.nodes.map((n) => [n.id, n]));
+  // bendSourceKey::generation -> every child in that row, so we can sort by
+  // x and drop the two edges. A Map keyed by emittedId (not an array of
+  // childId) matters: a union child appears TWICE in graph.edges (one
+  // parent_child row per parent) — dedup by emittedId before sorting so it
+  // isn't counted twice when deciding who's "leftmost/rightmost".
+  const childrenByBendKey = new Map<
+    string,
+    Map<string, { childId: string; x: number }>
+  >();
+
+  for (const edge of graph.edges) {
+    if (edge.kind !== "parent_child") continue;
+    const union = unionByChild.get(edge.target);
+    // A union child's row groups by the shared partnership, not by either
+    // individual parent edge (which is dropped entirely — see toFlowEdges)
+    // — key on the partnership so this child groups correctly with
+    // siblings sharing that same union, not with this one parent's OTHER,
+    // non-union children.
+    const bendSourceKey =
+      union && union.parentIds.includes(edge.source)
+        ? `union:${union.partnershipEdgeId}`
+        : `parent:${edge.source}`;
+    const childNode = nodeById.get(edge.target);
+    if (!childNode) continue;
+    const bendKey = `${bendSourceKey}::${childNode.generation}`;
+
+    // The actual emitted edge id differs for a union child (see toFlowEdges'
+    // `union-${partnershipEdgeId}-${childId}`) vs a plain parent_child edge
+    // (edge.id itself) — track both id shapes here so the lookup in
+    // toFlowEdges below matches regardless of which one this child becomes.
+    const emittedId =
+      union && union.parentIds.includes(edge.source)
+        ? `union-${union.partnershipEdgeId}-${edge.target}`
+        : edge.id;
+    if (!childrenByBendKey.has(bendKey))
+      childrenByBendKey.set(bendKey, new Map());
+    childrenByBendKey
+      .get(bendKey)!
+      .set(emittedId, { childId: edge.target, x: childNode.x });
+  }
+
+  const middle = new Set<string>();
+  for (const children of childrenByBendKey.values()) {
+    if (children.size < 3) continue; // 1 or 2 children — none are "middle".
+    const sorted = [...children.entries()].sort((a, b) => a[1].x - b[1].x);
+    for (const [emittedId] of sorted.slice(1, -1)) middle.add(emittedId);
+  }
+  return middle;
+}
+
 function toFlowEdges(
   graph: TreeLayoutGraph,
   highlight: TreeHighlightState,
 ): (RelationshipFlowEdge | UnionChildFlowEdge)[] {
   const unionByChild = findUnionParentPairs(graph);
+  const middleSiblingEdgeIds = findMiddleSiblingEdgeIds(graph, unionByChild);
   const edges: (RelationshipFlowEdge | UnionChildFlowEdge)[] = [];
 
   for (const edge of graph.edges) {
@@ -318,6 +490,8 @@ function toFlowEdges(
           isOnTracePath: highlight.traceEdgeIds
             ? highlight.traceEdgeIds.has(edge.id)
             : undefined,
+          traceDirection: highlight.traceEdgeDirections?.get(edge.id),
+          isMiddleSibling: middleSiblingEdgeIds.has(edge.id),
         },
       });
       continue;
@@ -356,6 +530,7 @@ function toFlowEdges(
         isOnTracePath: highlight.traceEdgeIds
           ? highlight.traceEdgeIds.has(edge.id)
           : undefined,
+        traceDirection: highlight.traceEdgeDirections?.get(edge.id),
         tracedPartnerId,
       },
     });
@@ -364,9 +539,16 @@ function toFlowEdges(
     // partnership edge.
     for (const [childId, union] of unionByChild) {
       if (union.partnershipEdgeId !== edge.id) continue;
+      // Whichever of the two possible parent_child edge ids actually exists
+      // in the trace (a child normally has only ONE recorded parent_child
+      // row per parent, so at most one of these two ids is real) — reused
+      // below for traceDirection, not just the boolean.
+      const tracedParentChildId = [
+        `pc-${union.parentIds[0]}-${childId}`,
+        `pc-${union.parentIds[1]}-${childId}`,
+      ].find((pcId) => highlight.traceEdgeIds?.has(pcId));
       const childIsOnTracePath = highlight.traceEdgeIds
-        ? highlight.traceEdgeIds.has(`pc-${union.parentIds[0]}-${childId}`) ||
-          highlight.traceEdgeIds.has(`pc-${union.parentIds[1]}-${childId}`)
+        ? tracedParentChildId !== undefined
         : undefined;
       edges.push({
         id: `union-${edge.id}-${childId}`,
@@ -381,6 +563,12 @@ function toFlowEdges(
           // parent — a sibling of theirs (same couple, not on the path)
           // keeps a plain trunk starting at the partnership midpoint.
           tracedParentId: childIsOnTracePath ? tracedPartnerId : undefined,
+          traceDirection: tracedParentChildId
+            ? highlight.traceEdgeDirections?.get(tracedParentChildId)
+            : undefined,
+          isMiddleSibling: middleSiblingEdgeIds.has(
+            `union-${edge.id}-${childId}`,
+          ),
         },
       });
     }
@@ -399,16 +587,31 @@ export function toReactFlow(
   readOnly: boolean = false,
   /** Present only for the anonymous Share Link view — see buildPhotoUrl. */
   shareToken: string | undefined = undefined,
+  /** Collapse/expand (rewrite plan §7 Stage 5) — undefined in read-only mode. */
+  onToggleCollapse: ((personId: string) => void) | undefined = undefined,
+  /**
+   * Which person ids have at least one recorded child — computed from the
+   * FULL (pre-collapse) graph by the caller when `graph` here has already
+   * been pruned by prune-collapsed.ts (a currently-collapsed person's own
+   * children are gone from THIS graph's edges by the time toReactFlow sees
+   * it, so deriving it from `graph` directly would wrongly hide the badge on
+   * a person who's already collapsed). Defaults to deriving it from `graph`
+   * itself, correct whenever no collapse is active.
+   */
+  personIdsWithChildrenOverride: ReadonlySet<string> | undefined = undefined,
 ): { nodes: PersonFlowNode[]; edges: TreeFlowEdge[] } {
+  const withChildren =
+    personIdsWithChildrenOverride ?? personIdsWithChildren(graph);
   const edges = toFlowEdges(graph, highlight);
   // Array order does NOT control paint order here — XYFlow's default
-  // zIndexMode ('basic') assigns every edge the same CSS z-index (its own
-  // edge.zIndex, default 0, plus a node-elevation term that's also 0 for
-  // plain unselected nodes) regardless of where it sits in this array, so a
-  // traced edge crossing a plain sibling edge (e.g. Виктор's parent_child
-  // line crossing his partnership line to Галина) could still end up
-  // underneath it. Giving traced edges an explicit higher zIndex is what
-  // 'basic' mode actually reads to decide stacking.
+  // zIndexMode ('basic') assigns every edge/node the same CSS z-index (its
+  // own explicit zIndex, default 0) regardless of where it sits in this
+  // array, so a traced edge crossing a plain sibling edge (e.g. Виктор's
+  // parent_child line crossing his partnership line to Галина) could still
+  // end up underneath it. Giving traced edges an explicit higher zIndex is
+  // what 'basic' mode actually reads to decide stacking — kept below every
+  // card's own zIndex: 2 (toFlowNode above) so a traced line NEVER draws
+  // over a card, only over other (plain) lines.
   const elevatedEdges = edges.map((edge) => {
     const isFullyTraced = edge.data?.isOnTracePath === true;
     // A partnership edge half-colored via tracedPartnerId (see toFlowEdges)
@@ -432,6 +635,8 @@ export function toReactFlow(
         onFocusPerson,
         readOnly,
         shareToken,
+        withChildren,
+        onToggleCollapse,
       ),
     ),
     edges: elevatedEdges,

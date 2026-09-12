@@ -10,6 +10,7 @@ import type {
   PartnershipStatus as EnginePartnershipStatus,
   TreeLayoutResult,
 } from "./layout/types";
+import { buildTreeLayout } from "./layout/layout";
 import type {
   LayoutEdge,
   LayoutNode,
@@ -50,12 +51,97 @@ function toEngineStatus(
 }
 
 export interface TreeAdapterInput {
-  persons: PersonRecord[];
+  // Pick<>, not the full PersonRecord — this is exactly what the engine
+  // itself needs (shouldBeLeft's own tie-break + gender ordering, nothing
+  // else), which lets TreePersonClientPayload (a narrower, client-safe
+  // subset — see its own doc comment) satisfy this too, without widening it
+  // all the way to `unknown`.
+  persons: Pick<PersonRecord, "id" | "firstName" | "lastName" | "gender">[];
   parentChildEdges: Pick<ParentChildRecord, "id" | "parentId" | "childId">[];
   partnershipEdges: Pick<
     PartnershipRecord,
     "id" | "person1Id" | "person2Id" | "status" | "isCurrent"
   >[];
+}
+
+/**
+ * The exact subset of PersonRecord this module actually reads (toTreeFamilyGraph
+ * + fromTreeLayout, combined) — see rewrite plan §7 Stage 7 (client-side
+ * focus-switch re-layout, §3.4). Deliberately narrower than PersonRecord:
+ * this shape crosses the server/client boundary as a plain prop (the tree
+ * page hands it to a Client Component so re-focusing can re-run
+ * buildTreeLayout locally instead of a full page reload), so it must never
+ * carry privacy-sensitive or simply unneeded fields (createdBy, familyId,
+ * privacyLevel, middleName, maidenName, birthPlaceId, deathPlaceId,
+ * deathCause, description) into client JS, and must stay plain-JSON-safe
+ * (no Date — createdAt is intentionally omitted too, since orderingKeyByPersonId
+ * isn't consumed by shouldBeLeft yet, see FamilyGraph's own doc comment).
+ */
+export type TreePersonClientPayload = Pick<
+  PersonRecord,
+  | "id"
+  | "slug"
+  | "firstName"
+  | "lastName"
+  | "nickname"
+  | "gender"
+  | "isPlaceholder"
+  | "isLiving"
+  | "birthDate"
+  | "deathDate"
+  | "photoMediaId"
+  | "religion"
+  | "nationality"
+>;
+
+/**
+ * Everything a Client Component needs to re-run buildTreeLayout + fromTreeLayout
+ * locally (rewrite plan §7 Stage 7) without touching the database again —
+ * built once server-side (see tree.service.ts::getRawTreeGraph) from the
+ * SAME rows getFocusTreeLayout already fetches, so the two never drift out
+ * of sync with each other.
+ */
+export interface TreeClientGraphPayload {
+  persons: TreePersonClientPayload[];
+  parentChildEdges: Pick<ParentChildRecord, "id" | "parentId" | "childId">[];
+  partnershipEdges: Pick<
+    PartnershipRecord,
+    "id" | "person1Id" | "person2Id" | "status" | "isCurrent"
+  >[];
+}
+
+/**
+ * Rebuilds a TreeLayoutGraph entirely client-side, for a NEW focus person,
+ * against an already-fetched TreeClientGraphPayload — the client-side
+ * counterpart to getFocusTreeLayout (tree.service.ts), used by TreeCanvas's
+ * own focus-switch handler (rewrite plan §7 Stage 7) instead of a full page
+ * navigation. No React/Next import here (this file already has none), so
+ * it's safe to call directly from a "use client" component.
+ */
+export function buildClientTreeLayout(
+  payload: TreeClientGraphPayload,
+  focusPersonId: string,
+): TreeLayoutGraph {
+  const personById = new Map(payload.persons.map((p) => [p.id, p]));
+
+  const { graph } = toTreeFamilyGraph({
+    persons: payload.persons,
+    parentChildEdges: payload.parentChildEdges,
+    partnershipEdges: payload.partnershipEdges,
+  });
+
+  const result = buildTreeLayout(graph, focusPersonId);
+
+  const partnershipIsCurrentById = new Map(
+    payload.partnershipEdges.map((r) => [r.id, r.isCurrent]),
+  );
+  return fromTreeLayout(
+    focusPersonId,
+    result,
+    personById,
+    payload.parentChildEdges,
+    partnershipIsCurrentById,
+  );
 }
 
 /**
@@ -65,11 +151,23 @@ export interface TreeAdapterInput {
  * LayoutNode.person needs (slug, photo, nickname, religion, ...) must be
  * joined back by id afterward, not threaded through the engine itself.
  */
-export function toTreeFamilyGraph(input: TreeAdapterInput): {
+export function toTreeFamilyGraph<
+  TPerson extends TreeAdapterInput["persons"][number],
+>(
+  input: TreeAdapterInput & { persons: TPerson[] },
+): {
   graph: FamilyGraph;
-  personById: Map<string, PersonRecord>;
+  personById: Map<string, TPerson>;
 } {
-  const personById = new Map(input.persons.map((p) => [p.id, p]));
+  // Provably safe despite the cast: `personById` is built directly from
+  // `input.persons: TPerson[]` one line below, with no transformation of the
+  // person objects themselves (only keyed by their own id) — TypeScript's
+  // generic variance rules can't express "this Map<string, TPerson> was
+  // literally built from a TPerson[]" on their own, hence the assertion.
+  const personById = new Map(input.persons.map((p) => [p.id, p])) as Map<
+    string,
+    TPerson
+  >;
 
   const persons: EngineePerson[] = input.persons.map((p) => ({
     id: p.id,
@@ -147,7 +245,7 @@ const Y_SCALE = PROD_GENERATION_Y_SPACING / ENGINE_GENERATION_GAP; // 0.958
 export function fromTreeLayout(
   focusPersonId: string,
   result: TreeLayoutResult,
-  personById: Map<string, PersonRecord>,
+  personById: Map<string, TreePersonClientPayload>,
   parentChildEdgesInput: Pick<ParentChildRecord, "parentId" | "childId">[],
   partnershipIsCurrentById: Map<string, boolean>,
 ): TreeLayoutGraph {
@@ -179,10 +277,13 @@ export function fromTreeLayout(
       personId: p.id,
       x: p.x * X_SCALE,
       y: p.y * Y_SCALE,
-      // 0-at-focus BFS distance — same semantics person-node.tsx's
-      // generationColor() already expects.
+      // 0-at-focus BFS distance — drives person-node.tsx's entrance-stagger
+      // animationDelay (no longer any card color coding by generation, see
+      // globals.css's own comment: every card border/ring is flat
+      // --tree-accent now).
       generation: p.generation,
       isFocus: p.id === focusPersonId,
+      isIsolated: p.isIsolated,
       person,
     };
   });

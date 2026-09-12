@@ -1,7 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
-import { generationColor } from "./person-node";
 
 /** Photo-forward, name-below tree card: a large round avatar sitting flush
  *  against the card's own top edge (no border/background of its own — see
@@ -22,7 +21,7 @@ export function CompactCardBody({
   name: string;
   years: string | null;
   initials: string;
-  /** Focus person or on the currently traced relationship path — person-node.tsx's usual border-primary treatment, moved to a ring around the avatar since this style has no card border of its own. */
+  /** Focus person or on the currently traced relationship path — terracotta, person-node.tsx's usual border-primary treatment, moved to a ring around the avatar since this style has no card border of its own. */
   isHighlighted: boolean;
   /** Keyboard-selected (person-node.tsx's usual ring-ring treatment). */
   isSelected: boolean;
@@ -39,22 +38,24 @@ export function CompactCardBody({
           "size-22! text-xl",
           data.isPlaceholder && "outline-dashed outline-muted-foreground",
         )}
-        // Generation color-coding (DESIGN.md): one warm hue, lightness/
-        // chroma fading with distance from focus — never a rainbow per
-        // generation. Drawn as a ring around the avatar (box-shadow, so it
-        // draws outside the element's own box without shifting layout)
+        // Identity ring (DESIGN.md): one flat sage (--tree-accent) color for
+        // every card, regardless of generation — always visible as this
+        // person's own "identity" ring, independent of whatever's currently
+        // focused/traced. Drawn as a ring around the avatar (box-shadow, so
+        // it draws outside the element's own box without shifting layout)
         // rather than a strip above it (as in portrait-card-body.tsx) — a
         // strip here would sit between the connector line and the avatar,
-        // breaking the "line touches the avatar" contact this card style
-        // is built around. isHighlighted/isSelected override this with the
-        // same accent colors person-node.tsx's card border/ring would show
-        // in portrait mode — those states outrank plain generation coloring.
+        // breaking the "line touches the avatar" contact this card style is
+        // built around. isHighlighted (focus/traced) switches to terracotta
+        // (--primary) instead — the one color reserved for "what the user
+        // is doing right now", never mixed with the identity sage (see
+        // buildCardFrameClassName's own comment on that split).
         style={{
           boxShadow: isHighlighted
             ? "0 0 0 3px var(--primary), 0 0 0 6px color-mix(in oklch, var(--primary) 30%, transparent)"
             : isSelected
               ? "0 0 0 3px var(--ring)"
-              : `0 0 0 3px ${generationColor(data.generation)}`,
+              : "0 0 0 3px var(--tree-accent)",
         }}
       >
         {data.photoUrl && <AvatarImage src={data.photoUrl} alt="" />}

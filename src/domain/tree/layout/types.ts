@@ -25,6 +25,15 @@ export type RelationshipKind = "spouse" | "parent-child";
 export type PartnershipStatus =
   "married" | "partnered" | "divorced" | "widowed";
 
+/**
+ * DB parentRole has 5 values; step/foster/unknown are lumped with adoptive
+ * for rendering purposes (all "not a recorded biological line") — see
+ * tree layout rules in CLAUDE.md. Not yet consumed anywhere in the engine
+ * (added ahead of the render-side dashed-line work — see rewrite plan §5.1).
+ */
+export type ParentRole =
+  "biological" | "adoptive" | "step" | "foster" | "unknown";
+
 export interface Relationship {
   id: string;
   kind: RelationshipKind;
@@ -33,11 +42,20 @@ export interface Relationship {
   to: string;
   /** Only meaningful for kind "spouse". Defaults to "married" when absent. */
   status?: PartnershipStatus;
+  /** Only meaningful for kind "parent-child". Defaults to "biological" when absent. Not yet read anywhere — see rewrite plan §5.1. */
+  parentRole?: ParentRole;
 }
 
 export interface FamilyGraph {
   persons: Person[];
   relationships: Relationship[];
+  /**
+   * Deterministic entry-order tie-break for same-gender spouse pairs and
+   * multi-marriage chronological ordering — lower sorts first (left /
+   * earlier marriage). Falls back to id when absent or when two people's
+   * keys are equal. Not yet consumed by shouldBeLeft — see rewrite plan §1.6.
+   */
+  orderingKeyByPersonId?: Map<string, string>;
 }
 
 // ---------------------------------------------------------------------------
@@ -62,6 +80,14 @@ export interface Partnership {
   status: PartnershipStatus;
   /** Children born specifically within this partnership (both parents match, or the other parent is absent from the graph). */
   childrenIds: string[];
+  /**
+   * Chronological marriage order for one person relative to their OTHER
+   * partnerships — 0 = earliest, ties broken by partnership id. NOT global
+   * across the family; only meaningful for ordering one person's own
+   * side-by-side partnership branches left-to-right. Not yet computed by
+   * normalizeGraph — see rewrite plan §1.4 (defaults to 0 until then).
+   */
+  marriageOrder: number;
 }
 
 /** A person's children without a recorded partnership (other parent unknown/absent from graph). */
@@ -80,6 +106,21 @@ export interface NormalizedPerson extends Person {
   parentIds: string[];
   /** Soft directional hint — paternal grows left, maternal grows right, propagated recursively (see graph.ts). */
   branch: Branch;
+  /**
+   * True when this person has NO recorded relationship at all — no
+   * parent-child edge (as parent or child) and no partnership, in either
+   * direction. Such a person can never be reached by growBranch's
+   * ancestor/descendant/in-law walk from any focus (there's nothing to walk
+   * along), so they are placed separately (see placement.ts's own doc
+   * comment on the isolated row) instead of participating in the graph's
+   * generation/branch/occupancy machinery at all. Distinct from merely
+   * being unREACHABLE from the current focus (a real relative in a
+   * disconnected part of the same family graph) — that case doesn't exist
+   * today since getRawTreeGraph loads one family's full graph and every
+   * person in it is expected to connect to it somehow; this flag is for the
+   * genuinely edgeless case (see tree-layout-isolated-persons memory).
+   */
+  isIsolated: boolean;
 }
 
 export interface NormalizedGraph {
@@ -107,6 +148,20 @@ export interface SubtreeMeasurement {
   ownWidth: number;
   /** Total width required by this branch's own row plus every descendant row beneath it, already including sibling/branch margins. */
   totalWidth: number;
+  /**
+   * Width of just THIS branch's own row — side-by-side remarriage
+   * partnerships/solo-parenthood included, but NEVER any descendant row
+   * beneath it (unlike totalWidth, which folds in the deepest child's
+   * width too). Used by growChildrenRowDown's compact sibling layout
+   * (CLAUDE.md TREE LAYOUT RULES §5 "родные сиблинги рядом") to keep full
+   * siblings adjacent regardless of how wide one sibling's OWN descendant
+   * subtree eventually gets many generations down — a subtree that goes
+   * wide expands away from its compact row position, not by pushing its
+   * siblings apart on their shared row. Equal to `ownWidth` for a childless
+   * person with at most one partnership; wider only when the person
+   * themselves has multiple partnerships/solo-parenthood side by side.
+   */
+  compactWidth: number;
   /** Number of descendant generations beneath this branch (0 = childless). */
   depth: number;
 }
