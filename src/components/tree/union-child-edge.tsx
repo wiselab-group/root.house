@@ -6,7 +6,11 @@ import {
   CONNECTOR_CENTER_Y,
   type UnionChildFlowEdge,
 } from "./adapters/xyflow-adapter";
-import { COMPACT_CHILD_TAIL_LENGTH, TRACE_COLOR } from "./relationship-edge";
+import {
+  COMPACT_CHILD_TAIL_LENGTH,
+  TRACE_COLOR,
+  traceMarchClassName,
+} from "./relationship-edge";
 import { roundedOrthogonalPath } from "./orthogonal-path";
 import { useTreeNodeGeometry } from "./tree-layout-positions-context";
 
@@ -38,6 +42,13 @@ export function UnionChildEdge({
   const parentB = useTreeNodeGeometry(data?.parentBId ?? "");
   const targetNode = useTreeNodeGeometry(target);
   const isOnTracePath = data?.isOnTracePath === true;
+  // This trunk is always drawn parent→child (tracedStart/trunkPoints below
+  // both run toward targetX/targetY) — same meaning as
+  // RelationshipEdgeData.traceDirection (xyflow-adapter.ts computes this
+  // one from the underlying pc-<parent>-<child> edge, which is always
+  // recorded parent→child too), so traceMarchClassName's forward/reverse
+  // pick below needs no extra adjustment for this edge type.
+  const traceDirection = data?.traceDirection ?? 1;
 
   if (!parentA || !parentB || !targetNode) return null;
 
@@ -136,7 +147,9 @@ export function UnionChildEdge({
     <BaseEdge
       id={id}
       path={path}
-      className={isOnTracePath ? "animate-tree-trace-march" : undefined}
+      className={
+        isOnTracePath ? traceMarchClassName(traceDirection) : undefined
+      }
       style={{
         strokeWidth: isOnTracePath ? 3 : 2,
         stroke: isOnTracePath ? TRACE_COLOR : "var(--branch)",

@@ -168,6 +168,9 @@ export default async function FamilyTreePage({
           // computed when highlight.tracePersonIds is present at all.
           tracePersonIds: traceOutcome ? tracedGraph.tracePersonIds : undefined,
           traceEdgeIds: traceOutcome ? tracedGraph.traceEdgeIds : undefined,
+          traceEdgeDirections: traceOutcome
+            ? tracedGraph.traceEdgeDirections
+            : undefined,
         }}
         traceA={
           traceAId

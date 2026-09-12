@@ -69,6 +69,8 @@ export interface RelationshipEdgeData extends Record<string, unknown> {
   isCurrent: boolean;
   /** Relationship Trace (tree-trace.ts) — true while this edge is a hop on the currently traced A-to-B path. */
   isOnTracePath?: boolean;
+  /** Only meaningful when isOnTracePath — see TreeHighlightState.traceEdgeDirections. `1`: this edge's own source→target order matches the walk from A to B; `-1`: A→B walks it target→source. Lets the marching-ants animation (relationship-edge.tsx) always crawl the same visible direction, A to B, regardless of which way this edge happens to point. */
+  traceDirection?: 1 | -1;
   /**
    * Set on a partnership edge when exactly one partner (not the couple's
    * relationship to each other) is on the traced A-to-B path — e.g. Виктор
@@ -101,6 +103,8 @@ export interface UnionChildEdgeData extends Record<string, unknown> {
   parentAId: string;
   parentBId: string;
   isOnTracePath?: boolean;
+  /** Only meaningful when isOnTracePath — see RelationshipEdgeData.traceDirection. This edge is always drawn parentAId→childId (source→target, see UnionChildEdge's own doc comment on why there's no real "source" node), so `1` means A→B walks parent-to-child on this hop, `-1` means child-to-parent. */
+  traceDirection?: 1 | -1;
   /**
    * When the trace path reaches this child through only one parent (see
    * RelationshipEdgeData.tracedPartnerId — same idea, same source), naming
@@ -155,6 +159,8 @@ export interface TreeHighlightState {
   filterMatchedIds?: Set<string>;
   tracePersonIds?: Set<string>;
   traceEdgeIds?: Set<string>;
+  /** See TracedTreeLayoutGraph.traceEdgeDirections (tree-trace.ts) — which way A→B walks each traced edge, so the marching-ants animation always crawls A→B regardless of the edge's own source/target order. */
+  traceEdgeDirections?: Map<string, 1 | -1>;
 }
 
 // Node dimensions per card style — must match what PersonNode actually
@@ -484,6 +490,7 @@ function toFlowEdges(
           isOnTracePath: highlight.traceEdgeIds
             ? highlight.traceEdgeIds.has(edge.id)
             : undefined,
+          traceDirection: highlight.traceEdgeDirections?.get(edge.id),
           isMiddleSibling: middleSiblingEdgeIds.has(edge.id),
         },
       });
@@ -523,6 +530,7 @@ function toFlowEdges(
         isOnTracePath: highlight.traceEdgeIds
           ? highlight.traceEdgeIds.has(edge.id)
           : undefined,
+        traceDirection: highlight.traceEdgeDirections?.get(edge.id),
         tracedPartnerId,
       },
     });
@@ -531,9 +539,16 @@ function toFlowEdges(
     // partnership edge.
     for (const [childId, union] of unionByChild) {
       if (union.partnershipEdgeId !== edge.id) continue;
+      // Whichever of the two possible parent_child edge ids actually exists
+      // in the trace (a child normally has only ONE recorded parent_child
+      // row per parent, so at most one of these two ids is real) — reused
+      // below for traceDirection, not just the boolean.
+      const tracedParentChildId = [
+        `pc-${union.parentIds[0]}-${childId}`,
+        `pc-${union.parentIds[1]}-${childId}`,
+      ].find((pcId) => highlight.traceEdgeIds?.has(pcId));
       const childIsOnTracePath = highlight.traceEdgeIds
-        ? highlight.traceEdgeIds.has(`pc-${union.parentIds[0]}-${childId}`) ||
-          highlight.traceEdgeIds.has(`pc-${union.parentIds[1]}-${childId}`)
+        ? tracedParentChildId !== undefined
         : undefined;
       edges.push({
         id: `union-${edge.id}-${childId}`,
@@ -548,6 +563,9 @@ function toFlowEdges(
           // parent — a sibling of theirs (same couple, not on the path)
           // keeps a plain trunk starting at the partnership midpoint.
           tracedParentId: childIsOnTracePath ? tracedPartnerId : undefined,
+          traceDirection: tracedParentChildId
+            ? highlight.traceEdgeDirections?.get(tracedParentChildId)
+            : undefined,
           isMiddleSibling: middleSiblingEdgeIds.has(
             `union-${edge.id}-${childId}`,
           ),

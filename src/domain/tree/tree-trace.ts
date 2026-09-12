@@ -21,6 +21,18 @@ export interface TracedTreeLayoutGraph extends TreeLayoutGraph {
   tracePersonIds: Set<string>;
   /** Edge ids (LayoutEdge.id) on the path, or empty if not traced/not found. */
   traceEdgeIds: Set<string>;
+  /**
+   * Direction each traced edge is walked A→B, keyed by LayoutEdge.id: `1`
+   * means the path visits this edge's own `source` before its `target`
+   * (same order the edge itself was recorded in); `-1` means the reverse.
+   * The genealogy path can traverse a parent_child edge in either direction
+   * depending on which side of the common ancestor it's on (see
+   * traceEdgeIds' own comment below) — the marching-ants animation
+   * (relationship-edge.tsx/union-child-edge.tsx) needs this to always
+   * visibly crawl from A to B, never the reverse, regardless of which way
+   * the underlying edge happens to point.
+   */
+  traceEdgeDirections: Map<string, 1 | -1>;
   traceStatus: RelationshipPathOutcome["status"] | null;
 }
 
@@ -42,6 +54,7 @@ export function applyRelationshipTrace(
       ...graph,
       tracePersonIds: new Set(),
       traceEdgeIds: new Set(),
+      traceEdgeDirections: new Map(),
       traceStatus: outcome?.status ?? null,
     };
   }
@@ -51,32 +64,34 @@ export function applyRelationshipTrace(
     outcome.personIds.filter((id) => visibleIds.has(id)),
   );
 
-  const traceEdgeIds = new Set(
-    graph.edges
-      .filter((edge) => {
-        // A parent_child edge is on the path if consecutive personIds in the
-        // outcome match this edge's source/target (in either direction —
-        // the path may traverse the edge "up" or "down" depending on which
-        // side of the common ancestor it's on).
-        for (let i = 0; i < outcome.personIds.length - 1; i++) {
-          const a = outcome.personIds[i];
-          const b = outcome.personIds[i + 1];
-          if (
-            (edge.source === a && edge.target === b) ||
-            (edge.source === b && edge.target === a)
-          ) {
-            return true;
-          }
-        }
-        return false;
-      })
-      .map((edge) => edge.id),
-  );
+  const traceEdgeIds = new Set<string>();
+  const traceEdgeDirections = new Map<string, 1 | -1>();
+  for (const edge of graph.edges) {
+    // A parent_child edge is on the path if consecutive personIds in the
+    // outcome match this edge's source/target (in either direction — the
+    // path may traverse the edge "up" or "down" depending on which side of
+    // the common ancestor it's on).
+    for (let i = 0; i < outcome.personIds.length - 1; i++) {
+      const a = outcome.personIds[i];
+      const b = outcome.personIds[i + 1];
+      if (edge.source === a && edge.target === b) {
+        traceEdgeIds.add(edge.id);
+        traceEdgeDirections.set(edge.id, 1);
+        break;
+      }
+      if (edge.source === b && edge.target === a) {
+        traceEdgeIds.add(edge.id);
+        traceEdgeDirections.set(edge.id, -1);
+        break;
+      }
+    }
+  }
 
   return {
     ...graph,
     tracePersonIds,
     traceEdgeIds,
+    traceEdgeDirections,
     traceStatus: outcome.status,
   };
 }

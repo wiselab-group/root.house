@@ -218,19 +218,36 @@
      GPU-composited property despite not being one. Applied via className
      (not the library's own react-flow__edge.animated, see
      relationship-edge.tsx/union-child-edge.tsx) to keep this codebase's own
-     stroke-width/color choices instead of that class's fixed dasharray. */
-  @keyframes tree-trace-march {
+     stroke-width/color choices instead of that class's fixed dasharray.
+
+     Two explicit directions (not one keyframe reading a --tree-trace-dir
+     custom property via calc()) — the custom-property version silently
+     stopped animating (real bug the user caught): a var() read inside an
+     animated element's OWN @keyframes value is exactly the kind of thing
+     that has historically been inconsistent across engines depending on
+     when the property is resolved relative to the animation starting, and
+     it isn't worth re-litigating which browser/build step ate it when two
+     plain keyframes sidestep the question entirely. Both must stay
+     multiples of the dasharray's own period (6 + 4 = 10) — any other value
+     makes the pattern jump at the loop seam instead of continuing smoothly,
+     which reads as a stutter every cycle (an earlier, separate bug). */
+  @keyframes tree-trace-march-forward {
     to {
-      /* Must be a multiple of the dasharray's own period (6 + 4 = 10) — any
-         other value makes the pattern jump at the loop seam instead of
-         continuing smoothly, which reads as a stutter/jerk every cycle
-         (real bug the user caught: -16 was one such non-multiple). */
+      stroke-dashoffset: 20;
+    }
+  }
+  @keyframes tree-trace-march-reverse {
+    to {
       stroke-dashoffset: -20;
     }
   }
-  .animate-tree-trace-march {
+  .animate-tree-trace-march-forward {
     stroke-dasharray: 6 4;
-    animation: tree-trace-march 0.6s linear infinite;
+    animation: tree-trace-march-forward 0.6s linear infinite;
+  }
+  .animate-tree-trace-march-reverse {
+    stroke-dasharray: 6 4;
+    animation: tree-trace-march-reverse 0.6s linear infinite;
   }
 }
 

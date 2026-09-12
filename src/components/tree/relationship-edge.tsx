@@ -33,6 +33,19 @@ export const TRACE_COLOR = "var(--primary)";
 export const COMPACT_CHILD_TAIL_LENGTH = 56;
 
 /**
+ * Which marching-ants className (globals.css) crawls the dashes in the
+ * A→B-visible direction along THIS path, given which way this specific
+ * path's `d` was drawn relative to the A→B walk (see traceDirection's own
+ * doc comment on RelationshipEdgeData). Centralized so every call site
+ * picks between the two classes the same way.
+ */
+export function traceMarchClassName(traceDirection: 1 | -1): string {
+  return traceDirection === 1
+    ? "animate-tree-trace-march-forward"
+    : "animate-tree-trace-march-reverse";
+}
+
+/**
  * Renders parent_child edges as a solid line and partnership edges as
  * dashed — the visual distinction between "descent" and "union" the plan's
  * DESIGN.md calls for, without needing separate label text on every edge.
@@ -52,6 +65,10 @@ export function RelationshipEdge({
   const isPartnership = type === "partnership";
   const isPastPartnership = isPartnership && data?.isCurrent === false;
   const isOnTracePath = data?.isOnTracePath === true;
+  // Defaults to 1 (forward) — only read once isOnTracePath is true, where
+  // xyflow-adapter.ts always sets a real value (see traceDirection's own
+  // doc comment), so this fallback never actually applies in practice.
+  const traceDirection = data?.traceDirection ?? 1;
 
   // parent_child edges (including union-child trunk lines, see
   // union-child-edge.tsx) are built as an explicit "down, across, down"
@@ -67,6 +84,7 @@ export function RelationshipEdge({
         source={source}
         target={target}
         isOnTracePath={isOnTracePath}
+        traceDirection={traceDirection}
         isMiddleSibling={data?.isMiddleSibling === true}
       />
     );
@@ -79,6 +97,7 @@ export function RelationshipEdge({
       target={target}
       isPastPartnership={isPastPartnership}
       isOnTracePath={isOnTracePath}
+      traceDirection={traceDirection}
       tracedPartnerId={data?.tracedPartnerId}
     />
   );
@@ -89,12 +108,14 @@ function ParentChildEdgeLine({
   source,
   target,
   isOnTracePath,
+  traceDirection,
   isMiddleSibling,
 }: {
   id: string;
   source: string;
   target: string;
   isOnTracePath: boolean;
+  traceDirection: 1 | -1;
   isMiddleSibling: boolean;
 }) {
   const sourceNode = useTreeNodeGeometry(source);
@@ -144,7 +165,14 @@ function ParentChildEdgeLine({
     <BaseEdge
       id={id}
       path={path}
-      className={isOnTracePath ? "animate-tree-trace-march" : undefined}
+      // This path is always drawn source→target (parent→child, top to
+      // bottom) — traceMarchClassName picks whichever of the two
+      // marching-ants directions (globals.css) crawls that as A→B, never
+      // B→A, regardless of which end of this specific edge A and B happen
+      // to fall on.
+      className={
+        isOnTracePath ? traceMarchClassName(traceDirection) : undefined
+      }
       style={{
         strokeWidth: isOnTracePath ? 3 : 2,
         stroke: isOnTracePath ? TRACE_COLOR : "var(--branch)",
@@ -168,6 +196,7 @@ function PartnershipEdgeLine({
   target,
   isPastPartnership,
   isOnTracePath,
+  traceDirection,
   tracedPartnerId,
 }: {
   id: string;
@@ -175,6 +204,7 @@ function PartnershipEdgeLine({
   target: string;
   isPastPartnership: boolean;
   isOnTracePath: boolean;
+  traceDirection: 1 | -1;
   tracedPartnerId?: string;
 }) {
   const sourceNode = useTreeNodeGeometry(source);
@@ -260,17 +290,21 @@ function PartnershipEdgeLine({
     <BaseEdge
       id={id}
       path={`M${x1},${y} L${x2},${yTarget}`}
-      className={isOnTracePath ? "animate-tree-trace-march" : undefined}
+      // This path is always drawn source→target (x1→x2 above) — same
+      // A→B-direction pick as ParentChildEdgeLine, see its own comment.
+      className={
+        isOnTracePath ? traceMarchClassName(traceDirection) : undefined
+      }
       style={{
         strokeWidth: isOnTracePath ? 3 : 1.5,
         stroke: isOnTracePath ? TRACE_COLOR : "var(--branch)",
         // While traced, the class's own "6 4" dasharray drives the line
         // (current/past marriage's "5 3"/"2 4" pattern is skipped here) —
         // the marching-ants keyframe's dashoffset is a fixed multiple of
-        // "6 4"'s 10px period (see the keyframe's own comment); mixing in a
+        // "6 4"'s 10px period (see globals.css's own comment); mixing in a
         // different period from dashStyle would desync the loop and make
-        // the animation visibly stutter at the seam (the bug the user
-        // caught). Current/past distinction matters less mid-trace anyway —
+        // the animation visibly stutter at the seam (an earlier, separate
+        // bug). Current/past distinction matters less mid-trace anyway —
         // the terracotta color + motion is already the dominant signal.
         ...(isOnTracePath ? {} : dashStyle),
       }}
