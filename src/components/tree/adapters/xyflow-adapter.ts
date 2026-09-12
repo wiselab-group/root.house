@@ -230,6 +230,22 @@ export const CONNECTOR_CENTER_Y: Record<TreeCardStyle, number> = {
 };
 
 /**
+ * Half-width, in px, of the one opaque element a partnership line must stop
+ * at before reaching a card's center — compact's round avatar (44px radius,
+ * see CONNECTOR_CENTER_Y above). compact-card-body.tsx's outer frame has NO
+ * background of its own (buildCardFrameClassName's own comment — so the
+ * parent_child connector visibly touches the avatar), so a straight line
+ * drawn all the way to the card's horizontal center (relationship-edge.tsx)
+ * would cross the fully transparent padding around the circle with nothing
+ * opaque left to paint over it, reading as the line "leaking" across the
+ * card instead of stopping under the photo. Clamping each endpoint to this
+ * radius keeps the line's very last segment inside the one element that
+ * actually hides it. Portrait has no equivalent — its square photo already
+ * spans the card's full width, so nothing transparent surrounds it.
+ */
+export const AVATAR_RADIUS = 44;
+
+/**
  * The avatar image endpoint differs between the authenticated tree (family-
  * membership gated) and the anonymous Share Link view (token + scope
  * gated, no session at all) — see PersonNodeData.photoUrl's own doc
@@ -303,6 +319,13 @@ function toFlowNode(
     // XYFlow needs explicit dimensions before layout/fitView math is
     // reliable; matches the fixed size PersonNode renders each style at.
     ...NODE_DIMENSIONS[cardStyle],
+    // zIndexMode 'basic' (see toReactFlow below) stacks nodes and edges in
+    // one shared order — a card must NEVER be drawn under a line, traced or
+    // not (a Relationship Trace line crossing behind a card it passes read
+    // as broken/backwards). Edges default to zIndex 0 and traced edges get 1
+    // (elevated only to stay above OTHER, plain crossing edges) — 2 here
+    // keeps every card above both.
+    zIndex: 2,
   };
 }
 
@@ -563,13 +586,14 @@ export function toReactFlow(
     personIdsWithChildrenOverride ?? personIdsWithChildren(graph);
   const edges = toFlowEdges(graph, highlight);
   // Array order does NOT control paint order here — XYFlow's default
-  // zIndexMode ('basic') assigns every edge the same CSS z-index (its own
-  // edge.zIndex, default 0, plus a node-elevation term that's also 0 for
-  // plain unselected nodes) regardless of where it sits in this array, so a
-  // traced edge crossing a plain sibling edge (e.g. Виктор's parent_child
-  // line crossing his partnership line to Галина) could still end up
-  // underneath it. Giving traced edges an explicit higher zIndex is what
-  // 'basic' mode actually reads to decide stacking.
+  // zIndexMode ('basic') assigns every edge/node the same CSS z-index (its
+  // own explicit zIndex, default 0) regardless of where it sits in this
+  // array, so a traced edge crossing a plain sibling edge (e.g. Виктор's
+  // parent_child line crossing his partnership line to Галина) could still
+  // end up underneath it. Giving traced edges an explicit higher zIndex is
+  // what 'basic' mode actually reads to decide stacking — kept below every
+  // card's own zIndex: 2 (toFlowNode above) so a traced line NEVER draws
+  // over a card, only over other (plain) lines.
   const elevatedEdges = edges.map((edge) => {
     const isFullyTraced = edge.data?.isOnTracePath === true;
     // A partnership edge half-colored via tracedPartnerId (see toFlowEdges)

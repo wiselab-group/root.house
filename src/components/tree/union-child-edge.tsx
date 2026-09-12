@@ -2,6 +2,7 @@
 
 import { BaseEdge, type EdgeProps } from "@xyflow/react";
 import {
+  AVATAR_RADIUS,
   CONNECTOR_CENTER_Y,
   type UnionChildFlowEdge,
 } from "./adapters/xyflow-adapter";
@@ -81,11 +82,28 @@ export function UnionChildEdge({
   // line (two independently stroke-capped <path>s bumping into each other,
   // see relationship-edge.tsx's PartnershipEdgeLine) at the midpoint with a
   // visibly bumped corner that no per-path rounding could smooth over.
+  // Pulled back by the avatar's own radius when that parent is compact —
+  // same reasoning as PartnershipEdgeLine's x1/x2 (see AVATAR_RADIUS's own
+  // doc comment): compact's round avatar has no opaque card background
+  // around it, so a traced line ending at the exact center would leak
+  // across the transparent card padding on its way in.
   const tracedStart =
     data?.tracedParentId === data?.parentAId
-      ? { x: centerXA, y: centerYA }
+      ? {
+          x:
+            parentA.cardStyle === "compact"
+              ? centerXA + Math.sign(sourceX - centerXA) * AVATAR_RADIUS
+              : centerXA,
+          y: centerYA,
+        }
       : data?.tracedParentId === data?.parentBId
-        ? { x: centerXB, y: centerYB }
+        ? {
+            x:
+              parentB.cardStyle === "compact"
+                ? centerXB + Math.sign(sourceX - centerXB) * AVATAR_RADIUS
+                : centerXB,
+            y: centerYB,
+          }
         : null;
 
   // The horizontal bend sits a fixed distance above the child, not at the

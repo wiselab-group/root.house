@@ -2,6 +2,7 @@
 
 import { BaseEdge, type EdgeProps } from "@xyflow/react";
 import {
+  AVATAR_RADIUS,
   CONNECTOR_CENTER_Y,
   type RelationshipFlowEdge,
 } from "./adapters/xyflow-adapter";
@@ -194,9 +195,27 @@ function PartnershipEdgeLine({
   // runs "through" each card to the avatar's center (compact's round avatar
   // sits centered inside the card), instead of stopping short at the card's
   // outer border with a gap that reads as disconnected from either avatar.
-  const x1 = sourceLeft + sourceNode.width / 2;
-  const x2 = targetLeft + targetNode.width / 2;
+  const x1Full = sourceLeft + sourceNode.width / 2;
+  const x2Full = targetLeft + targetNode.width / 2;
   const yTarget = targetNode.y + targetCenterY;
+
+  // ...but compact's round avatar has NO opaque card background around it
+  // (see AVATAR_RADIUS's own doc comment) — a line drawn all the way to
+  // that center would cross the fully transparent padding around the
+  // circle with nothing left to hide it. Pull each endpoint back by the
+  // avatar's own radius (toward the OTHER end, along this already-
+  // horizontal line) so the line's last visible segment always lands
+  // inside the opaque circle instead of the transparent card around it.
+  // Portrait's square photo spans the card's full width, so it has no
+  // such gap and keeps ending at the exact center.
+  const x1 =
+    sourceNode.cardStyle === "compact"
+      ? x1Full + Math.sign(x2Full - x1Full) * AVATAR_RADIUS
+      : x1Full;
+  const x2 =
+    targetNode.cardStyle === "compact"
+      ? x2Full + Math.sign(x1Full - x2Full) * AVATAR_RADIUS
+      : x2Full;
 
   const dashStyle = {
     strokeDasharray: isPastPartnership ? "2 4" : "5 3",

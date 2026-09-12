@@ -1649,7 +1649,12 @@ describe("multiple marriages laid out on opposite sides (Lamech between Adah and
       { id: "zillah", firstName: "Zillah", lastName: "", gender: "female" },
       { id: "jabal", firstName: "Jabal", lastName: "", gender: "unknown" },
       { id: "jubal", firstName: "Jubal", lastName: "", gender: "unknown" },
-      { id: "tubalcain", firstName: "Tubal-cain", lastName: "", gender: "unknown" },
+      {
+        id: "tubalcain",
+        firstName: "Tubal-cain",
+        lastName: "",
+        gender: "unknown",
+      },
       { id: "naamah", firstName: "Naamah", lastName: "", gender: "unknown" },
       { id: "noah", firstName: "Noah", lastName: "", gender: "unknown" },
     ];
@@ -1660,8 +1665,18 @@ describe("multiple marriages laid out on opposite sides (Lamech between Adah and
       { id: "pc-jabal-b", kind: "parent-child", from: "adah", to: "jabal" },
       { id: "pc-jubal-a", kind: "parent-child", from: "lamech", to: "jubal" },
       { id: "pc-jubal-b", kind: "parent-child", from: "adah", to: "jubal" },
-      { id: "pc-tubalcain-a", kind: "parent-child", from: "lamech", to: "tubalcain" },
-      { id: "pc-tubalcain-b", kind: "parent-child", from: "zillah", to: "tubalcain" },
+      {
+        id: "pc-tubalcain-a",
+        kind: "parent-child",
+        from: "lamech",
+        to: "tubalcain",
+      },
+      {
+        id: "pc-tubalcain-b",
+        kind: "parent-child",
+        from: "zillah",
+        to: "tubalcain",
+      },
       { id: "pc-naamah-a", kind: "parent-child", from: "lamech", to: "naamah" },
       { id: "pc-naamah-b", kind: "parent-child", from: "zillah", to: "naamah" },
       // Noah: recorded under Lamech only (no mother) — a genuine solo-parent

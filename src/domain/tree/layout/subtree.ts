@@ -211,10 +211,12 @@ function multiPartnershipRowWidth(spouseCardWidths: number[]): number {
     const width = spouseCardWidths[i];
     if (width === 0) continue; // solo-parent branch — no spouse card, no row width
     if (i % 2 === 0) {
-      leftWidth += (leftBranchCount === 0 ? SPOUSE_GAP : REMARRIAGE_GAP) + width;
+      leftWidth +=
+        (leftBranchCount === 0 ? SPOUSE_GAP : REMARRIAGE_GAP) + width;
       leftBranchCount++;
     } else {
-      rightWidth += (rightBranchCount === 0 ? SPOUSE_GAP : REMARRIAGE_GAP) + width;
+      rightWidth +=
+        (rightBranchCount === 0 ? SPOUSE_GAP : REMARRIAGE_GAP) + width;
       rightBranchCount++;
     }
   }
@@ -1303,8 +1305,13 @@ function nearEdgeOffsetFromAnchor(
   // partnership branch) — multiPartnershipLayout(0, ...) gives the outer
   // edges of the WHOLE unit relative to that same origin; the near-edge
   // CARD's center is CARD_WIDTH/2 in from whichever edge faces the anchor.
-  const { leftEdge, rightEdge } = multiPartnershipLayout(0, partnerships.length);
-  return isNearSideLeft ? leftEdge + CARD_WIDTH / 2 : rightEdge - CARD_WIDTH / 2;
+  const { leftEdge, rightEdge } = multiPartnershipLayout(
+    0,
+    partnerships.length,
+  );
+  return isNearSideLeft
+    ? leftEdge + CARD_WIDTH / 2
+    : rightEdge - CARD_WIDTH / 2;
 }
 
 /**
@@ -2026,9 +2033,7 @@ function findOffCenterParentPairs(ctx: GrowthContext): string[] {
       childPositions.reduce((sum, p) => sum + p.x, 0) / childPositions.length;
     const coupleCenterX = (leftPos.x + rightPos.x) / 2;
 
-    if (
-      Math.abs(coupleCenterX - childRowMeanX) > PARENT_ROW_CENTER_X_EPSILON
-    ) {
+    if (Math.abs(coupleCenterX - childRowMeanX) > PARENT_ROW_CENTER_X_EPSILON) {
       // Sanity: the couple's own junction (if already recorded) must agree
       // with coupleCenterX — otherwise this partnership is mid-repair by
       // something else this same pass, skip rather than double-move it.
@@ -2083,7 +2088,10 @@ function tryRecenterParentRowOnChildren(
   if (!leftPerson || !rightPerson) return false;
   // Multi-marriage guard — see findOffCenterParentPairs's own doc
   // comment on why this shape can never be recentered this way.
-  if (leftPerson.partnershipIds.length > 1 || rightPerson.partnershipIds.length > 1) {
+  if (
+    leftPerson.partnershipIds.length > 1 ||
+    rightPerson.partnershipIds.length > 1
+  ) {
     return false;
   }
 
@@ -2152,9 +2160,8 @@ function tryRecenterParentRowOnChildren(
       const parent = graph.personById.get(parentId);
       if (!parent) continue;
       for (const parentPartnershipId of parent.partnershipIds) {
-        const parentPartnership = graph.partnershipById.get(
-          parentPartnershipId,
-        );
+        const parentPartnership =
+          graph.partnershipById.get(parentPartnershipId);
         if (!parentPartnership?.childrenIds.includes(movedId)) continue;
 
         const rowY = shifted.get(movedId)!.y;
@@ -2191,7 +2198,12 @@ function tryRecenterParentRowOnChildren(
       width: CARD_WIDTH,
       height: CARD_HEIGHT,
     });
-    occupancy.reserve({ x: pos.x, y: pos.y, width: CARD_WIDTH, height: CARD_HEIGHT });
+    occupancy.reserve({
+      x: pos.x,
+      y: pos.y,
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
+    });
     positionByPerson.set(id, pos);
   }
   for (const [pId, junction] of junctionByPartnership) {

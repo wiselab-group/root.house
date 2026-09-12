@@ -218,3 +218,24 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Family tree: belt-and-suspenders paint-order guarantee — a connector line
+   crossing BEHIND a card it passes (e.g. one sibling's line running under a
+   neighboring card on a dense row) must never win the stacking race.
+   @xyflow/react renders all edges and all nodes into two separate sibling
+   containers (.react-flow__edges / .react-flow__nodes) that carry no
+   z-index of their own (CSS default: auto), so this makes the ordering
+   explicit at the container level regardless of each individual edge/node's
+   own zIndex (xyflow-adapter.ts's per-element zIndex still orders edges
+   among themselves — traced above plain — and is unaffected by this).
+   NOTE: this does NOT cover a line ending INSIDE a card's own transparent
+   area (compact's round avatar has no opaque card background around it,
+   see AVATAR_RADIUS's doc comment in xyflow-adapter.ts) — that's a
+   geometry problem (the line must stop at the ring, not lean strokes),
+   fixed separately in relationship-edge.tsx/union-child-edge.tsx. */
+.react-flow__edges {
+  z-index: 0;
+}
+.react-flow__nodes {
+  z-index: 1;
+}
