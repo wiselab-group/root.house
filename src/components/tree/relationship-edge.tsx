@@ -41,11 +41,24 @@ export const COMPACT_CHILD_TAIL_LENGTH = 56;
  * path's `d` was drawn relative to the A→B walk (see traceDirection's own
  * doc comment on RelationshipEdgeData). Centralized so every call site
  * picks between the two classes the same way.
+ *
+ * The mapping is inverted relative to what the class names suggest: SVG's
+ * stroke-dashoffset moving toward a MORE POSITIVE value (globals.css's own
+ * "-march-forward" keyframe, `to { stroke-dashoffset: 20 }`) visually slides
+ * the dash pattern BACKWARD along the path — from its end toward its start
+ * — not forward from start to end (a negative-going offset does that,
+ * "-march-reverse"'s `to { stroke-dashoffset: -20 }`). So when this path's
+ * own `d` was drawn source→target in the same order as the A→B walk
+ * (traceDirection 1), the class that visually crawls start-to-end — i.e.
+ * A-to-B, the direction the user actually asked to see — is "-reverse", not
+ * "-forward". Real bug the user caught (Relationship Trace between two
+ * ancestor/descendant people): the dashes were visibly crawling B→A while
+ * every doc comment and variable name said A→B.
  */
 export function traceMarchClassName(traceDirection: 1 | -1): string {
   return traceDirection === 1
-    ? "animate-tree-trace-march-forward"
-    : "animate-tree-trace-march-reverse";
+    ? "animate-tree-trace-march-reverse"
+    : "animate-tree-trace-march-forward";
 }
 
 /**
