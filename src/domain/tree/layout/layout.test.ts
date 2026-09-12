@@ -1686,21 +1686,20 @@ describe("multiple marriages laid out on opposite sides (Lamech between Adah and
     expect(zillah.x - lamech.x).toBeCloseTo(CARD_WIDTH + SPOUSE_GAP, 5);
   });
 
-  it("Noah (Lamech's solo-parent child, no recorded mother) lands one generation below Lamech, reasonably close to Lamech's own x", () => {
-    // Noah's row (y = lamech.y + GENERATION_GAP) is already occupied by
-    // Jabal/Jubal/Tubal-cain/Naamah (Adah's and Zillah's children), so an
-    // occupancy search legitimately displaces Noah sideways from x=0 to
-    // find a free slot — this is the SAME "childless-only-child not exactly
-    // under the parent junction" shape CLAUDE.md's downward-strand-gap
-    // repair pass exists for, not a regression in THIS fix. The assertion
-    // here only checks the two things this fix (opposite-sides marriages)
-    // actually promises: Noah is one generation down, and within a few
-    // card-widths of Lamech, not thousands of px away.
+  it("Noah (Lamech's solo-parent child, no recorded mother) lands EXACTLY below Lamech's own card, not displaced by Adah's/Zillah's children", () => {
+    // Solo-parenthood's children grow FIRST (growPersonBranchDown,
+    // subtree.ts), before either marriage's children row — Adah's
+    // (Jabal/Jubal) and Zillah's (Tubal-cain/Naamah) children rows grow
+    // OUTWARD from their own branchCenter, away from Lamech's own x, so
+    // once Noah's slot is reserved first, neither marriage's children row
+    // ever contests it. User's own explicit request: "жёны Ламеха по краям
+    // — значит и их дети должны быть по краям", leaving the center free for
+    // Noah directly under Lamech.
     const result = buildTreeLayout(lamechTwoWives(), focusId);
     const lamech = personById(result, focusId);
     const noah = personById(result, "noah");
+    expect(noah.x).toBeCloseTo(lamech.x, 5);
     expect(noah.y).toBeGreaterThan(lamech.y);
-    expect(Math.abs(noah.x - lamech.x)).toBeLessThan(CARD_WIDTH * 4);
   });
 
   it("has no overlaps", () => {

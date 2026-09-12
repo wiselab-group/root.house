@@ -446,6 +446,28 @@ function growPersonBranchDown(
   }
 
   const ownX = positionByPerson.get(personId)!.x;
+
+  // Solo-parenthood's children are grown FIRST, before any partnership's
+  // children — they have no spouse card to anchor from, so they grow
+  // straight down from personId's own fixed card at `ownX` (identical to
+  // `anchorX` for 2+ partnerships; see this function's own comment above on
+  // why they differ for exactly one). Growing them before the partnership
+  // children reserves that center slot while it's still free: the user's
+  // own explicit request (a person with two marriages laid out
+  // symmetrically on either side — Lamech between Adah and Zillah) means
+  // the solo child (Noah, recorded under Lamech alone) must land directly
+  // under Lamech, not wherever occupancy happens to still be free after
+  // BOTH marriages' children rows (which grow OUTWARD, away from center,
+  // per Partnership §7) have already claimed the row. Growing solo first
+  // and outward-fanning partnerships after means the partnership rows'
+  // own occupancy search naturally avoids the now-reserved center slot,
+  // instead of the reverse (solo searching around whatever the partnership
+  // rows left over, which could push it sideways for no good reason once
+  // partnership children.length grows past a couple).
+  if (solo) {
+    growChildrenRowDown(ctx, solo.childrenIds, ownX, y + GENERATION_GAP);
+  }
+
   const spouseXs = resolveSpouseXs(anchorX, ownX, partnerships);
 
   for (let i = 0; i < partnerships.length; i++) {
@@ -495,20 +517,6 @@ function growPersonBranchDown(
     // OTHER partnerships (not `personId`'s) — grow those outward from the
     // spouse's own fixed position instead of silently skipping them.
     growSpouseOwnPartnershipsDown(ctx, spouseId, partnership.id, spouseX, y);
-  }
-
-  if (solo) {
-    // Solo-parenthood has no spouse card of its own — it always occupies
-    // the NEXT slot in the alternating sequence after every real
-    // partnership (see multiPartnershipSpouseXs' own branchSlot doc
-    // comment), anchored on personId's own card directly (there is no
-    // second card to center a junction between).
-    growChildrenRowDown(
-      ctx,
-      solo.childrenIds,
-      anchorX,
-      y + GENERATION_GAP,
-    );
   }
 }
 
