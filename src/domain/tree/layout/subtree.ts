@@ -2229,6 +2229,21 @@ function tryRaiseAncestorBranchForChild(
  * `positionByPerson` entry (row y, junction x), not a junction lookup; a
  * child computed from the real junction point only lands ~half a
  * GENERATION_GAP from its OLD row, not a fresh full generation away.
+ * (3) `positionByPerson` was updated for every `branchIds` member, but
+ * `occupancy` was only ever released/reserved for `childId` — every raised
+ * branch member's OLD slot stayed reserved forever as a phantom blocker (and
+ * its new slot was never reserved at all), silently corrupting any placement
+ * decided later that happened to probe that stale rectangle. Real bug caught
+ * on the real Neon fixture (family Купчик/Ушкар, focus Александр Купчик):
+ * Наталья Свидунович (a childless-leaf repair target one branch over) still
+ * had her pre-raise slot reserved on the Kupchik/Kozlovsky shared row when
+ * growSiblingRow placed Галина's own blood sibling Нина Тихонович — the
+ * phantom reservation forced Нина through the wide INTER_FAMILY_GAP fallback
+ * search well past where she belonged, even though by the time layout
+ * finished Наталья herself had long since moved off that row. The ordering
+ * makes this invisible to assertNoOverlaps (nothing overlaps — the stale
+ * rectangle is simply never freed), so it only ever shows up as an
+ * unexplained gap on real data, never a hard collision.
  */
 function tryApplyAncestorBranchRaise(
   ctx: GrowthContext,
@@ -2265,7 +2280,22 @@ function tryApplyAncestorBranchRaise(
   );
   if (overlapsExisting) return false;
 
-  for (const [id, pos] of shifted) positionByPerson.set(id, pos);
+  for (const [id, pos] of shifted) {
+    const oldPos = positionByPerson.get(id)!;
+    occupancy.release({
+      x: oldPos.x,
+      y: oldPos.y,
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
+    });
+    occupancy.reserve({
+      x: pos.x,
+      y: pos.y,
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
+    });
+    positionByPerson.set(id, pos);
+  }
   for (const [partnershipId, junction] of junctionByPartnership) {
     const partnership = graph.partnershipById.get(partnershipId);
     if (!partnership) continue;
@@ -2448,13 +2478,21 @@ function collectDescendantSubtreeIds(
  * lands the moved unit on a DIFFERENT row that happens to be entirely free
  * of the conflicting party counts as resolved). Junction points (partnership
  * midpoints for the T-connector to children) move by the same deltaY too,
- * so connector geometry stays correct after the shift.
+ * so connector geometry stays correct after the shift. `occupancy` is
+ * released/reserved for every moved id alongside `positionByPerson` — same
+ * phantom-reservation bug as tryApplyAncestorBranchRaise's own doc comment
+ * describes (this function is the OTHER shift mechanism repairSideConstraint
+ * Violations uses, for the side-constraint/interleaved-sibling violation
+ * kinds rather than far-from-parent), found the same way: a moved subtree's
+ * stale old-slot reservation silently blocked a later placement decision
+ * elsewhere on real Neon data, invisible to assertNoOverlaps since nothing
+ * actually overlapped — the rectangle was just never freed.
  */
 function tryShiftSubtreeOutOfViolation(
   ctx: GrowthContext,
   movingIds: Set<string>,
 ): boolean {
-  const { graph, positionByPerson, junctionByPartnership } = ctx;
+  const { graph, positionByPerson, junctionByPartnership, occupancy } = ctx;
   const original = new Map(
     [...movingIds].map((id) => [id, positionByPerson.get(id)!]),
   );
@@ -2486,7 +2524,22 @@ function tryShiftSubtreeOutOfViolation(
       const resolved = rowResolvedAfterShift(graph, positionByPerson, shifted);
       if (!resolved) continue;
 
-      for (const [id, pos] of shifted) positionByPerson.set(id, pos);
+      for (const [id, pos] of shifted) {
+        const oldPos = positionByPerson.get(id)!;
+        occupancy.release({
+          x: oldPos.x,
+          y: oldPos.y,
+          width: CARD_WIDTH,
+          height: CARD_HEIGHT,
+        });
+        occupancy.reserve({
+          x: pos.x,
+          y: pos.y,
+          width: CARD_WIDTH,
+          height: CARD_HEIGHT,
+        });
+        positionByPerson.set(id, pos);
+      }
       for (const [partnershipId, junction] of junctionByPartnership) {
         const partnership = graph.partnershipById.get(partnershipId);
         if (!partnership) continue;
