@@ -50,25 +50,34 @@ export function traceMarchClassName(traceDirection: 1 | -1): string {
 
 /**
  * Draws a traced (terracotta, marching-ants) line with a solid, undashed
- * backdrop of the same width painted first, in the canvas background color
- * — a general fix for a whole class of bug, not a one-off: ANY two tree
- * lines that happen to run along the exact same pixels (a union trunk's
- * shared stem before a sibling branches off, a partnership line's plain
- * half meeting the traced half, or any future case neither of us has hit
- * yet) would otherwise show the plain one bleeding through the terracotta
- * dash's gaps, no matter how carefully the plain line's own geometry is
- * trimmed to avoid the overlap (see git history — that per-case trimming
- * approach was tried first, in union-child-edge.tsx, and still needed a
- * second bug-fixed revision once a same-row assumption turned out false on
- * real data). A solid backdrop the exact width of the traced stroke, drawn
- * BEFORE it in paint order, hides whatever's underneath unconditionally —
- * the fix no longer depends on finding and trimming every overlapping
- * line's geometry by hand. `--background` is used rather than transparency
- * or a card-colored fill because the canvas's dotted Background pattern
- * (tree-canvas.tsx) sits in its own layer below every edge; painting over
- * it with the flat page background is the only way to fully occlude a line
- * underneath without also punching a visible dot-pattern gap that doesn't
- * match the surrounding canvas.
+ * backdrop painted first, in the canvas background color — a general fix
+ * for a whole class of bug, not a one-off: ANY two tree lines that happen
+ * to run along the exact same pixels (a union trunk's shared stem before a
+ * sibling branches off, a partnership line's plain half meeting the traced
+ * half, or any future case neither of us has hit yet) would otherwise show
+ * the plain one bleeding through the terracotta dash's gaps, no matter how
+ * carefully the plain line's own geometry is trimmed to avoid the overlap
+ * (see git history — that per-case trimming approach was tried first, in
+ * union-child-edge.tsx, and still needed a second bug-fixed revision once a
+ * same-row assumption turned out false on real data). A solid backdrop
+ * drawn BEFORE the traced line in paint order hides whatever's underneath
+ * unconditionally — the fix no longer depends on finding and trimming every
+ * overlapping line's geometry by hand.
+ *
+ * The backdrop is noticeably wider than the traced stroke itself
+ * (strokeWidth + 6, not just +2) with `strokeLinejoin="round"` — a plain
+ * neighboring line's own T-junction into this same path routinely lands a
+ * few px off from this path's own rounded corner (roundedOrthogonalPath's
+ * CORNER_RADIUS curve, orthogonal-path.ts, is computed independently per
+ * edge — two edges meeting near the same point don't share one exact
+ * corner), so a backdrop only as wide as the stroke left a thin sliver of
+ * that neighboring line visible right at the bend (real bug caught on real
+ * data, screenshot arrow pointing at exactly that sliver). `--background`
+ * is used rather than transparency or a card-colored fill because the
+ * canvas's dotted Background pattern (tree-canvas.tsx) sits in its own
+ * layer below every edge; painting over it with the flat page background is
+ * the only way to fully occlude a line underneath without also punching a
+ * visible dot-pattern gap that doesn't match the surrounding canvas.
  */
 export function TracedLine({
   path,
@@ -85,8 +94,9 @@ export function TracedLine({
         d={path}
         fill="none"
         stroke="var(--background)"
-        strokeWidth={strokeWidth + 2}
+        strokeWidth={strokeWidth + 6}
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
       <BaseEdge
         path={path}
