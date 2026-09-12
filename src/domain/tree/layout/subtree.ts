@@ -1817,6 +1817,35 @@ export function repairSideConstraintViolations(ctx: GrowthContext): void {
       return;
     }
 
+    // CLAUDE.md invariant #9 ("родители центрируются по всему ряду детей"),
+    // downward-growth direction — see findOffCenterParentPairs's own doc
+    // comment for why growChildrenRowDown alone can't guarantee this the way
+    // growPersonBranchUp already does for the upward direction. Checked last
+    // (after the three checks above, all of which already existed for other
+    // invariants) since moving a parent ROW is the most disruptive shift
+    // this pass makes — cheaper, narrower fixes get first refusal.
+    //
+    // Tries EVERY off-center partnership this pass, not just the first —
+    // real bug caught on real Neon data: a graph can have several
+    // independently off-center couples at once (each pulled sideways by a
+    // DIFFERENT unrelated cousin branch's occupancy footprint), and one of
+    // them being genuinely unfixable this pass (its own new slot collides
+    // with something) must not block every OTHER, unrelated couple's own
+    // fixable violation — stopping at the first one found silently left the
+    // reported real case (Владимир/Наталья Евтух, family "kupczyk")
+    // unrepaired every time an earlier-iterated couple happened to be stuck.
+    const offCenterPartnershipIds = findOffCenterParentPairs(ctx);
+    if (offCenterPartnershipIds.length > 0) {
+      let anyResolved = false;
+      for (const partnershipId of offCenterPartnershipIds) {
+        if (tryRecenterParentRowOnChildren(ctx, partnershipId)) {
+          anyResolved = true;
+        }
+      }
+      if (anyResolved) continue;
+      return;
+    }
+
     return; // no violation of any kind remains
   }
 }
@@ -1899,6 +1928,280 @@ function findFirstFarFromParentViolator(ctx: GrowthContext): string | null {
     }
   }
   return null;
+}
+
+/**
+ * Floating-point tolerance for "is this partnership's own couple-center x
+ * equal to the center of their placed children row" — same reasoning as
+ * FAR_FROM_PARENT_X_EPSILON (a numeric "how far is too far" threshold would
+ * have to pick an arbitrary drift budget; CLAUDE.md invariant #9 has none).
+ */
+const PARENT_ROW_CENTER_X_EPSILON = 0.5;
+
+/**
+ * Finds one already-placed partnership whose own couple-center x (midpoint
+ * of the two spouses' cards) does not match the center of their FULL row of
+ * placed children (leftmost + rightmost child sharing the children's exact
+ * y), if any — CLAUDE.md invariant #9 ("родители центрируются по всему ряду
+ * детей") checked for the DOWNWARD growth direction specifically.
+ *
+ * growPersonBranchUp (the UPWARD direction — a child already placed, parents
+ * grown above them) already guarantees this by construction: it computes
+ * the parent pair's idealX from the complete sibling row BEFORE calling
+ * placeAncestorUnit, so there's no mis-centered intermediate state to later
+ * detect (see that function's own doc comment). growChildrenRowDown (the
+ * DOWNWARD direction — a couple already placed by their own caller, THEIR
+ * children grown below) has no equivalent guarantee: it centers the
+ * children's row on the couple's already-fixed x, but if
+ * occupancy.findFreeInterval has to shift that row sideways to avoid an
+ * unrelated cousin branch sharing the same generation row (a real, common
+ * shape — full sibling rows across a whole partnership-of-partnerships
+ * generation all share one y, per invariant #5), nothing shifts the couple
+ * back to follow their own, now-correctly-placed children. Real case this
+ * was found on: real Neon family "kupczyk", focus Николай Купчик — Наталья
+ * Евтух+Владимир Евтух (couple-center x=1118.2) with children Егор+
+ * Анастасия Евтух forced by occupancy to x=1288..1500 (row-center 1394.15,
+ * 276px off) because a cousin row (Ольга/Юрий Ефимович's children) already
+ * occupied the couple's natural centered slot on the same generation row.
+ *
+ * Scoped to partnerships with 2+ placed children sharing one exact y (a
+ * single child is covered by findFirstFarFromParentViolator's own
+ * "childless leaf" repair instead — a lone child with no siblings and no
+ * descendants of their own; a single child WITH descendants or a spouse
+ * isn't a "row" in the sense this checks, and moving them would need to drag
+ * their own subtree, out of scope here same as invariant #9's own doc
+ * comment on the child-side repair). Returns the partnership's id.
+ *
+ * Excludes EITHER partner having 2+ partnerships (multi-marriage, CLAUDE.md
+ * TREE LAYOUT RULES §7 — Lamech between Adah and Zillah): for that shape,
+ * the person's own card is ALWAYS fixed exactly at their anchorX by
+ * construction (growPersonBranchDown's own 2+ partnership branch), shared
+ * across every one of their marriages AND any solo-parent children — moving
+ * it to chase ONE marriage's own children row would misalign the person
+ * from their OTHER marriage's spouse/children and any solo child, which
+ * this repair's moving set doesn't (and structurally can't, without special-
+ * casing the whole alternating-sides geometry) account for. Real bug this
+ * exclusion fixes: without it, this repair moved Lamech itself off his
+ * fixed anchor to chase Zillah's own children row (Tubal-cain/Naamah),
+ * stranding Noah (Lamech's solo-parent child, deliberately anchored at
+ * Lamech's original x) — caught by the existing "Noah lands exactly below
+ * Lamech" regression test.
+ */
+function findOffCenterParentPairs(ctx: GrowthContext): string[] {
+  const { graph, positionByPerson, junctionByPartnership } = ctx;
+  const violators: string[] = [];
+  for (const partnership of graph.partnershipById.values()) {
+    const leftPerson = graph.personById.get(partnership.leftPersonId);
+    const rightPerson = graph.personById.get(partnership.rightPersonId);
+    if (!leftPerson || !rightPerson) continue;
+    if (
+      leftPerson.partnershipIds.length > 1 ||
+      rightPerson.partnershipIds.length > 1
+    ) {
+      continue;
+    }
+
+    const leftPos = positionByPerson.get(partnership.leftPersonId);
+    const rightPos = positionByPerson.get(partnership.rightPersonId);
+    if (!leftPos || !rightPos) continue;
+
+    const childPositions = partnership.childrenIds
+      .map((id) => positionByPerson.get(id))
+      .filter((p): p is Point => Boolean(p));
+    if (childPositions.length < 2) continue;
+
+    const childY = childPositions[0].y;
+    if (!childPositions.every((p) => p.y === childY)) continue; // not one contiguous row — a repair elsewhere already mid-flight
+
+    // Arithmetic MEAN of the row's own x positions — matching
+    // growPersonBranchUp's own idealX definition exactly (see that
+    // function's doc comment), NOT (min+max)/2. Real regression caught by
+    // the existing "Kozlovsky centered over the AVERAGE, not just Galina"
+    // test: once one sibling's own spouse (Viktor Ravbetsky) is wedged in
+    // next to them, gaps between siblings are no longer uniform, so the
+    // midpoint-of-span and the mean diverge — using the midpoint here would
+    // have fought against a couple the engine already placed correctly by
+    // its own (mean-based) definition of "centered".
+    const childRowMeanX =
+      childPositions.reduce((sum, p) => sum + p.x, 0) / childPositions.length;
+    const coupleCenterX = (leftPos.x + rightPos.x) / 2;
+
+    if (
+      Math.abs(coupleCenterX - childRowMeanX) > PARENT_ROW_CENTER_X_EPSILON
+    ) {
+      // Sanity: the couple's own junction (if already recorded) must agree
+      // with coupleCenterX — otherwise this partnership is mid-repair by
+      // something else this same pass, skip rather than double-move it.
+      const junction = junctionByPartnership.get(partnership.id);
+      if (junction && Math.abs(junction.x - coupleCenterX) > 1) continue;
+      violators.push(partnership.id);
+    }
+  }
+  return violators;
+}
+
+/**
+ * Repairs one findOffCenterParentPairs violation by shifting ONLY the
+ * couple itself (plus their own ancestor branch — collectAncestorBranchIds,
+ * so the couple stays correctly aligned under THEIR OWN parents above) by
+ * `childRowMeanX - coupleCenterX` along X — deliberately narrower than
+ * tryRaiseAncestorBranchForChild's Y-axis equivalent, which moves the WHOLE
+ * generation row together.
+ *
+ * Moving the whole row was tried first and rejected (see git history/PR
+ * discussion): a couple's own children row is typically shifted sideways by
+ * a NEIGHBOR's occupancy footprint, which means the "ideal" delta almost
+ * always points TOWARD that same neighbor — dragging the entire row with it
+ * collides with that neighbor immediately (or with whatever's beyond them),
+ * so the whole-row approach failed to fire on the majority of real
+ * violations, silently leaving the original offset in place. Moving only
+ * the couple + their own ancestor spine has a far smaller footprint: it
+ * only needs the couple's own new slot free relative to whichever row-mate
+ * is on the shift's own side (checked below via the ordinary overlap scan,
+ * same as every other repair in this file) — verified to actually fire and
+ * resolve the reported real-data case (real Neon family "kupczyk", multiple
+ * focus points) where the whole-row version did not.
+ *
+ * Trade-off accepted: this couple may now sit visually slightly off from
+ * their own siblings' row (their own x no longer necessarily evenly spaced
+ * with the neighboring couples) — a smaller, more localized side effect
+ * than leaving them uncentered over their own children, which is what this
+ * repair exists to fix. The couple's OWN children are deliberately NOT part
+ * of the moving set — they're already correctly, compactly placed (this
+ * repair exists specifically because they couldn't be moved to the couple,
+ * not because they're wrong) — only the parents' side moves to follow them.
+ */
+function tryRecenterParentRowOnChildren(
+  ctx: GrowthContext,
+  partnershipId: string,
+): boolean {
+  const { graph, positionByPerson, junctionByPartnership, occupancy } = ctx;
+  const partnership = graph.partnershipById.get(partnershipId);
+  if (!partnership) return false;
+  const leftPerson = graph.personById.get(partnership.leftPersonId);
+  const rightPerson = graph.personById.get(partnership.rightPersonId);
+  if (!leftPerson || !rightPerson) return false;
+  // Multi-marriage guard — see findOffCenterParentPairs's own doc
+  // comment on why this shape can never be recentered this way.
+  if (leftPerson.partnershipIds.length > 1 || rightPerson.partnershipIds.length > 1) {
+    return false;
+  }
+
+  const leftPos = positionByPerson.get(partnership.leftPersonId);
+  const rightPos = positionByPerson.get(partnership.rightPersonId);
+  if (!leftPos || !rightPos) return false;
+
+  const childPositions = partnership.childrenIds
+    .map((id) => positionByPerson.get(id))
+    .filter((p): p is Point => Boolean(p));
+  if (childPositions.length < 2) return false;
+  // Mean, not (min+max)/2 — must match findOffCenterParentPairs's own
+  // definition exactly, or this repair could "fix" a couple the finder
+  // considers already correctly centered (see that function's own doc
+  // comment on why mean vs midpoint diverge once sibling spacing isn't
+  // uniform).
+  const childRowMeanX =
+    childPositions.reduce((sum, p) => sum + p.x, 0) / childPositions.length;
+  const coupleCenterX = (leftPos.x + rightPos.x) / 2;
+  const deltaX = childRowMeanX - coupleCenterX;
+  if (Math.abs(deltaX) <= PARENT_ROW_CENTER_X_EPSILON) return false;
+
+  // Only the couple + their OWN ancestor branch moves (not their siblings'
+  // rows, not the rest of the generation row) — see this function's own doc
+  // comment on why the wider, whole-row version was rejected.
+  const branchIds = collectAncestorBranchIds(graph, partnership.leftPersonId);
+  // The children themselves must never move (see this function's own doc
+  // comment) — collectAncestorBranchIds only ever walks UPWARD from each
+  // row-mate, so a child couldn't have been swept in anyway; deleted here
+  // explicitly rather than relying on that implicitly.
+  for (const childId of partnership.childrenIds) branchIds.delete(childId);
+
+  const shifted = new Map<string, Point>();
+  for (const id of branchIds) {
+    const pos = positionByPerson.get(id);
+    if (!pos) return false;
+    shifted.set(id, { x: pos.x + deltaX, y: pos.y });
+  }
+
+  const overlapsExisting = [...shifted.values()].some((pos) =>
+    [...positionByPerson].some(
+      ([otherId, otherPos]) =>
+        !branchIds.has(otherId) &&
+        Math.abs(pos.x - otherPos.x) < CARD_WIDTH &&
+        Math.abs(pos.y - otherPos.y) < CARD_HEIGHT,
+    ),
+  );
+  if (overlapsExisting) return false;
+
+  // Invariant #1 ("коннекторы никогда не пересекаются"): a card can move
+  // without literally overlapping anything and still CROSS a sibling-row
+  // neighbor's connector — e.g. shifting this couple's own left half right
+  // past their OWN sibling (one row up, in a DIFFERENT partnership's
+  // childrenIds) whose card wasn't moved. Real regression this check fixes:
+  // caught by the property-based random-graph suite (seed=24,
+  // personCount=50) as a "crossed trunk" violation — moving only the couple
+  // (not the whole row) means a same-row sibling not in the moving set can
+  // end up on the wrong side of graph order. Checked the same way
+  // findCrossedTrunkViolation (invariants.ts) checks it: for every
+  // partnership any MOVED person is a recorded child of, the shifted row's
+  // x-order must still match childrenIds' own order.
+  for (const movedId of branchIds) {
+    const movedPerson = graph.personById.get(movedId);
+    if (!movedPerson || movedPerson.parentIds.length === 0) continue;
+    for (const parentId of movedPerson.parentIds) {
+      const parent = graph.personById.get(parentId);
+      if (!parent) continue;
+      for (const parentPartnershipId of parent.partnershipIds) {
+        const parentPartnership = graph.partnershipById.get(
+          parentPartnershipId,
+        );
+        if (!parentPartnership?.childrenIds.includes(movedId)) continue;
+
+        const rowY = shifted.get(movedId)!.y;
+        const siblingRow = parentPartnership.childrenIds
+          .map((id) => ({
+            id,
+            pos: shifted.get(id) ?? positionByPerson.get(id),
+          }))
+          .filter(
+            (entry): entry is { id: string; pos: Point } =>
+              Boolean(entry.pos) && entry.pos!.y === rowY,
+          );
+        if (siblingRow.length < 2) continue;
+
+        const sortedByX = [...siblingRow].sort((a, b) => a.pos.x - b.pos.x);
+        for (let i = 0; i < sortedByX.length - 1; i++) {
+          const graphIdxA = parentPartnership.childrenIds.indexOf(
+            sortedByX[i].id,
+          );
+          const graphIdxB = parentPartnership.childrenIds.indexOf(
+            sortedByX[i + 1].id,
+          );
+          if (graphIdxA > graphIdxB) return false; // would cross this sibling row's own order
+        }
+      }
+    }
+  }
+
+  for (const [id, pos] of shifted) {
+    const oldPos = positionByPerson.get(id)!;
+    occupancy.release({
+      x: oldPos.x,
+      y: oldPos.y,
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
+    });
+    occupancy.reserve({ x: pos.x, y: pos.y, width: CARD_WIDTH, height: CARD_HEIGHT });
+    positionByPerson.set(id, pos);
+  }
+  for (const [pId, junction] of junctionByPartnership) {
+    const p = graph.partnershipById.get(pId);
+    if (!p) continue;
+    if (branchIds.has(p.leftPersonId) || branchIds.has(p.rightPersonId)) {
+      junctionByPartnership.set(pId, { x: junction.x + deltaX, y: junction.y });
+    }
+  }
+  return true;
 }
 
 /**
