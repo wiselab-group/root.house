@@ -5,9 +5,11 @@ import {
   AVATAR_RADIUS,
   CONNECTOR_CENTER_Y,
   type RelationshipFlowEdge,
+  type RelationshipEdgeData,
 } from "./adapters/xyflow-adapter";
 import { roundedOrthogonalPath } from "./orthogonal-path";
 import { useTreeNodeGeometry } from "./tree-layout-positions-context";
+import { UnionCollapseBadge } from "./union-collapse-badge";
 
 /**
  * Relationship Trace's line color — terracotta (--primary), matching traced
@@ -183,6 +185,7 @@ export function RelationshipEdge({
       isDimmed={isDimmed}
       traceDirection={traceDirection}
       tracedPartnerId={data?.tracedPartnerId}
+      unionCollapse={data?.unionCollapse}
     />
   );
 }
@@ -289,6 +292,7 @@ function PartnershipEdgeLine({
   isDimmed,
   traceDirection,
   tracedPartnerId,
+  unionCollapse,
 }: {
   id: string;
   source: string;
@@ -298,6 +302,7 @@ function PartnershipEdgeLine({
   isDimmed: boolean;
   traceDirection: 1 | -1;
   tracedPartnerId?: string;
+  unionCollapse?: RelationshipEdgeData["unionCollapse"];
 }) {
   const sourceNode = useTreeNodeGeometry(source);
   const targetNode = useTreeNodeGeometry(target);
@@ -344,6 +349,23 @@ function PartnershipEdgeLine({
     strokeDasharray: isPastPartnership ? "2 4" : "5 3",
   };
 
+  // Same midpoint the union trunk line hangs off (see
+  // union-child-edge.tsx's own sourceX/sourceY) — the collapse badge sits
+  // exactly where the shared descendants' own connector line starts, so it
+  // reads as "there's more of the tree hanging off THIS union" rather than
+  // a control floating at an arbitrary point on the partnership line.
+  const midX = (x1 + x2) / 2;
+  const midY = (y + yTarget) / 2;
+  const collapseBadge = unionCollapse ? (
+    <UnionCollapseBadge
+      x={midX}
+      y={midY}
+      collapsedDescendantCount={unionCollapse.collapsedDescendantCount}
+      collapseKey={unionCollapse.collapseKey}
+      onToggleCollapse={unionCollapse.onToggleCollapse}
+    />
+  ) : null;
+
   // A trace path can reach this couple's shared child through only ONE of
   // them (parent → union trunk → child, see union-child-edge.tsx and
   // xyflow-adapter.ts's tracedPartnerId) — the partnership relationship
@@ -357,8 +379,6 @@ function PartnershipEdgeLine({
   // bump instead of a sharp corner). This component only draws the OTHER
   // half — the untraced partner's plain dashed segment.
   if (!isOnTracePath && tracedPartnerId) {
-    const midX = (x1 + x2) / 2;
-    const midY = (y + yTarget) / 2;
     // (x1,y) belongs to whichever side is geometrically left, not
     // necessarily `source` — pick the untraced partner's own coordinates by
     // whether they're on that left side or not.
@@ -366,16 +386,19 @@ function PartnershipEdgeLine({
     const [plainX, plainY] = tracedIsLeft ? [x2, yTarget] : [x1, y];
 
     return (
-      <BaseEdge
-        id={id}
-        path={`M${midX},${midY} L${plainX},${plainY}`}
-        style={{
-          strokeWidth: 1.5,
-          stroke: "var(--branch)",
-          opacity: isDimmed ? 0.35 : 1,
-          ...dashStyle,
-        }}
-      />
+      <>
+        <BaseEdge
+          id={id}
+          path={`M${midX},${midY} L${plainX},${plainY}`}
+          style={{
+            strokeWidth: 1.5,
+            stroke: "var(--branch)",
+            opacity: isDimmed ? 0.35 : 1,
+            ...dashStyle,
+          }}
+        />
+        {collapseBadge}
+      </>
     );
   }
 
@@ -389,19 +412,29 @@ function PartnershipEdgeLine({
   // the dominant signal.
   if (isOnTracePath) {
     return (
-      <TracedLine path={path} traceDirection={traceDirection} strokeWidth={3} />
+      <>
+        <TracedLine
+          path={path}
+          traceDirection={traceDirection}
+          strokeWidth={3}
+        />
+        {collapseBadge}
+      </>
     );
   }
   return (
-    <BaseEdge
-      id={id}
-      path={path}
-      style={{
-        strokeWidth: 1.5,
-        stroke: "var(--branch)",
-        opacity: isDimmed ? 0.35 : 1,
-        ...dashStyle,
-      }}
-    />
+    <>
+      <BaseEdge
+        id={id}
+        path={path}
+        style={{
+          strokeWidth: 1.5,
+          stroke: "var(--branch)",
+          opacity: isDimmed ? 0.35 : 1,
+          ...dashStyle,
+        }}
+      />
+      {collapseBadge}
+    </>
   );
 }

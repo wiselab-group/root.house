@@ -64,29 +64,34 @@ export function InvisibleConnectorHandles() {
 }
 
 /**
- * "+N" / "−" collapse toggle, floating at the card's own bottom-center — the
- * one place a parent_child connector line already runs, so the badge reads
- * as "there's more of the tree hanging off this line" rather than a random
- * floating control. `nodrag`/`nopan` (XYFlow's own escape-hatch classes, see
- * its docs) keep a click here from starting a canvas drag or panning the
- * viewport; stopPropagation keeps it from also bubbling into the card's own
- * click-to-open-popover behavior underneath.
+ * The collapse/expand "+N" / "−" button itself — shared, unpositioned
+ * visual, so PersonNode's per-card badge (CollapseBadge below) and the
+ * per-union badge rendered on a partnership line's own midpoint
+ * (union-collapse-badge.tsx) read as the exact same control regardless of
+ * which one a given branch happens to get (see xyflow-adapter.ts's
+ * personIdsNeedingOwnBadge/findUnionsWithChildren for which branches get
+ * which). Callers own their own positioning wrapper — this component only
+ * renders the button, un-positioned. `nodrag`/`nopan` (XYFlow's own
+ * escape-hatch classes, see its docs) keep a click here from starting a
+ * canvas drag or panning the viewport; stopPropagation keeps it from also
+ * bubbling into whatever's underneath (a card's click-to-open-popover, or —
+ * for the union badge — nothing, but kept for the same defensive reason).
  */
-export function CollapseBadge({
-  personId,
+export function CollapseToggleButton({
   collapsedDescendantCount,
-  onToggleCollapse,
+  onToggle,
+  className,
 }: {
-  personId: string;
   collapsedDescendantCount: number | undefined;
-  onToggleCollapse: (personId: string) => void;
+  onToggle: () => void;
+  className?: string;
 }) {
   const isCollapsed = collapsedDescendantCount !== undefined;
   return (
     <button
       type="button"
       className={cn(
-        "nodrag nopan absolute left-1/2 -bottom-2.5 z-10 flex h-5 min-w-5 -translate-x-1/2 items-center justify-center gap-0.5 rounded-full border bg-card px-1.5 text-[0.65rem] font-medium shadow-sm transition-colors",
+        "nodrag nopan z-10 flex h-5 min-w-5 items-center justify-center gap-0.5 rounded-full border bg-card px-1.5 text-[0.65rem] font-medium shadow-sm transition-colors",
         // Sage (--tree-accent), not terracotta — "collapsed" is a standing
         // property of this branch (identity/state), not something the user
         // is doing right now, so it follows the identity color, not the
@@ -95,10 +100,11 @@ export function CollapseBadge({
         isCollapsed
           ? "border-tree-accent text-tree-accent hover:bg-tree-accent/10"
           : "border-border text-muted-foreground opacity-60 hover:opacity-100 focus-visible:opacity-100",
+        className,
       )}
       onClick={(e) => {
         e.stopPropagation();
-        onToggleCollapse(personId);
+        onToggle();
       }}
       aria-label={
         isCollapsed
@@ -120,6 +126,34 @@ export function CollapseBadge({
         <MinusIcon className="size-3" />
       )}
     </button>
+  );
+}
+
+/**
+ * "+N" / "−" collapse toggle, floating at the card's own bottom-center — the
+ * one place a parent_child connector line already runs, so the badge reads
+ * as "there's more of the tree hanging off this line" rather than a random
+ * floating control. Only rendered on a card when NO union badge already
+ * covers this person's children (see xyflow-adapter.ts's
+ * personIdsNeedingOwnBadge) — a person with a partnered union with shared
+ * children gets that union's own badge on the partnership line instead (see
+ * union-collapse-badge.tsx), never both.
+ */
+export function CollapseBadge({
+  personId,
+  collapsedDescendantCount,
+  onToggleCollapse,
+}: {
+  personId: string;
+  collapsedDescendantCount: number | undefined;
+  onToggleCollapse: (personId: string) => void;
+}) {
+  return (
+    <CollapseToggleButton
+      collapsedDescendantCount={collapsedDescendantCount}
+      onToggle={() => onToggleCollapse(personId)}
+      className="absolute left-1/2 -bottom-2.5 -translate-x-1/2"
+    />
   );
 }
 

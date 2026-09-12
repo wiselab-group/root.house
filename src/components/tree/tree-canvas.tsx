@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   ReactFlow,
@@ -35,7 +35,8 @@ import { TreeCardStyleControl } from "./tree-card-style-control";
 import { useCollapsedBranches } from "./use-collapsed-branches";
 import {
   pruneCollapsedDescendants,
-  personIdsWithChildren,
+  personIdsNeedingOwnBadge,
+  findUnionsWithChildren,
 } from "./prune-collapsed";
 import { TreeLayoutPositionsProvider } from "./tree-layout-positions-context";
 
@@ -74,9 +75,20 @@ function FocusViewport({
 }) {
   const { setCenter } = useReactFlow();
   const reducedMotion = useReducedMotion();
+  // The last focus id this effect actually centered on — distinguishes "the
+  // user switched to a DIFFERENT person" (re-center) from "the SAME focus
+  // person's card just reappeared after being hidden by a collapsed branch,
+  // then un-collapsed again" (user-confirmed 2026-09-12: no re-center here —
+  // collapsing/expanding a branch is a visibility change, not a navigation,
+  // so the viewport should stay exactly where it was). Starts at `undefined`
+  // — the very first real focus id is still a fresh center (isInitialLoad
+  // already picks the un-animated instant-jump variant for that case).
+  const lastCenteredIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (!focusNode) return;
+    if (lastCenteredIdRef.current === focusNode.id) return;
+    lastCenteredIdRef.current = focusNode.id;
     // Prefer `measured` (XYFlow's own ResizeObserver reading of the actual
     // rendered DOM node) over the static width/height passed into
     // toReactFlow's NODE_DIMENSIONS — that static height in particular is
@@ -105,8 +117,11 @@ function FocusViewport({
     // Re-centers whenever the focus person itself changes (URL ?focus=...
     // navigation, or TreeCanvas's own client-side setFocus) — NOT on every
     // node reposition (card style toggle, filter/trace highlight), which
-    // would fight the user's own pan/zoom mid-session. focusNode's identity
-    // change (a new id) is what signals "the user asked to jump to someone
+    // would fight the user's own pan/zoom mid-session, and NOT when the
+    // SAME focus id merely reappears after a collapse/expand round-trip
+    // (lastCenteredIdRef's own early-return above handles that case — see
+    // its doc comment). focusNode's identity change (a new id, never before
+    // centered on) is what signals "the user asked to jump to someone
     // else", not a mere prop update.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusNode?.id, setCenter]);
@@ -347,13 +362,17 @@ export function TreeCanvas({
   // returns a NEW graph with the collapsed subtrees' nodes/edges filtered
   // out, leaving every remaining node's own x/y exactly as laid out (no
   // FURTHER client-side re-layout on top of that — see prune-collapsed.ts's
-  // own doc comment for why). `withChildren` is computed off the FULL graph
-  // (before pruning) so a currently-collapsed person's badge doesn't
-  // disappear just because their own children are no longer in the pruned
-  // edge list.
+  // own doc comment for why). `personIdsNeedingBadge`/`unionsWithChildren`
+  // are both computed off the FULL graph (before pruning) so a
+  // currently-collapsed person/union's badge doesn't disappear just because
+  // their own children are no longer in the pruned edge list.
   const { collapsedIds, toggleCollapse } = useCollapsedBranches();
-  const withChildren = useMemo(
-    () => personIdsWithChildren(effectiveGraph),
+  const personIdsNeedingBadge = useMemo(
+    () => personIdsNeedingOwnBadge(effectiveGraph),
+    [effectiveGraph],
+  );
+  const unionsWithChildren = useMemo(
+    () => findUnionsWithChildren(effectiveGraph),
     [effectiveGraph],
   );
   const prunedGraph = useMemo(
@@ -373,7 +392,8 @@ export function TreeCanvas({
         readOnly,
         shareToken,
         readOnly ? undefined : toggleCollapse,
-        withChildren,
+        personIdsNeedingBadge,
+        unionsWithChildren,
       ),
     [
       prunedGraph,
@@ -385,7 +405,8 @@ export function TreeCanvas({
       readOnly,
       shareToken,
       toggleCollapse,
-      withChildren,
+      personIdsNeedingBadge,
+      unionsWithChildren,
     ],
   );
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);

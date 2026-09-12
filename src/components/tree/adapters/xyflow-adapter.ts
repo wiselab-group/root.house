@@ -4,7 +4,11 @@ import type {
   LayoutNode,
 } from "@/domain/tree/tree-layout.builder";
 import type { TreeCardStyle } from "../use-tree-card-style";
-import { personIdsWithChildren } from "../prune-collapsed";
+import {
+  personIdsNeedingOwnBadge,
+  findUnionsWithChildren,
+  type UnionWithChildren,
+} from "../prune-collapsed";
 
 /**
  * The ONLY module in the codebase allowed to import @xyflow/react types.
@@ -54,14 +58,20 @@ export interface PersonNodeData extends Record<string, unknown> {
   readOnly?: boolean;
   /**
    * Collapse/expand (rewrite plan §7 Stage 5) — true when this person has at
-   * least one recorded child, i.e. there's something a collapse toggle could
-   * ever hide. A childless leaf gets no badge/toggle at all. Always false in
-   * read-only (Share Link) mode — see onToggleCollapse below.
+   * least one recorded child NOT already covered by a union collapse badge
+   * (see prune-collapsed.ts's personIdsNeedingOwnBadge and this file's own
+   * findUnionsWithChildren usage below) — i.e. there's something a
+   * card-level collapse toggle could ever hide that the union badge on a
+   * partnership line doesn't already cover. A childless leaf, or a person
+   * whose every child is shared with a partnered spouse (their union badge
+   * covers it instead — see union-collapse-badge.tsx), gets no card-level
+   * badge/toggle of its own. Always false in read-only (Share Link) mode —
+   * see onToggleCollapse below.
    */
   hasChildren?: boolean;
   /** Present (and non-zero) only while this person's own descendants are currently hidden — see prune-collapsed.ts's collapsedDescendantCount. Renders the "+N" badge. */
   collapsedDescendantCount?: number;
-  /** Toggles this person's collapsed state (see use-collapsed-branches.ts) — undefined in read-only mode, matching onFocusPerson's own pattern (no collapse state exists to toggle on the anonymous Share Link view, which renders a static snapshot). */
+  /** Toggles this person's collapsed state (see use-collapsed-branches.ts) — undefined in read-only mode, matching onFocusPerson's own pattern (no collapse state exists to toggle on the anonymous Share Link view, which renders a static snapshot). Always called with the `person:<personId>` collapse key (see prune-collapsed.ts) — PersonNode itself doesn't need to know that shape, it just forwards its own personId. */
   onToggleCollapse?: (personId: string) => void;
 }
 
@@ -90,6 +100,22 @@ export interface RelationshipEdgeData extends Record<string, unknown> {
    * other jogs, so it's drawn as a sharp corner instead of a rounded one.
    */
   isMiddleSibling?: boolean;
+  /**
+   * Partnership edges only, and only when the couple has at least one
+   * shared child (see prune-collapsed.ts's findUnionsWithChildren) — carries
+   * the collapse/expand toggle for their shared descendants, rendered by
+   * PartnershipEdgeLine at the partnership line's own midpoint instead of on
+   * either individual card (see union-collapse-badge.tsx's doc comment for
+   * why). Undefined for a childless partnership, or in read-only mode (no
+   * collapse state exists to toggle there — matches onToggleCollapse's own
+   * pattern on PersonNodeData).
+   */
+  unionCollapse?: {
+    /** Always `union:<partnershipEdgeId>` — pass this straight to onToggleCollapse below, verbatim (unlike PersonNodeData.onToggleCollapse, this one is NOT re-prefixed — it already IS the full collapse key). */
+    collapseKey: string;
+    collapsedDescendantCount: number | undefined;
+    onToggleCollapse: (collapseKey: string) => void;
+  };
 }
 
 /**
@@ -277,8 +303,8 @@ function toFlowNode(
   onFocusPerson: (personId: string) => void,
   readOnly: boolean,
   shareToken: string | undefined,
-  withChildren: ReadonlySet<string>,
-  onToggleCollapse: ((personId: string) => void) | undefined,
+  personIdsNeedingBadge: ReadonlySet<string>,
+  onToggleCollapse: ((collapseKey: string) => void) | undefined,
 ): PersonFlowNode {
   const xScale =
     cardStyle === "portrait" ? PORTRAIT_X_SPACING / COMPACT_X_SPACING : 1;
@@ -318,9 +344,16 @@ function toFlowNode(
       // Also omitted outright in read-only mode (see PersonNodeData.readOnly).
       onFocusPerson: node.isFocus || readOnly ? undefined : onFocusPerson,
       readOnly,
-      hasChildren: !readOnly && withChildren.has(node.id),
+      hasChildren: !readOnly && personIdsNeedingBadge.has(node.id),
       collapsedDescendantCount: node.collapsedDescendantCount,
-      onToggleCollapse: readOnly ? undefined : onToggleCollapse,
+      // PersonNodeData.onToggleCollapse's own contract is "call me with my
+      // personId" — the person:<id> prefixing (see prune-collapsed.ts's two
+      // collapse-key shapes) is this adapter's own concern, not something
+      // PersonNode/CollapseBadge need to know about.
+      onToggleCollapse:
+        readOnly || !onToggleCollapse
+          ? undefined
+          : (personId: string) => onToggleCollapse(`person:${personId}`),
     },
     // XYFlow needs explicit dimensions before layout/fitView math is
     // reliable; matches the fixed size PersonNode renders each style at.
@@ -462,9 +495,29 @@ function findMiddleSiblingEdgeIds(
 function toFlowEdges(
   graph: TreeLayoutGraph,
   highlight: TreeHighlightState,
+  readOnly: boolean,
+  onToggleCollapse: ((collapseKey: string) => void) | undefined,
+  unionsWithChildrenOverride: UnionWithChildren[] | undefined,
 ): (RelationshipFlowEdge | UnionChildFlowEdge)[] {
   const unionByChild = findUnionParentPairs(graph);
   const middleSiblingEdgeIds = findMiddleSiblingEdgeIds(graph, unionByChild);
+  // Every partnership with a shared child, keyed by partnershipEdgeId — see
+  // findUnionsWithChildren's own doc comment for why a shared union (not
+  // just "both partners happen to each have children") is what moves the
+  // badge here.
+  const unionsWithChildrenByEdgeId = new Map<string, UnionWithChildren>(
+    (unionsWithChildrenOverride ?? findUnionsWithChildren(graph)).map((u) => [
+      u.collapseKey.slice("union:".length),
+      u,
+    ]),
+  );
+  // The collapsedDescendantCount for a union: key was attached by
+  // pruneCollapsedDescendants to the lexicographically-first partner's OWN
+  // node (see prune-collapsed.ts's resolveCollapseRoot) — read it back off
+  // that node rather than recomputing it here.
+  const collapsedCountByPersonId = new Map(
+    graph.nodes.map((n) => [n.id, n.collapsedDescendantCount]),
+  );
   const edges: (RelationshipFlowEdge | UnionChildFlowEdge)[] = [];
 
   for (const edge of graph.edges) {
@@ -520,6 +573,12 @@ function toFlowEdges(
     // not left/right screen position — RelationshipEdge/UnionChildEdge both
     // resolve actual left/right (and the trunk midpoint) from live node
     // positions at render time, not from this ordering.
+    const unionWithChildren = unionsWithChildrenByEdgeId.get(edge.id);
+    // The lexicographically-first partner is where pruneCollapsedDescendants
+    // attached this union's collapsedDescendantCount — see
+    // resolveCollapseRoot's own doc comment.
+    const unionAnchorId = [edge.source, edge.target].sort()[0];
+
     edges.push({
       id: edge.id,
       type: "partnership",
@@ -532,6 +591,15 @@ function toFlowEdges(
           : undefined,
         traceDirection: highlight.traceEdgeDirections?.get(edge.id),
         tracedPartnerId,
+        unionCollapse:
+          unionWithChildren && !readOnly && onToggleCollapse
+            ? {
+                collapseKey: unionWithChildren.collapseKey,
+                collapsedDescendantCount:
+                  collapsedCountByPersonId.get(unionAnchorId),
+                onToggleCollapse,
+              }
+            : undefined,
       },
     });
 
@@ -588,21 +656,42 @@ export function toReactFlow(
   /** Present only for the anonymous Share Link view — see buildPhotoUrl. */
   shareToken: string | undefined = undefined,
   /** Collapse/expand (rewrite plan §7 Stage 5) — undefined in read-only mode. */
-  onToggleCollapse: ((personId: string) => void) | undefined = undefined,
+  onToggleCollapse: ((collapseKey: string) => void) | undefined = undefined,
   /**
-   * Which person ids have at least one recorded child — computed from the
-   * FULL (pre-collapse) graph by the caller when `graph` here has already
-   * been pruned by prune-collapsed.ts (a currently-collapsed person's own
-   * children are gone from THIS graph's edges by the time toReactFlow sees
-   * it, so deriving it from `graph` directly would wrongly hide the badge on
-   * a person who's already collapsed). Defaults to deriving it from `graph`
-   * itself, correct whenever no collapse is active.
+   * Which person ids still need their OWN card-level collapse badge —
+   * computed from the FULL (pre-collapse) graph by the caller when `graph`
+   * here has already been pruned by prune-collapsed.ts (a
+   * currently-collapsed person's own children are gone from THIS graph's
+   * edges by the time toReactFlow sees it, so deriving it from `graph`
+   * directly would wrongly hide the badge on a person who's already
+   * collapsed). Defaults to deriving it from `graph` itself, correct
+   * whenever no collapse is active. See prune-collapsed.ts's
+   * personIdsNeedingOwnBadge for what "needs its own badge" means (a
+   * childless leaf, or a person whose every child is already covered by a
+   * union badge, needs none).
    */
-  personIdsWithChildrenOverride: ReadonlySet<string> | undefined = undefined,
+  personIdsNeedingOwnBadgeOverride: ReadonlySet<string> | undefined = undefined,
+  /**
+   * Every union (partnership with a shared child) in the FULL (pre-collapse)
+   * graph — same "compute off the full graph" reasoning as
+   * personIdsNeedingOwnBadgeOverride above: a currently-collapsed union's
+   * own partnership edge survives pruning (only the CHILDREN below it are
+   * hidden), so deriving this from `graph` directly would actually still
+   * work for an already-collapsed union, but computing it once from the
+   * full graph up front keeps both overrides consistent and avoids a second
+   * full edge scan. Defaults to deriving it from `graph` itself.
+   */
+  unionsWithChildrenOverride: UnionWithChildren[] | undefined = undefined,
 ): { nodes: PersonFlowNode[]; edges: TreeFlowEdge[] } {
-  const withChildren =
-    personIdsWithChildrenOverride ?? personIdsWithChildren(graph);
-  const edges = toFlowEdges(graph, highlight);
+  const personIdsNeedingBadge =
+    personIdsNeedingOwnBadgeOverride ?? personIdsNeedingOwnBadge(graph);
+  const edges = toFlowEdges(
+    graph,
+    highlight,
+    readOnly,
+    onToggleCollapse,
+    unionsWithChildrenOverride,
+  );
   // Array order does NOT control paint order here — XYFlow's default
   // zIndexMode ('basic') assigns every edge/node the same CSS z-index (its
   // own explicit zIndex, default 0) regardless of where it sits in this
@@ -635,7 +724,7 @@ export function toReactFlow(
         onFocusPerson,
         readOnly,
         shareToken,
-        withChildren,
+        personIdsNeedingBadge,
         onToggleCollapse,
       ),
     ),

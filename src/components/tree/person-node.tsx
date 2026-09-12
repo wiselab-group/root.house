@@ -51,7 +51,11 @@ import { PersonNodePopoverActions } from "./person-node-popover-actions";
  * Also carries the collapse/expand "+N" badge (rewrite plan §7 Stage 5, see
  * person-node-parts.tsx's CollapseBadge) — floating at the card's own
  * bottom-center, outside the popover trigger so a click there toggles
- * collapse state instead of opening the profile menu.
+ * collapse state instead of opening the profile menu. Only rendered when
+ * `data.hasChildren` is true, which xyflow-adapter.ts sets to false for a
+ * person whose every child is already covered by a UNION badge instead (see
+ * union-collapse-badge.tsx) — a partnered couple with shared children gets
+ * ONE badge on their partnership line, never one per card.
  */
 export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
   const name = personLabel(data);

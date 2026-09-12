@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { toReactFlow, type UnionChildFlowEdge } from "./xyflow-adapter";
+import {
+  toReactFlow,
+  type UnionChildFlowEdge,
+  type RelationshipFlowEdge,
+} from "./xyflow-adapter";
 import type {
   LayoutEdge,
   LayoutNode,
@@ -333,5 +337,152 @@ describe("toReactFlow — trace on a union with a non-traced sibling", () => {
     const byTarget = new Map(unionEdges.map((e) => [e.target, e]));
     expect(byTarget.get("alexander")?.data?.isOnTracePath).toBe(true);
     expect(byTarget.get("daria")?.data?.isOnTracePath).toBe(false);
+  });
+});
+
+describe("toReactFlow — union collapse badge (2026-09-12 change: badge moves off the card and onto the partnership line when a couple shares a child)", () => {
+  function buildUnionGraph(): TreeLayoutGraph {
+    return {
+      focusPersonId: "viktor",
+      nodes: [
+        node("viktor", -100, 0, 0),
+        node("galina", 100, 0, 0),
+        node("child", 0, 200, 1),
+      ],
+      edges: [
+        {
+          id: "partner-1",
+          kind: "partnership",
+          source: "viktor",
+          target: "galina",
+        },
+        {
+          id: "pc-viktor-child",
+          kind: "parent_child",
+          source: "viktor",
+          target: "child",
+        },
+        {
+          id: "pc-galina-child",
+          kind: "parent_child",
+          source: "galina",
+          target: "child",
+        },
+      ],
+    };
+  }
+
+  it("a partnership edge with a shared child carries unionCollapse data when onToggleCollapse is provided", () => {
+    const graph = buildUnionGraph();
+    const { edges } = toReactFlow(
+      graph,
+      "fam1",
+      "fam-slug",
+      "compact",
+      {},
+      () => {},
+      false,
+      undefined,
+      () => {},
+    );
+    const partnershipEdge = edges.find(
+      (e): e is RelationshipFlowEdge => e.type === "partnership",
+    );
+    expect(partnershipEdge?.data?.unionCollapse?.collapseKey).toBe(
+      "union:partner-1",
+    );
+  });
+
+  it("neither parent's own card gets hasChildren — their shared child is entirely covered by the union badge", () => {
+    const graph = buildUnionGraph();
+    const { nodes } = toReactFlow(
+      graph,
+      "fam1",
+      "fam-slug",
+      "compact",
+      {},
+      () => {},
+      false,
+      undefined,
+      () => {},
+    );
+    const byId = new Map(nodes.map((n) => [n.id, n]));
+    expect(byId.get("viktor")?.data.hasChildren).toBe(false);
+    expect(byId.get("galina")?.data.hasChildren).toBe(false);
+  });
+
+  it("in read-only mode, no unionCollapse is attached even though the couple shares a child", () => {
+    const graph = buildUnionGraph();
+    const { edges } = toReactFlow(
+      graph,
+      "fam1",
+      "fam-slug",
+      "compact",
+      {},
+      () => {},
+      true, // readOnly
+    );
+    const partnershipEdge = edges.find(
+      (e): e is RelationshipFlowEdge => e.type === "partnership",
+    );
+    expect(partnershipEdge?.data?.unionCollapse).toBeUndefined();
+  });
+
+  it("a childless partnership carries no unionCollapse data", () => {
+    const graph: TreeLayoutGraph = {
+      focusPersonId: "viktor",
+      nodes: [node("viktor", -100, 0, 0), node("galina", 100, 0, 0)],
+      edges: [
+        {
+          id: "partner-1",
+          kind: "partnership",
+          source: "viktor",
+          target: "galina",
+        },
+      ],
+    };
+    const { edges } = toReactFlow(
+      graph,
+      "fam1",
+      "fam-slug",
+      "compact",
+      {},
+      () => {},
+      false,
+      undefined,
+      () => {},
+    );
+    const partnershipEdge = edges.find(
+      (e): e is RelationshipFlowEdge => e.type === "partnership",
+    );
+    expect(partnershipEdge?.data?.unionCollapse).toBeUndefined();
+  });
+
+  it("a solo child (only one recorded parent) still gives that parent their own card-level badge", () => {
+    const graph: TreeLayoutGraph = {
+      focusPersonId: "viktor",
+      nodes: [node("viktor", 0, 0, 0), node("child", 0, 200, 1)],
+      edges: [
+        {
+          id: "pc-viktor-child",
+          kind: "parent_child",
+          source: "viktor",
+          target: "child",
+        },
+      ],
+    };
+    const { nodes } = toReactFlow(
+      graph,
+      "fam1",
+      "fam-slug",
+      "compact",
+      {},
+      () => {},
+      false,
+      undefined,
+      () => {},
+    );
+    const viktor = nodes.find((n) => n.id === "viktor");
+    expect(viktor?.data.hasChildren).toBe(true);
   });
 });
