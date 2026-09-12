@@ -120,22 +120,25 @@ export function measurePersonWidth(
   // Each partnership this person is in becomes its own side-by-side branch
   // (this is the concrete remarriage mechanism — Partnership §27).
   const branchWidths: number[] = [];
-  const branchCompactWidths: number[] = [];
+  // Per-branch SPOUSE card width only (never includes personId's own
+  // card — see multiPartnershipRowWidth's own doc comment for why: with
+  // multiple marriages, personId's card is placed exactly once, in the
+  // MIDDLE of all their marriages, not once per branch).
+  const spouseCardWidths: number[] = [];
   let maxDepth = 0;
   for (const partnership of partnerships) {
     const m = measurePartnershipWidth(graph, partnership.id, memo);
     branchWidths.push(m.totalWidth);
-    branchCompactWidths.push(m.compactWidth);
+    spouseCardWidths.push(CARD_WIDTH);
     maxDepth = Math.max(maxDepth, m.depth + 1);
   }
   if (solo) {
     const m = measureChildrenRowWidth(graph, solo.childrenIds, memo);
     branchWidths.push(Math.max(CARD_WIDTH, m.totalWidth));
-    // Solo-parenthood's compact contribution is just this person's own
-    // card — the whole point of compactWidth is to NOT fold descendant
-    // width in, and solo's only "own row" element is the person themselves
-    // (no spouse card, unlike a partnership's CARD_WIDTH*2+SPOUSE_GAP).
-    branchCompactWidths.push(CARD_WIDTH);
+    // Solo-parenthood has no spouse card at all — it contributes 0 to the
+    // alternating-sides row width (personId's own card already accounts
+    // for their own presence; there is no second card for this branch).
+    spouseCardWidths.push(0);
     maxDepth = Math.max(maxDepth, m.depth + 1);
   }
 
@@ -143,17 +146,79 @@ export function measurePersonWidth(
     branchWidths.reduce((a, b) => a + b, 0) +
     REMARRIAGE_GAP * Math.max(0, branchWidths.length - 1);
   const compactWidth =
-    branchCompactWidths.reduce((a, b) => a + b, 0) +
-    REMARRIAGE_GAP * Math.max(0, branchCompactWidths.length - 1);
+    partnerships.length + (solo ? 1 : 0) <= 1
+      ? // Exactly one branch: unchanged single-partnership/solo shape —
+        // multiPartnershipRowWidth's alternating-sides math only kicks in
+        // once there's more than one branch to alternate. spouseCardWidths[0]
+        // is 0 for a solo-only person (no spouse card at all — see
+        // measurePersonWidth's own comment on this), so this correctly
+        // collapses to CARD_WIDTH with no SPOUSE_GAP added for that case.
+        CARD_WIDTH +
+        (spouseCardWidths[0] > 0 ? SPOUSE_GAP + spouseCardWidths[0] : 0)
+      : multiPartnershipRowWidth(spouseCardWidths);
 
   const result: SubtreeMeasurement = {
     ownWidth: CARD_WIDTH,
     totalWidth: Math.max(CARD_WIDTH, totalWidth),
-    compactWidth: Math.max(CARD_WIDTH, compactWidth),
+    compactWidth,
     depth: maxDepth,
   };
   memo.set(cacheKey, result);
   return result;
+}
+
+/**
+ * Total row width (compactWidth) for a person with MULTIPLE marriages
+ * (and/or a solo-parent branch), laid out alternating-sides around the
+ * person's own card (see multiPartnershipSpouseXs' own doc comment for the
+ * actual placement this mirrors) — CLAUDE.md TREE LAYOUT RULES §7: first
+ * marriage's spouse to the LEFT of personId's own card, second to the
+ * RIGHT, third further left, fourth further right, alternating outward.
+ * personId's own card contributes CARD_WIDTH exactly once (not once per
+ * branch, unlike the single-partnership case where "the partnership's own
+ * width" already double-counts as "personId's contribution to this row" —
+ * see measurePersonWidth's own single-branch special case). Each side's own
+ * running width is its spouse cards plus REMARRIAGE_GAP between them (not
+ * SPOUSE_GAP, which only applies directly against personId's own card);
+ * `spouseCardWidths[i]` is 0 for the solo-parent branch (no spouse card at
+ * all — see measurePersonWidth's own comment on this).
+ *
+ * Symmetric around personId's own card: with an ODD marriage count (one
+ * side gets one more branch than the other, e.g. 3 marriages = 2 left + 1
+ * right), the actual placed unit is NOT centered on personId's own card —
+ * personId always sits exactly at anchorX (growPersonBranchDown's own 2+
+ * partnership branch), but the wider side then extends further from that
+ * anchor than the narrower side does. Returning `max(leftWidth, rightWidth)
+ * * 2` (mirroring the wider side onto the narrower one) keeps
+ * growChildrenRowDown's own cursor — which reserves this width CENTERED on
+ * childCenter and then places personId AT childCenter — safe: the real
+ * unit is a subset of the reserved (slightly wider than strictly needed on
+ * the narrow side) rectangle, so it can never spill into a neighboring
+ * sibling's slot. Real bug this fixes: an un-mirrored (leftWidth+rightWidth)
+ * total reserved the CORRECT total area but assumed it was centered on
+ * childCenter, when for an odd marriage count the actual unit's geometric
+ * center is off childCenter by exactly the left/right width difference —
+ * caught by property testing (a descendant-only random graph, one person
+ * with 3 marriages: 2 left branches + 1 right branch overlapped a
+ * completely unrelated neighboring sibling by the resulting ~116px offset).
+ */
+function multiPartnershipRowWidth(spouseCardWidths: number[]): number {
+  let leftWidth = 0;
+  let rightWidth = 0;
+  let leftBranchCount = 0;
+  let rightBranchCount = 0;
+  for (let i = 0; i < spouseCardWidths.length; i++) {
+    const width = spouseCardWidths[i];
+    if (width === 0) continue; // solo-parent branch — no spouse card, no row width
+    if (i % 2 === 0) {
+      leftWidth += (leftBranchCount === 0 ? SPOUSE_GAP : REMARRIAGE_GAP) + width;
+      leftBranchCount++;
+    } else {
+      rightWidth += (rightBranchCount === 0 ? SPOUSE_GAP : REMARRIAGE_GAP) + width;
+      rightBranchCount++;
+    }
+  }
+  return CARD_WIDTH + 2 * Math.max(leftWidth, rightWidth);
 }
 
 export function measurePartnershipWidth(
@@ -315,8 +380,7 @@ function growPersonBranchDown(
   // awareness of which one is this call's actual blood relative).
   personIsLeftOverride?: boolean,
 ): void {
-  const { graph, occupancy, positionByPerson, junctionByPartnership, memo } =
-    ctx;
+  const { graph, occupancy, positionByPerson, junctionByPartnership } = ctx;
   if (positionByPerson.has(personId)) return; // already placed via a spouse's branch
 
   const person = graph.personById.get(personId);
@@ -338,46 +402,57 @@ function growPersonBranchDown(
     return;
   }
 
-  // Lay out this person's partnership branches side by side, centered on
-  // anchorX. Uses each branch's COMPACT width (own row only, never
-  // descendant depth) for the cursor here — this person's own position
-  // (anchorX) was itself handed down by a compact sibling-row cursor
-  // (growChildrenRowDown), which already measured THIS person's contribution
-  // to their row as measurePersonWidth(...).compactWidth (the sum of every
-  // partnership's own compactWidth, side by side). Using totalWidth here
-  // instead would silently disagree with that outer contract whenever any
-  // partnership already has children of its own (their totalWidth then
-  // exceeds their compactWidth) — real bug this replaces, caught on a random
-  // property-test fixture: a remarried person's SECOND partnership branch
-  // drifted away from their sibling row's compact center by exactly the
-  // difference between their combined totalWidth and compactWidth, close
-  // enough to overlap their own sibling's neighboring partnership branch.
-  const branchCompactWidths = [
-    ...partnerships.map(
-      (p) => measurePartnershipWidth(graph, p.id, memo).compactWidth,
-    ),
-    ...(solo ? [CARD_WIDTH] : []),
-  ];
-  const compactWidth =
-    branchCompactWidths.reduce((a, b) => a + b, 0) +
-    REMARRIAGE_GAP * Math.max(0, branchCompactWidths.length - 1);
+  // EXACTLY one partnership (the overwhelming common case, and every
+  // "ordinary descendant/ancestor branch" caller that has no marriage-count
+  // ambiguity to resolve): unchanged pre-multi-marriage geometry — the PAIR
+  // (personId + spouse) is centered on anchorX, personId's own card offset
+  // to whichever side isLeft/personIsLeftOverride picks. This is what every
+  // caller up the call chain (growChildrenRowDown's compact cursor,
+  // growPersonBranchUp's ancestor centering, placeGraph's own focus anchor)
+  // already assumes when it hands this function an anchorX meant as "the
+  // slot this whole unit occupies" — changing it to "personId's own exact
+  // position" for the single-partnership case would silently disagree with
+  // every one of those callers' own compactWidth/measurement math (real
+  // regression this restores: full siblings sharing a row, each with their
+  // OWN single spouse, ended up ~100px off their compact cursor slot and
+  // overlapping a neighbor, once personId's card stopped being centered on
+  // anchorX here).
+  //
+  // 2+ partnerships (remarriage): a DIFFERENT geometry applies — personId's
+  // own card is fixed exactly AT anchorX and every marriage's spouse
+  // alternates sides outward from it (multiPartnershipSpouseXs' own doc
+  // comment; CLAUDE.md TREE LAYOUT RULES §7 — Lamech between Adah and
+  // Zillah). This is safe specifically BECAUSE growChildrenRowDown's own
+  // compactWidth measurement (measurePersonWidth's multiPartnershipRowWidth
+  // branch) was written to match this exact "personId's card is the anchor,
+  // spouses fan out from it" shape for 2+ partnerships — the two are a
+  // matched pair, not independently chosen.
+  if (partnerships.length === 1) {
+    const isLeft =
+      personIsLeftOverride ?? partnerships[0].leftPersonId === personId;
+    const selfX = isLeft
+      ? anchorX - CARD_WIDTH / 2 - SPOUSE_GAP / 2
+      : anchorX + CARD_WIDTH / 2 + SPOUSE_GAP / 2;
+    positionByPerson.set(personId, { x: selfX, y });
+    occupancy.reserve({ x: selfX, y, width: CARD_WIDTH, height: CARD_HEIGHT });
+  } else {
+    positionByPerson.set(personId, { x: anchorX, y });
+    occupancy.reserve({
+      x: anchorX,
+      y,
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
+    });
+  }
 
-  let cursor = anchorX - compactWidth / 2;
-  let personPlaced = false;
+  const ownX = positionByPerson.get(personId)!.x;
+  const spouseXs = resolveSpouseXs(anchorX, ownX, partnerships);
 
   for (let i = 0; i < partnerships.length; i++) {
     const partnership = partnerships[i];
-    const width = branchCompactWidths[i];
-    const branchCenter = cursor + width / 2;
-    cursor += width + REMARRIAGE_GAP;
+    const spouseX = spouseXs[i];
+    const branchCenter = (ownX + spouseX) / 2;
 
-    const isLeft =
-      i === 0 && personIsLeftOverride !== undefined
-        ? personIsLeftOverride
-        : partnership.leftPersonId === personId;
-    const selfX = isLeft
-      ? branchCenter - CARD_WIDTH / 2 - SPOUSE_GAP / 2
-      : branchCenter + CARD_WIDTH / 2 + SPOUSE_GAP / 2;
     // Whichever of the partnership's two members is NOT personId — never
     // simply "the other of leftPersonId/rightPersonId keyed off isLeft",
     // which silently self-referenced personId whenever personIsLeftOverride
@@ -392,20 +467,7 @@ function growPersonBranchDown(
       partnership.leftPersonId === personId
         ? partnership.rightPersonId
         : partnership.leftPersonId;
-    const spouseX = isLeft
-      ? branchCenter + CARD_WIDTH / 2 + SPOUSE_GAP / 2
-      : branchCenter - CARD_WIDTH / 2 - SPOUSE_GAP / 2;
 
-    if (!personPlaced) {
-      positionByPerson.set(personId, { x: selfX, y });
-      occupancy.reserve({
-        x: selfX,
-        y,
-        width: CARD_WIDTH,
-        height: CARD_HEIGHT,
-      });
-      personPlaced = true;
-    }
     if (!positionByPerson.has(spouseId)) {
       positionByPerson.set(spouseId, { x: spouseX, y });
       occupancy.reserve({
@@ -416,9 +478,11 @@ function growPersonBranchDown(
       });
     }
 
-    const junctionX = (selfX + spouseX) / 2;
     const junctionY = y + CARD_HEIGHT / 2 + GENERATION_GAP / 2;
-    junctionByPartnership.set(partnership.id, { x: junctionX, y: junctionY });
+    junctionByPartnership.set(partnership.id, {
+      x: branchCenter,
+      y: junctionY,
+    });
 
     growChildrenRowDown(
       ctx,
@@ -434,24 +498,128 @@ function growPersonBranchDown(
   }
 
   if (solo) {
-    const width = branchCompactWidths[branchCompactWidths.length - 1];
-    const branchCenter = cursor + width / 2;
-    if (!personPlaced) {
-      positionByPerson.set(personId, { x: branchCenter, y });
-      occupancy.reserve({
-        x: branchCenter,
-        y,
-        width: CARD_WIDTH,
-        height: CARD_HEIGHT,
-      });
-    }
+    // Solo-parenthood has no spouse card of its own — it always occupies
+    // the NEXT slot in the alternating sequence after every real
+    // partnership (see multiPartnershipSpouseXs' own branchSlot doc
+    // comment), anchored on personId's own card directly (there is no
+    // second card to center a junction between).
     growChildrenRowDown(
       ctx,
       solo.childrenIds,
-      branchCenter,
+      anchorX,
       y + GENERATION_GAP,
     );
   }
+}
+
+/**
+ * Computes each marriage branch's spouse X position — first marriage's
+ * spouse to the LEFT of personId's own card (at anchorX), second to the
+ * RIGHT, third further LEFT (past the first branch), fourth further RIGHT,
+ * and so on, alternating outward — so a remarried person visually reads as
+ * standing "between" their marriages rather than at one end of a lineup
+ * (CLAUDE.md TREE LAYOUT RULES §7: e.g. Lamech between Adah and Zillah).
+ * Branch order follows `person.partnershipIds`' own array order (real
+ * chronological marriageOrder isn't computed yet — see
+ * Partnership.marriageOrder's own doc comment). Each side's own running
+ * cursor grows independently outward — SPOUSE_GAP between personId's own
+ * card and the first branch on each side (matching the single-partnership
+ * spacing exactly), REMARRIAGE_GAP between that side's own successive
+ * branches (each of which is just one spouse card wide — personId's own
+ * card is placed once, not once per branch, unlike the old cursor which
+ * measured each branch as a full self+spouse pair).
+ */
+function multiPartnershipSpouseXs(
+  personX: number,
+  partnershipCount: number,
+): number[] {
+  return multiPartnershipLayout(personX, partnershipCount).xs;
+}
+
+/**
+ * Shared implementation behind multiPartnershipSpouseXs (the per-branch
+ * spouse positions) AND unitOuterEdge (the outermost edge of the whole
+ * alternating-sides unit on a given side — needed by growSiblingRow: for a
+ * sibling with 2+ partnerships, the card FACING the sibling row's anchor is
+ * NOT necessarily the sibling's own card (that's only true for exactly one
+ * partnership) — it's whichever branch ended up outermost on that side, see
+ * growSiblingRow's own comment on why this matters).
+ */
+function multiPartnershipLayout(
+  personX: number,
+  partnershipCount: number,
+): { xs: number[]; leftEdge: number; rightEdge: number } {
+  const xs: number[] = new Array(partnershipCount);
+  // Each side's own edge starts at personId's own card edge; the first
+  // branch placed on a side is SPOUSE_GAP away from it (matching the
+  // single-partnership spacing exactly), every later branch on that SAME
+  // side is REMARRIAGE_GAP past the previous one.
+  let leftEdge = personX - CARD_WIDTH / 2;
+  let rightEdge = personX + CARD_WIDTH / 2;
+  let leftBranchCount = 0;
+  let rightBranchCount = 0;
+  for (let i = 0; i < partnershipCount; i++) {
+    if (i % 2 === 0) {
+      const gap = leftBranchCount === 0 ? SPOUSE_GAP : REMARRIAGE_GAP;
+      leftEdge -= gap + CARD_WIDTH;
+      xs[i] = leftEdge + CARD_WIDTH / 2;
+      leftBranchCount++;
+    } else {
+      const gap = rightBranchCount === 0 ? SPOUSE_GAP : REMARRIAGE_GAP;
+      rightEdge += gap + CARD_WIDTH;
+      xs[i] = rightEdge - CARD_WIDTH / 2;
+      rightBranchCount++;
+    }
+  }
+  return { xs, leftEdge, rightEdge };
+}
+
+/**
+ * The ONE shared formula for where each of personId's marriage spouses
+ * lands — used by BOTH growPersonBranchDown (the real placement) and
+ * predictRowCardPositions (its exact prediction, checked against occupancy
+ * before anything is placed) so the two can never drift out of sync with
+ * each other again (see predictRowCardPositions' own doc comment on the
+ * class of bug that caused — a check silently using different math than the
+ * real placement, letting a genuinely-colliding position through
+ * undetected).
+ *
+ * EXACTLY one partnership: the PAIR is centered on `anchorX` (unchanged
+ * pre-multi-marriage geometry — see growPersonBranchDown's own comment on
+ * why this must stay `anchorX`-centered, not `ownX`-centered, for this
+ * case); `ownX` is personId's own already-resolved position (offset from
+ * anchorX by growPersonBranchDown's own isLeft calculation), and the spouse
+ * lands CARD_WIDTH+SPOUSE_GAP away from `ownX` on the opposite side of the
+ * pair's center — equivalently, mirrored across anchorX from `ownX`.
+ * `personIsLeftOverride` (and its gender-based default,
+ * `partnership.leftPersonId === personId`) decides which side that is —
+ * this is growSiblingRow's "which side does this blood relative's own card
+ * face" decision (see that parameter's own doc comment on
+ * growPersonBranchDown).
+ *
+ * 2+ partnerships: alternating sides by marriage order
+ * (multiPartnershipSpouseXs), fanning out from `ownX` (== `anchorX` for
+ * this case — see growPersonBranchDown's own comment) — which side each
+ * spouse sits on is a matter of marriage order there, not a single
+ * left/right choice, so neither the override nor the gender default has
+ * anything left to control.
+ */
+function resolveSpouseXs(
+  anchorX: number,
+  ownX: number,
+  partnerships: Partnership[],
+): number[] {
+  if (partnerships.length !== 1) {
+    return multiPartnershipSpouseXs(ownX, partnerships.length);
+  }
+  // Mirroring ownX across anchorX gives the spouse's position directly:
+  // ownX = anchorX ∓ (CARD_WIDTH/2+SPOUSE_GAP/2), so the spouse (on the
+  // opposite side of the pair's center) is anchorX ± the same offset,
+  // i.e. 2*anchorX - ownX. personIsLeftOverride/gender were already baked
+  // into ownX by the caller (growPersonBranchDown's own isLeft branch, or
+  // predictRowCardPositions' ownCardOffsetFromAnchor call) — nothing left
+  // for this function itself to decide for the single-partnership case.
+  return [2 * anchorX - ownX];
 }
 
 function growSpouseOwnPartnershipsDown(
@@ -1020,33 +1188,17 @@ function placeAncestorUnit(
  * spouse from every partnership — never descendants, which land one full
  * GENERATION_GAP further down and can never collide with anything at THIS
  * y no matter how wide their own subtree is) — without actually placing
- * anything. Mirrors growPersonBranchDown's own cursor math EXACTLY,
- * including using each partnership's compactWidth (own row only, never
- * descendant depth — CLAUDE.md TREE LAYOUT RULES §5 "родные сиблинги рядом")
- * for cursor SPACING between REMARRIAGE branches, same as
- * growPersonBranchDown itself. An earlier version of both functions used
- * totalWidth here (descendant-inclusive), which was the deliberately correct
- * choice back when child ROWS were also spaced by totalWidth — once
- * growChildrenRowDown switched sibling-row spacing to compactWidth so full
- * siblings stay adjacent regardless of subtree depth, this function had to
- * switch too or it would silently mispredict where growPersonBranchDown
- * actually places a remarried person's second partnership branch, letting a
- * genuinely-colliding position through this function's own check undetected
- * (the ONE prior real bug this same doc comment used to describe was the
- * mirror-image mistake — using flat CARD_WIDTH*2+SPOUSE_GAP back when
- * totalWidth was the correct cursor unit; the lesson generalizes: whichever
- * width unit growPersonBranchDown's actual cursor uses, this function must
- * use the exact same one).
+ * anything. Mirrors growPersonBranchDown's own placement math EXACTLY: the
+ * PAIR is centered on anchorX for exactly one partnership (personId's own
+ * card offset via ownCardOffsetFromAnchor), personId's own card is exactly
+ * AT anchorX for 2+ (see that function's own doc comment), and every
+ * spouse lands via the SAME resolveSpouseXs helper growPersonBranchDown
+ * itself uses.
  */
 function predictRowCardPositions(
   graph: NormalizedGraph,
   personId: string,
   anchorX: number,
-  memo: Map<string, SubtreeMeasurement>,
-  // Must match whatever override growPersonBranchDown/ownCardOffsetFromAnchor
-  // will be called with for this same personId — see
-  // growPersonBranchDown's own doc comment on personIsLeftOverride. Kept in
-  // sync manually by growSiblingRow.
   personIsLeftOverride?: boolean,
 ): number[] {
   const person = graph.personById.get(personId);
@@ -1058,121 +1210,93 @@ function predictRowCardPositions(
   const solo = graph.soloParentByPersonId.get(personId);
   if (partnerships.length === 0 && !solo) return [anchorX];
 
-  // Must use compactWidth, matching growPersonBranchDown's own cursor
-  // exactly (see that function's doc comment on why REMARRIAGE-branch
-  // cursor spacing switched from totalWidth to compactWidth) — this
-  // function's whole contract is mirroring growPersonBranchDown's real
-  // placement math so callers can check occupancy against it BEFORE
-  // actually placing anything (see this function's own doc comment).
-  const branchCompactWidths = [
-    ...partnerships.map(
-      (p) => measurePartnershipWidth(graph, p.id, memo).compactWidth,
-    ),
-    ...(solo ? [CARD_WIDTH] : []),
-  ];
-  const compactWidth =
-    branchCompactWidths.reduce((a, b) => a + b, 0) +
-    REMARRIAGE_GAP * Math.max(0, branchCompactWidths.length - 1);
-
-  let cursor = anchorX - compactWidth / 2;
-  const positions: number[] = [];
-  let personPlaced = false;
-
-  for (let i = 0; i < partnerships.length; i++) {
-    const partnership = partnerships[i];
-    const width = branchCompactWidths[i];
-    const branchCenter = cursor + width / 2;
-    cursor += width + REMARRIAGE_GAP;
-
-    const isLeft =
-      i === 0 && personIsLeftOverride !== undefined
-        ? personIsLeftOverride
-        : partnership.leftPersonId === personId;
-    const selfX = isLeft
-      ? branchCenter - CARD_WIDTH / 2 - SPOUSE_GAP / 2
-      : branchCenter + CARD_WIDTH / 2 + SPOUSE_GAP / 2;
-    const spouseX = isLeft
-      ? branchCenter + CARD_WIDTH / 2 + SPOUSE_GAP / 2
-      : branchCenter - CARD_WIDTH / 2 - SPOUSE_GAP / 2;
-
-    if (!personPlaced) {
-      positions.push(selfX);
-      personPlaced = true;
-    }
-    positions.push(spouseX);
-  }
-
-  if (solo) {
-    const width = branchCompactWidths[branchCompactWidths.length - 1];
-    const branchCenter = cursor + width / 2;
-    if (!personPlaced) positions.push(branchCenter);
-  }
-
-  return positions;
+  const ownX =
+    anchorX + ownCardOffsetFromAnchor(graph, personId, personIsLeftOverride);
+  const spouseXs = resolveSpouseXs(anchorX, ownX, partnerships);
+  return [ownX, ...spouseXs];
 }
 
 /**
  * The signed X offset of `personId`'s OWN card relative to whatever
  * `anchorX` would be passed into growPersonBranchDown(personId, anchorX,
- * ...) — i.e. `ownCardX - anchorX`. growPersonBranchDown centers a person's
- * FULL subtree (their own card plus their spouse's card plus every
- * descendant) around `anchorX`, so for anyone with a partnership/solo-parent
- * branch, their OWN card sits offset from that center, not AT it — this
- * mirrors that exact same math (branchCenter for the person's FIRST
- * partnership/solo branch, i=0 in growPersonBranchDown's own loop, since
- * that's always the branch that places the person's own card) so callers
- * that need to land a specific person's card at an EXACT target x (not just
- * "somewhere in the middle of their subtree") can invert it: pass
- * `targetOwnX - ownCardOffsetFromAnchor(...)` as anchorX.
+ * ...) — i.e. `ownCardX - anchorX`. Zero for 0 or 2+ partnerships
+ * (childless/unpartnered people are placed exactly at anchorX; a remarried
+ * person's own card is also exactly at anchorX, with every spouse
+ * alternating out from it — see multiPartnershipSpouseXs' own doc comment).
+ * Nonzero for EXACTLY one partnership — that case centers the PAIR (not
+ * personId's own card) on anchorX, so personId's own card sits offset from
+ * it by half a spouse-pair-width, mirroring growPersonBranchDown's own
+ * single-partnership branch exactly (see that function's own comment on
+ * why the single-partnership case must stay anchorX-centered-on-the-pair,
+ * not anchorX-centered-on-personId, unlike the 2+ case).
  */
 function ownCardOffsetFromAnchor(
   graph: NormalizedGraph,
   personId: string,
-  memo: Map<string, SubtreeMeasurement>,
-  // Must match whatever personIsLeftOverride growPersonBranchDown will be
-  // called with for this same personId — see that parameter's own doc
-  // comment. Kept in sync manually by growSiblingRow (the only caller of
-  // either with a non-default override); a mismatch between the two would
-  // silently break the "resolvedOwnX round-trips through subtreeAnchorX"
-  // invariant this function's own doc comment describes.
   personIsLeftOverride?: boolean,
 ): number {
   const person = graph.personById.get(personId);
   if (!person) return 0;
-
   const partnerships = person.partnershipIds
     .map((id) => graph.partnershipById.get(id))
     .filter((p): p is Partnership => Boolean(p));
-  const solo = graph.soloParentByPersonId.get(personId);
-  if (partnerships.length === 0 && !solo) return 0; // childless/unpartnered — own card IS the anchor
-
-  // Must use compactWidth, matching growPersonBranchDown's own cursor
-  // exactly (see that function's doc comment on why REMARRIAGE-branch
-  // cursor spacing switched from totalWidth to compactWidth).
-  const branchCompactWidths = [
-    ...partnerships.map(
-      (p) => measurePartnershipWidth(graph, p.id, memo).compactWidth,
-    ),
-    ...(solo ? [CARD_WIDTH] : []),
-  ];
-  const compactWidth =
-    branchCompactWidths.reduce((a, b) => a + b, 0) +
-    REMARRIAGE_GAP * Math.max(0, branchCompactWidths.length - 1);
-  // The person's own card is always placed on branch i=0 (their FIRST
-  // partnership, or their solo branch if that's their only branch) — see
-  // growPersonBranchDown's own `personPlaced` flag, set true on the first
-  // iteration and never reconsidered after.
-  const firstWidth = branchCompactWidths[0];
-  const branchCenterOffset = -compactWidth / 2 + firstWidth / 2;
-
-  if (partnerships.length === 0) return branchCenterOffset; // solo-only — own card IS this branch's center
+  if (partnerships.length !== 1) return 0;
 
   const isLeft =
     personIsLeftOverride ?? partnerships[0].leftPersonId === personId;
-  const selfOffset = isLeft
+  return isLeft
     ? -CARD_WIDTH / 2 - SPOUSE_GAP / 2
     : CARD_WIDTH / 2 + SPOUSE_GAP / 2;
-  return branchCenterOffset + selfOffset;
+}
+
+/**
+ * The signed X offset of the card FACING growSiblingRow's anchor (the "near
+ * edge" of `personId`'s whole marriage unit) relative to whatever `anchorX`
+ * would be passed into growPersonBranchDown(personId, anchorX, ...).
+ *
+ * For 0 or 1 partnerships this is exactly ownCardOffsetFromAnchor —
+ * personId's own card either IS the whole unit (childless/unpartnered) or
+ * IS the near-edge card (a single partnership always puts personId's own
+ * card at the edge, spouse on the far side — see that function's own
+ * comment).
+ *
+ * For 2+ partnerships this DIFFERS from ownCardOffsetFromAnchor: personId's
+ * own card sits in the MIDDLE of their alternating-sides marriages (always
+ * exactly at anchorX — see growPersonBranchDown's own comment), so the card
+ * actually facing the sibling row's anchor is whichever spouse branch ended
+ * up OUTERMOST on the anchor side, not personId's own card. Real bug this
+ * fixes: growSiblingRow used to always treat personId's own card as the
+ * near-edge card regardless of marriage count, so a sibling with 2+
+ * partnerships in an ancestor sibling row got anchored ~2 branch-widths off
+ * from where their actual near-edge card needed to land, overlapping an
+ * unrelated neighbor (caught by property testing on a random graph with a
+ * 3-marriage ancestor sibling).
+ *
+ * `isNearSideLeft` says which side of the pair faces the anchor — same
+ * meaning as personIsLeftOverride/siblingIsLeft in growSiblingRow: true
+ * means the anchor is to the LEFT, so the near-edge card is on personId's
+ * LEFT side of their unit.
+ */
+function nearEdgeOffsetFromAnchor(
+  graph: NormalizedGraph,
+  personId: string,
+  isNearSideLeft: boolean,
+): number {
+  const person = graph.personById.get(personId);
+  if (!person) return 0;
+  const partnerships = person.partnershipIds
+    .map((id) => graph.partnershipById.get(id))
+    .filter((p): p is Partnership => Boolean(p));
+  if (partnerships.length <= 1) {
+    return ownCardOffsetFromAnchor(graph, personId, isNearSideLeft);
+  }
+
+  // personId's own card is at anchorX (see growPersonBranchDown's own 2+
+  // partnership branch) — multiPartnershipLayout(0, ...) gives the outer
+  // edges of the WHOLE unit relative to that same origin; the near-edge
+  // CARD's center is CARD_WIDTH/2 in from whichever edge faces the anchor.
+  const { leftEdge, rightEdge } = multiPartnershipLayout(0, partnerships.length);
+  return isNearSideLeft ? leftEdge + CARD_WIDTH / 2 : rightEdge - CARD_WIDTH / 2;
 }
 
 /**
@@ -1315,7 +1439,13 @@ function growSiblingRow(
       },
       0,
     );
-    const resolvedOwnX = tightFree
+    // Despite the name, this is the resolved position of the unit's
+    // NEAR-EDGE card, not necessarily siblingId's own card — see
+    // nearEdgeOffsetFromAnchor's own doc comment: with 2+ partnerships,
+    // siblingId's own card sits in the MIDDLE of their marriages, so the
+    // card actually facing the anchor is one of their spouses (whichever
+    // branch ended up outermost on the anchor side).
+    const resolvedNearEdgeX = tightFree
       ? targetNearSideCenterX
       : (occupancy.findFreeInterval(
           y,
@@ -1327,13 +1457,9 @@ function growSiblingRow(
           growRight ? 1 : -1,
         ) ?? targetNearSideCenterX);
 
-    const offset = ownCardOffsetFromAnchor(
-      graph,
-      siblingId,
-      memo,
-      siblingIsLeft,
-    );
-    const subtreeAnchorX = resolvedOwnX - offset;
+    const subtreeAnchorX =
+      resolvedNearEdgeX -
+      nearEdgeOffsetFromAnchor(graph, siblingId, siblingIsLeft);
 
     // The near-side-only check above (tightFree/findFreeInterval) only ever
     // verified THIS sibling's own tight card slot (plus, when applicable,
@@ -1371,7 +1497,6 @@ function growSiblingRow(
       graph,
       siblingId,
       subtreeAnchorX,
-      memo,
       siblingIsLeft,
     );
     const allCardsFree = predictedCardXs.every(
@@ -1381,7 +1506,7 @@ function growSiblingRow(
           0,
         ),
     );
-    let finalResolvedOwnX = resolvedOwnX;
+    let finalNearEdgeX = resolvedNearEdgeX;
     let finalSubtreeAnchorX = subtreeAnchorX;
     if (!allCardsFree) {
       // Fallback: widen the search outward from the tight target, checking
@@ -1399,7 +1524,6 @@ function growSiblingRow(
           graph,
           siblingId,
           candidateAnchorX,
-          memo,
           siblingIsLeft,
         );
         const candidateFree = candidateCardXs.every(
@@ -1411,7 +1535,9 @@ function growSiblingRow(
         );
         if (candidateFree) {
           finalSubtreeAnchorX = candidateAnchorX;
-          finalResolvedOwnX = candidateAnchorX + offset;
+          finalNearEdgeX =
+            candidateAnchorX +
+            nearEdgeOffsetFromAnchor(graph, siblingId, siblingIsLeft);
           break;
         }
         // If the bounded search exhausts its radius without finding a
@@ -1426,7 +1552,13 @@ function growSiblingRow(
 
     growPersonBranchDown(ctx, siblingId, finalSubtreeAnchorX, y, siblingIsLeft);
 
-    anchorX = finalResolvedOwnX;
+    // The NEXT sibling in this row grows from THIS sibling's own near-edge
+    // card (facing the anchor) — never from siblingId's own card position
+    // when those differ (2+ partnerships put siblingId's card in the
+    // MIDDLE, not at the edge — see nearEdgeOffsetFromAnchor's own doc
+    // comment) — so the exact SIBLING_GAP spacing between blood relatives
+    // holds regardless of how many marriages either one has.
+    anchorX = finalNearEdgeX;
   }
 }
 

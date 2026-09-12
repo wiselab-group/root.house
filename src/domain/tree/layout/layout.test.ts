@@ -1632,3 +1632,141 @@ describe("layout engine — compact sibling row regardless of one sibling's deep
     expect(positionMap(r1)).toEqual(positionMap(r2));
   });
 });
+
+describe("multiple marriages laid out on opposite sides (Lamech between Adah and Zillah)", () => {
+  // Regression fixture matching the real Biblical-scale data that surfaced
+  // this: Lamech has two wives, Adah (with children Jabal/Jubal) and Zillah
+  // (with children Tubal-cain/Naamah), plus Noah recorded as Lamech's solo
+  // child (no mother recorded) — CLAUDE.md TREE LAYOUT RULES §7. Per the
+  // user's explicit request: "если у мужчины две жены то их размещать по
+  // обе стороны" (if a man has two wives, place them on opposite sides).
+  const focusId = "lamech";
+
+  function lamechTwoWives(): FamilyGraph {
+    const persons: FamilyGraph["persons"] = [
+      { id: "lamech", firstName: "Lamech", lastName: "", gender: "male" },
+      { id: "adah", firstName: "Adah", lastName: "", gender: "female" },
+      { id: "zillah", firstName: "Zillah", lastName: "", gender: "female" },
+      { id: "jabal", firstName: "Jabal", lastName: "", gender: "unknown" },
+      { id: "jubal", firstName: "Jubal", lastName: "", gender: "unknown" },
+      { id: "tubalcain", firstName: "Tubal-cain", lastName: "", gender: "unknown" },
+      { id: "naamah", firstName: "Naamah", lastName: "", gender: "unknown" },
+      { id: "noah", firstName: "Noah", lastName: "", gender: "unknown" },
+    ];
+    const relationships: FamilyGraph["relationships"] = [
+      { id: "lamech-adah", kind: "spouse", from: "lamech", to: "adah" },
+      { id: "lamech-zillah", kind: "spouse", from: "lamech", to: "zillah" },
+      { id: "pc-jabal-a", kind: "parent-child", from: "lamech", to: "jabal" },
+      { id: "pc-jabal-b", kind: "parent-child", from: "adah", to: "jabal" },
+      { id: "pc-jubal-a", kind: "parent-child", from: "lamech", to: "jubal" },
+      { id: "pc-jubal-b", kind: "parent-child", from: "adah", to: "jubal" },
+      { id: "pc-tubalcain-a", kind: "parent-child", from: "lamech", to: "tubalcain" },
+      { id: "pc-tubalcain-b", kind: "parent-child", from: "zillah", to: "tubalcain" },
+      { id: "pc-naamah-a", kind: "parent-child", from: "lamech", to: "naamah" },
+      { id: "pc-naamah-b", kind: "parent-child", from: "zillah", to: "naamah" },
+      // Noah: recorded under Lamech only (no mother) — a genuine solo-parent
+      // child ALONGSIDE two real partnerships, not miscategorized into one
+      // of them (see tree-layout-compact-sibling-row memory's open
+      // follow-up on the separate sharedChildren/sparseDataUnion bug this
+      // fixture deliberately sidesteps by giving Noah no recorded mother at
+      // all, rather than testing that unrelated data-modeling bug here).
+      { id: "pc-noah", kind: "parent-child", from: "lamech", to: "noah" },
+    ];
+    return { persons, relationships };
+  }
+
+  it("Adah and Zillah sit on OPPOSITE sides of Lamech's own card, not side by side on one side", () => {
+    const result = buildTreeLayout(lamechTwoWives(), focusId);
+    const lamech = personById(result, focusId);
+    const adah = personById(result, "adah");
+    const zillah = personById(result, "zillah");
+    expect(adah.x).toBeLessThan(lamech.x);
+    expect(zillah.x).toBeGreaterThan(lamech.x);
+    expect(lamech.x - adah.x).toBeCloseTo(CARD_WIDTH + SPOUSE_GAP, 5);
+    expect(zillah.x - lamech.x).toBeCloseTo(CARD_WIDTH + SPOUSE_GAP, 5);
+  });
+
+  it("Noah (Lamech's solo-parent child, no recorded mother) lands one generation below Lamech, reasonably close to Lamech's own x", () => {
+    // Noah's row (y = lamech.y + GENERATION_GAP) is already occupied by
+    // Jabal/Jubal/Tubal-cain/Naamah (Adah's and Zillah's children), so an
+    // occupancy search legitimately displaces Noah sideways from x=0 to
+    // find a free slot — this is the SAME "childless-only-child not exactly
+    // under the parent junction" shape CLAUDE.md's downward-strand-gap
+    // repair pass exists for, not a regression in THIS fix. The assertion
+    // here only checks the two things this fix (opposite-sides marriages)
+    // actually promises: Noah is one generation down, and within a few
+    // card-widths of Lamech, not thousands of px away.
+    const result = buildTreeLayout(lamechTwoWives(), focusId);
+    const lamech = personById(result, focusId);
+    const noah = personById(result, "noah");
+    expect(noah.y).toBeGreaterThan(lamech.y);
+    expect(Math.abs(noah.x - lamech.x)).toBeLessThan(CARD_WIDTH * 4);
+  });
+
+  it("has no overlaps", () => {
+    const result = buildTreeLayout(lamechTwoWives(), focusId);
+    expect(detectOverlaps(positionMap(result))).toEqual([]);
+  });
+
+  it("is deterministic", () => {
+    const graph = lamechTwoWives();
+    const r1 = buildTreeLayout(graph, focusId);
+    const r2 = buildTreeLayout(graph, focusId);
+    expect(positionMap(r1)).toEqual(positionMap(r2));
+  });
+});
+
+describe("odd marriage count (3 marriages) stays symmetric around the person's own card", () => {
+  // Regression test for a real bug caught by property testing: with an ODD
+  // number of marriages (2 branches on one side, 1 on the other), the
+  // person's own card is still fixed exactly at the row's own childCenter
+  // (growPersonBranchDown's 2+ partnership branch), but the WIDER side then
+  // extends further from that center than the narrower side — an
+  // un-mirrored compactWidth (left+right, not symmetric) reserved the
+  // correct TOTAL area but assumed it was centered on childCenter, so an
+  // unrelated neighboring sibling on the narrow side ended up inside the
+  // real (off-center) unit's footprint. Fixed by mirroring the wider side
+  // (compactWidth = CARD_WIDTH + 2*max(leftWidth, rightWidth)) — see
+  // multiPartnershipRowWidth's own doc comment.
+  const focusId = "focus";
+
+  function personWithThreeMarriages(): FamilyGraph {
+    const persons: FamilyGraph["persons"] = [
+      { id: "focus", firstName: "Focus", lastName: "", gender: "male" },
+      { id: "sibling", firstName: "Sibling", lastName: "", gender: "unknown" },
+      { id: "parent", firstName: "Parent", lastName: "", gender: "unknown" },
+      { id: "thrice", firstName: "Thrice", lastName: "", gender: "male" },
+      { id: "wife1", firstName: "Wife1", lastName: "", gender: "female" },
+      { id: "wife2", firstName: "Wife2", lastName: "", gender: "female" },
+      { id: "wife3", firstName: "Wife3", lastName: "", gender: "female" },
+    ];
+    const relationships: FamilyGraph["relationships"] = [
+      // "focus" and "thrice" are full siblings sharing a solo parent —
+      // "sibling" is squeezed in the middle for the property-test-shaped
+      // topology, but the key case is focus/thrice adjacency.
+      { id: "pc-focus", kind: "parent-child", from: "parent", to: "focus" },
+      { id: "pc-sibling", kind: "parent-child", from: "parent", to: "sibling" },
+      { id: "pc-thrice", kind: "parent-child", from: "parent", to: "thrice" },
+      { id: "thrice-wife1", kind: "spouse", from: "thrice", to: "wife1" },
+      { id: "thrice-wife2", kind: "spouse", from: "thrice", to: "wife2" },
+      { id: "thrice-wife3", kind: "spouse", from: "thrice", to: "wife3" },
+    ];
+    return { persons, relationships };
+  }
+
+  it("has no overlaps between the thrice-married sibling's branches and their own neighboring sibling", () => {
+    const result = buildTreeLayout(personWithThreeMarriages(), focusId);
+    expect(detectOverlaps(positionMap(result))).toEqual([]);
+  });
+
+  it("thrice's own card sits at the row's compact cursor slot, wives alternating left/right/left", () => {
+    const result = buildTreeLayout(personWithThreeMarriages(), focusId);
+    const thrice = personById(result, "thrice");
+    const wife1 = personById(result, "wife1");
+    const wife2 = personById(result, "wife2");
+    const wife3 = personById(result, "wife3");
+    expect(wife1.x).toBeLessThan(thrice.x); // 1st marriage: left
+    expect(wife2.x).toBeGreaterThan(thrice.x); // 2nd marriage: right
+    expect(wife3.x).toBeLessThan(wife1.x); // 3rd marriage: further left
+  });
+});
