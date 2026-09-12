@@ -415,7 +415,21 @@ export function TreeCanvas({
     setEdges(initialEdges);
   }, [initialEdges, setEdges]);
 
-  const focusNode = nodes.find(
+  // Read from `initialNodes` (this render's own freshly-computed layout, via
+  // the useMemo above), NOT `nodes` (the useNodesState mirror) — `nodes` only
+  // catches up to a NEW `initialNodes` in the setNodes effect above, one
+  // render later. Right after a focus switch (setFocus/buildClientTreeLayout
+  // relays out the WHOLE graph around the new focus, including their own
+  // position moving to x=0), the very first render already has the correct
+  // `initialNodes` but `nodes` is still the PREVIOUS focus's layout — finding
+  // focusNode there returned the new focus person's OLD, pre-relayout
+  // position, and FocusViewport's effect (keyed on focusNode?.id, which HAD
+  // changed) centered on that stale position — the canvas visibly scrolling
+  // to the wrong spot, since the id never changes again on the next render
+  // once `nodes` catches up (real bug the user caught, both as "doesn't
+  // scroll at all" on the id-only-comparison fix's variant and as "scrolls
+  // to the wrong place" here).
+  const focusNode = initialNodes.find(
     (node) => node.id === effectiveGraph.focusPersonId,
   );
   // Passed to CardStyleInternalsSync below — recomputing this plain array
