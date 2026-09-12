@@ -42,6 +42,10 @@ export function UnionChildEdge({
   const parentB = useTreeNodeGeometry(data?.parentBId ?? "");
   const targetNode = useTreeNodeGeometry(target);
   const isOnTracePath = data?.isOnTracePath === true;
+  // Same undefined-vs-false distinction as RelationshipEdge's own isDimmed:
+  // undefined means no trace is active (never dim), false means a trace IS
+  // active and this trunk isn't part of it.
+  const isDimmed = data?.isOnTracePath === false;
   // This trunk is always drawn parent→child (tracedStart/trunkPoints below
   // both run toward targetX/targetY) — same meaning as
   // RelationshipEdgeData.traceDirection (xyflow-adapter.ts computes this
@@ -153,6 +157,7 @@ export function UnionChildEdge({
       style={{
         strokeWidth: isOnTracePath ? 3 : 2,
         stroke: isOnTracePath ? TRACE_COLOR : "var(--branch)",
+        opacity: isDimmed ? 0.35 : 1,
       }}
     />
   );

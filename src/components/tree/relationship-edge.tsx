@@ -65,6 +65,13 @@ export function RelationshipEdge({
   const isPartnership = type === "partnership";
   const isPastPartnership = isPartnership && data?.isCurrent === false;
   const isOnTracePath = data?.isOnTracePath === true;
+  // isOnTracePath collapses false/undefined together, but they mean
+  // different things: undefined is "no trace active at all" (every line
+  // stays normal), false is "a trace IS active and this edge isn't part of
+  // it" (see xyflow-adapter.ts — traceEdgeIds present, even empty, means a
+  // trace is active). Only the latter should fade the line, mirroring
+  // person-node.tsx's own isDimmed (isOnTracePath === false).
+  const isDimmed = data?.isOnTracePath === false;
   // Defaults to 1 (forward) — only read once isOnTracePath is true, where
   // xyflow-adapter.ts always sets a real value (see traceDirection's own
   // doc comment), so this fallback never actually applies in practice.
@@ -84,6 +91,7 @@ export function RelationshipEdge({
         source={source}
         target={target}
         isOnTracePath={isOnTracePath}
+        isDimmed={isDimmed}
         traceDirection={traceDirection}
         isMiddleSibling={data?.isMiddleSibling === true}
       />
@@ -97,6 +105,7 @@ export function RelationshipEdge({
       target={target}
       isPastPartnership={isPastPartnership}
       isOnTracePath={isOnTracePath}
+      isDimmed={isDimmed}
       traceDirection={traceDirection}
       tracedPartnerId={data?.tracedPartnerId}
     />
@@ -108,6 +117,7 @@ function ParentChildEdgeLine({
   source,
   target,
   isOnTracePath,
+  isDimmed,
   traceDirection,
   isMiddleSibling,
 }: {
@@ -115,6 +125,7 @@ function ParentChildEdgeLine({
   source: string;
   target: string;
   isOnTracePath: boolean;
+  isDimmed: boolean;
   traceDirection: 1 | -1;
   isMiddleSibling: boolean;
 }) {
@@ -176,6 +187,7 @@ function ParentChildEdgeLine({
       style={{
         strokeWidth: isOnTracePath ? 3 : 2,
         stroke: isOnTracePath ? TRACE_COLOR : "var(--branch)",
+        opacity: isDimmed ? 0.35 : 1,
       }}
     />
   );
@@ -196,6 +208,7 @@ function PartnershipEdgeLine({
   target,
   isPastPartnership,
   isOnTracePath,
+  isDimmed,
   traceDirection,
   tracedPartnerId,
 }: {
@@ -204,6 +217,7 @@ function PartnershipEdgeLine({
   target: string;
   isPastPartnership: boolean;
   isOnTracePath: boolean;
+  isDimmed: boolean;
   traceDirection: 1 | -1;
   tracedPartnerId?: string;
 }) {
@@ -280,6 +294,7 @@ function PartnershipEdgeLine({
         style={{
           strokeWidth: 1.5,
           stroke: "var(--branch)",
+          opacity: isDimmed ? 0.35 : 1,
           ...dashStyle,
         }}
       />
@@ -298,6 +313,7 @@ function PartnershipEdgeLine({
       style={{
         strokeWidth: isOnTracePath ? 3 : 1.5,
         stroke: isOnTracePath ? TRACE_COLOR : "var(--branch)",
+        opacity: isDimmed ? 0.35 : 1,
         // While traced, the class's own "6 4" dasharray drives the line
         // (current/past marriage's "5 3"/"2 4" pattern is skipped here) —
         // the marching-ants keyframe's dashoffset is a fixed multiple of

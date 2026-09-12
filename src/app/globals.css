@@ -282,3 +282,15 @@
 .react-flow__nodes {
   z-index: 1;
 }
+
+/* Relationship Trace dims every non-traced line to the same opacity
+   person-node.tsx's own isDimmed uses for non-traced cards (see
+   relationship-edge.tsx/union-child-edge.tsx's isDimmed) — this transition
+   is what makes that fade smooth instead of an instant snap, matching the
+   card's own transition-[opacity,box-shadow]. Scoped to .react-flow__edge
+   path (not a blanket "* path") so it never touches unrelated SVG, e.g.
+   avatar icons. The global prefers-reduced-motion rule above already zeroes
+   transition-duration for every element, this included. */
+.react-flow__edge path {
+  transition: opacity 200ms var(--ease-tree-focus);
+}
