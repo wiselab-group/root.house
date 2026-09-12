@@ -50,12 +50,14 @@ Visual Target: Awwwards/FWA-уровень качества, но тёплый �
 
 - **Терракота** (hue 45, `--primary`) — единственный цвет ДЕЙСТВИЯ во всём
   приложении, включая дерево: кнопки, badges, brand mark, а внутри дерева —
-  ИСКЛЮЧИТЕЛЬНО keyboard-selected карточка (`isSelected` в
-  `person-node-parts.tsx`) и линия Relationship Trace (`TRACE_COLOR` в
-  `relationship-edge.tsx`). Никогда не используется как состояние покоя.
-  Focus-person и traced-карточки (`isFocusOrTraced`) сами по себе остаются
-  на sage — терракотовым выделяется только линия трейса и
-  keyboard-selected карточка, не рамка фокус-персоны.
+  ИСКЛЮЧИТЕЛЬНО Relationship Trace карточка (`isTraced` в
+  `person-node-parts.tsx`/`compact-card-body.tsx`, линия — `TRACE_COLOR` в
+  `relationship-edge.tsx`) и keyboard-selected карточка (`isSelected`).
+  Никогда не используется как состояние покоя. Focus-person — единственное
+  исключение из «terracotta = traced»: даже когда сам фокус оказывается
+  одним из концов активного trace, его рамка остаётся sage (просто
+  акцентирована вторым ring) — `isTraceHighlighted` в `person-node.tsx`
+  явно исключает `isFocus`.
 - **Приглушённый sage/оливковый** (hue 126, `--tree-accent`) — цвет
   ИДЕНТИЧНОСТИ внутри дерева: постоянная обводка/ring КАЖДОЙ карточки (обеих
   cardStyle — portrait и compact), видна всегда, не только в фокусе, ОДНИМ
@@ -71,12 +73,12 @@ Visual Target: Awwwards/FWA-уровень качества, но тёплый �
   «ствола» дерева (`relationship-edge.tsx`, `union-child-edge.tsx`), всегда
   структурный фон, никогда не incidental UI-акцент.
 
-Ключевое правило: sage = «это человек» (постоянно, включая фокус и trace —
-их рамка/ring остаются sage, просто акцентированы вторым ring), терракота =
-«это конкретная карточка, на которую ты только что перешёл клавиатурой»
-(`isSelected`) плюс сама линия Relationship Trace — их нельзя менять
-местами или смешивать в одном элементе (см. `buildCardFrameClassName`'s
-собственный doc-комментарий). Все три hue подобраны и проверены на
+Ключевое правило: sage = «это человек» (постоянно, включая фокус — его
+рамка/ring остаются sage, просто акцентированы вторым ring), терракота =
+«это то, на что ты сейчас смотришь/что выбрал» (Relationship Trace карточка
+и линия, keyboard-selected карточка) — их нельзя менять местами или
+смешивать в одном элементе (см. `buildCardFrameClassName`'s собственный
+doc-комментарий). Все три hue подобраны и проверены на
 WCAG-контраст (см. DESIGN.md § Color Tokens) так, чтобы читаться как
 «кора/ветки/листва», не конфликтуя друг с другом; НЕ стартаперский
 сине-фиолетовый градиент. Заголовки — Lora (`.font-heading`), UI — Geist

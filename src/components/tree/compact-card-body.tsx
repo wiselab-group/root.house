@@ -14,15 +14,18 @@ export function CompactCardBody({
   name,
   years,
   initials,
-  isHighlighted,
+  isFocus,
+  isTraced,
   isSelected,
 }: {
   data: PersonFlowNode["data"];
   name: string;
   years: string | null;
   initials: string;
-  /** Focus person or on the currently traced relationship path — stays the sage identity color (thicker ring), not terracotta; see buildCardFrameClassName's own comment on that split. */
-  isHighlighted: boolean;
+  /** Focus person — stays the sage identity color (thicker ring), not terracotta; see buildCardFrameClassName's own comment on that split. */
+  isFocus: boolean;
+  /** On the currently traced relationship path (and not itself the focus person) — terracotta, person-node.tsx's usual border-primary treatment on the portrait style, moved to a ring around the avatar here since this style has no card border of its own. */
+  isTraced: boolean;
   /** Keyboard-selected (person-node.tsx's usual ring-ring treatment). */
   isSelected: boolean;
 }) {
@@ -46,17 +49,19 @@ export function CompactCardBody({
         // rather than a strip above it (as in portrait-card-body.tsx) — a
         // strip here would sit between the connector line and the avatar,
         // breaking the "line touches the avatar" contact this card style is
-        // built around. isHighlighted (focus/traced) stays the same sage
-        // (--tree-accent) identity color, just thickened with a second ring
-        // for emphasis — terracotta (--primary) is reserved for isSelected
-        // (keyboard navigation) only (see buildCardFrameClassName's own
-        // comment on that split).
+        // built around. isFocus stays the same sage (--tree-accent) identity
+        // color, just thickened with a second ring for emphasis — isTraced
+        // switches to terracotta (--primary) instead, the one color reserved
+        // for "what the user is doing right now" (see buildCardFrameClassName's
+        // own comment on that split).
         style={{
           boxShadow: isSelected
             ? "0 0 0 3px var(--ring)"
-            : isHighlighted
-              ? "0 0 0 3px var(--tree-accent), 0 0 0 6px color-mix(in oklch, var(--tree-accent) 30%, transparent)"
-              : "0 0 0 3px var(--tree-accent)",
+            : isTraced
+              ? "0 0 0 3px var(--primary), 0 0 0 6px color-mix(in oklch, var(--primary) 30%, transparent)"
+              : isFocus
+                ? "0 0 0 3px var(--tree-accent), 0 0 0 6px color-mix(in oklch, var(--tree-accent) 30%, transparent)"
+                : "0 0 0 3px var(--tree-accent)",
         }}
       >
         {data.photoUrl && <AvatarImage src={data.photoUrl} alt="" />}

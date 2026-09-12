@@ -59,7 +59,10 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
   const initials = personInitials(data);
 
   const isDimmed = data.isFilterMatch === false || data.isOnTracePath === false;
-  const isTraceHighlighted = data.isOnTracePath === true;
+  // The focus person can itself be one end of an active trace (isOnTracePath
+  // true) — it still stays on the sage identity color, not terracotta, so
+  // this excludes isFocus explicitly rather than just checking isOnTracePath.
+  const isTraceHighlighted = data.isOnTracePath === true && !data.isFocus;
 
   const cardBody = (
     <>
@@ -77,7 +80,8 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
           name={name}
           years={years}
           initials={initials}
-          isHighlighted={data.isFocus || isTraceHighlighted}
+          isFocus={data.isFocus}
+          isTraced={isTraceHighlighted}
           isSelected={selected}
         />
       )}
@@ -92,7 +96,8 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
 
   const cardFrameClassName = buildCardFrameClassName({
     cardStyle: data.cardStyle,
-    isFocusOrTraced: data.isFocus || isTraceHighlighted,
+    isFocus: data.isFocus,
+    isTraced: isTraceHighlighted,
     isSelected: Boolean(selected),
     isPlaceholder: data.isPlaceholder,
     isDimmed,

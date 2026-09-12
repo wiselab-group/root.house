@@ -128,32 +128,34 @@ export function CollapseBadge({
  * that file's render body short (CLAUDE.md's 150-line component limit).
  * "compact" cardStyle has NO card frame at all — the round avatar itself
  * carries the border/ring states (see compact-card-body.tsx's own
- * isHighlighted/isSelected/isPlaceholder handling) so the parent_child
+ * isFocus/isTraced/isSelected/isPlaceholder handling) so the parent_child
  * connector line, anchored to this div's own top/bottom edges via
  * InvisibleConnectorHandles, visibly touches the avatar instead of stopping
  * at an invisible card boundary.
  *
  * Color roles (see globals.css's own comment): sage (--tree-accent) reads as
  * this person's own identity — a permanent border on every card, the same
- * flat shade regardless of generation. Focus-person and Relationship Trace
- * both stay on that same sage identity color (just emphasized with a ring)
- * rather than switching to terracotta — only keyboard selection (isSelected,
- * --ring) uses terracotta, as the one color reserved for "this is the exact
- * card you just keyboard-navigated to" (see globals.css's own comment on
- * --ring for that split). The sage border is deliberately ONE color for
- * every card — no per-generation fade — so "sage border" reads as a single
- * consistent signal across the whole tree, not a gradient to decode.
+ * flat shade regardless of generation. The focus person keeps that same
+ * sage identity border (just emphasized with a ring) rather than switching
+ * to terracotta — terracotta stays reserved for "what the user is doing
+ * right now": Relationship Trace cards (isTraced) and keyboard selection
+ * (isSelected, --ring) both use it. The sage border is deliberately ONE
+ * color for every card — no per-generation fade — so "sage border" reads as
+ * a single consistent signal across the whole tree, not a gradient to
+ * decode.
  */
 export function buildCardFrameClassName({
   cardStyle,
-  isFocusOrTraced,
+  isFocus,
+  isTraced,
   isSelected,
   isPlaceholder,
   isDimmed,
   readOnly,
 }: {
   cardStyle: PersonFlowNode["data"]["cardStyle"];
-  isFocusOrTraced: boolean;
+  isFocus: boolean;
+  isTraced: boolean;
   isSelected: boolean;
   isPlaceholder: boolean;
   isDimmed: boolean;
@@ -167,8 +169,10 @@ export function buildCardFrameClassName({
       ? "overflow-visible"
       : cn(
           "overflow-hidden rounded-lg border bg-card shadow-sm hover:shadow-md",
-          "border-tree-accent",
-          isFocusOrTraced && "ring-2 ring-tree-accent/30",
+          isTraced
+            ? "border-primary ring-2 ring-primary/30"
+            : "border-tree-accent",
+          isFocus && !isTraced && "ring-2 ring-tree-accent/30",
           isSelected && "ring-2 ring-ring",
           isPlaceholder && "border-dashed opacity-70",
         ),
