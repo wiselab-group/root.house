@@ -23,6 +23,7 @@ import {
   getSiblingsOf,
   insertParentChild,
   insertPartnership,
+  setPartnershipCurrent,
   type ParentChildRecord,
   type PartnershipRecord,
 } from "./relationship.repository";
@@ -176,6 +177,21 @@ export async function removePartnership(
   familyId: string,
 ): Promise<boolean> {
   return deletePartnership(id, familyId);
+}
+
+/**
+ * Marks an existing partnership as current (married/together) or past
+ * (divorced) — the tree's own rendering (relationship-edge.tsx's
+ * PartnershipEdgeLine/DivorceBreakMark) already distinguishes these, this is
+ * the write side finally exposed through a real action instead of only
+ * being settable at insertPartnership() time.
+ */
+export async function setPartnershipStatus(
+  id: string,
+  familyId: string,
+  isCurrent: boolean,
+): Promise<boolean> {
+  return setPartnershipCurrent(id, familyId, isCurrent);
 }
 
 export interface FamilyOfPerson {

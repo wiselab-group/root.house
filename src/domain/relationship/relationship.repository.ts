@@ -211,6 +211,32 @@ export async function deleteParentChild(
   return result.length > 0;
 }
 
+/**
+ * Flips a partnership between "current" and "past" (divorced) — the couple
+ * stays linked, only isCurrent/status change. `status` mirrors isCurrent
+ * rather than being independently settable here: this repo function backs
+ * exactly one UI action (PartnershipStatusToggle), a simple two-state
+ * toggle, not general partnership editing (which would need its own
+ * status/date fields — out of scope for now, see relationship.actions.ts).
+ */
+export async function setPartnershipCurrent(
+  id: string,
+  familyId: string,
+  isCurrent: boolean,
+): Promise<boolean> {
+  const result = await db
+    .update(relationshipsPartnership)
+    .set({ isCurrent, status: isCurrent ? "partnered" : "divorced" })
+    .where(
+      and(
+        eq(relationshipsPartnership.id, id),
+        eq(relationshipsPartnership.familyId, familyId),
+      ),
+    )
+    .returning({ id: relationshipsPartnership.id });
+  return result.length > 0;
+}
+
 export async function deletePartnership(
   id: string,
   familyId: string,

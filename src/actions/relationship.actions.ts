@@ -14,6 +14,7 @@ import {
   addPartnership,
   removeParentChild,
   removePartnership,
+  setPartnershipStatus,
   RelationshipValidationError,
   type ParentRole,
 } from "@/domain/relationship/relationship.service";
@@ -139,4 +140,33 @@ export async function removePartnershipAction(
   const familySlug = await getFamilySlugById(familyId);
   const personSlug = await getPersonSlugById(personId, familyId);
   revalidatePath(`/families/${familySlug}/people/${personSlug}`);
+}
+
+/**
+ * Flips a partnership between current and past (divorced) — see
+ * setPartnershipStatus's own doc comment. Revalidates both partners' own
+ * profile pages (not just `personId`'s) since the Family panel on the OTHER
+ * partner's page shows this exact same relationship too, and the tree itself
+ * (whichever page rendered it) needs the new dasharray on next load.
+ */
+export async function setPartnershipStatusAction(
+  familyId: string,
+  personId: string,
+  otherPersonId: string,
+  relationshipId: string,
+  isCurrent: boolean,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+
+  await requireFamilyAccess(familyId, session.user.id, "editor");
+  await setPartnershipStatus(relationshipId, familyId, isCurrent);
+  const familySlug = await getFamilySlugById(familyId);
+  const [personSlug, otherPersonSlug] = await Promise.all([
+    getPersonSlugById(personId, familyId),
+    getPersonSlugById(otherPersonId, familyId),
+  ]);
+  revalidatePath(`/families/${familySlug}/people/${personSlug}`);
+  revalidatePath(`/families/${familySlug}/people/${otherPersonSlug}`);
+  revalidatePath(`/families/${familySlug}/tree`);
 }

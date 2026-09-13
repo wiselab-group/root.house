@@ -123,9 +123,105 @@ export function TracedLine({
 }
 
 /**
- * Renders parent_child edges as a solid line and partnership edges as
- * dashed — the visual distinction between "descent" and "union" the plan's
- * DESIGN.md calls for, without needing separate label text on every edge.
+ * One diagonal stroke of the standard genogram "divorced" mark (McGoldrick/
+ * Gerson notation) — see DivorceBreakMark's own doc comment for the full
+ * two-stroke `//` shape this composes.
+ */
+function DivorceSlash({ x, y }: { x: number; y: number }) {
+  return (
+    <line
+      x1={x - 3}
+      y1={y - 7}
+      x2={x + 2}
+      y2={y + 7}
+      stroke="var(--branch)"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+    />
+  );
+}
+
+/**
+ * The standard genogram "divorced" mark (McGoldrick/Gerson notation) — two
+ * short parallel diagonal strokes crossing the partnership line, like a `//`
+ * cutting the line. Replaces an earlier dasharray-based scheme (current
+ * marriage "5 3" vs past "2 4") that user testing showed was too subtle to
+ * read as two different states at a glance — both looked like "some dashed
+ * line". A solid line with an explicit break is the widely recognized
+ * convention instead, and reads clearly at any zoom level since it's a
+ * shape, not a spacing difference. Each stroke is drawn at a fixed
+ * screen-space angle/length regardless of the partnership line's own
+ * (near-horizontal) direction — real genograms draw this mark at a
+ * consistent diagonal, not perpendicular to the line, so it stays instantly
+ * recognizable rather than blending into the line itself.
+ *
+ * Normally both strokes sit together at the line's own midpoint
+ * (`straddle` undefined) — but that midpoint is also where
+ * UnionCollapseBadge anchors (see PartnershipEdgeLine's midX/midY, both
+ * exist for the same reason). Real bug caught on real data: a divorced
+ * couple with a shared child showed a solid, unbroken line — the badge's
+ * opaque HTML button (EdgeLabelRenderer, painted above the SVG edge layer)
+ * fully covered a `//` drawn at that same spot, badge and mark piled on one
+ * point. Fixed by splitting the two strokes apart instead of moving either
+ * element off its own anchor: pass `straddle` (the direction from the
+ * midpoint toward the OTHER end of whichever segment is actually drawn at
+ * the call site) to draw one stroke just before the badge and the other
+ * just after it, each clear of the badge's ~20px footprint
+ * (CollapseToggleButton's h-5/min-w-5) — reading as one `//` mark that the
+ * badge happens to sit inside, not a mark shoved off to one side.
+ */
+function DivorceBreakMark({
+  x,
+  y,
+  straddle,
+  towardOnly,
+}: {
+  x: number;
+  y: number;
+  straddle?: { dx: number; dy: number };
+  /**
+   * When only one side of the midpoint actually has a drawn line (the
+   * traced-partial-line branch in PartnershipEdgeLine — the other half is
+   * drawn by UnionChildEdge instead, see its own comment there), both
+   * strokes must sit on THAT side of the badge, not straddle it — a stroke
+   * placed on the undrawn side would float in empty space next to nothing.
+   */
+  towardOnly?: boolean;
+}) {
+  if (!straddle) {
+    return (
+      <>
+        <DivorceSlash x={x - 4} y={y} />
+        <DivorceSlash x={x + 4} y={y} />
+      </>
+    );
+  }
+  const length = Math.hypot(straddle.dx, straddle.dy) || 1;
+  const offset = 20;
+  const ux = (straddle.dx / length) * offset;
+  const uy = (straddle.dy / length) * offset;
+  if (towardOnly) {
+    return (
+      <>
+        <DivorceSlash x={x + ux * 0.5} y={y + uy * 0.5} />
+        <DivorceSlash x={x + ux * 1.4} y={y + uy * 1.4} />
+      </>
+    );
+  }
+  return (
+    <>
+      <DivorceSlash x={x - ux} y={y - uy} />
+      <DivorceSlash x={x + ux} y={y + uy} />
+    </>
+  );
+}
+
+/**
+ * Renders parent_child edges as a solid line and partnership edges also as
+ * solid — divorce is marked with DivorceBreakMark (see its own doc comment)
+ * rather than a different line style, so "descent" vs "union" is read from
+ * edge SHAPE (straight-down vs straight-across, see DESIGN.md) rather than
+ * needing separate label text on every edge.
  *
  * `data.isOnTracePath` (set by tree-trace.ts via xyflow-adapter.ts) draws
  * the edge in the accent color at full weight, overriding the normal
@@ -345,10 +441,6 @@ function PartnershipEdgeLine({
       ? x2Full + Math.sign(x1Full - x2Full) * AVATAR_RADIUS
       : x2Full;
 
-  const dashStyle = {
-    strokeDasharray: isPastPartnership ? "2 4" : "5 3",
-  };
-
   // Same midpoint the union trunk line hangs off (see
   // union-child-edge.tsx's own sourceX/sourceY) — the collapse badge sits
   // exactly where the shared descendants' own connector line starts, so it
@@ -394,9 +486,20 @@ function PartnershipEdgeLine({
             strokeWidth: 1.5,
             stroke: "var(--branch)",
             opacity: isDimmed ? 0.35 : 1,
-            ...dashStyle,
           }}
         />
+        {isPastPartnership && (
+          <DivorceBreakMark
+            x={midX}
+            y={midY}
+            straddle={
+              unionCollapse
+                ? { dx: plainX - midX, dy: plainY - midY }
+                : undefined
+            }
+            towardOnly
+          />
+        )}
         {collapseBadge}
       </>
     );
@@ -406,10 +509,9 @@ function PartnershipEdgeLine({
   // This path is always drawn source→target (x1→x2 above) — same
   // A→B-direction pick as ParentChildEdgeLine, see its own comment.
   // isOnTracePath draws via TracedLine — see its own doc comment. Note this
-  // also means the current/past marriage's "5 3"/"2 4" dasharray is skipped
-  // while traced, in favor of TracedLine's own fixed marching-ants period —
-  // matters less mid-trace anyway, the terracotta color + motion is already
-  // the dominant signal.
+  // also means the divorce break is skipped while traced, in favor of
+  // TracedLine's own fixed marching-ants styling — matters less mid-trace
+  // anyway, the terracotta color + motion is already the dominant signal.
   if (isOnTracePath) {
     return (
       <>
@@ -431,9 +533,17 @@ function PartnershipEdgeLine({
           strokeWidth: 1.5,
           stroke: "var(--branch)",
           opacity: isDimmed ? 0.35 : 1,
-          ...dashStyle,
         }}
       />
+      {isPastPartnership && (
+        <DivorceBreakMark
+          x={midX}
+          y={midY}
+          straddle={
+            unionCollapse ? { dx: x2 - midX, dy: yTarget - midY } : undefined
+          }
+        />
+      )}
       {collapseBadge}
     </>
   );

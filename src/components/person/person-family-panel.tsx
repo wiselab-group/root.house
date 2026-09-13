@@ -1,22 +1,10 @@
-import Link from "next/link";
 import { getFamilyOf } from "@/domain/relationship/relationship.service";
 import { listPeople } from "@/domain/person/person.service";
-import { personDisplayName } from "@/domain/person/display-name";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddRelativeForm } from "@/components/forms/add-relative-form";
-import { RemoveRelationshipButton } from "@/components/forms/remove-relationship-button";
 import { CollapsibleForm } from "@/components/forms/collapsible-form";
-
-interface RelativeItem {
-  id: string;
-  slug: string;
-  firstName: string | null;
-  lastName: string | null;
-  nickname: string | null;
-  isPlaceholder: boolean;
-  /** The relationship row's own id, for removal. Undefined for derived relations (siblings). */
-  relationshipId?: string;
-}
+import { RelativeGroup } from "./relative-group";
+import type { RelativeItem } from "./relative-item";
 
 /**
  * Renders a Person's parents/spouses/children/siblings plus inline
@@ -45,10 +33,11 @@ export async function PersonFamilyPanel({
   const toItem = (
     relatedPersonId: string,
     relationshipId: string,
+    isCurrent?: boolean,
   ): RelativeItem | null => {
     const person = peopleById.get(relatedPersonId);
     if (!person) return null;
-    return { ...person, relationshipId };
+    return { ...person, relationshipId, isCurrent };
   };
 
   const parents = family.parents
@@ -59,7 +48,11 @@ export async function PersonFamilyPanel({
     .filter((p) => p != null);
   const spouses = family.partnerships
     .map((r) =>
-      toItem(r.person1Id === personId ? r.person2Id : r.person1Id, r.id),
+      toItem(
+        r.person1Id === personId ? r.person2Id : r.person1Id,
+        r.id,
+        r.isCurrent,
+      ),
     )
     .filter((p) => p != null);
   const siblings = family.siblings
@@ -141,63 +134,5 @@ export async function PersonFamilyPanel({
         )}
       </CardContent>
     </Card>
-  );
-}
-
-function RelativeGroup({
-  familyId,
-  familySlug,
-  personId,
-  title,
-  people,
-  relationshipKind,
-  canEdit = false,
-}: {
-  familyId: string;
-  familySlug: string;
-  personId: string;
-  title: string;
-  people: RelativeItem[];
-  relationshipKind?: "parent_child" | "partnership";
-  canEdit?: boolean;
-}) {
-  return (
-    <div className="min-w-0">
-      <h3 className="mb-2 text-sm font-medium text-muted-foreground">
-        {title}
-      </h3>
-      {people.length === 0 ? (
-        <p className="text-sm text-muted-foreground">—</p>
-      ) : (
-        <ul className="flex flex-wrap gap-2">
-          {people.map((person) => (
-            <li
-              key={person.id}
-              className={`flex max-w-full items-center gap-1 rounded-full border border-border py-1 pl-3 ${
-                canEdit && relationshipKind && person.relationshipId
-                  ? "pr-1"
-                  : "pr-3"
-              }`}
-            >
-              <Link
-                href={`/families/${familySlug}/people/${person.slug}`}
-                className="truncate text-sm hover:underline"
-              >
-                {personDisplayName(person)}
-              </Link>
-              {canEdit && relationshipKind && person.relationshipId && (
-                <RemoveRelationshipButton
-                  familyId={familyId}
-                  personId={personId}
-                  relationshipId={person.relationshipId}
-                  relationshipKind={relationshipKind}
-                  relativeName={personDisplayName(person)}
-                />
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
   );
 }
