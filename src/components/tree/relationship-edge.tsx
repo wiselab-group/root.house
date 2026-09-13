@@ -290,33 +290,55 @@ function DivorceBreakMark({
   const strokeAY = y - uy;
   const strokeBX = x + ux;
   const strokeBY = y + uy;
-  // Each occluder is centered halfway between its own stroke and the badge
-  // (x, y) — not on the stroke alone — and sized (offset/2 + a stroke's own
-  // ~2.5px half-width) to span the ENTIRE stretch from the stroke out to
-  // the badge's anchor point, not just a small span immediately around the
-  // stroke. The badge itself is narrower than that stretch (CollapseToggleButton's
-  // ~10px radius vs. this ~20px offset), so a stroke-only occluder left a
-  // bare run of solid line visible between the stroke and the badge — real
-  // bug the user caught on real data (Елена/Николай Купчик): the line was
-  // clearly still visible between each `\` and the badge's white oval.
-  const fillHalfSpan = offset / 2 + 2.5;
+  // ONE occluder per side, spanning the ENTIRE stretch from the stroke's OWN
+  // outer edge (away from the badge, toward the person's card — NOT past
+  // it, see below) all the way in to the badge's own anchor (x, y) — not a
+  // stroke-sized occluder plus a separately-sized fill occluder stitched
+  // together at an exact seam. Multiple exactly-abutting segments (tried
+  // repeatedly before this) are extremely sensitive to sub-pixel rounding
+  // in SVG rendering: each retuning of one segment's size shifted the OTHER
+  // segment's edge relative to it, and real screenshots kept showing a
+  // hairline of the connector line surviving right at whichever seam wasn't
+  // just adjusted (real bugs the user caught repeatedly on real data,
+  // Елена/Николай Купчик, even after confirming via exact SVG coordinates
+  // that each individual segment's own span was numerically correct — the
+  // seams between segments were the actual problem, not any single
+  // segment's math). A single occluder per side removes every internal
+  // seam.
+  //
+  // The occluder's outer edge lands at the stroke's own CENTER (strokeAX/
+  // strokeBX), not at the outer edge of its full ~2.5px footprint. A genogram
+  // `//` mark reads as the line being cut BY the diagonal stroke — the
+  // stroke should visibly cross the connector line, half of it sitting on
+  // the "line visible" side and half on the "occluded" side, not sit
+  // entirely inside a white gap with the line stopping short of it on both
+  // ends. Ending the occluder at the stroke's outer edge (tried first,
+  // matching the stroke's full footprint) technically matched the stroke's
+  // own bounding box exactly, but visually still read as the line stopping
+  // short of the slash rather than touching it — the diagonal shape itself,
+  // being much narrower than its own bounding box at any single point along
+  // the (horizontal) partnership line, doesn't fill that box, so the box's
+  // edge doesn't look like "where the stroke is" (real bug the user caught
+  // on real, zoomed-in data: the stroke floated fully surrounded by white,
+  // touching the line on neither side).
+  const outerScale = 1;
   return (
     <>
       {gapAxis && (
-        <DivorceGapOccluder
-          x={(strokeAX + x) / 2}
-          y={(strokeAY + y) / 2}
-          axis={gapAxis}
-          halfSpan={fillHalfSpan}
-        />
-      )}
-      {gapAxis && (
-        <DivorceGapOccluder
-          x={(strokeBX + x) / 2}
-          y={(strokeBY + y) / 2}
-          axis={gapAxis}
-          halfSpan={fillHalfSpan}
-        />
+        <>
+          <DivorceGapOccluder
+            x={x - ux * outerScale}
+            y={y - uy * outerScale}
+            axis={gapAxis}
+            spanFrom={{ x, y }}
+          />
+          <DivorceGapOccluder
+            x={x + ux * outerScale}
+            y={y + uy * outerScale}
+            axis={gapAxis}
+            spanFrom={{ x, y }}
+          />
+        </>
       )}
       <DivorceSlash x={strokeAX} y={strokeAY} />
       <DivorceSlash x={strokeBX} y={strokeBY} />
@@ -345,29 +367,51 @@ function DivorceBreakMark({
  * both strokes in practice (real bug the user caught: the line stopped
  * clearly short of the slashes) — 4 is tuned from that visual feedback
  * rather than derived purely from the nominal stroke coordinates.
+ *
+ * Two ways to size the occluded segment: `halfSpan` for a short symmetric
+ * segment centered on (x, y) (the no-badge case, and each individual
+ * stroke's own footprint), or `spanFrom` to instead draw from (x, y) all
+ * the way out to an explicit second point — used by the straddle/badge case
+ * to cover an entire stroke-to-badge stretch with one occluder rather than
+ * stitching two separately-sized ones together at a seam (see
+ * DivorceBreakMark's own doc comment for why the seam approach kept
+ * regressing on real data).
  */
 function DivorceGapOccluder({
   x,
   y,
   axis,
   halfSpan = 2.5,
+  spanFrom,
 }: {
   x: number;
   y: number;
   axis: { dx: number; dy: number };
   halfSpan?: number;
+  spanFrom?: { x: number; y: number };
 }) {
   const length = Math.hypot(axis.dx, axis.dy) || 1;
   const ux = (axis.dx / length) * halfSpan;
   const uy = (axis.dy / length) * halfSpan;
+  const [x1, y1, x2, y2] = spanFrom
+    ? [x, y, spanFrom.x, spanFrom.y]
+    : [x - ux, y - uy, x + ux, y + uy];
   return (
     <line
-      x1={x - ux}
-      y1={y - uy}
-      x2={x + ux}
-      y2={y + uy}
+      x1={x1}
+      y1={y1}
+      x2={x2}
+      y2={y2}
       stroke="var(--background)"
-      strokeWidth={4}
+      // Matches the underlying partnership line's own strokeWidth (1.5) plus
+      // a hair of overlap (2), not a much thicker 4 — a noticeably thicker
+      // occluder painted a visibly wider white band than the thin line it's
+      // covering, reading as an oversized gap around the slash rather than
+      // a clean break exactly the line's own width (real bug the user
+      // caught on real data, Елена/Николай Купчик, via exact SVG coordinates
+      // confirming the occluder's x-span already matched the slash exactly
+      // — the mismatch was in strokeWidth, not position).
+      strokeWidth={2}
       strokeLinecap="butt"
     />
   );
