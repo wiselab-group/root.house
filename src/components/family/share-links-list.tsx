@@ -1,15 +1,12 @@
 import type { ShareLinkWithStatus } from "@/domain/share-link/share-link.service";
 import { ShareLinkRowActions } from "./share-link-row-actions";
 
-const STATUS_LABELS: Record<ShareLinkWithStatus["status"], string> = {
-  active: "Активна",
-  expired: "Истекла",
-  revoked: "Отозвана",
-};
-
 /** Server Component receiving already-fetched share links as props (see
  *  ShareLinkSection) — renders the static row, delegates revoke to a client
- *  leaf component, same split as PendingInvitationsList/InvitationRowActions. */
+ *  leaf component, same split as PendingInvitationsList/InvitationRowActions.
+ *  Status isn't shown per-row: every caller (ShareLinksTabs) already groups
+ *  links by status into a labeled tab, so repeating it here would be
+ *  redundant. */
 export function ShareLinksList({
   familyId,
   shareLinks,
@@ -30,8 +27,7 @@ export function ShareLinksList({
         >
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-medium">
-              {STATUS_LABELS[link.status]} · Фокус:{" "}
-              {focusPersonNames[link.focusPersonId] ?? "—"}
+              Фокус: {focusPersonNames[link.focusPersonId] ?? "—"}
             </span>
             <span className="text-xs text-muted-foreground">
               {link.passwordHash ? "Защищена паролем" : "Без пароля"} ·{" "}

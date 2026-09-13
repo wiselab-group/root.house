@@ -1,7 +1,7 @@
 import type { ShareLinkWithStatus } from "@/domain/share-link/share-link.service";
 import { listPersonsByFamily } from "@/domain/person/person.repository";
 import { CreateShareLinkForm } from "./create-share-link-form";
-import { ShareLinksList } from "./share-links-list";
+import { ShareLinksTabs } from "./share-links-tabs";
 
 /**
  * Server Component (fetches its own focus-person names, since
@@ -28,8 +28,8 @@ export async function ShareLinkSection({
     <div className="flex flex-col gap-6">
       {shareLinks.length > 0 && (
         <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium">Активные ссылки</h3>
-          <ShareLinksList
+          <h3 className="text-sm font-medium">Ссылки</h3>
+          <ShareLinksTabs
             familyId={familyId}
             shareLinks={shareLinks}
             focusPersonNames={focusPersonNames}
