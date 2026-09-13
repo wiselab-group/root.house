@@ -1,4 +1,5 @@
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import type { PlaceRecord } from "@/domain/place/place.service";
 
 /**
@@ -22,19 +23,14 @@ export function PlaceSelect({
   return (
     <div className="flex flex-col gap-2">
       <Label htmlFor={id}>{label}</Label>
-      <select
-        id={id}
-        name={name}
-        defaultValue={defaultValue ?? ""}
-        className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
-      >
+      <NativeSelect id={id} name={name} defaultValue={defaultValue ?? ""}>
         <option value="">Не указано</option>
         {places.map((place) => (
           <option key={place.id} value={place.id}>
             {place.name}
           </option>
         ))}
-      </select>
+      </NativeSelect>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import type { PersonRecord } from "@/domain/person/person.service";
 import { personDisplayName } from "@/domain/person/display-name";
 import { useCollapsibleFormClose } from "./collapsible-form";
@@ -81,11 +82,7 @@ export function AddRelativeForm({
       </div>
 
       {mode === "existing" ? (
-        <select
-          name="existingPersonId"
-          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
-          required
-        >
+        <NativeSelect name="existingPersonId" required>
           <option value="">Выберите человека…</option>
           {candidates.map((candidate) => (
             <option key={candidate.id} value={candidate.id}>
@@ -95,7 +92,7 @@ export function AddRelativeForm({
                 : ""}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       ) : (
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-2 gap-2">

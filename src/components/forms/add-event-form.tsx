@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { PersonDateFields } from "./person-date-fields";
 import { PlaceSelect } from "./place-select";
 import { PrivacyLevelSelect } from "./privacy-level-select";
@@ -53,18 +54,13 @@ export function AddEventForm({
           <Label htmlFor="type" className="text-xs text-muted-foreground">
             Тип
           </Label>
-          <select
-            id="type"
-            name="type"
-            defaultValue="other"
-            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
-          >
+          <NativeSelect id="type" name="type" defaultValue="other">
             {Object.entries(EVENT_TYPE_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="title" className="text-xs text-muted-foreground">

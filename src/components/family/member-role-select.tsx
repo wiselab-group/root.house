@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateMemberRoleAction } from "@/actions/family.actions";
+import { NativeSelect } from "@/components/ui/native-select";
 import { ROLE_LABELS } from "@/domain/family/role-labels";
 import type { FamilyRole } from "@/domain/family/roles";
 
@@ -48,11 +49,10 @@ export function MemberRoleSelect({
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <select
+      <NativeSelect
         value={role}
         disabled={disabled || isPending}
         onChange={(e) => handleChange(e.target.value as FamilyRole)}
-        className="h-9 rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
         aria-label="Роль участника"
       >
         {ROLE_OPTIONS.map((option) => (
@@ -60,7 +60,7 @@ export function MemberRoleSelect({
             {ROLE_LABELS[option]}
           </option>
         ))}
-      </select>
+      </NativeSelect>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );

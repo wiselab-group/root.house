@@ -12,6 +12,7 @@ import type { ShareLinkVisibilityScope } from "@/domain/share-link/share-link.se
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 
 const initialState: CreateShareLinkFormState = {};
 
@@ -98,20 +99,19 @@ export function CreateShareLinkForm({ familyId }: { familyId: string }) {
           >
             Что видно по ссылке
           </Label>
-          <select
+          <NativeSelect
             id="share-visibility-scope"
             name="visibilityScope"
             value={visibilityScope}
             onChange={(e) =>
               setVisibilityScope(e.target.value as ShareLinkVisibilityScope)
             }
-            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
           >
             <option value="family_and_public">
               Всё, что видно участникам семьи
             </option>
             <option value="public_only">Только отмеченное «публичным»</option>
-          </select>
+          </NativeSelect>
           <p className="max-w-64 text-xs text-muted-foreground">
             Приватные данные не показываются в любом случае.
           </p>
@@ -123,19 +123,18 @@ export function CreateShareLinkForm({ familyId }: { familyId: string }) {
           >
             Фокус дерева
           </Label>
-          <select
+          <NativeSelect
             id="share-focus-person"
             name="focusPersonId"
             required
             disabled={!visiblePersons || noOneVisible}
-            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
           >
             {visiblePersons?.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
           {state.fieldErrors?.focusPersonId && (
             <p className="text-xs text-destructive">
               {state.fieldErrors.focusPersonId}
@@ -149,16 +148,15 @@ export function CreateShareLinkForm({ familyId }: { familyId: string }) {
           >
             Срок действия
           </Label>
-          <select
+          <NativeSelect
             id="share-expiration"
             name="expirationPreset"
             defaultValue="7d"
-            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
           >
             <option value="never">Никогда</option>
             <option value="7d">7 дней</option>
             <option value="30d">30 дней</option>
-          </select>
+          </NativeSelect>
         </div>
         <div className="flex flex-col gap-1">
           <Label

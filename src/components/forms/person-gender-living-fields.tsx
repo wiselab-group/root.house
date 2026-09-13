@@ -1,4 +1,5 @@
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
 import type { PersonRecord } from "@/domain/person/person.service";
 
@@ -22,18 +23,17 @@ export function PersonGenderLivingFields({
     <div className="grid grid-cols-2 gap-4">
       <div className="flex flex-col gap-2">
         <Label htmlFor="gender">Пол</Label>
-        <select
+        <NativeSelect
           id="gender"
           name="gender"
           defaultValue={gender ?? "unknown"}
-          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
         >
           {GENDER_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
       <div className="flex items-center gap-2.5 pt-6">
         <Switch

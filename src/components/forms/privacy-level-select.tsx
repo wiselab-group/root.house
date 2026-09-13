@@ -1,4 +1,5 @@
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import type { PrivacyLevel } from "@/db/schema";
 
 const PRIVACY_LABELS: Record<PrivacyLevel, string> = {
@@ -33,7 +34,7 @@ export function PrivacyLevelSelect({
       <Label htmlFor="privacyLevel" className="text-xs text-muted-foreground">
         Кто может это видеть?
       </Label>
-      <select
+      <NativeSelect
         id="privacyLevel"
         name="privacyLevel"
         defaultValue={value === undefined ? defaultValue : undefined}
@@ -41,7 +42,6 @@ export function PrivacyLevelSelect({
         onChange={
           onChange ? (e) => onChange(e.target.value as PrivacyLevel) : undefined
         }
-        className="h-9 rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {(Object.entries(PRIVACY_LABELS) as [PrivacyLevel, string][]).map(
           ([optionValue, label]) => (
@@ -50,7 +50,7 @@ export function PrivacyLevelSelect({
             </option>
           ),
         )}
-      </select>
+      </NativeSelect>
     </div>
   );
 }
