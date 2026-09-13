@@ -15,6 +15,7 @@ import {
   CollapseBadge,
   InvisibleConnectorHandles,
   personLabel,
+  selectedCardBoxShadow,
   yearRange,
 } from "./person-node-parts";
 import { PersonNodePopoverActions } from "./person-node-popover-actions";
@@ -102,7 +103,6 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
     cardStyle: data.cardStyle,
     isFocus: data.isFocus,
     isTraced: isTraceHighlighted,
-    isSelected: Boolean(selected),
     isPlaceholder: data.isPlaceholder,
     isDimmed,
     readOnly: Boolean(data.readOnly),
@@ -115,6 +115,11 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
     // version of that spec is staggering how each node enters the new
     // layout, not sliding it from its old position.
     animationDelay: `${Math.min(Math.abs(data.generation), 4) * 60}ms`,
+    boxShadow: selectedCardBoxShadow({
+      cardStyle: data.cardStyle,
+      isSelected: Boolean(selected),
+      isTraced: isTraceHighlighted,
+    }),
   };
 
   // Collapse/expand (rewrite plan §7 Stage 5) — only rendered when this

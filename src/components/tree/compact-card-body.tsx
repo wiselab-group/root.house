@@ -26,7 +26,7 @@ export function CompactCardBody({
   isFocus: boolean;
   /** On the currently traced relationship path (and not itself the focus person) — terracotta, person-node.tsx's usual border-primary treatment on the portrait style, moved to a ring around the avatar here since this style has no card border of its own. */
   isTraced: boolean;
-  /** Keyboard-selected (person-node.tsx's usual ring-ring treatment). */
+  /** Keyboard-selected — terracotta double ring, same shape as isTraced/isFocus (see buildCardFrameClassName's own comment on that split). */
   isSelected: boolean;
 }) {
   return (
@@ -51,14 +51,18 @@ export function CompactCardBody({
         // breaking the "line touches the avatar" contact this card style is
         // built around. isFocus stays the same sage (--tree-accent) identity
         // color, just thickened with a second ring for emphasis — isTraced
-        // switches to terracotta (--primary) instead, the one color reserved
-        // for "what the user is doing right now" (see buildCardFrameClassName's
-        // own comment on that split).
+        // and isSelected both switch to a double terracotta ring instead
+        // (--primary and --ring respectively — same double-ring shape, kept
+        // as two separate tokens since Trace and keyboard-selection are
+        // conceptually different "what's active right now" states even
+        // though both read as terracotta; see buildCardFrameClassName's own
+        // comment on the sage/terracotta split). isTraced wins when both are
+        // true.
         style={{
-          boxShadow: isSelected
-            ? "0 0 0 3px var(--ring)"
-            : isTraced
-              ? "0 0 0 3px var(--primary), 0 0 0 6px color-mix(in oklch, var(--primary) 30%, transparent)"
+          boxShadow: isTraced
+            ? "0 0 0 3px var(--primary), 0 0 0 6px color-mix(in oklch, var(--primary) 30%, transparent)"
+            : isSelected
+              ? "0 0 0 3px var(--ring), 0 0 0 6px color-mix(in oklch, var(--ring) 30%, transparent)"
               : isFocus
                 ? "0 0 0 3px var(--tree-accent), 0 0 0 6px color-mix(in oklch, var(--tree-accent) 30%, transparent)"
                 : "0 0 0 3px var(--tree-accent)",

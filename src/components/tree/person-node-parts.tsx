@@ -170,19 +170,24 @@ export function CollapseBadge({
  * Color roles (see globals.css's own comment): sage (--tree-accent) reads as
  * this person's own identity — a permanent border on every card, the same
  * flat shade regardless of generation. The focus person keeps that same
- * sage identity border (just emphasized with a ring) rather than switching
- * to terracotta — terracotta stays reserved for "what the user is doing
- * right now": Relationship Trace cards (isTraced) and keyboard selection
- * (isSelected, --ring) both use it. The sage border is deliberately ONE
- * color for every card — no per-generation fade — so "sage border" reads as
- * a single consistent signal across the whole tree, not a gradient to
- * decode.
+ * sage identity border, just emphasized with a second ring. Keyboard
+ * selection (isSelected) stays terracotta (it's a "what you're doing right
+ * now" state, same family as Relationship Trace) but now uses that same
+ * double-ring shape instead of the single flat `ring-ring` it used to have —
+ * a plain single ring read as a weaker, different-looking signal than
+ * focus/trace's double ring instead of a clearly equivalent kind of
+ * emphasis; requested by the user. Drawn as an explicit box-shadow rather
+ * than stacked Tailwind `ring-*` utilities because a card can only carry one
+ * `ring` utility at a time, and this needs two rings (3px solid + 6px
+ * translucent) independent of the sage border underneath. The sage border
+ * is deliberately ONE color for every card — no per-generation fade — so
+ * "sage border" reads as a single consistent signal across the whole tree,
+ * not a gradient to decode.
  */
 export function buildCardFrameClassName({
   cardStyle,
   isFocus,
   isTraced,
-  isSelected,
   isPlaceholder,
   isDimmed,
   readOnly,
@@ -190,7 +195,6 @@ export function buildCardFrameClassName({
   cardStyle: PersonFlowNode["data"]["cardStyle"];
   isFocus: boolean;
   isTraced: boolean;
-  isSelected: boolean;
   isPlaceholder: boolean;
   isDimmed: boolean;
   readOnly: boolean;
@@ -207,12 +211,37 @@ export function buildCardFrameClassName({
             ? "border-primary ring-2 ring-primary/30"
             : "border-tree-accent",
           isFocus && !isTraced && "ring-2 ring-tree-accent/30",
-          isSelected && "ring-2 ring-ring",
+          // isSelected gets its own explicit box-shadow (selectedCardBoxShadow
+          // below) instead of a ring-* utility here — see this function's own
+          // doc comment on why (a card can only carry one `ring` utility, and
+          // isTraced/isFocus already claim it).
           isPlaceholder && "border-dashed opacity-70",
         ),
     isDimmed && "opacity-35 hover:opacity-70",
     !readOnly && "cursor-pointer",
   );
+}
+
+/**
+ * isSelected's terracotta double-ring box-shadow for the "portrait" card
+ * frame (see buildCardFrameClassName's own doc comment) — undefined when it
+ * doesn't apply, so callers can spread it into their existing style object
+ * without an empty boxShadow key colliding with cardStyle "compact" (which
+ * draws its own selected ring on the avatar instead, see
+ * compact-card-body.tsx). isTraced always wins over isSelected, matching
+ * buildCardFrameClassName's own precedence.
+ */
+export function selectedCardBoxShadow({
+  cardStyle,
+  isSelected,
+  isTraced,
+}: {
+  cardStyle: PersonFlowNode["data"]["cardStyle"];
+  isSelected: boolean;
+  isTraced: boolean;
+}): string | undefined {
+  if (cardStyle !== "portrait" || !isSelected || isTraced) return undefined;
+  return "0 0 0 3px var(--ring), 0 0 0 6px color-mix(in oklch, var(--ring) 30%, transparent)";
 }
 
 export function personLabel(data: PersonFlowNode["data"]): string {
