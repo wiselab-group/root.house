@@ -338,6 +338,67 @@ describe("toReactFlow — trace on a union with a non-traced sibling", () => {
     expect(byTarget.get("alexander")?.data?.isOnTracePath).toBe(true);
     expect(byTarget.get("daria")?.data?.isOnTracePath).toBe(false);
   });
+
+  // Regression for a real bug caught on real data (Елизавета→Виктор trace,
+  // family Купчик/Ушкар): Виктор is the trace's own ENDEPOINT (so he's in
+  // tracePersonIds), and separately partnered with Галина — but that
+  // partnership carries no trace hop at all (no shared child of theirs is on
+  // the path). tracedPartnerId used to fire off "one partner happens to be
+  // in tracePersonIds" alone, telling PartnershipEdgeLine to draw only
+  // Галина's half and rely on UnionChildEdge to draw Виктор's half through a
+  // traced child — but no child of this union was ever traced, so nobody
+  // drew Виктор's half and the line to Галина visibly broke.
+  it("does not half-draw a partnership's line when one partner is a trace endpoint but no CHILD of that union is on the trace path", () => {
+    const graph: TreeLayoutGraph = {
+      focusPersonId: "viktor",
+      nodes: [
+        node("elizaveta", -300, -100, -1),
+        node("viktor", -100, 100, 0),
+        node("galina", 100, 100, 0),
+        node("some-child", 100, 200, 1),
+      ],
+      edges: [
+        {
+          id: "pc-elizaveta-viktor",
+          kind: "parent_child",
+          source: "elizaveta",
+          target: "viktor",
+        },
+        {
+          id: "spouse-viktor-galina",
+          kind: "partnership",
+          source: "viktor",
+          target: "galina",
+        },
+        {
+          id: "pc-galina-child",
+          kind: "parent_child",
+          source: "galina",
+          target: "some-child",
+        },
+      ] as LayoutEdge[],
+    };
+
+    const highlight = {
+      tracePersonIds: new Set(["elizaveta", "viktor"]),
+      traceEdgeIds: new Set(["pc-elizaveta-viktor"]),
+      traceEdgeDirections: new Map([["pc-elizaveta-viktor", 1 as const]]),
+    };
+
+    const { edges } = toReactFlow(
+      graph,
+      "fam1",
+      "fam-slug",
+      "compact",
+      highlight,
+    );
+    const partnershipEdge = edges.find(
+      (e): e is RelationshipFlowEdge =>
+        e.type === "partnership" && e.id === "spouse-viktor-galina",
+    )!;
+    expect(partnershipEdge.data?.isOnTracePath).toBeFalsy();
+    expect(partnershipEdge.data?.tracedPartnerId).toBeUndefined();
+  });
 });
 
 describe("toReactFlow — union collapse badge (2026-09-12 change: badge moves off the card and onto the partnership line when a couple shares a child)", () => {

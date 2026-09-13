@@ -560,8 +560,30 @@ function toFlowEdges(
     const partneredUnion = [...unionByChild.values()].find(
       (u) => u.partnershipEdgeId === edge.id,
     );
+    // Merely having a traced person as one of the two partners isn't enough
+    // — that person can be a trace ENDPOINT with no trace hop running
+    // through this particular union at all (e.g. Виктор Купчик traced as
+    // the path's target, but his partnership with Галина isn't on the path
+    // to any child). tracedPartnerId must only fire when the trace actually
+    // continues through this union to one of its children — i.e. at least
+    // one of this union's parent_child edges is itself a hop on the path —
+    // otherwise PartnershipEdgeLine below draws only the OTHER partner's
+    // half (see its own isOnTracePath/tracedPartnerId branch) and nobody
+    // ever draws the traced partner's half, leaving a visible gap in the
+    // line. Real bug caught on real data (Елизавета→Виктор trace: Виктор's
+    // line to Галина partially vanished).
+    const unionHasTracedChildHop =
+      partneredUnion &&
+      highlight.traceEdgeIds &&
+      [...unionByChild.entries()].some(
+        ([childId, u]) =>
+          u.partnershipEdgeId === edge.id &&
+          partneredUnion.parentIds.some((parentId) =>
+            highlight.traceEdgeIds!.has(`pc-${parentId}-${childId}`),
+          ),
+      );
     const tracedPartnerId =
-      partneredUnion && highlight.tracePersonIds
+      partneredUnion && unionHasTracedChildHop && highlight.tracePersonIds
         ? partneredUnion.parentIds.find((id) =>
             highlight.tracePersonIds!.has(id),
           )
