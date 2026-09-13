@@ -125,14 +125,21 @@ export function TracedLine({
 /**
  * One diagonal stroke of the standard genogram "divorced" mark (McGoldrick/
  * Gerson notation) — see DivorceBreakMark's own doc comment for the full
- * two-stroke `//` shape this composes.
+ * two-stroke `//` shape this composes. Symmetric around (x, y) on BOTH axes
+ * (x∓2.5, not the earlier x-3/x+2) — DivorceGapOccluder centers its own
+ * occlusion segment exactly on this same (x, y), so an asymmetric stroke
+ * left a ~0.5px sliver of solid line uncovered on one side and
+ * over-occluded on the other (real bug the user caught: the line visibly
+ * poked past the slash on one side but not the other, inconsistently
+ * between different divorced couples depending on which side of the couple
+ * happened to render first).
  */
 function DivorceSlash({ x, y }: { x: number; y: number }) {
   return (
     <line
-      x1={x - 3}
+      x1={x - 2.5}
       y1={y - 7}
-      x2={x + 2}
+      x2={x + 2.5}
       y2={y + 7}
       stroke="var(--branch)"
       strokeWidth={1.5}
@@ -144,19 +151,42 @@ function DivorceSlash({ x, y }: { x: number; y: number }) {
 /**
  * The standard genogram "divorced" mark (McGoldrick/Gerson notation) — two
  * short parallel diagonal strokes crossing the partnership line, like a `//`
- * cutting the line. Replaces an earlier dasharray-based scheme (current
- * marriage "5 3" vs past "2 4") that user testing showed was too subtle to
- * read as two different states at a glance — both looked like "some dashed
- * line". A solid line with an explicit break is the widely recognized
- * convention instead, and reads clearly at any zoom level since it's a
- * shape, not a spacing difference. Each stroke is drawn at a fixed
- * screen-space angle/length regardless of the partnership line's own
- * (near-horizontal) direction — real genograms draw this mark at a
- * consistent diagonal, not perpendicular to the line, so it stays instantly
- * recognizable rather than blending into the line itself.
+ * cutting the line, with the line itself visibly broken between them.
+ * Replaces an earlier dasharray-based scheme (current marriage "5 3" vs past
+ * "2 4") that user testing showed was too subtle to read as two different
+ * states at a glance — both looked like "some dashed line". A solid line
+ * with an explicit break is the widely recognized convention instead, and
+ * reads clearly at any zoom level since it's a shape, not a spacing
+ * difference. Each stroke is drawn at a fixed screen-space angle/length
+ * regardless of the partnership line's own (near-horizontal) direction —
+ * real genograms draw this mark at a consistent diagonal, not perpendicular
+ * to the line, so it stays instantly recognizable rather than blending into
+ * the line itself.
  *
- * Normally both strokes sit together at the line's own midpoint
- * (`straddle` undefined) — but that midpoint is also where
+ * The gap around each stroke is NOT cut out of the underlying `path`'s `d`
+ * (two `M...L...` subpaths with the middle segment omitted) — that was tried
+ * and explicitly reverted per user feedback ("ты опять сломал!"): it reads
+ * as a rendering glitch rather than a deliberate mark, especially at the
+ * corner joins other lines (union trunk, collapse badge) make with this
+ * exact path. Instead the underlying line is drawn as one unbroken `path`,
+ * exactly as before, and the gap is painted on top of it afterward — a
+ * `--background`-colored occluding segment centered on EACH stroke's own
+ * position, the same backdrop-occlusion trick TracedLine already uses
+ * elsewhere in this file to hide whatever line is underneath without
+ * touching that line's own geometry. One occluder per stroke (not one
+ * spanning the full distance between them) because in the `straddle` case
+ * the two strokes sit ~28-39px apart straddling the collapse badge — a
+ * single occluder centered on the untouched (x, y) midpoint would only
+ * cover the badge's own already-covered anchor point, not either actual
+ * stroke (this was the bug: gap looked like it did nothing, because it was
+ * painted somewhere the line-over-it problem wasn't). `gapAxis` gives each
+ * occluder the line's local direction (it must be a short segment ALONG the
+ * partnership line, not a fixed-orientation shape) so it fully covers the
+ * line without also erasing the canvas's dotted Background pattern in a
+ * shape that doesn't match the line.
+ *
+ * Normally both strokes (and the gap between them) sit at the line's own
+ * midpoint (`straddle` undefined) — but that midpoint is also where
  * UnionCollapseBadge anchors (see PartnershipEdgeLine's midX/midY, both
  * exist for the same reason). Real bug caught on real data: a divorced
  * couple with a shared child showed a solid, unbroken line — the badge's
@@ -168,13 +198,26 @@ function DivorceSlash({ x, y }: { x: number; y: number }) {
  * the call site) to draw one stroke just before the badge and the other
  * just after it, each clear of the badge's ~20px footprint
  * (CollapseToggleButton's h-5/min-w-5) — reading as one `//` mark that the
- * badge happens to sit inside, not a mark shoved off to one side.
+ * badge happens to sit inside, not a mark shoved off to one side. The
+ * offset (28px) leaves visible clearance beyond the button's own edge
+ * rather than butting the stroke right against it — the user asked for
+ * more room here, not the stroke hugging the badge.
+ *
+ * The gap occluder is drawn even when a collapse badge also sits between
+ * the strokes: the badge (CollapseToggleButton, a small round button) isn't
+ * guaranteed to fully cover the strokes' span on its own — real bug caught
+ * on real data, a divorced couple WITH a collapse badge still showed a
+ * solid line between the strokes, the button's own opaque circle narrower
+ * than the gap the strokes imply. Drawing the occluder underneath the badge
+ * unconditionally is harmless (both are the same background color) and
+ * removes the dependency on the badge's exact size/shape.
  */
 function DivorceBreakMark({
   x,
   y,
   straddle,
   towardOnly,
+  gapAxis,
 }: {
   x: number;
   y: number;
@@ -187,32 +230,126 @@ function DivorceBreakMark({
    * placed on the undrawn side would float in empty space next to nothing.
    */
   towardOnly?: boolean;
+  /**
+   * Unit-ish direction vector of the underlying line at this point, used to
+   * orient the gap occluder along it (see this function's own doc comment).
+   */
+  gapAxis?: { dx: number; dy: number };
 }) {
   if (!straddle) {
+    // Spans the full distance between both strokes (x-4 to x+4, i.e.
+    // halfSpan 4 + each DivorceSlash's own ~2.5px half-width so the
+    // occluder's edge reaches under the stroke rather than stopping just
+    // short of it) — a single occluder only as wide as one stroke's own
+    // footprint (this function's earlier version) left a bare sliver of
+    // solid line visible between it and the OTHER stroke, since the two
+    // strokes here sit apart from each other, not both on the same spot as
+    // the (x, y) center. Real bug the user caught on real data (Нина/Сергей
+    // Тихонович, no collapse badge): the line visibly poked out past one of
+    // the two slashes.
+    const gap = gapAxis ? (
+      <DivorceGapOccluder x={x} y={y} axis={gapAxis} halfSpan={4} />
+    ) : null;
     return (
       <>
+        {gap}
         <DivorceSlash x={x - 4} y={y} />
         <DivorceSlash x={x + 4} y={y} />
       </>
     );
   }
   const length = Math.hypot(straddle.dx, straddle.dy) || 1;
-  const offset = 20;
+  const offset = 28;
   const ux = (straddle.dx / length) * offset;
   const uy = (straddle.dy / length) * offset;
+  // The strokes sit straddling the badge (offset from x/y by ~28px, see
+  // above) — the occluder must be centered on EACH stroke's own position,
+  // not on the original (x, y) midpoint, which here is the badge's own
+  // anchor, not a point between the strokes. Two separate occluders, one
+  // per stroke, rather than one spanning both: the badge itself already
+  // covers the space between them.
   if (towardOnly) {
+    const strokeAX = x + ux * 0.5;
+    const strokeAY = y + uy * 0.5;
+    const strokeBX = x + ux * 1.4;
+    const strokeBY = y + uy * 1.4;
     return (
       <>
-        <DivorceSlash x={x + ux * 0.5} y={y + uy * 0.5} />
-        <DivorceSlash x={x + ux * 1.4} y={y + uy * 1.4} />
+        {gapAxis && (
+          <DivorceGapOccluder x={strokeAX} y={strokeAY} axis={gapAxis} />
+        )}
+        {gapAxis && (
+          <DivorceGapOccluder x={strokeBX} y={strokeBY} axis={gapAxis} />
+        )}
+        <DivorceSlash x={strokeAX} y={strokeAY} />
+        <DivorceSlash x={strokeBX} y={strokeBY} />
       </>
     );
   }
+  const strokeAX = x - ux;
+  const strokeAY = y - uy;
+  const strokeBX = x + ux;
+  const strokeBY = y + uy;
   return (
     <>
-      <DivorceSlash x={x - ux} y={y - uy} />
-      <DivorceSlash x={x + ux} y={y + uy} />
+      {gapAxis && (
+        <DivorceGapOccluder x={strokeAX} y={strokeAY} axis={gapAxis} />
+      )}
+      {gapAxis && (
+        <DivorceGapOccluder x={strokeBX} y={strokeBY} axis={gapAxis} />
+      )}
+      <DivorceSlash x={strokeAX} y={strokeAY} />
+      <DivorceSlash x={strokeBX} y={strokeBY} />
     </>
+  );
+}
+
+/**
+ * Paints over the underlying partnership line, in the canvas background
+ * color, along a short segment centered on (x, y) — see DivorceBreakMark's
+ * own doc comment for why this occludes rather than cuts the real path.
+ * Default `halfSpan` (2.5) matches DivorceSlash's own horizontal
+ * (along-the-line) footprint — its diagonal runs from x-3 to x+2, a ~2.5px
+ * half-width around its own center — so the line breaks exactly where the
+ * slash crosses it, and the line's visible end touches the slash rather
+ * than stopping short of it with a visible gap before the mark starts (real
+ * bug the user caught: an earlier wider halfSpan of 6 left the line clearly
+ * not reaching the slash). Call sites that need to cover BOTH of two
+ * strokes with one occluder centered between them (the `!straddle` case in
+ * DivorceBreakMark, where the two strokes sit at x∓4 rather than both under
+ * this same point) pass a wider explicit `halfSpan` instead — 2.5 alone
+ * would leave a sliver of solid line between the occluder and the far
+ * stroke (real bug the user caught: the line visibly poked out past one of
+ * the two slashes), while the geometrically "exact" 6.5 (each stroke's own
+ * half-width plus the 4px gap between their centers) overshot visibly past
+ * both strokes in practice (real bug the user caught: the line stopped
+ * clearly short of the slashes) — 4 is tuned from that visual feedback
+ * rather than derived purely from the nominal stroke coordinates.
+ */
+function DivorceGapOccluder({
+  x,
+  y,
+  axis,
+  halfSpan = 2.5,
+}: {
+  x: number;
+  y: number;
+  axis: { dx: number; dy: number };
+  halfSpan?: number;
+}) {
+  const length = Math.hypot(axis.dx, axis.dy) || 1;
+  const ux = (axis.dx / length) * halfSpan;
+  const uy = (axis.dy / length) * halfSpan;
+  return (
+    <line
+      x1={x - ux}
+      y1={y - uy}
+      x2={x + ux}
+      y2={y + uy}
+      stroke="var(--background)"
+      strokeWidth={4}
+      strokeLinecap="butt"
+    />
   );
 }
 
@@ -498,6 +635,7 @@ function PartnershipEdgeLine({
                 : undefined
             }
             towardOnly
+            gapAxis={{ dx: plainX - midX, dy: plainY - midY }}
           />
         )}
         {collapseBadge}
@@ -542,6 +680,7 @@ function PartnershipEdgeLine({
           straddle={
             unionCollapse ? { dx: x2 - midX, dy: yTarget - midY } : undefined
           }
+          gapAxis={{ dx: x2 - midX, dy: yTarget - midY }}
         />
       )}
       {collapseBadge}
