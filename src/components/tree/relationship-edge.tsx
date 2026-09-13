@@ -290,13 +290,33 @@ function DivorceBreakMark({
   const strokeAY = y - uy;
   const strokeBX = x + ux;
   const strokeBY = y + uy;
+  // Each occluder is centered halfway between its own stroke and the badge
+  // (x, y) — not on the stroke alone — and sized (offset/2 + a stroke's own
+  // ~2.5px half-width) to span the ENTIRE stretch from the stroke out to
+  // the badge's anchor point, not just a small span immediately around the
+  // stroke. The badge itself is narrower than that stretch (CollapseToggleButton's
+  // ~10px radius vs. this ~20px offset), so a stroke-only occluder left a
+  // bare run of solid line visible between the stroke and the badge — real
+  // bug the user caught on real data (Елена/Николай Купчик): the line was
+  // clearly still visible between each `\` and the badge's white oval.
+  const fillHalfSpan = offset / 2 + 2.5;
   return (
     <>
       {gapAxis && (
-        <DivorceGapOccluder x={strokeAX} y={strokeAY} axis={gapAxis} />
+        <DivorceGapOccluder
+          x={(strokeAX + x) / 2}
+          y={(strokeAY + y) / 2}
+          axis={gapAxis}
+          halfSpan={fillHalfSpan}
+        />
       )}
       {gapAxis && (
-        <DivorceGapOccluder x={strokeBX} y={strokeBY} axis={gapAxis} />
+        <DivorceGapOccluder
+          x={(strokeBX + x) / 2}
+          y={(strokeBY + y) / 2}
+          axis={gapAxis}
+          halfSpan={fillHalfSpan}
+        />
       )}
       <DivorceSlash x={strokeAX} y={strokeAY} />
       <DivorceSlash x={strokeBX} y={strokeBY} />
