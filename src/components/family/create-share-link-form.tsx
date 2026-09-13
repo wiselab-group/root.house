@@ -91,7 +91,7 @@ export function CreateShareLinkForm({ familyId }: { familyId: string }) {
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-end gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1">
           <Label
             htmlFor="share-visibility-scope"
@@ -112,7 +112,7 @@ export function CreateShareLinkForm({ familyId }: { familyId: string }) {
             </option>
             <option value="public_only">Только отмеченное «публичным»</option>
           </NativeSelect>
-          <p className="max-w-64 text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Приватные данные не показываются в любом случае.
           </p>
         </div>
@@ -172,8 +172,8 @@ export function CreateShareLinkForm({ familyId }: { familyId: string }) {
             </p>
           )}
         </div>
-        <SubmitButton />
       </div>
+      <SubmitButton />
       {noOneVisible && (
         <p className="text-sm text-muted-foreground">
           {visibilityScope === "public_only"
