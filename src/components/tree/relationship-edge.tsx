@@ -175,7 +175,7 @@ function DivorceSlash({ x, y }: { x: number; y: number }) {
  * elsewhere in this file to hide whatever line is underneath without
  * touching that line's own geometry. One occluder per stroke (not one
  * spanning the full distance between them) because in the `straddle` case
- * the two strokes sit ~28-39px apart straddling the collapse badge — a
+ * the two strokes sit ~20-28px apart straddling the collapse badge — a
  * single occluder centered on the untouched (x, y) midpoint would only
  * cover the badge's own already-covered anchor point, not either actual
  * stroke (this was the bug: gap looked like it did nothing, because it was
@@ -199,9 +199,9 @@ function DivorceSlash({ x, y }: { x: number; y: number }) {
  * just after it, each clear of the badge's ~20px footprint
  * (CollapseToggleButton's h-5/min-w-5) — reading as one `//` mark that the
  * badge happens to sit inside, not a mark shoved off to one side. The
- * offset (28px) leaves visible clearance beyond the button's own edge
- * rather than butting the stroke right against it — the user asked for
- * more room here, not the stroke hugging the badge.
+ * offset (20px) sits right at the button's own edge — a wider 28px, tried
+ * briefly, put visible clearance between the badge and each stroke that the
+ * user asked to have removed again ("верни слеши ближе").
  *
  * The gap occluder is drawn even when a collapse badge also sits between
  * the strokes: the badge (CollapseToggleButton, a small round button) isn't
@@ -259,10 +259,10 @@ function DivorceBreakMark({
     );
   }
   const length = Math.hypot(straddle.dx, straddle.dy) || 1;
-  const offset = 28;
+  const offset = 20;
   const ux = (straddle.dx / length) * offset;
   const uy = (straddle.dy / length) * offset;
-  // The strokes sit straddling the badge (offset from x/y by ~28px, see
+  // The strokes sit straddling the badge (offset from x/y by ~20px, see
   // above) — the occluder must be centered on EACH stroke's own position,
   // not on the original (x, y) midpoint, which here is the badge's own
   // anchor, not a point between the strokes. Two separate occluders, one
