@@ -91,15 +91,15 @@ export function CollapseToggleButton({
     <button
       type="button"
       className={cn(
-        "nodrag nopan z-10 flex h-5 min-w-5 items-center justify-center gap-0.5 rounded-full border bg-card px-1.5 text-[0.65rem] font-medium shadow-sm transition-colors",
+        "nodrag nopan z-10 flex h-5 min-w-5 cursor-pointer items-center justify-center gap-0.5 rounded-full border bg-card px-1.5 text-[0.65rem] font-medium shadow-sm transition-colors",
         // Sage (--tree-accent), not terracotta — "collapsed" is a standing
         // property of this branch (identity/state), not something the user
         // is doing right now, so it follows the identity color, not the
         // action color (see buildCardFrameClassName's own comment on that
         // split).
         isCollapsed
-          ? "border-tree-accent text-tree-accent hover:bg-tree-accent/10"
-          : "border-border text-muted-foreground opacity-60 hover:opacity-100 focus-visible:opacity-100",
+          ? "border-tree-accent text-tree-accent"
+          : "border-border text-muted-foreground hover:text-foreground",
         className,
       )}
       onClick={(e) => {
