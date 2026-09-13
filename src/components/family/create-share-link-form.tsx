@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { PasswordInput } from "@/components/ui/password-input";
 
 const initialState: CreateShareLinkFormState = {};
 
@@ -165,7 +166,7 @@ export function CreateShareLinkForm({ familyId }: { familyId: string }) {
           >
             Пароль (необязательно)
           </Label>
-          <Input id="share-password" name="password" type="password" />
+          <PasswordInput id="share-password" name="password" />
           {state.fieldErrors?.password && (
             <p className="text-xs text-destructive">
               {state.fieldErrors.password}

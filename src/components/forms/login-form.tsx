@@ -8,6 +8,7 @@ import { credentialsSchema } from "@/lib/validation/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 
 /** Same email format the server actually enforces — checked here only to
  *  decide whether the password step can be reached, never as the source of
@@ -144,11 +145,10 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string } = {}) {
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="password">Пароль</Label>
-            <Input
+            <PasswordInput
               ref={passwordRef}
               id="password"
               name="password"
-              type="password"
               autoComplete="current-password"
               required
               onChange={() => setDismissServerError(true)}

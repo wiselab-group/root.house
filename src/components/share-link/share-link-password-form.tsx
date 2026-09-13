@@ -9,8 +9,8 @@ import {
   type VerifyShareLinkPasswordFormState,
 } from "@/actions/share-link-access.actions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 
 const initialState: VerifyShareLinkPasswordFormState = {};
 
@@ -55,7 +55,7 @@ export function ShareLinkPasswordForm({ token }: { token: string }) {
         >
           Пароль
         </Label>
-        <Input id="share-password" name="password" type="password" required />
+        <PasswordInput id="share-password" name="password" required />
       </div>
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
       <SubmitButton />
