@@ -1,8 +1,7 @@
-import { PhotoGrid } from "./photo-grid";
 import { AlbumGrid } from "./album-grid";
 import { AlbumPageHeader } from "./album-page-header";
 import { UploadPhotoDialog } from "./upload-photo-dialog";
-import { EmptyPhotosState } from "./empty-photos-state";
+import { PhotosFeedSection } from "./photos-feed-section";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import type { GalleryPhotoView } from "./gallery-photo";
 import type { AlbumWithCoverRecord } from "@/domain/album/album.service";
@@ -12,7 +11,7 @@ import type { AlbumWithCoverRecord } from "@/domain/album/album.service";
  * The unfiltered page leads with the album grid (folder-style cards with a
  * cover photo) above the flat photo feed — an album reads as a place you
  * open, not just a tab filter. Once inside one album, the breadcrumb above
- * is the way back out — a pill row repeating "Все фото" + the current
+ * is the way back out — a pill row repeating "Без альбома" + the current
  * album's own (already-visible-in-the-title) name added nothing.
  *
  * The two "add" actions used to live stacked at the very bottom of the
@@ -23,6 +22,12 @@ import type { AlbumWithCoverRecord } from "@/domain/album/album.service";
  * creating an album is the rarer, structural action, so it moved into the
  * album grid itself as a "+ Новый альбом" tile (AlbumGrid/CreateAlbumTile)
  * — each action now sits next to what it actually affects.
+ *
+ * `photos` on the unfiltered page is pre-filtered by the caller (see
+ * photos/page.tsx) to exclude anything already in an album — it used to be
+ * the family's ENTIRE photo list, so every album cover above also showed
+ * up again in the flat feed below it, on the same page. PhotosFeedSection
+ * scopes that feed's heading/emptiness accordingly (`scoped` prop below).
  */
 export function PhotosPageLayout({
   familyId,
@@ -97,34 +102,22 @@ export function PhotosPageLayout({
       </div>
 
       {!activeAlbumId && (
-        <>
-          <AlbumGrid
-            familySlug={familySlug}
-            albums={albums}
-            familyId={familyId}
-            canEdit={canEdit}
-          />
-          {albums.length > 0 && (
-            <div className="flex items-center gap-3 pt-2">
-              <h2 className="font-heading text-xl font-medium whitespace-nowrap">
-                Все фото
-              </h2>
-              <div aria-hidden="true" className="h-px flex-1 bg-border" />
-            </div>
-          )}
-        </>
-      )}
-
-      {photos.length === 0 && (activeAlbumId || albums.length === 0) ? (
-        <EmptyPhotosState canUpload={canUpload} />
-      ) : (
-        <PhotoGrid
-          photos={photos}
-          familyId={familyId}
+        <AlbumGrid
           familySlug={familySlug}
+          albums={albums}
+          familyId={familyId}
           canEdit={canEdit}
         />
       )}
+
+      <PhotosFeedSection
+        photos={photos}
+        familyId={familyId}
+        familySlug={familySlug}
+        canEdit={canEdit}
+        canUpload={canUpload}
+        scoped={!activeAlbumId && albums.length > 0}
+      />
     </main>
   );
 }

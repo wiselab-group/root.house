@@ -32,10 +32,18 @@ export default async function PhotosPage({
     listAlbumsWithCover(familyId),
     getFamilySummary(familyId),
   ]);
-  const photos = filterVisibleGalleryPhotos(allPhotos, {
+  const visiblePhotos = filterVisibleGalleryPhotos(allPhotos, {
     userId: session.user.id,
     role: member.role,
   });
+  // The unfiltered /photos page already leads with every album's own cover
+  // in AlbumGrid above — showing the family's full photo list again below
+  // would repeat the same photos twice on one page. The feed under the
+  // albums grid is scoped to photos not in any album, so it reads as "what
+  // still needs sorting" instead of a redundant full-gallery dump. The
+  // album's own page (.../photos/[albumId]) is unaffected — it keeps
+  // showing everything in that one album, unfiltered.
+  const photos = visiblePhotos.filter((photo) => photo.albums.length === 0);
 
   return (
     <PhotosPageLayout
