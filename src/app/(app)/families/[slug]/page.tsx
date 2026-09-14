@@ -73,7 +73,7 @@ export default async function FamilyDashboardPage({
       <div className="animate-content-enter">
         <FamilyTreeLaunchCard
           href={`/families/${slug}/tree`}
-          description="Интерактивная схема родственных связей — начните здесь"
+          description="Интерактивная схема родственных связей"
         />
       </div>
 

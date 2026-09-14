@@ -24,8 +24,21 @@ import { partialDateFromFormData } from "@/domain/shared/partial-date";
 export interface PersonFormState {
   error?: string;
   fieldErrors?: Record<string, string>;
+  /** Set only on success — the id/slug of the newly created person, plus the
+   *  family's own slug, so the client can navigate itself (see below) rather
+   *  than this action redirecting. */
+  created?: { personId: string; personSlug: string; familySlug: string };
 }
 
+/**
+ * Does NOT redirect on success (unlike updatePersonAction) — PersonForm's
+ * create flow needs the new person's id back on the client first, to
+ * optionally upload a just-picked avatar file via /api/media/upload (which
+ * requires an existing personId) BEFORE navigating to the profile page.
+ * Navigation itself happens client-side afterwards (see PersonForm's
+ * submit handling for the "showPhotoPicker" case) via router.push to the
+ * same URL this used to redirect() to.
+ */
 export async function createPersonAction(
   familyId: string,
   _prevState: PersonFormState,
@@ -82,7 +95,13 @@ export async function createPersonAction(
 
   const familySlug = await getFamilySlugById(familyId);
   revalidatePath(`/families/${familySlug}/people`);
-  redirect(`/families/${familySlug}/people/${person.slug}`);
+  return {
+    created: {
+      personId: person.id,
+      personSlug: person.slug,
+      familySlug: familySlug ?? "",
+    },
+  };
 }
 
 export interface CreatePlaceholderFormState {

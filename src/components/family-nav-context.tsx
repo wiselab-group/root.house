@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import {
-  Network,
+  TreeDeciduous,
   Users,
   Images,
   MapPin,
@@ -19,7 +19,7 @@ import {
  * (itself a Client Component) resolves the actual component from this map.
  */
 const NAV_ICONS = {
-  tree: Network,
+  tree: TreeDeciduous,
   people: Users,
   photos: Images,
   places: MapPin,

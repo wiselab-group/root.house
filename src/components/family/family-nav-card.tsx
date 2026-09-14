@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { ArrowRight, TreePine } from "lucide-react";
+import { ArrowRight, TreeDeciduous } from "lucide-react";
 
 /**
  * The dashboard's single lead action — the family tree. Visually the
@@ -28,7 +28,11 @@ export function FamilyTreeLaunchCard({
       className="group flex items-center gap-4 rounded-2xl bg-primary/8 px-6 py-7 ring-1 ring-primary/30 transition-all duration-200 ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-primary/12 hover:ring-primary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-        <TreePine className="size-5" strokeWidth={1.75} aria-hidden="true" />
+        <TreeDeciduous
+          className="size-5"
+          strokeWidth={1.75}
+          aria-hidden="true"
+        />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="font-heading text-2xl font-medium tracking-tight text-primary">

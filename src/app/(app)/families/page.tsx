@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowRight, TreePine } from "lucide-react";
+import { ArrowRight, TreeDeciduous } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { LinkButton } from "@/components/ui/link-button";
 import { listFamiliesForUser } from "@/domain/family/family.service";
@@ -88,7 +88,11 @@ function EmptyFamiliesState() {
   return (
     <div className="flex flex-col items-center gap-6 rounded-2xl border border-dashed border-border px-6 py-16 text-center">
       <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <TreePine className="size-6" strokeWidth={1.75} aria-hidden="true" />
+        <TreeDeciduous
+          className="size-6"
+          strokeWidth={1.75}
+          aria-hidden="true"
+        />
       </span>
       <div className="flex max-w-sm flex-col gap-2">
         <h2 className="font-heading text-xl font-medium">Начните с себя</h2>
