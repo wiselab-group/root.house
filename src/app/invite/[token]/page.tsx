@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { getInvitationPreview } from "@/domain/invitation/invitation.service";
-import { AuthBrand } from "@/components/auth/auth-brand";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { AcceptInvitationCard } from "@/components/invitation/accept-invitation-card";
 import {
   Card,
@@ -35,13 +35,17 @@ export default async function InvitePage({
   ]);
 
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center p-4">
-      <AuthBrand />
-      <Card className="w-full max-w-sm">
+    <AuthShell>
+      <Card
+        className="w-full max-w-sm animate-content-enter rounded-2xl shadow-sm"
+        style={{ animationDelay: "80ms" }}
+      >
         {!preview ? (
           <>
             <CardHeader>
-              <CardTitle>Приглашение не найдено</CardTitle>
+              <CardTitle className="font-heading text-xl">
+                Приглашение не найдено
+              </CardTitle>
               <CardDescription>
                 Эта ссылка недействительна или уже была использована.
               </CardDescription>
@@ -50,7 +54,7 @@ export default async function InvitePage({
         ) : preview.status !== "pending" ? (
           <>
             <CardHeader>
-              <CardTitle>
+              <CardTitle className="font-heading text-xl">
                 {preview.status === "expired" && "Срок приглашения истёк"}
                 {preview.status === "revoked" && "Приглашение отозвано"}
                 {preview.status === "accepted" && "Приглашение уже принято"}
@@ -72,7 +76,9 @@ export default async function InvitePage({
         ) : !session?.user ? (
           <>
             <CardHeader>
-              <CardTitle>Приглашение в семью «{preview.familyName}»</CardTitle>
+              <CardTitle className="font-heading text-xl">
+                Приглашение в семью «{preview.familyName}»
+              </CardTitle>
               <CardDescription>
                 {preview.inviterName || "Владелец семьи"} приглашает вас
                 присоединиться в роли «{ROLE_LABELS[preview.role]}». Войдите или
@@ -100,6 +106,6 @@ export default async function InvitePage({
           />
         )}
       </Card>
-    </main>
+    </AuthShell>
   );
 }

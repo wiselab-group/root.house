@@ -59,7 +59,9 @@ export function AcceptInvitationCard({
   return (
     <>
       <CardHeader>
-        <CardTitle>Приглашение в семью «{familyName}»</CardTitle>
+        <CardTitle className="font-heading text-xl">
+          Приглашение в семью «{familyName}»
+        </CardTitle>
         <CardDescription>
           {inviterName || "Владелец семьи"} приглашает вас присоединиться в роли
           «{ROLE_LABELS[role]}».

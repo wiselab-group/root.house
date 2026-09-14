@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
-import { AuthBrand } from "@/components/auth/auth-brand";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { LoginForm } from "@/components/forms/login-form";
 import {
   Card,
@@ -23,11 +23,13 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
     : callbackUrl;
 
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center p-4">
-      <AuthBrand />
-      <Card className="w-full max-w-sm">
+    <AuthShell>
+      <Card
+        className="w-full max-w-sm animate-content-enter rounded-2xl shadow-sm"
+        style={{ animationDelay: "80ms" }}
+      >
         <CardHeader>
-          <CardTitle>С возвращением</CardTitle>
+          <CardTitle className="font-heading text-xl">С возвращением</CardTitle>
           <CardDescription>
             Войдите, чтобы продолжить работу с семейным архивом.
           </CardDescription>
@@ -59,6 +61,6 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           </p>
         </CardContent>
       </Card>
-    </main>
+    </AuthShell>
   );
 }

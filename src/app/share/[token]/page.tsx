@@ -9,7 +9,7 @@ import {
   PersonNotPubliclyVisibleError,
 } from "@/domain/share-link/public-tree.service";
 import type { ShareLinkVisibilityScope } from "@/domain/share-link/share-link.service";
-import { AuthBrand } from "@/components/auth/auth-brand";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { PublicTreeView } from "@/components/share-link/public-tree-view";
 import { ShareLinkPasswordForm } from "@/components/share-link/share-link-password-form";
 import {
@@ -53,15 +53,19 @@ export default async function SharePage({
   }
 
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center gap-6 p-4">
-      <AuthBrand />
+    <AuthShell>
       {access.kind === "not_found" && <StatusCard variant="not_found" />}
       {access.kind === "expired" && <StatusCard variant="expired" />}
       {access.kind === "revoked" && <StatusCard variant="revoked" />}
       {access.kind === "password_required" && (
-        <Card className="w-full max-w-sm">
+        <Card
+          className="w-full max-w-sm animate-content-enter rounded-2xl shadow-sm"
+          style={{ animationDelay: "80ms" }}
+        >
           <CardHeader>
-            <CardTitle>Ссылка защищена паролем</CardTitle>
+            <CardTitle className="font-heading text-xl">
+              Ссылка защищена паролем
+            </CardTitle>
             <CardDescription>
               Введите пароль, который вам передали вместе со ссылкой.
             </CardDescription>
@@ -71,7 +75,7 @@ export default async function SharePage({
           </CardContent>
         </Card>
       )}
-    </main>
+    </AuthShell>
   );
 }
 
@@ -96,9 +100,12 @@ function StatusCard({
   }[variant];
 
   return (
-    <Card className="w-full max-w-sm">
+    <Card
+      className="w-full max-w-sm animate-content-enter rounded-2xl shadow-sm"
+      style={{ animationDelay: "80ms" }}
+    >
       <CardHeader>
-        <CardTitle>{copy.title}</CardTitle>
+        <CardTitle className="font-heading text-xl">{copy.title}</CardTitle>
         <CardDescription>{copy.description}</CardDescription>
       </CardHeader>
     </Card>
@@ -136,17 +143,18 @@ async function GrantedTreeView({
 
   if (!graph) {
     return (
-      <main className="flex min-h-svh flex-col items-center justify-center gap-6 p-4">
-        <AuthBrand />
-        <Card className="w-full max-w-sm">
+      <AuthShell>
+        <Card className="w-full max-w-sm animate-content-enter rounded-2xl shadow-sm">
           <CardHeader>
-            <CardTitle>Материал больше не доступен</CardTitle>
+            <CardTitle className="font-heading text-xl">
+              Материал больше не доступен
+            </CardTitle>
             <CardDescription>
               Этот материал больше не доступен по этой ссылке.
             </CardDescription>
           </CardHeader>
         </Card>
-      </main>
+      </AuthShell>
     );
   }
 

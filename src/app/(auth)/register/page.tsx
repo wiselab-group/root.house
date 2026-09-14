@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
-import { AuthBrand } from "@/components/auth/auth-brand";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { RegisterForm } from "@/components/forms/register-form";
 import {
   Card,
@@ -25,11 +25,15 @@ export default async function RegisterPage({
     : callbackUrl;
 
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center p-4">
-      <AuthBrand />
-      <Card className="w-full max-w-sm">
+    <AuthShell>
+      <Card
+        className="w-full max-w-sm animate-content-enter rounded-2xl shadow-sm"
+        style={{ animationDelay: "80ms" }}
+      >
         <CardHeader>
-          <CardTitle>Начать семейный архив</CardTitle>
+          <CardTitle className="font-heading text-xl">
+            Начать семейный архив
+          </CardTitle>
           <CardDescription>
             Создайте аккаунт, чтобы завести своё первое семейное дерево.
           </CardDescription>
@@ -56,6 +60,6 @@ export default async function RegisterPage({
           </p>
         </CardContent>
       </Card>
-    </main>
+    </AuthShell>
   );
 }
