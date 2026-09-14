@@ -83,23 +83,23 @@ export function PhotosPageLayout({
               ]
         }
       />
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <AlbumPageHeader
-          familyId={familyId}
-          familySlug={familySlug}
-          canEdit={canEdit}
-          activeAlbumId={activeAlbumId}
-          activeAlbumName={activeAlbumName}
-          activeAlbumDescription={activeAlbumDescription}
-        />
-        {canUpload && (
-          <UploadPhotoDialog
-            familyId={familyId}
-            albums={albums}
-            defaultAlbums={defaultAlbums}
-          />
-        )}
-      </div>
+      <AlbumPageHeader
+        familyId={familyId}
+        familySlug={familySlug}
+        canEdit={canEdit}
+        activeAlbumId={activeAlbumId}
+        activeAlbumName={activeAlbumName}
+        activeAlbumDescription={activeAlbumDescription}
+        headerActions={
+          canUpload && (
+            <UploadPhotoDialog
+              familyId={familyId}
+              albums={albums}
+              defaultAlbums={defaultAlbums}
+            />
+          )
+        }
+      />
 
       {!activeAlbumId && (
         <AlbumGrid
