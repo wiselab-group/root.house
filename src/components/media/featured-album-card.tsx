@@ -24,7 +24,7 @@ export function FeaturedAlbumCard({
   return (
     <Link
       href={`/families/${familySlug}/photos/${album.id}`}
-      className="group relative flex aspect-[16/9] overflow-hidden rounded-xl border border-border bg-muted sm:aspect-[21/9]"
+      className="group relative flex aspect-video flex-col overflow-hidden rounded-xl border border-border bg-muted sm:aspect-21/9"
     >
       {album.coverMediaId ? (
         <Image
