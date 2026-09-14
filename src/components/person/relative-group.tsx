@@ -41,7 +41,7 @@ function RelativeListItem({
   canEdit: boolean;
 }) {
   return (
-    <li className="group/pill relative flex max-w-full items-center gap-2 rounded-full border border-border py-1 pr-3 pl-1.5 transition-colors hover:bg-muted/60">
+    <li className="group/pill relative flex max-w-full items-center gap-2 rounded-full border border-border p-1 transition-colors hover:bg-muted/60">
       <Link
         href={`/families/${familySlug}/people/${person.slug}`}
         className="absolute inset-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
@@ -51,7 +51,7 @@ function RelativeListItem({
         person={person}
         familyId={familyId}
         size="sm"
-        className="pointer-events-none"
+        className="pointer-events-none size-9!"
       />
       <span className="truncate text-sm font-medium group-hover/pill:text-primary">
         {personDisplayName(person)}
