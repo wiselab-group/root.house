@@ -40,8 +40,19 @@ function RelativeListItem({
   relationshipKind?: "parent_child" | "partnership";
   canEdit: boolean;
 }) {
+  // Trailing icon buttons already carry their own visual weight (rounded
+  // hit-area, hover fill) that reads as padding before the pill's own
+  // right edge — an extra pr-3 there over-spaced them from the border. A
+  // pill with no icons (derived siblings, view-only callers) has nothing
+  // after the name/badge to play that role, so it needs the explicit pr-3
+  // itself or the text sits flush against the rounded edge.
+  const hasIcons = canEdit && relationshipKind && person.relationshipId;
   return (
-    <li className="group/pill relative flex max-w-full items-center gap-2 rounded-full border border-border p-1 transition-colors hover:bg-muted/60">
+    <li
+      className={`group/pill relative flex max-w-full items-center gap-2 rounded-full border border-border p-1 transition-colors hover:bg-muted/60 ${
+        hasIcons ? "" : "pr-3"
+      }`}
+    >
       <Link
         href={`/families/${familySlug}/people/${person.slug}`}
         className="absolute inset-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
