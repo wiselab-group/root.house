@@ -56,9 +56,9 @@ export function RemoveRelationshipButton({
         render={
           <Button
             variant="ghost"
-            size="icon-xs"
+            size="icon-sm"
             aria-label={`Убрать связь с ${relativeName}`}
-            className="rounded-full text-muted-foreground hover:text-destructive"
+            className="cursor-pointer rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           />
         }
       >

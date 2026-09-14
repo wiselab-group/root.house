@@ -10,13 +10,20 @@ import type { RelativeItem } from "./relative-item";
  * CLAUDE.md's 150-line component limit (PartnershipStatusToggle's addition
  * pushed the combined file over). No shared state beyond its own props.
  *
- * Carries a small PersonAvatar and denser weight (bg-muted/50 fill, medium
- * text) rather than a bare outline ring around plain text — this is the
- * profile's most-repeated interactive element (every relationship on the
- * page renders through here) and a thin gray outline with tiny type read as
- * a generic admin-tool chip, not "a family member" (impeccable design pass,
- * `bolder`: avatars + denser pill, per explicit user choice over a
- * text-only amplification).
+ * Quiet outline at rest (no fill), a muted tint added only on hover — a
+ * permanent bg-muted read as heavier than this repeats-per-relationship
+ * element should carry, but a bare invisible pill with nothing to trace its
+ * shape looked under-defined once the fill was dropped, so the original
+ * outline border stays. The whole pill is the
+ * click target, not just the name text: `Link` is stretched to cover the
+ * full `<li>` via absolute inset-0 (a `<button>` — the heart/× controls —
+ * can't nest inside an `<a>`, so they stay as siblings positioned above it
+ * with `relative z-10`, the standard "clickable card + escape-hatch button"
+ * pattern) — before this, hovering highlighted the whole pill but only the
+ * name text itself was actually clickable, a mismatch between the visible
+ * hover affordance and the real hit area (caught in live review). Opens in
+ * the same tab, matching every other person-link in the app (profile list,
+ * search, breadcrumbs) — a relative pill is not a special case.
  */
 function RelativeListItem({
   familyId,
@@ -33,45 +40,51 @@ function RelativeListItem({
   relationshipKind?: "parent_child" | "partnership";
   canEdit: boolean;
 }) {
-  const canManage = canEdit && relationshipKind && person.relationshipId;
   return (
-    <li
-      className={`group/pill flex max-w-full items-center gap-2 rounded-full bg-muted/60 py-1 pr-3 pl-1.5 transition-colors hover:bg-muted ${
-        canManage ? "pr-1.5" : "pr-3"
-      }`}
-    >
-      <PersonAvatar person={person} familyId={familyId} size="sm" />
+    <li className="group/pill relative flex max-w-full items-center gap-2 rounded-full border border-border py-1 pr-3 pl-1.5 transition-colors hover:bg-muted/60">
       <Link
         href={`/families/${familySlug}/people/${person.slug}`}
-        className="truncate text-sm font-medium group-hover/pill:text-primary group-hover/pill:underline"
-      >
+        className="absolute inset-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        aria-label={personDisplayName(person)}
+      />
+      <PersonAvatar
+        person={person}
+        familyId={familyId}
+        size="sm"
+        className="pointer-events-none"
+      />
+      <span className="truncate text-sm font-medium group-hover/pill:text-primary">
         {personDisplayName(person)}
-      </Link>
+      </span>
       {!person.isCurrent && relationshipKind === "partnership" && (
-        <span className="shrink-0 rounded-full bg-background px-2 py-0.5 text-[0.65rem] leading-none font-medium text-muted-foreground">
+        <span className="pointer-events-none shrink-0 rounded-full bg-muted px-2 py-0.5 text-[0.65rem] leading-none font-medium text-muted-foreground">
           бывш.
         </span>
       )}
       {canEdit &&
         relationshipKind === "partnership" &&
         person.relationshipId && (
-          <PartnershipStatusToggle
-            familyId={familyId}
-            personId={personId}
-            otherPersonId={person.id}
-            relationshipId={person.relationshipId}
-            isCurrent={person.isCurrent ?? true}
-            relativeName={personDisplayName(person)}
-          />
+          <span className="relative z-10">
+            <PartnershipStatusToggle
+              familyId={familyId}
+              personId={personId}
+              otherPersonId={person.id}
+              relationshipId={person.relationshipId}
+              isCurrent={person.isCurrent ?? true}
+              relativeName={personDisplayName(person)}
+            />
+          </span>
         )}
       {canEdit && relationshipKind && person.relationshipId && (
-        <RemoveRelationshipButton
-          familyId={familyId}
-          personId={personId}
-          relationshipId={person.relationshipId}
-          relationshipKind={relationshipKind}
-          relativeName={personDisplayName(person)}
-        />
+        <span className="relative z-10">
+          <RemoveRelationshipButton
+            familyId={familyId}
+            personId={personId}
+            relationshipId={person.relationshipId}
+            relationshipKind={relationshipKind}
+            relativeName={personDisplayName(person)}
+          />
+        </span>
       )}
     </li>
   );

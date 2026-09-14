@@ -65,10 +65,10 @@ export function PartnershipStatusToggle({
         render={
           <Button
             variant="ghost"
-            size="icon-xs"
+            size="icon-sm"
             aria-label={label}
             title={label}
-            className="cursor-pointer rounded-full text-muted-foreground hover:text-foreground"
+            className="cursor-pointer rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary"
           />
         }
       >
