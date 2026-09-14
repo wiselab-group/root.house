@@ -11,8 +11,8 @@ import { getPlace } from "@/domain/place/place.service";
 import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 import { formatPartialDate } from "@/domain/shared/partial-date";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ProfileSection } from "@/components/person/profile-section";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 
@@ -73,11 +73,13 @@ export default async function EventDetailsPage({
   ];
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
+    <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12 sm:py-16">
       <SetBreadcrumbs items={breadcrumbItems} />
-      <div>
-        <Badge variant="secondary">{EVENT_TYPE_LABELS[event.type]}</Badge>
-        <h1 className="font-heading mt-2 text-3xl font-medium">
+      <div className="flex flex-col gap-2">
+        <Badge variant="secondary" className="w-fit">
+          {EVENT_TYPE_LABELS[event.type]}
+        </Badge>
+        <h1 className="font-heading text-3xl font-medium tracking-tight text-balance">
           {event.title}
         </h1>
         <p className="text-muted-foreground">
@@ -88,47 +90,39 @@ export default async function EventDetailsPage({
       </div>
 
       {event.description && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Описание</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm whitespace-pre-wrap">
-            {event.description}
-          </CardContent>
-        </Card>
+        <ProfileSection title="Описание">
+          <p className="text-sm whitespace-pre-wrap">{event.description}</p>
+        </ProfileSection>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Участники</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {participants.length === 0 ? (
-            <p className="text-sm text-muted-foreground">—</p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {participants.map((p) => (
-                <li
-                  key={p.personId}
-                  className="flex items-center justify-between text-sm"
-                >
-                  {p.slug ? (
-                    <Link
-                      href={`/families/${slug}/people/${p.slug}`}
-                      className="hover:underline"
-                    >
-                      {p.name}
-                    </Link>
-                  ) : (
-                    <span>{p.name}</span>
-                  )}
-                  <span className="text-muted-foreground">{p.roleLabel}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      <ProfileSection title="Участники">
+        {participants.length === 0 ? (
+          <p className="text-sm text-muted-foreground">—</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-border">
+            {participants.map((p) => (
+              <li
+                key={p.personId}
+                className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+              >
+                {p.slug ? (
+                  <Link
+                    href={`/families/${slug}/people/${p.slug}`}
+                    className="font-medium hover:text-primary hover:underline"
+                  >
+                    {p.name}
+                  </Link>
+                ) : (
+                  <span className="font-medium">{p.name}</span>
+                )}
+                <span className="text-sm text-muted-foreground">
+                  {p.roleLabel}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </ProfileSection>
     </main>
   );
 }
