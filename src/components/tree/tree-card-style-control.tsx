@@ -1,18 +1,46 @@
-import { Controls, ControlButton } from "@xyflow/react";
-import { CircleIcon, LockIcon, LockOpenIcon, SquareIcon } from "lucide-react";
+"use client";
+
+import { Controls, ControlButton, useReactFlow } from "@xyflow/react";
+import {
+  CircleIcon,
+  LockIcon,
+  LockOpenIcon,
+  MaximizeIcon,
+  SettingsIcon,
+  SquareIcon,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverClose,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import type { TreeCardStyle } from "./use-tree-card-style";
 
 /**
  * Card-style toggle (compact/portrait) + drag-lock toggle — split out from
  * tree-canvas.tsx purely to keep that file under the 150-line component
- * limit. Bottom-left xyflow control cluster (the library's default
- * position).
+ * limit.
  *
- * The drag lock uses a custom ControlButton (not xyflow's own built-in lock
- * button, which showInteractive={false} above disables) because this app's
- * card-style button already lives in this same custom cluster — one
- * <Controls> owning both keeps them visually grouped instead of splitting
- * across two separate button stacks.
+ * Two entirely different renderings depending on `isCoarsePointer`:
+ *
+ * Desktop (pointer: fine) keeps XYFlow's own bottom-left <Controls> cluster
+ * (zoom in/out + fit-view + this app's custom style/lock buttons) — a fine
+ * pointer has no trouble hitting a 26px control, and the cluster's fixed
+ * screen position never competes with anything else there.
+ *
+ * Mobile/touch (isCoarsePointer) replaces the whole cluster with ONE round
+ * FAB (MobileTreeControlsButton, matching Trace/Filter's own floating-button
+ * styling in tree-toolbar.tsx) that opens a Popover listing the same
+ * actions. Found on a real 390×844 screenshot of real family data (see
+ * memory/conversation 2026-09-14): the native 3-button stacked cluster sits
+ * ~180px tall in the bottom-left corner, permanently covering whatever tree
+ * card happens to pan/zoom underneath it — not a one-off framing, every
+ * card eventually passes through that corner on a tree the user is
+ * scrolling around. Collapsing to one FAB that's only ever a small circle
+ * removes that permanent dead zone; the actions themselves stay reachable
+ * one tap further in, inside the popover sheet.
  */
 export function TreeCardStyleControl({
   cardStyle,
@@ -30,19 +58,25 @@ export function TreeCardStyleControl({
   setDraggable?: (draggable: boolean) => void;
   showZoom: boolean;
 }) {
+  // showZoom doubles as this component's own "are we on a coarse pointer"
+  // signal — tree-canvas.tsx already computes it as `!isCoarsePointer`
+  // (zoom buttons are redundant with pinch-to-zoom on touch), and the same
+  // condition is exactly when this cluster needs to collapse to a FAB.
+  const isCoarsePointer = !showZoom;
+
+  if (isCoarsePointer) {
+    return (
+      <MobileTreeControls
+        cardStyle={cardStyle}
+        setCardStyle={setCardStyle}
+        draggable={draggable}
+        setDraggable={setDraggable}
+      />
+    );
+  }
+
   return (
-    // Default xyflow control buttons are 26px/12px-icon — a fine pointer
-    // target on desktop but too small to comfortably tap. Bumped up on
-    // coarse/touch pointers only (phones, tablets), matching the pointer-fine
-    // gate the minimap uses in tree-canvas.tsx — width alone isn't a reliable
-    // "mobile" signal (a landscape phone can exceed md). Zoom in/out buttons
-    // are dropped entirely there too — pinch-to-zoom covers that on a
-    // touchscreen, and two more 44px targets is clutter fit-view/lock don't need.
-    <Controls
-      showInteractive={false}
-      showZoom={showZoom}
-      className="pointer-coarse:[&_.react-flow\_\_controls-button]:size-11! pointer-coarse:[&_.react-flow\_\_controls-button_svg]:max-h-5! pointer-coarse:[&_.react-flow\_\_controls-button_svg]:max-w-5!"
-    >
+    <Controls showInteractive={false} showZoom={showZoom}>
       <ControlButton
         onClick={() =>
           setCardStyle(cardStyle === "compact" ? "portrait" : "compact")
@@ -92,5 +126,105 @@ export function TreeCardStyleControl({
         </ControlButton>
       )}
     </Controls>
+  );
+}
+
+/**
+ * One row inside the mobile popover sheet — icon + label in one 44px-tall
+ * tap target, matching this app's other mobile tap targets. Wrapped in
+ * PopoverClose (not a plain button) so tapping a row both fires the action
+ * AND closes the sheet — same convention as PersonNodePopoverActions' own
+ * card-click popover; without it the sheet stayed open over the just-changed
+ * tree, one extra dismiss tap away from actually seeing the result.
+ * `aria-pressed` shades the row for the drag-lock toggle's current state.
+ */
+function ControlRow({
+  icon,
+  label,
+  onClick,
+  pressed,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  pressed?: boolean;
+}) {
+  return (
+    <PopoverClose
+      render={
+        <button
+          type="button"
+          onClick={onClick}
+          aria-pressed={pressed}
+          className="flex h-11 w-full items-center gap-3 rounded-md px-3 text-sm text-foreground hover:bg-muted aria-pressed:bg-muted"
+        />
+      }
+    >
+      <span className="flex size-5 shrink-0 items-center justify-center text-muted-foreground [&_svg]:size-4.5 [&_svg]:fill-none">
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1 text-left">{label}</span>
+    </PopoverClose>
+  );
+}
+
+function MobileTreeControls({
+  cardStyle,
+  setCardStyle,
+  draggable,
+  setDraggable,
+}: {
+  cardStyle: TreeCardStyle;
+  setCardStyle: (style: TreeCardStyle) => void;
+  draggable?: boolean;
+  setDraggable?: (draggable: boolean) => void;
+}) {
+  const { fitView } = useReactFlow();
+
+  return (
+    <Popover>
+      <PopoverTrigger
+        render={
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Управление деревом"
+            className="absolute bottom-3 left-3 z-10 rounded-full shadow-md"
+          />
+        }
+      >
+        <SettingsIcon className="fill-none!" />
+      </PopoverTrigger>
+      <PopoverContent side="top" align="start" className="w-72 p-1">
+        <ControlRow
+          icon={<MaximizeIcon />}
+          label="Показать всё дерево"
+          onClick={() => fitView({ duration: 300 })}
+        />
+        <ControlRow
+          icon={cardStyle === "compact" ? <SquareIcon /> : <CircleIcon />}
+          label={
+            cardStyle === "compact"
+              ? "Крупное фото на карточке"
+              : "Компактные карточки"
+          }
+          onClick={() =>
+            setCardStyle(cardStyle === "compact" ? "portrait" : "compact")
+          }
+        />
+        {setDraggable && (
+          <ControlRow
+            icon={draggable ? <LockOpenIcon /> : <LockIcon />}
+            label={
+              draggable
+                ? "Заблокировать перетаскивание"
+                : "Разрешить перетаскивание"
+            }
+            pressed={draggable}
+            onClick={() => setDraggable(!draggable)}
+          />
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
