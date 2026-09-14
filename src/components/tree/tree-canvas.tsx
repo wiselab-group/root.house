@@ -13,9 +13,13 @@ import {
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { updateDefaultFocusPersonAction } from "@/actions/family.actions";
-import type { TreeLayoutGraph } from "@/domain/tree/tree-layout.builder";
+import type {
+  TreeLayoutGraph,
+  PersonNode as LayoutPersonNode,
+} from "@/domain/tree/tree-layout.builder";
 import {
   buildClientTreeLayout,
   type TreeClientGraphPayload,
@@ -46,6 +50,21 @@ const edgeTypes = {
   partnership: RelationshipEdge,
   unionChild: UnionChildEdge,
 };
+
+/**
+ * Same fallback order as person-node-parts.tsx's personLabel, duplicated
+ * here rather than imported because that helper reads PersonFlowNode["data"]
+ * (the XYFlow-adapted shape) while setFocus below only has the raw layout
+ * graph's PersonNode on hand (TreeLayoutGraph.nodes[].person) — the two
+ * shapes carry the same fields under the same names, so the logic itself
+ * must stay identical, just typed against a different input.
+ */
+function layoutPersonLabel(person: LayoutPersonNode): string {
+  const parts = [person.firstName, person.lastName].filter(Boolean);
+  if (parts.length > 0) return parts.join(" ");
+  if (person.nickname) return person.nickname;
+  return person.isPlaceholder ? "Неизвестный родственник" : "Без имени";
+}
 
 /**
  * The tree always centers on the focus person at a fixed 85% zoom — not
@@ -306,14 +325,18 @@ export function TreeCanvas({
     setClientGraph(null);
   }
 
-  const setFocus = useCallback(
+  const effectiveGraph = clientGraph ?? graph;
+
+  // Persists personId as this user's own "tree opens focused on" default
+  // (Family Settings' FamilyFocusSettings, same server action) and
+  // re-centers the canvas on it, without a server round-trip — see the
+  // param comments below. Split out from setFocus (below) so the undo
+  // action in setFocus's own toast can call this directly instead of
+  // recursing into setFocus itself, which the react-hooks lint (correctly)
+  // rejects: a useCallback referencing its own not-yet-initialized binding
+  // inside its own body can't be kept up to date across renders.
+  const applyFocus = useCallback(
     (personId: string) => {
-      // Persists as this user's own "tree opens focused on" default (Family
-      // Settings' FamilyFocusSettings, same server action it calls) — a
-      // deliberate "сделать фокус-персоной" click means "this is who I want
-      // to see when I come back", not just a one-off navigation, so it
-      // should stick past this session too. Fire-and-forget: it has nothing
-      // useful to block the (synchronous, local) re-layout below on.
       void updateDefaultFocusPersonAction(familyId, personId);
 
       // Keeps the URL shareable/bookmarkable (and gives the browser
@@ -339,7 +362,46 @@ export function TreeCanvas({
     [familyId, pathname, rawGraph, router, searchParams],
   );
 
-  const effectiveGraph = clientGraph ?? graph;
+  // Impeccable critique 2026-09-14 (P0): applyFocus's DB write used to be
+  // completely silent — a click on "Сделать фокус-персоной" persisted
+  // forever with no confirmation, one tap away from the harmless "Посмотреть
+  // профиль" in the exact same popover. This wrapper adds a toast so the
+  // side effect is visible and gives an immediate way back; wording
+  // ("Дерево теперь открывается с фокусом на …") matches
+  // FamilyFocusSettings' own label for this same preference so the two
+  // surfaces read as one setting, not two different features. This is the
+  // function actually wired to card popovers as onFocusPerson — never
+  // applyFocus directly, or the click would go back to being silent.
+  const setFocus = useCallback(
+    (personId: string) => {
+      const previousFocusId = effectiveGraph.focusPersonId;
+      const newFocusNode = effectiveGraph.nodes.find(
+        (node) => node.personId === personId,
+      );
+      const previousFocusNode = effectiveGraph.nodes.find(
+        (node) => node.personId === previousFocusId,
+      );
+
+      applyFocus(personId);
+
+      toast(
+        `Дерево теперь открывается с фокусом на ${
+          newFocusNode
+            ? layoutPersonLabel(newFocusNode.person)
+            : "этого человека"
+        }`,
+        previousFocusNode
+          ? {
+              action: {
+                label: "Отменить",
+                onClick: () => applyFocus(previousFocusId),
+              },
+            }
+          : undefined,
+      );
+    },
+    [applyFocus, effectiveGraph],
+  );
 
   // Collapse/expand (rewrite plan §7 Stage 5) — purely client-side, ephemeral
   // (see use-collapsed-branches.ts). `effectiveGraph` itself (server-computed

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Lora } from "next/font/google";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 // `subsets` must include "cyrillic" — the entire UI is in Russian; Geist's
@@ -40,7 +41,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="ru"
       className={`${geistSans.variable} ${geistMono.variable} ${lora.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        {/* Global toast host (sonner) — mounted once at the root so any
+            client component can call `toast(...)` without its own portal.
+            First consumer: tree-canvas.tsx's setFocus confirms a
+            "Сделать фокус-персоной" click with an undo affordance, since
+            that action silently persists a per-user default otherwise. */}
+        <Toaster position="bottom-center" />
+      </body>
     </html>
   );
 }
