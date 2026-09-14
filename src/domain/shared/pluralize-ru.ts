@@ -25,3 +25,8 @@ export function personCountLabel(count: number): string {
 export function photoCountLabel(count: number): string {
   return `${count} фото`;
 }
+
+/** "1 место" / "2 места" / "5 мест". */
+export function placeCountLabel(count: number): string {
+  return `${count} ${pluralizeRu(count, "место", "места", "мест")}`;
+}

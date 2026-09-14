@@ -38,7 +38,7 @@ export function DeletePlaceButton({
             type="button"
             variant="ghost"
             size="sm"
-            className="text-muted-foreground hover:text-destructive"
+            className="shrink-0 text-muted-foreground hover:text-destructive"
           />
         }
       >

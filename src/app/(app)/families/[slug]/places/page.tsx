@@ -1,20 +1,15 @@
 import type { Metadata } from "next";
+import { MapPin } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { listPlaces } from "@/domain/place/place.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { PlacesList } from "@/components/place/places-list";
 import { CreatePlaceForm } from "@/components/forms/create-place-form";
-import { DeletePlaceButton } from "@/components/forms/delete-place-button";
 import { CollapsibleForm } from "@/components/forms/collapsible-form";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
+import { placeCountLabel } from "@/domain/shared/pluralize-ru";
 
 export const metadata: Metadata = {
   title: "Места",
@@ -36,7 +31,7 @@ export default async function PlacesPage({
   ]);
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
+    <main className="mx-auto flex max-w-2xl flex-col gap-10 px-6 py-12 sm:py-16">
       <SetBreadcrumbs
         items={[
           { label: "Мои семьи", href: "/families" },
@@ -44,58 +39,59 @@ export default async function PlacesPage({
           { label: "Места" },
         ]}
       />
-      <div>
-        <h1 className="font-heading text-2xl font-medium">Места</h1>
+      <div className="flex flex-col gap-2">
+        <h1 className="font-heading text-3xl font-medium tracking-tight text-balance sm:text-4xl">
+          Места
+        </h1>
         <p className="text-muted-foreground">
-          Места рождения, проживания и других событий — используются при
-          заполнении профилей и событий.
+          {places.length > 0
+            ? `${placeCountLabel(places.length)} — используются при заполнении профилей и событий.`
+            : "Места рождения, проживания и других событий."}
         </p>
       </div>
 
       {places.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Пока пусто</CardTitle>
-            <CardDescription>Добавьте первое место.</CardDescription>
-          </CardHeader>
-        </Card>
+        <EmptyPlacesState canEdit={canEdit} familyId={familyId} />
       ) : (
-        <ul className="flex flex-col gap-3">
-          {places.map((place) => (
-            <li key={place.id}>
-              <Card>
-                <CardHeader>
-                  <CardTitle>{place.name}</CardTitle>
-                  {(place.region || place.country) && (
-                    <CardDescription>
-                      {[place.region, place.country].filter(Boolean).join(", ")}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-                {(place.description || canEdit) && (
-                  <CardContent className="flex flex-col gap-2">
-                    {place.description && (
-                      <p className="text-sm">{place.description}</p>
-                    )}
-                    {canEdit && (
-                      <DeletePlaceButton
-                        familyId={familyId}
-                        placeId={place.id}
-                      />
-                    )}
-                  </CardContent>
-                )}
-              </Card>
-            </li>
-          ))}
-        </ul>
+        <PlacesList familyId={familyId} places={places} canEdit={canEdit} />
       )}
 
-      {canEdit && (
+      {places.length > 0 && canEdit && (
         <CollapsibleForm triggerLabel="Добавить место">
           <CreatePlaceForm familyId={familyId} />
         </CollapsibleForm>
       )}
     </main>
+  );
+}
+
+/** Same teaching-empty-state shape as /families and /people — a concrete
+ *  next step, not a bare "nothing here". Non-editors see plain copy with
+ *  no dead-end CTA they can't act on. */
+function EmptyPlacesState({
+  canEdit,
+  familyId,
+}: {
+  canEdit: boolean;
+  familyId: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-6 rounded-2xl border border-dashed border-border px-6 py-16 text-center">
+      <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <MapPin className="size-6" strokeWidth={1.75} aria-hidden="true" />
+      </span>
+      <div className="flex max-w-sm flex-col gap-2">
+        <h2 className="font-heading text-xl font-medium">Мест пока нет</h2>
+        <p className="text-muted-foreground">
+          Добавьте город или деревню, где кто-то из семьи родился, жил или
+          похоронен — потом сможете выбрать его прямо в профиле человека.
+        </p>
+      </div>
+      {canEdit && (
+        <CollapsibleForm triggerLabel="Добавить место">
+          <CreatePlaceForm familyId={familyId} />
+        </CollapsibleForm>
+      )}
+    </div>
   );
 }
