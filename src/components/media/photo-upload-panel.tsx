@@ -7,7 +7,6 @@ import { PersonMultiCombobox } from "./person-multi-combobox";
 import { AlbumMultiCombobox } from "./album-multi-combobox";
 import { PhotoPreviewCard } from "./photo-preview-card";
 import { uploadPhoto } from "@/lib/upload-photo";
-import { useCollapsibleFormClose } from "@/components/forms/collapsible-form";
 import { PrivacyLevelSelect } from "@/components/forms/privacy-level-select";
 import type { PrivacyLevel } from "@/db/schema";
 
@@ -20,23 +19,28 @@ import type { PrivacyLevel } from "@/db/schema";
  * until "Загрузить" is pressed, so nothing is sent to the server the
  * moment the OS file picker closes. Shares the actual fetch() call with
  * PhotoUploadForm via lib/upload-photo.ts.
+ *
+ * Deliberately does NOT close itself after a successful upload (unlike
+ * AlbumForm, a one-shot create) — after confirm() succeeds this resets to
+ * the empty "Выбрать фото" state instead, so uploading several photos in a
+ * row stays a tight loop of file-pick → tag → confirm without reopening
+ * the dialog each time. `onCancel` closes the surrounding UploadPhotoDialog
+ * explicitly instead.
  */
 export function PhotoUploadPanel({
   familyId,
   albums,
   defaultAlbums = [],
+  onCancel,
 }: {
   familyId: string;
   /** The family's existing albums, for AlbumMultiCombobox — fetched once by the parent page, not re-fetched per upload. */
   albums: { id: string; name: string }[];
   /** Pre-selected albums — e.g. the album this panel is rendered inside of on /photos/[albumId], so an upload from that page defaults to landing in it. */
   defaultAlbums?: { id: string; name: string }[];
+  onCancel: () => void;
 }) {
   const router = useRouter();
-  // Collapses the whole panel back to its trigger button — offered next to
-  // "Выбрать фото" only, since a staged file already has its own Cancel via
-  // PhotoPreviewCard.
-  const close = useCollapsibleFormClose();
   const inputRef = useRef<HTMLInputElement>(null);
   const [taggedPeople, setTaggedPeople] = useState<
     { id: string; name: string }[]
@@ -125,12 +129,11 @@ export function PhotoUploadPanel({
           <Button
             type="button"
             variant="outline"
-            size="sm"
             onClick={() => inputRef.current?.click()}
           >
             Выбрать фото
           </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={close}>
+          <Button type="button" variant="ghost" onClick={onCancel}>
             Отмена
           </Button>
         </div>

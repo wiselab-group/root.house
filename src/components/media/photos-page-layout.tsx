@@ -1,8 +1,8 @@
-import { ImagesIcon } from "lucide-react";
 import { PhotoGrid } from "./photo-grid";
 import { AlbumGrid } from "./album-grid";
 import { AlbumPageHeader } from "./album-page-header";
-import { PhotosPageActions } from "./photos-page-actions";
+import { UploadPhotoDialog } from "./upload-photo-dialog";
+import { EmptyPhotosState } from "./empty-photos-state";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import type { GalleryPhotoView } from "./gallery-photo";
 import type { AlbumWithCoverRecord } from "@/domain/album/album.service";
@@ -14,6 +14,15 @@ import type { AlbumWithCoverRecord } from "@/domain/album/album.service";
  * open, not just a tab filter. Once inside one album, the breadcrumb above
  * is the way back out — a pill row repeating "Все фото" + the current
  * album's own (already-visible-in-the-title) name added nothing.
+ *
+ * The two "add" actions used to live stacked at the very bottom of the
+ * page as equal-weight outline buttons — easy to miss below a long grid,
+ * and wrong about which action is primary. Uploading a photo is the
+ * page's main, frequent action, so it's now a filled button pinned in the
+ * header (reachable without scrolling, Google/Apple Photos-style);
+ * creating an album is the rarer, structural action, so it moved into the
+ * album grid itself as a "+ Новый альбом" tile (AlbumGrid/CreateAlbumTile)
+ * — each action now sits next to what it actually affects.
  */
 export function PhotosPageLayout({
   familyId,
@@ -69,14 +78,23 @@ export function PhotosPageLayout({
               ]
         }
       />
-      <AlbumPageHeader
-        familyId={familyId}
-        familySlug={familySlug}
-        canEdit={canEdit}
-        activeAlbumId={activeAlbumId}
-        activeAlbumName={activeAlbumName}
-        activeAlbumDescription={activeAlbumDescription}
-      />
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <AlbumPageHeader
+          familyId={familyId}
+          familySlug={familySlug}
+          canEdit={canEdit}
+          activeAlbumId={activeAlbumId}
+          activeAlbumName={activeAlbumName}
+          activeAlbumDescription={activeAlbumDescription}
+        />
+        {canUpload && (
+          <UploadPhotoDialog
+            familyId={familyId}
+            albums={albums}
+            defaultAlbums={defaultAlbums}
+          />
+        )}
+      </div>
 
       {!activeAlbumId && (
         <>
@@ -84,6 +102,7 @@ export function PhotosPageLayout({
             familySlug={familySlug}
             albums={albums}
             familyId={familyId}
+            canEdit={canEdit}
           />
           {albums.length > 0 && (
             <div className="flex items-center gap-3 pt-2">
@@ -106,44 +125,6 @@ export function PhotosPageLayout({
           canEdit={canEdit}
         />
       )}
-
-      {canUpload && (
-        <PhotosPageActions
-          familyId={familyId}
-          albums={albums}
-          defaultAlbums={defaultAlbums}
-        />
-      )}
     </main>
-  );
-}
-
-/** Same teaching-empty-state shape as /families, /people and /places — a
- *  concrete next step, not a bare "nothing here". On the unfiltered /photos
- *  page this only shows once there are no albums either (an album-only
- *  family with zero loose photos still has the album grid above to show for
- *  itself, so this would be redundant noise under it) — but inside a
- *  specific empty album (activeAlbumId set) it always shows regardless of
- *  the family's other albums, since a blank PhotoGrid with no explanation
- *  would otherwise render silently. Non-uploaders see plain copy with no
- *  dead-end CTA they can't act on — the family's own PhotosPageActions is
- *  the only upload entry point either way, so no button is duplicated here. */
-function EmptyPhotosState({ canUpload }: { canUpload: boolean }) {
-  return (
-    <div className="flex flex-col items-center gap-6 rounded-2xl border border-dashed border-border px-6 py-16 text-center">
-      <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <ImagesIcon className="size-6" strokeWidth={1.75} aria-hidden="true" />
-      </span>
-      <div className="flex max-w-sm flex-col gap-2">
-        <h2 className="font-heading text-xl font-medium">
-          Фотографий пока нет
-        </h2>
-        <p className="text-muted-foreground">
-          {canUpload
-            ? "Добавьте первое фото — со временем здесь соберётся семейный альбом."
-            : "Когда кто-то из семьи добавит фото, они появятся здесь."}
-        </p>
-      </div>
-    </div>
   );
 }
