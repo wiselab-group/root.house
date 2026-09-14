@@ -207,6 +207,29 @@
     animation: tree-node-enter 320ms var(--ease-reveal) backwards;
   }
 
+  /* Generic list/section entrance (families list, family dashboard) — same
+     opacity+translateY reveal as the tree's own entrance, just not tied to
+     |generation| distance: callers stagger via inline animation-delay on
+     each item's own index (see FamiliesPage / FamilyDashboardPage). Kept
+     separate from .animate-tree-node-enter because that name is documented
+     as tree-specific (DESIGN.md § Family Tree specific) and uses scale, not
+     translateY — this one is the calmer product-register version (product.md:
+     "no orchestrated page-load sequences" — this is a single, brief,
+     140-260ms-per-item stagger on first paint, not a choreographed sequence). */
+  @keyframes content-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-content-enter {
+    animation: content-enter 420ms var(--ease-reveal) backwards;
+  }
+
   /* Relationship Trace "marching ants" (reactflow.dev/examples/interaction/
      contextual-zoom's animated-edge look, user-requested) — a traced edge's
      dashes visibly crawl along the path, reading as "flow" from Person A to
