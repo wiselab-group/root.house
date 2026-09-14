@@ -86,7 +86,12 @@ export function PhotosPageLayout({
             familyId={familyId}
           />
           {albums.length > 0 && (
-            <h2 className="font-heading text-xl font-medium">Все фото</h2>
+            <div className="flex items-center gap-3 pt-2">
+              <h2 className="font-heading text-xl font-medium whitespace-nowrap">
+                Все фото
+              </h2>
+              <div aria-hidden="true" className="h-px flex-1 bg-border" />
+            </div>
           )}
         </>
       )}
