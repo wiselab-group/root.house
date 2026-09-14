@@ -7,8 +7,8 @@ import { getPlace } from "@/domain/place/place.service";
 import { personDisplayName } from "@/domain/person/display-name";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { resolvePersonIdBySlug } from "@/lib/resolve-person-slug";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ProfileSection } from "@/components/person/profile-section";
 import { PersonFamilyPanel } from "@/components/person/person-family-panel";
 import { PersonTimeline } from "@/components/person/person-timeline";
 import { PersonMediaGallery } from "@/components/person/person-media-gallery";
@@ -69,8 +69,17 @@ export default async function PersonProfilePage({
     getFamilySummary(familyId),
   ]);
 
+  const hasBasicInfo =
+    person.maidenName ||
+    person.nickname ||
+    person.religion ||
+    person.nationality ||
+    birthPlace ||
+    deathPlace ||
+    person.deathCause;
+
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
+    <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12 sm:py-16">
       <SetBreadcrumbs
         items={[
           { label: "Мои семьи", href: "/families" },
@@ -79,44 +88,41 @@ export default async function PersonProfilePage({
           { label: personDisplayName(person) },
         ]}
       />
-      <PersonProfileHeader
-        person={person}
-        personSlug={personSlug}
-        familyId={familyId}
-        familySlug={slug}
-        role={member.role}
-        birthPlace={birthPlace}
-        deathPlace={deathPlace}
-      />
+      <div className="flex flex-col gap-4">
+        <PersonProfileHeader
+          person={person}
+          personSlug={personSlug}
+          familyId={familyId}
+          familySlug={slug}
+          role={member.role}
+          birthPlace={birthPlace}
+          deathPlace={deathPlace}
+        />
+        {person.isPlaceholder && (
+          <Badge variant="secondary" className="w-fit">
+            Запись-заглушка — данные неизвестны
+          </Badge>
+        )}
+      </div>
 
-      {person.isPlaceholder && (
-        <Badge variant="secondary">Запись-заглушка — данные неизвестны</Badge>
+      {hasBasicInfo && (
+        <ProfileSection title="Основная информация">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+            <InfoRow label="Девичья фамилия" value={person.maidenName} />
+            <InfoRow label="Прозвище" value={person.nickname} />
+            <InfoRow label="Религия" value={person.religion} />
+            <InfoRow label="Национальность" value={person.nationality} />
+            <InfoRow label="Место рождения" value={birthPlace?.name ?? null} />
+            <InfoRow label="Место смерти" value={deathPlace?.name ?? null} />
+            <InfoRow label="Причина смерти" value={person.deathCause} />
+          </div>
+        </ProfileSection>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Основная информация</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-          <InfoRow label="Девичья фамилия" value={person.maidenName} />
-          <InfoRow label="Прозвище" value={person.nickname} />
-          <InfoRow label="Религия" value={person.religion} />
-          <InfoRow label="Национальность" value={person.nationality} />
-          <InfoRow label="Место рождения" value={birthPlace?.name ?? null} />
-          <InfoRow label="Место смерти" value={deathPlace?.name ?? null} />
-          <InfoRow label="Причина смерти" value={person.deathCause} />
-        </CardContent>
-      </Card>
-
       {person.description && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Описание</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm whitespace-pre-wrap">
-            {person.description}
-          </CardContent>
-        </Card>
+        <ProfileSection title="Описание">
+          <p className="text-sm whitespace-pre-wrap">{person.description}</p>
+        </ProfileSection>
       )}
 
       <PersonFamilyPanel

@@ -2,13 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
 import { PersonAvatar } from "@/components/person/person-avatar";
 import { personDisplayName } from "@/domain/person/display-name";
 import { formatPartialDate } from "@/domain/shared/partial-date";
@@ -42,6 +37,10 @@ function personMatches(person: PersonRecord, query: string): boolean {
  * server-side under requireFamilyAccess, so filtering it in the browser on
  * every keystroke avoids a network round-trip per letter typed. Matches
  * name/maiden name/nickname/birth-or-death year, all client-side.
+ *
+ * Rendered as one divide-y list (not a Card per row) — same "archive list,
+ * not a stack of boxes" treatment as /families' own list, see that page's
+ * doc history. A dense phone-book style row: avatar, name, dates, arrow.
  */
 export function PeopleList({
   familyId,
@@ -77,49 +76,56 @@ export function PeopleList({
       )}
 
       {filtered.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Ничего не найдено</CardTitle>
-            <CardDescription>Попробуйте изменить запрос.</CardDescription>
-          </CardHeader>
-        </Card>
+        <p className="py-8 text-center text-sm text-muted-foreground">
+          Ничего не найдено — попробуйте изменить запрос.
+        </p>
       ) : (
-        <ul className="flex flex-col gap-3">
-          {filtered.map((person) => (
-            <li key={person.id}>
-              <Link href={`/families/${familySlug}/people/${person.slug}`}>
-                <Card className="transition-colors hover:border-foreground/30">
-                  <CardHeader className="flex! flex-row items-center gap-3">
-                    <PersonAvatar
-                      person={person}
-                      familyId={familyId}
-                      size="lg"
-                      className="size-14! text-base"
-                    />
-                    <div>
-                      <CardTitle>
-                        {personDisplayName(person)}
-                        {person.maidenName &&
-                          person.maidenName !== person.lastName && (
-                            // Same "differs from lastName" guard as the tree's
-                            // person combobox — a placeholder person or someone
-                            // whose maiden name IS their current last name
-                            // shouldn't show a redundant "(Smith) Smith".
-                            <span className="font-normal text-muted-foreground">
-                              {" "}
-                              ({person.maidenName})
-                            </span>
-                          )}
-                      </CardTitle>
-                      <CardDescription>
-                        {formatPartialDate(person.birthDate)}
-                        {person.isLiving
-                          ? ""
-                          : ` — ${formatPartialDate(person.deathDate)}`}
-                      </CardDescription>
-                    </div>
-                  </CardHeader>
-                </Card>
+        <ul className="flex flex-col divide-y divide-border border-y border-border">
+          {filtered.map((person, index) => (
+            <li
+              key={person.id}
+              className="animate-content-enter"
+              style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
+            >
+              <Link
+                href={`/families/${familySlug}/people/${person.slug}`}
+                className="group/row flex items-center justify-between gap-4 py-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <div className="flex min-w-0 items-center gap-4">
+                  <PersonAvatar
+                    person={person}
+                    familyId={familyId}
+                    size="lg"
+                    className="size-12! shrink-0 text-base"
+                  />
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate font-heading text-lg font-medium transition-colors group-hover/row:text-primary">
+                      {personDisplayName(person)}
+                      {person.maidenName &&
+                        person.maidenName !== person.lastName && (
+                          // Same "differs from lastName" guard as the tree's
+                          // person combobox — a placeholder person or someone
+                          // whose maiden name IS their current last name
+                          // shouldn't show a redundant "(Smith) Smith".
+                          <span className="font-sans font-normal text-muted-foreground">
+                            {" "}
+                            ({person.maidenName})
+                          </span>
+                        )}
+                    </span>
+                    <span className="truncate text-sm text-muted-foreground">
+                      {formatPartialDate(person.birthDate)}
+                      {person.isLiving
+                        ? ""
+                        : ` — ${formatPartialDate(person.deathDate)}`}
+                    </span>
+                  </div>
+                </div>
+                <ArrowRight
+                  className="size-5 shrink-0 text-muted-foreground/60 transition-all duration-200 ease-(--ease-tree-focus) group-hover/row:translate-x-1 group-hover/row:text-primary"
+                  strokeWidth={1.75}
+                  aria-hidden="true"
+                />
               </Link>
             </li>
           ))}

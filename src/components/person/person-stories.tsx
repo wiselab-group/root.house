@@ -2,10 +2,10 @@ import {
   getPersonStories,
   filterVisibleStories,
 } from "@/domain/story/story.service";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddStoryForm } from "@/components/forms/add-story-form";
 import { DeleteStoryButton } from "@/components/forms/delete-story-button";
 import { CollapsibleForm } from "@/components/forms/collapsible-form";
+import { ProfileSection } from "./profile-section";
 import { canDelete, type ActingMember } from "@/domain/family/permissions";
 
 /**
@@ -31,11 +31,8 @@ export async function PersonStories({
   const stories = filterVisibleStories(allStories, member);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Истории</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+    <ProfileSection title="Истории">
+      <div className="flex flex-col gap-4">
         {stories.length === 0 ? (
           <p className="text-sm text-muted-foreground">Историй пока нет.</p>
         ) : (
@@ -71,7 +68,7 @@ export async function PersonStories({
             <AddStoryForm familyId={familyId} personId={personId} />
           </CollapsibleForm>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </ProfileSection>
   );
 }

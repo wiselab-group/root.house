@@ -6,10 +6,10 @@ import {
 import { listPlaces } from "@/domain/place/place.service";
 import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 import { formatPartialDate } from "@/domain/shared/partial-date";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AddEventForm } from "@/components/forms/add-event-form";
 import { CollapsibleForm } from "@/components/forms/collapsible-form";
+import { ProfileSection } from "./profile-section";
 import type { ActingMember } from "@/domain/family/permissions";
 
 /**
@@ -42,11 +42,8 @@ export async function PersonTimeline({
   const placeNameById = new Map(places.map((place) => [place.id, place.name]));
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Хронология</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+    <ProfileSection title="Хронология">
+      <div className="flex flex-col gap-4">
         {timeline.length === 0 ? (
           <p className="text-sm text-muted-foreground">Событий пока нет.</p>
         ) : (
@@ -86,7 +83,7 @@ export async function PersonTimeline({
             />
           </CollapsibleForm>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </ProfileSection>
   );
 }

@@ -53,7 +53,7 @@ export default async function EditPersonPage({
   ]);
 
   return (
-    <main className="mx-auto flex max-w-xl flex-col gap-6 p-6">
+    <main className="mx-auto flex max-w-xl flex-col gap-8 px-6 py-12 sm:py-16">
       <SetBreadcrumbs
         items={[
           { label: "Мои семьи", href: "/families" },
@@ -66,9 +66,13 @@ export default async function EditPersonPage({
           { label: "Редактировать" },
         ]}
       />
-      <Card>
+      <h1 className="font-heading text-3xl font-medium tracking-tight text-balance">
+        {personDisplayName(person)}
+      </h1>
+
+      <Card className="rounded-2xl">
         <CardHeader>
-          <CardTitle>Фото профиля</CardTitle>
+          <CardTitle className="font-heading text-lg">Фото профиля</CardTitle>
         </CardHeader>
         <CardContent>
           <AvatarEditor
@@ -79,10 +83,7 @@ export default async function EditPersonPage({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Редактировать</CardTitle>
-        </CardHeader>
+      <Card className="rounded-2xl">
         <CardContent>
           {/* .bind() on the real "use server" action, not a closure — see
               note in people/new/page.tsx for why this distinction matters. */}

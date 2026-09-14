@@ -1,8 +1,8 @@
 import { getFamilyOf } from "@/domain/relationship/relationship.service";
 import { listPeople } from "@/domain/person/person.service";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddRelativeForm } from "@/components/forms/add-relative-form";
 import { CollapsibleForm } from "@/components/forms/collapsible-form";
+import { ProfileSection } from "./profile-section";
 import { RelativeGroup } from "./relative-group";
 import type { RelativeItem } from "./relative-item";
 
@@ -61,11 +61,8 @@ export async function PersonFamilyPanel({
     .map((p): RelativeItem => ({ ...p })); // no relationshipId — siblings are derived, not removable
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Семья</CardTitle>
-      </CardHeader>
-      <CardContent className="flex min-w-0 flex-col gap-6">
+    <ProfileSection title="Семья" className="min-w-0">
+      <div className="flex min-w-0 flex-col gap-6">
         <RelativeGroup
           familyId={familyId}
           familySlug={familySlug}
@@ -132,7 +129,7 @@ export async function PersonFamilyPanel({
             </CollapsibleForm>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </ProfileSection>
   );
 }

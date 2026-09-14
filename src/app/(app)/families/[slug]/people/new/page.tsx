@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PersonCreateForm } from "@/components/forms/person-create-form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { listPlaces } from "@/domain/place/place.service";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
@@ -21,7 +21,7 @@ export default async function NewPersonPage({
   ]);
 
   return (
-    <main className="mx-auto flex max-w-xl flex-col gap-6 p-6">
+    <main className="mx-auto flex max-w-xl flex-col gap-8 px-6 py-12 sm:py-16">
       <SetBreadcrumbs
         items={[
           { label: "Мои семьи", href: "/families" },
@@ -30,10 +30,10 @@ export default async function NewPersonPage({
           { label: "Добавить человека" },
         ]}
       />
-      <Card>
-        <CardHeader>
-          <CardTitle>Добавить человека</CardTitle>
-        </CardHeader>
+      <h1 className="font-heading text-3xl font-medium tracking-tight text-balance">
+        Добавить человека
+      </h1>
+      <Card className="rounded-2xl">
         <CardContent>
           <PersonCreateForm familyId={familyId} places={places} />
         </CardContent>

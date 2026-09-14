@@ -2,9 +2,9 @@ import {
   getPersonGallery,
   filterVisibleGalleryPhotos,
 } from "@/domain/media/media.service";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhotoUploadForm } from "@/components/forms/photo-upload-form";
 import { PhotoGrid } from "@/components/media/photo-grid";
+import { ProfileSection } from "./profile-section";
 import type { ActingMember } from "@/domain/family/permissions";
 
 /**
@@ -39,11 +39,8 @@ export async function PersonMediaGallery({
   const photos = filterVisibleGalleryPhotos(allPhotos, member);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Фотографии</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+    <ProfileSection title="Фотографии">
+      <div className="flex flex-col gap-4">
         {photos.length === 0 ? (
           <p className="text-sm text-muted-foreground">Фотографий пока нет.</p>
         ) : (
@@ -58,7 +55,7 @@ export async function PersonMediaGallery({
         {canContribute && (
           <PhotoUploadForm familyId={familyId} personId={personId} />
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </ProfileSection>
   );
 }
