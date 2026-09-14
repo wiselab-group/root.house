@@ -30,19 +30,24 @@ function SubmitButton({ label }: { label: string }) {
  * picking an existing family member from a dropdown, or by typing a new
  * name (optionally marking it a placeholder for "we don't know who this
  * is", e.g. an unnamed child or unknown parent).
+ *
+ * `kind` is chosen by the caller (AddRelativePanel's tabs), not inside this
+ * form — so the form itself carries no heading/label of its own; the tab
+ * already says "Родитель"/"Супруг"/"Ребёнок" one level up, and repeating
+ * that as a form title would be the same word twice in a row.
  */
 export function AddRelativeForm({
   familyId,
   personId,
   kind,
   candidates,
-  label,
+  submitLabel,
 }: {
   familyId: string;
   personId: string;
   kind: "parent" | "child" | "spouse";
   candidates: PersonRecord[];
-  label: string;
+  submitLabel: string;
 }) {
   const close = useCollapsibleFormClose();
   const [mode, setMode] = useState<"existing" | "new">(
@@ -53,12 +58,7 @@ export function AddRelativeForm({
   const [state, formAction] = useActionState(boundAction, initialState);
 
   return (
-    <form
-      action={formAction}
-      className="flex flex-col gap-3 rounded-md border border-border p-3"
-    >
-      <p className="text-sm font-medium">{label}</p>
-
+    <form action={formAction} className="flex flex-col gap-3">
       <div className="flex gap-3 text-sm">
         <label className="flex items-center gap-1.5">
           <input
@@ -125,7 +125,7 @@ export function AddRelativeForm({
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
       <div className="flex gap-2">
-        <SubmitButton label={label} />
+        <SubmitButton label={submitLabel} />
         <Button type="button" variant="ghost" size="sm" onClick={close}>
           Отмена
         </Button>

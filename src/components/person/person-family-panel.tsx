@@ -1,7 +1,6 @@
 import { getFamilyOf } from "@/domain/relationship/relationship.service";
 import { listPeople } from "@/domain/person/person.service";
-import { AddRelativeForm } from "@/components/forms/add-relative-form";
-import { CollapsibleForm } from "@/components/forms/collapsible-form";
+import { AddRelativePanel } from "@/components/forms/add-relative-panel";
 import { ProfileSection } from "./profile-section";
 import { RelativeGroup } from "./relative-group";
 import type { RelativeItem } from "./relative-item";
@@ -99,35 +98,11 @@ export async function PersonFamilyPanel({
         />
 
         {canEdit && (
-          <div className="grid gap-3 sm:grid-cols-3">
-            <CollapsibleForm triggerLabel="Добавить родителя">
-              <AddRelativeForm
-                familyId={familyId}
-                personId={personId}
-                kind="parent"
-                candidates={otherPeople}
-                label="Добавить родителя"
-              />
-            </CollapsibleForm>
-            <CollapsibleForm triggerLabel="Добавить супруга">
-              <AddRelativeForm
-                familyId={familyId}
-                personId={personId}
-                kind="spouse"
-                candidates={otherPeople}
-                label="Добавить супруга"
-              />
-            </CollapsibleForm>
-            <CollapsibleForm triggerLabel="Добавить ребёнка">
-              <AddRelativeForm
-                familyId={familyId}
-                personId={personId}
-                kind="child"
-                candidates={otherPeople}
-                label="Добавить ребёнка"
-              />
-            </CollapsibleForm>
-          </div>
+          <AddRelativePanel
+            familyId={familyId}
+            personId={personId}
+            candidates={otherPeople}
+          />
         )}
       </div>
     </ProfileSection>
