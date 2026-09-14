@@ -272,6 +272,51 @@
     stroke-dasharray: 6 4;
     animation: tree-trace-march-reverse 0.6s linear infinite;
   }
+
+  /* Edge "draw-in" on expand (relationship-edge.tsx/union-child-edge.tsx) —
+     a newly-revealed branch's connector lines grow from their start point
+     to their end point instead of popping in fully drawn, matching
+     .animate-tree-node-enter's own "appears gently" treatment for the
+     cards at the other end of these same lines. This class is applied
+     conditionally by each edge component (`justExpanded &&
+     "animate-tree-edge-draw"`), gated on tree-just-expanded-edges-
+     context.tsx's `useIsJustExpandedEdge(id)` — NOT on plain CSS mount.
+     An earlier version keyed purely on the element mounting (any edge with
+     a fresh id plays the CSS `animation` automatically) played the sweep
+     across the WHOLE tree on the tree's first paint, a focus switch, or a
+     filter/trace change — every one of those mounts a fresh set of edge
+     ids too, not just an actual branch expand (user feedback, 2026-09-14:
+     "анимация должна быть только для разворачиваемой ветки"). The context
+     value is computed by diffing the previous render's edge-id set against
+     the current one, but ONLY when the underlying graph (before
+     collapse/expand pruning) is the SAME object across both renders — see
+     tree-canvas.tsx's own justExpandedEdgeIds computation for why that's
+     the one condition that isolates "the collapse set changed" from every
+     other reason the edge list can change.
+
+     Requires the <path> to carry `pathLength={1}` (an SVG attribute, not a
+     CSS one — set directly on BaseEdge's own path via the `pathLength` prop
+     it forwards through ...props) so `stroke-dasharray`/`stroke-dashoffset`
+     are expressed as a 0-1 fraction of the path's length rather than real
+     px — every edge has different actual geometry, but a fixed 0→1 sweep
+     here works identically for all of them without measuring each path's
+     real length in JS. This is the same "stroke-dashoffset is layout-safe"
+     exception the marching-ants animation above already relies on (CLAUDE.md
+     ANIMATION RULES: transform/opacity only, EXCEPT this — see that
+     animation's own comment) — the <path>'s `d` itself never changes here
+     either, only how much of the already-painted stroke is visible. */
+  @keyframes tree-edge-draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  .animate-tree-edge-draw {
+    stroke-dasharray: 1;
+    animation: tree-edge-draw 420ms var(--ease-reveal) backwards;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
