@@ -170,19 +170,23 @@ export function CollapseBadge({
  * Color roles (see globals.css's own comment): sage (--tree-accent) reads as
  * this person's own identity — a permanent border on every card, the same
  * flat shade regardless of generation. The focus person keeps that same
- * sage identity border, just emphasized with a second ring. Keyboard
+ * sage identity border, just emphasized with a thicker ring — same card
+ * size and same name weight as everyone else (a 2026-09-14 bolder pass
+ * tried both a `scale-110` card size bump and a bolder font-weight on the
+ * focus name; both reverted same-day per explicit user request — every card
+ * reads identically apart from this one ring, no other lever). Keyboard
  * selection (isSelected) stays terracotta (it's a "what you're doing right
  * now" state, same family as Relationship Trace) but now uses that same
- * double-ring shape instead of the single flat `ring-ring` it used to have —
- * a plain single ring read as a weaker, different-looking signal than
- * focus/trace's double ring instead of a clearly equivalent kind of
- * emphasis; requested by the user. Drawn as an explicit box-shadow rather
- * than stacked Tailwind `ring-*` utilities because a card can only carry one
- * `ring` utility at a time, and this needs two rings (3px solid + 6px
- * translucent) independent of the sage border underneath. The sage border
- * is deliberately ONE color for every card — no per-generation fade — so
- * "sage border" reads as a single consistent signal across the whole tree,
- * not a gradient to decode.
+ * double-ring shape instead of
+ * the single flat `ring-ring` it used to have — a plain single ring read as
+ * a weaker, different-looking signal than focus/trace's double ring instead
+ * of a clearly equivalent kind of emphasis; requested by the user. Drawn as
+ * an explicit box-shadow rather than stacked Tailwind `ring-*` utilities
+ * because a card can only carry one `ring` utility at a time, and this
+ * needs two rings (3px solid + 6px translucent) independent of the sage
+ * border underneath. The sage border is deliberately ONE color for every
+ * card — no per-generation fade — so "sage border" reads as a single
+ * consistent signal across the whole tree, not a gradient to decode.
  */
 export function buildCardFrameClassName({
   cardStyle,
@@ -210,7 +214,7 @@ export function buildCardFrameClassName({
           isTraced
             ? "border-primary ring-2 ring-primary/30"
             : "border-tree-accent",
-          isFocus && !isTraced && "ring-2 ring-tree-accent/30",
+          isFocus && !isTraced && "ring-[3px] ring-tree-accent/40",
           // isSelected gets its own explicit box-shadow (selectedCardBoxShadow
           // below) instead of a ring-* utility here — see this function's own
           // doc comment on why (a card can only carry one `ring` utility, and
