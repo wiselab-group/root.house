@@ -61,10 +61,14 @@ function RelativeListItem({
           бывш.
         </span>
       )}
-      {canEdit &&
-        relationshipKind === "partnership" &&
-        person.relationshipId && (
-          <span className="relative z-10">
+      {canEdit && relationshipKind && person.relationshipId && (
+        // -space-x-1: the icon buttons should sit closer to each other than
+        // to the name/badge before them — the shared gap-2 on the <li>
+        // spread every child equally, so this pair read as spaced apart
+        // from itself rather than one grouped "manage this relationship"
+        // control cluster.
+        <span className="relative z-10 flex items-center -space-x-1">
+          {relationshipKind === "partnership" && (
             <PartnershipStatusToggle
               familyId={familyId}
               personId={personId}
@@ -73,10 +77,7 @@ function RelativeListItem({
               isCurrent={person.isCurrent ?? true}
               relativeName={personDisplayName(person)}
             />
-          </span>
-        )}
-      {canEdit && relationshipKind && person.relationshipId && (
-        <span className="relative z-10">
+          )}
           <RemoveRelationshipButton
             familyId={familyId}
             personId={personId}
