@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { PersonCreateForm } from "@/components/forms/person-create-form";
-import { Card, CardContent } from "@/components/ui/card";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { listPlaces } from "@/domain/place/place.service";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
@@ -33,11 +32,7 @@ export default async function NewPersonPage({
       <h1 className="font-heading text-3xl font-medium tracking-tight text-balance">
         Добавить человека
       </h1>
-      <Card className="rounded-2xl">
-        <CardContent>
-          <PersonCreateForm familyId={familyId} places={places} />
-        </CardContent>
-      </Card>
+      <PersonCreateForm familyId={familyId} places={places} />
     </main>
   );
 }

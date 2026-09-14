@@ -7,7 +7,6 @@ import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { resolvePersonIdBySlug } from "@/lib/resolve-person-slug";
 import { PersonForm } from "@/components/forms/person-form";
 import { AvatarEditor } from "@/components/forms/avatar-editor";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { updatePersonAction } from "@/actions/person.actions";
 import { listPlaces } from "@/domain/place/place.service";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
@@ -70,32 +69,22 @@ export default async function EditPersonPage({
         {personDisplayName(person)}
       </h1>
 
-      <Card className="rounded-2xl">
-        <CardHeader>
-          <CardTitle className="font-heading text-lg">Фото профиля</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AvatarEditor
-            familyId={familyId}
-            personId={personId}
-            person={person}
-          />
-        </CardContent>
-      </Card>
+      <section className="flex flex-col gap-4">
+        <h2 className="font-heading text-xl font-medium">Фото профиля</h2>
+        <AvatarEditor familyId={familyId} personId={personId} person={person} />
+      </section>
 
-      <Card className="rounded-2xl">
-        <CardContent>
-          {/* .bind() on the real "use server" action, not a closure — see
-              note in people/new/page.tsx for why this distinction matters. */}
-          <PersonForm
-            action={updatePersonAction.bind(null, familyId, personId)}
-            person={person}
-            places={places}
-            submitLabel="Сохранить"
-            submitPendingLabel="Сохраняем…"
-          />
-        </CardContent>
-      </Card>
+      <section className="flex flex-col gap-6 border-t border-border pt-8">
+        {/* .bind() on the real "use server" action, not a closure — see
+            note in people/new/page.tsx for why this distinction matters. */}
+        <PersonForm
+          action={updatePersonAction.bind(null, familyId, personId)}
+          person={person}
+          places={places}
+          submitLabel="Сохранить"
+          submitPendingLabel="Сохраняем…"
+        />
+      </section>
     </main>
   );
 }
