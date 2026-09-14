@@ -1,11 +1,5 @@
 import type { Metadata } from "next";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { ProfileSection } from "@/components/person/profile-section";
 import { FamilySettingsDetailsRow } from "@/components/family/family-settings-details-row";
 import { FamilySettingsSlugRow } from "@/components/family/family-settings-slug-row";
 import { FamilySettingsFocusRow } from "@/components/family/family-settings-focus-row";
@@ -50,7 +44,7 @@ export default async function FamilySettingsPage({
   ]);
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
+    <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12 sm:py-16">
       <SetBreadcrumbs
         items={[
           { label: "Мои семьи", href: "/families" },
@@ -58,81 +52,62 @@ export default async function FamilySettingsPage({
           { label: "Настройки" },
         ]}
       />
-      <div>
-        <h1 className="font-heading text-2xl font-medium">Настройки</h1>
+      <div className="flex flex-col gap-2">
+        <h1 className="font-heading text-3xl font-medium tracking-tight text-balance sm:text-4xl">
+          Настройки
+        </h1>
         <p className="text-muted-foreground">
           Название, ссылка и описание архива.
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Об архиве</CardTitle>
-          <CardDescription>Видно всем участникам семьи.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-6">
+      <ProfileSection
+        title="Об архиве"
+        description="Видно всем участникам семьи."
+      >
+        <div className="flex flex-col gap-6">
           <FamilySettingsDetailsRow />
           <FamilySettingsSlugRow />
-        </CardContent>
-      </Card>
+        </div>
+      </ProfileSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Семейное дерево</CardTitle>
-          <CardDescription>
-            Личная настройка — видна только вам.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FamilySettingsFocusRow />
-        </CardContent>
-      </Card>
+      <ProfileSection
+        title="Семейное дерево"
+        description="Личная настройка — видна только вам."
+      >
+        <FamilySettingsFocusRow />
+      </ProfileSection>
 
       {isOwner && member && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Участники</CardTitle>
-            <CardDescription>
-              Управление доступом к семейному архиву.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <FamilyMembersSection
-              familyId={familyId}
-              currentUserId={member.userId}
-              members={members}
-              pendingInvitations={pendingInvitations}
-            />
-          </CardContent>
-        </Card>
+        <ProfileSection
+          title="Участники"
+          description="Управление доступом к семейному архиву."
+        >
+          <FamilyMembersSection
+            familyId={familyId}
+            currentUserId={member.userId}
+            members={members}
+            pendingInvitations={pendingInvitations}
+          />
+        </ProfileSection>
       )}
 
       {isOwner && member && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Ссылки для общего доступа</CardTitle>
-            <CardDescription>
-              Анонимный доступ только для чтения к публичным данным семьи — без
-              регистрации и без прав редактирования.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ShareLinkSection familyId={familyId} shareLinks={shareLinks} />
-          </CardContent>
-        </Card>
+        <ProfileSection
+          title="Ссылки для общего доступа"
+          description="Анонимный доступ только для чтения к публичным данным семьи — без регистрации и без прав редактирования."
+        >
+          <ShareLinkSection familyId={familyId} shareLinks={shareLinks} />
+        </ProfileSection>
       )}
 
-      <Card className="border-destructive/30">
-        <CardHeader>
-          <CardTitle className="text-destructive">Опасная зона</CardTitle>
-          <CardDescription>
-            Необратимые действия — доступны только владельцу.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FamilySettingsDeleteRow />
-        </CardContent>
-      </Card>
+      <ProfileSection
+        title="Опасная зона"
+        description="Необратимые действия — доступны только владельцу."
+        tone="danger"
+      >
+        <FamilySettingsDeleteRow />
+      </ProfileSection>
     </main>
   );
 }
