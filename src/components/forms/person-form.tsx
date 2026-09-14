@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { PersonNameFields } from "./person-name-fields";
 import { PersonDateFields } from "./person-date-fields";
 import { PersonGenderLivingFields } from "./person-gender-living-fields";
@@ -128,12 +129,11 @@ export function PersonForm({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="description">Описание</Label>
-        <textarea
+        <Textarea
           id="description"
           name="description"
           rows={4}
           defaultValue={person?.description ?? ""}
-          className="rounded-md border border-input bg-transparent px-3 py-2 text-sm"
         />
       </div>
 

@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useCollapsibleFormClose } from "./collapsible-form";
 
 const initialState: AlbumFormState = {};
@@ -54,12 +55,7 @@ export function AlbumForm({ familyId }: { familyId: string }) {
         <Label htmlFor="description" className="text-xs text-muted-foreground">
           Описание
         </Label>
-        <textarea
-          id="description"
-          name="description"
-          rows={2}
-          className="rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-        />
+        <Textarea id="description" name="description" rows={2} />
       </div>
 
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}

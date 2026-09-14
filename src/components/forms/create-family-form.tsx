@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 const initialState: CreateFamilyFormState = {};
 
@@ -47,10 +48,10 @@ export function CreateFamilyForm() {
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="description">Описание (необязательно)</Label>
-        <Input
+        <Textarea
           id="description"
           name="description"
-          type="text"
+          rows={3}
           placeholder="Пара слов об архиве"
         />
         {state.fieldErrors?.description && (

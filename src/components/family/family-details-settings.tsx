@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import type { FamilyRole } from "@/domain/family/roles";
 
 const initialState: UpdateFamilyDetailsFormState = {};
@@ -74,10 +75,10 @@ function DetailsEditForm({
         >
           Описание (необязательно)
         </Label>
-        <Input
+        <Textarea
           id="family-description"
           name="description"
-          type="text"
+          rows={3}
           value={descriptionValue}
           onChange={(e) => setDescriptionValue(e.target.value)}
           placeholder="Пара слов об архиве"
@@ -150,7 +151,9 @@ export function FamilyDetailsSettings({
         )}
       </div>
       {description && (
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <p className="text-sm whitespace-pre-wrap text-muted-foreground">
+          {description}
+        </p>
       )}
     </div>
   );

@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useCollapsibleFormClose } from "./collapsible-form";
 import { PrivacyLevelSelect } from "./privacy-level-select";
 
@@ -55,13 +56,7 @@ export function AddStoryForm({
         <Label htmlFor="body" className="text-xs text-muted-foreground">
           История
         </Label>
-        <textarea
-          id="body"
-          name="body"
-          rows={5}
-          required
-          className="rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-        />
+        <Textarea id="body" name="body" rows={5} required />
         {state.fieldErrors?.body && (
           <p className="text-sm text-destructive">{state.fieldErrors.body}</p>
         )}
