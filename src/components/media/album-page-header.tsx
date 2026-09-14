@@ -33,8 +33,10 @@ export function AlbumPageHeader({
 
   if (!activeAlbumId || !activeAlbumName) {
     return (
-      <div className="flex flex-col gap-1">
-        <h1 className="font-heading text-2xl font-medium">Фото</h1>
+      <div className="flex flex-col gap-2">
+        <h1 className="font-heading text-3xl font-medium tracking-tight text-balance sm:text-4xl">
+          Фото
+        </h1>
         <p className="text-muted-foreground">
           Все фотографии семьи в одном месте — те же снимки видны и в профилях
           отмеченных на них людей.
@@ -57,9 +59,11 @@ export function AlbumPageHeader({
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-2">
       <div className="flex items-center gap-1">
-        <h1 className="font-heading text-2xl font-medium">{activeAlbumName}</h1>
+        <h1 className="font-heading text-3xl font-medium tracking-tight text-balance sm:text-4xl">
+          {activeAlbumName}
+        </h1>
         {canEdit && (
           <div className="flex items-center gap-1">
             <Button

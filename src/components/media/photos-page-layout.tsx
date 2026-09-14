@@ -1,9 +1,4 @@
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { ImagesIcon } from "lucide-react";
 import { PhotoGrid } from "./photo-grid";
 import { AlbumGrid } from "./album-grid";
 import { AlbumPageHeader } from "./album-page-header";
@@ -57,7 +52,7 @@ export function PhotosPageLayout({
       : [];
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
+    <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12 sm:py-16">
       <SetBreadcrumbs
         items={
           activeAlbumName
@@ -91,18 +86,13 @@ export function PhotosPageLayout({
             familyId={familyId}
           />
           {albums.length > 0 && (
-            <h2 className="font-heading text-lg font-medium">Все фото</h2>
+            <h2 className="font-heading text-xl font-medium">Все фото</h2>
           )}
         </>
       )}
 
-      {photos.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Фотографий пока нет</CardTitle>
-            <CardDescription>Добавьте первое фото.</CardDescription>
-          </CardHeader>
-        </Card>
+      {photos.length === 0 && (activeAlbumId || albums.length === 0) ? (
+        <EmptyPhotosState canUpload={canUpload} />
       ) : (
         <PhotoGrid
           photos={photos}
@@ -120,5 +110,35 @@ export function PhotosPageLayout({
         />
       )}
     </main>
+  );
+}
+
+/** Same teaching-empty-state shape as /families, /people and /places — a
+ *  concrete next step, not a bare "nothing here". On the unfiltered /photos
+ *  page this only shows once there are no albums either (an album-only
+ *  family with zero loose photos still has the album grid above to show for
+ *  itself, so this would be redundant noise under it) — but inside a
+ *  specific empty album (activeAlbumId set) it always shows regardless of
+ *  the family's other albums, since a blank PhotoGrid with no explanation
+ *  would otherwise render silently. Non-uploaders see plain copy with no
+ *  dead-end CTA they can't act on — the family's own PhotosPageActions is
+ *  the only upload entry point either way, so no button is duplicated here. */
+function EmptyPhotosState({ canUpload }: { canUpload: boolean }) {
+  return (
+    <div className="flex flex-col items-center gap-6 rounded-2xl border border-dashed border-border px-6 py-16 text-center">
+      <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <ImagesIcon className="size-6" strokeWidth={1.75} aria-hidden="true" />
+      </span>
+      <div className="flex max-w-sm flex-col gap-2">
+        <h2 className="font-heading text-xl font-medium">
+          Фотографий пока нет
+        </h2>
+        <p className="text-muted-foreground">
+          {canUpload
+            ? "Добавьте первое фото — со временем здесь соберётся семейный альбом."
+            : "Когда кто-то из семьи добавит фото, они появятся здесь."}
+        </p>
+      </div>
+    </div>
   );
 }
