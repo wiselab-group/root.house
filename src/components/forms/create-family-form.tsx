@@ -1,12 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   createFamilyAction,
   type CreateFamilyFormState,
 } from "@/actions/family.actions";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +19,7 @@ function SubmitButton() {
   return (
     <Button
       type="submit"
-      className="w-full"
+      className="flex-1"
       disabled={pending}
       aria-busy={pending}
     >
@@ -63,7 +64,15 @@ export function CreateFamilyForm() {
 
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
-      <SubmitButton />
+      <div className="flex gap-3">
+        <SubmitButton />
+        <Link
+          href="/families"
+          className={buttonVariants({ variant: "outline" })}
+        >
+          Отмена
+        </Link>
+      </div>
     </form>
   );
 }
