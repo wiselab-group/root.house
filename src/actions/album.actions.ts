@@ -5,7 +5,12 @@ import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { getFamilySlugById } from "@/domain/family/family.service";
 import { createAlbumSchema } from "@/lib/validation/album";
-import { addAlbum, editAlbum, removeAlbum } from "@/domain/album/album.service";
+import {
+  addAlbum,
+  editAlbum,
+  removeAlbum,
+  setAlbumCoverPhoto,
+} from "@/domain/album/album.service";
 
 export interface AlbumFormState {
   error?: string;
@@ -96,6 +101,28 @@ export async function deleteAlbumAction(
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
   await removeAlbum(albumId, familyId);
+
+  const slug = await getFamilySlugById(familyId);
+  revalidatePath(`/families/${slug}/photos`);
+  revalidatePath(`/families/${slug}/photos/${albumId}`);
+}
+
+/**
+ * Sets a photo already in this album as its cover. mediaId must belong to a
+ * media_album row for this exact album (checked in
+ * album.repository.ts::setAlbumCover) — a foreign or untagged photo id
+ * updates nothing.
+ */
+export async function setAlbumCoverAction(
+  familyId: string,
+  albumId: string,
+  mediaId: string,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+
+  await requireFamilyAccess(familyId, session.user.id, "editor");
+  await setAlbumCoverPhoto(albumId, familyId, mediaId);
 
   const slug = await getFamilySlugById(familyId);
   revalidatePath(`/families/${slug}/photos`);

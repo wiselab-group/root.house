@@ -25,6 +25,7 @@ export function PhotosFeedSection({
   canEdit,
   canUpload,
   scoped,
+  activeAlbumId,
 }: {
   photos: GalleryPhotoView[];
   familyId: string;
@@ -32,6 +33,8 @@ export function PhotosFeedSection({
   canEdit: boolean;
   canUpload: boolean;
   scoped: boolean;
+  /** Present only on an album's own page — lets a photo tile offer "make cover" for THIS album. */
+  activeAlbumId?: string | null;
 }) {
   if (!scoped) {
     return photos.length === 0 ? (
@@ -42,6 +45,7 @@ export function PhotosFeedSection({
         familyId={familyId}
         familySlug={familySlug}
         canEdit={canEdit}
+        albumId={activeAlbumId}
       />
     );
   }

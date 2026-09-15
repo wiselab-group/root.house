@@ -7,6 +7,7 @@ export interface AlbumRecord {
   familyId: string;
   name: string;
   description: string | null;
+  coverMediaId: string | null;
 }
 
 /** AlbumRecord plus what an album grid card needs to render a cover — the
@@ -22,6 +23,7 @@ function toRecord(row: typeof albums.$inferSelect): AlbumRecord {
     familyId: row.familyId,
     name: row.name,
     description: row.description,
+    coverMediaId: row.coverMediaId,
   };
 }
 
@@ -77,13 +79,24 @@ export function buildAlbumsWithCoverQuery(familyId: string) {
       and ${sql.raw('"media"."id"')} not in ${avatarMediaIds}
   )`.as("photo_count");
 
-  const coverMediaId = sql<string | null>`(
-    select ${sql.raw('"media"."id"')} from ${mediaAlbum}
-    inner join ${media} on ${sql.raw('"media"."id"')} = ${sql.raw('"media_album"."media_id"')}
-    where ${sql.raw('"media_album"."album_id"')} = ${sql.raw('"albums"."id"')}
-      and ${sql.raw('"media"."id"')} not in ${avatarMediaIds}
-    order by ${sql.raw('"media"."created_at"')} desc
-    limit 1
+  // A manually-picked cover (albums.cover_media_id) wins when it's still a
+  // real photo in this album; otherwise falls back to the most recent
+  // non-avatar photo, same as before manual covers existed.
+  const coverMediaId = sql<string | null>`coalesce(
+    (
+      select ${sql.raw('"media"."id"')} from ${mediaAlbum}
+      inner join ${media} on ${sql.raw('"media"."id"')} = ${sql.raw('"media_album"."media_id"')}
+      where ${sql.raw('"media_album"."album_id"')} = ${sql.raw('"albums"."id"')}
+        and ${sql.raw('"media"."id"')} = ${sql.raw('"albums"."cover_media_id"')}
+    ),
+    (
+      select ${sql.raw('"media"."id"')} from ${mediaAlbum}
+      inner join ${media} on ${sql.raw('"media"."id"')} = ${sql.raw('"media_album"."media_id"')}
+      where ${sql.raw('"media_album"."album_id"')} = ${sql.raw('"albums"."id"')}
+        and ${sql.raw('"media"."id"')} not in ${avatarMediaIds}
+      order by ${sql.raw('"media"."created_at"')} desc
+      limit 1
+    )
   )`.as("cover_media_id");
 
   return db
@@ -164,6 +177,37 @@ export async function updateAlbum(
   const result = await db
     .update(albums)
     .set({ name: data.name, description: data.description ?? null })
+    .where(and(eq(albums.id, albumId), eq(albums.familyId, familyId)))
+    .returning({ id: albums.id });
+  return result.length > 0;
+}
+
+/**
+ * Sets (or clears, when mediaId is null) the album's manually-picked cover.
+ * Requires the photo to already be linked to this exact album (media_album
+ * row) — same IDOR-safe shape as the rest of this file, just checked via a
+ * join instead of a second WHERE column, since media doesn't carry familyId
+ * directly. A media_album row can't exist across a foreign album, so this
+ * alone is enough to rule out cross-family/cross-album assignment.
+ */
+export async function setAlbumCover(
+  albumId: string,
+  familyId: string,
+  mediaId: string | null,
+): Promise<boolean> {
+  if (mediaId !== null) {
+    const link = await db.query.mediaAlbum.findFirst({
+      where: and(
+        eq(mediaAlbum.albumId, albumId),
+        eq(mediaAlbum.mediaId, mediaId),
+      ),
+    });
+    if (!link) return false;
+  }
+
+  const result = await db
+    .update(albums)
+    .set({ coverMediaId: mediaId })
     .where(and(eq(albums.id, albumId), eq(albums.familyId, familyId)))
     .returning({ id: albums.id });
   return result.length > 0;

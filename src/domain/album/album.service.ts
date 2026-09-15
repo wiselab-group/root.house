@@ -4,6 +4,7 @@ import {
   getAlbumById,
   listAlbumsByFamily,
   listAlbumsWithCoverByFamily,
+  setAlbumCover,
   updateAlbum,
   type CreateAlbumData,
   type UpdateAlbumData,
@@ -48,4 +49,14 @@ export async function editAlbum(
   data: UpdateAlbumData,
 ): Promise<boolean> {
   return updateAlbum(albumId, familyId, data);
+}
+
+/** Sets the album's cover to one of its own photos, or clears it (mediaId
+ *  null) back to the automatic "most recent photo" default. */
+export async function setAlbumCoverPhoto(
+  albumId: string,
+  familyId: string,
+  mediaId: string | null,
+): Promise<boolean> {
+  return setAlbumCover(albumId, familyId, mediaId);
 }

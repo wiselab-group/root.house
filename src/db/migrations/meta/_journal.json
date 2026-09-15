@@ -85,6 +85,13 @@
       "when": 1788884614204,
       "tag": "0011_lying_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1789502020238,
+      "tag": "0012_living_sally_floyd",
+      "breakpoints": true
     }
   ]
 }

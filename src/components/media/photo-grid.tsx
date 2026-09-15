@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { PhotoLightbox } from "./photo-lightbox";
 import { BLUR_PLACEHOLDER } from "./blur-placeholder";
-import { DeleteMediaButton } from "@/components/forms/delete-media-button";
+import { PhotoTileMenu } from "./photo-tile-menu";
 import type { GalleryPhotoView } from "./gallery-photo";
 
 export type { GalleryPhotoView };
@@ -24,11 +24,14 @@ export function PhotoGrid({
   familyId,
   familySlug,
   canEdit,
+  albumId,
 }: {
   photos: GalleryPhotoView[];
   familyId: string;
   familySlug: string;
   canEdit: boolean;
+  /** Present only on an album's own page — enables "make cover" on each tile's menu. */
+  albumId?: string | null;
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
@@ -62,10 +65,11 @@ export function PhotoGrid({
                 className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
                 onClick={(e) => e.stopPropagation()}
               >
-                <DeleteMediaButton
+                <PhotoTileMenu
                   familyId={familyId}
                   familySlug={familySlug}
                   mediaId={photo.media.id}
+                  albumId={albumId}
                 />
               </div>
             )}

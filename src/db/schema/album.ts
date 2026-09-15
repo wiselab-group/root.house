@@ -16,6 +16,12 @@ export const albums = pgTable(
       .references(() => families.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     description: text("description"),
+    // No FK constraint, same reasoning as persons.photoMediaId in person.ts:
+    // media.ts already imports albums (mediaAlbum), so album.ts importing
+    // media back would form a circular module import. Enforced at the
+    // application layer (album.service.ts::setAlbumCover checks the media
+    // belongs to the same family before assigning it).
+    coverMediaId: uuid("cover_media_id"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [index("albums_family_idx").on(table.familyId)],

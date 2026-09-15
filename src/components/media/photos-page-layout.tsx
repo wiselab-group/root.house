@@ -117,6 +117,7 @@ export function PhotosPageLayout({
         canEdit={canEdit}
         canUpload={canUpload}
         scoped={!activeAlbumId && albums.length > 0}
+        activeAlbumId={activeAlbumId}
       />
     </main>
   );
