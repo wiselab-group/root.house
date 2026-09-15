@@ -18,9 +18,10 @@ import { PhotoUploadPanel } from "./photo-upload-panel";
  * action this whole page exists for, and it stays reachable without
  * scrolling past a long album/photo grid first (Google/Apple Photos both
  * keep upload pinned in the header). Opens PhotoUploadPanel in a Dialog
- * instead of inline: the panel doesn't self-close after each upload (it
- * resets to "Выбрать фото" so several photos can be added back to back),
- * so `open` stays owned here and only Cancel/Escape/backdrop closes it.
+ * instead of inline: the panel doesn't self-close after a batch finishes
+ * (its grid keeps showing the just-uploaded photos with checkmarks), so
+ * `open` stays owned here and only its own Cancel/"Готово"/Escape/backdrop
+ * closes it.
  */
 export function UploadPhotoDialog({
   familyId,

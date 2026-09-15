@@ -1,31 +1,28 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { PersonMultiCombobox } from "./person-multi-combobox";
 import { AlbumMultiCombobox } from "./album-multi-combobox";
-import { PhotoPreviewCard } from "./photo-preview-card";
-import { uploadPhoto } from "@/lib/upload-photo";
-import { PrivacyLevelSelect } from "@/components/forms/privacy-level-select";
-import type { PrivacyLevel } from "@/db/schema";
+import { PhotoDropzone } from "./photo-dropzone";
+import { PhotoUploadGrid } from "./photo-upload-grid";
+import { usePhotoBatchUpload } from "./use-photo-batch-upload";
 
 /**
- * Upload panel for the family-wide gallery (/families/[slug]/photos) —
- * unlike the person-profile PhotoUploadForm (always exactly one person,
- * never albumed), this lets a photo be tagged with zero, one, or several
- * people AND added to zero, one, or several albums before it's uploaded.
- * Picking a file only stages it (PhotoPreviewCard) — tags stay editable
- * until "Загрузить" is pressed, so nothing is sent to the server the
- * moment the OS file picker closes. Shares the actual fetch() call with
- * PhotoUploadForm via lib/upload-photo.ts.
+ * Upload panel for the family-wide gallery (/families/[slug]/photos) — a
+ * drag&drop, multiple-files-at-once dropzone (PhotoDropzone) with per-tile
+ * progress (PhotoUploadGrid, state owned by usePhotoBatchUpload). Kept
+ * deliberately minimal on fields: people are tagged separately, later,
+ * against the already-uploaded photo (there is no "who's in this photo?"
+ * step here) and privacy silently defaults to "family" (changeable
+ * afterwards from the photo itself) — the only decision this panel still
+ * asks about is which album, and only when that isn't already obvious:
+ * uploading from inside an album (defaultAlbums non-empty) tags every photo
+ * into it without asking, same as before.
  *
- * Deliberately does NOT close itself after a successful upload (unlike
- * AlbumForm, a one-shot create) — after confirm() succeeds this resets to
- * the empty "Выбрать фото" state instead, so uploading several photos in a
- * row stays a tight loop of file-pick → tag → confirm without reopening
- * the dialog each time. `onCancel` closes the surrounding UploadPhotoDialog
- * explicitly instead.
+ * Unlike the old single-file version, does NOT reset to empty after a
+ * successful batch — the grid stays showing what was just uploaded (with
+ * checkmarks) until the panel is closed, so a person can see everything
+ * that made it in before dismissing.
  */
 export function PhotoUploadPanel({
   familyId,
@@ -36,108 +33,72 @@ export function PhotoUploadPanel({
   familyId: string;
   /** The family's existing albums, for AlbumMultiCombobox — fetched once by the parent page, not re-fetched per upload. */
   albums: { id: string; name: string }[];
-  /** Pre-selected albums — e.g. the album this panel is rendered inside of on /photos/[albumId], so an upload from that page defaults to landing in it. */
+  /** Pre-selected albums — e.g. the album this panel is rendered inside of on /photos/[albumId], so an upload from that page lands there without asking. When non-empty, the album picker is hidden entirely (see doc comment above). */
   defaultAlbums?: { id: string; name: string }[];
   onCancel: () => void;
 }) {
-  const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [taggedPeople, setTaggedPeople] = useState<
-    { id: string; name: string }[]
-  >([]);
+  const isInsideAlbum = defaultAlbums.length > 0;
   const [taggedAlbums, setTaggedAlbums] =
     useState<{ id: string; name: string }[]>(defaultAlbums);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [privacyLevel, setPrivacyLevel] = useState<PrivacyLevel>("family");
-
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setError(null);
-    setPendingFile(file);
-  }
-
-  function cancel() {
-    setPendingFile(null);
-    setError(null);
-    if (inputRef.current) inputRef.current.value = "";
-  }
-
-  async function confirm() {
-    if (!pendingFile) return;
-
-    setIsUploading(true);
-    setError(null);
-
-    try {
-      await uploadPhoto({
-        familyId,
-        personIds: taggedPeople.map((person) => person.id),
-        albumIds: taggedAlbums.map((album) => album.id),
-        file: pendingFile,
-        privacyLevel,
-      });
-      setTaggedPeople([]);
-      setTaggedAlbums(defaultAlbums);
-      setPendingFile(null);
-      router.refresh();
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Не удалось загрузить фото",
-      );
-    } finally {
-      setIsUploading(false);
-      if (inputRef.current) inputRef.current.value = "";
-    }
-  }
+  const {
+    photos,
+    isUploading,
+    addFiles,
+    removePhoto,
+    uploadAll,
+    doneCount,
+    hasPending,
+  } = usePhotoBatchUpload(familyId);
 
   return (
     <div className="flex flex-col gap-3">
-      <PersonMultiCombobox
-        familyId={familyId}
-        label="Кто на фото (необязательно)"
-        value={taggedPeople}
-        onChange={setTaggedPeople}
-      />
-      <AlbumMultiCombobox
-        albums={albums}
-        value={taggedAlbums}
-        onChange={setTaggedAlbums}
-      />
-      <PrivacyLevelSelect value={privacyLevel} onChange={setPrivacyLevel} />
-
-      {pendingFile ? (
-        <PhotoPreviewCard
-          file={pendingFile}
-          isUploading={isUploading}
-          error={error}
-          onConfirm={confirm}
-          onCancel={cancel}
-        />
+      {isInsideAlbum ? (
+        <p className="text-sm text-muted-foreground">
+          Фото добавятся в альбом «{defaultAlbums[0]?.name}»
+        </p>
       ) : (
-        <div className="flex gap-2">
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/heic"
-            onChange={handleFileChange}
-            className="hidden"
-            id="family-photo-upload-input"
-          />
+        <AlbumMultiCombobox
+          albums={albums}
+          value={taggedAlbums}
+          onChange={setTaggedAlbums}
+        />
+      )}
+
+      <PhotoDropzone disabled={isUploading} onFiles={addFiles} />
+
+      <PhotoUploadGrid photos={photos} onRemove={removePhoto} />
+
+      {photos.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Кто на фото и видимость можно настроить позже, прямо на фото.
+        </p>
+      )}
+
+      <div className="flex items-center gap-2">
+        {photos.length > 0 && (
+          <span className="mr-auto text-sm text-muted-foreground">
+            {doneCount} из {photos.length} загружено
+          </span>
+        )}
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onCancel}
+          disabled={isUploading}
+        >
+          {doneCount > 0 && !hasPending ? "Готово" : "Отмена"}
+        </Button>
+        {hasPending && (
           <Button
             type="button"
-            variant="outline"
-            onClick={() => inputRef.current?.click()}
+            onClick={() => uploadAll(taggedAlbums.map((album) => album.id))}
+            disabled={isUploading}
+            aria-busy={isUploading}
           >
-            Выбрать фото
+            {isUploading ? "Загружаем…" : "Загрузить"}
           </Button>
-          <Button type="button" variant="ghost" onClick={onCancel}>
-            Отмена
-          </Button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
