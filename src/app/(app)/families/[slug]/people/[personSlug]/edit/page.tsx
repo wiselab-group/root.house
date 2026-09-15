@@ -65,14 +65,12 @@ export default async function EditPersonPage({
           { label: "Редактировать" },
         ]}
       />
-      <h1 className="font-heading text-3xl font-medium tracking-tight text-balance">
-        {personDisplayName(person)}
-      </h1>
-
-      <section className="flex flex-col gap-4">
-        <h2 className="font-heading text-xl font-medium">Фото профиля</h2>
+      <div className="flex items-center gap-4">
         <AvatarEditor familyId={familyId} personId={personId} person={person} />
-      </section>
+        <h1 className="font-heading text-3xl font-medium tracking-tight text-balance">
+          {personDisplayName(person)}
+        </h1>
+      </div>
 
       <section className="flex flex-col gap-6 border-t border-border pt-8">
         {/* .bind() on the real "use server" action, not a closure — see

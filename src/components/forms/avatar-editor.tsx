@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { PersonAvatar } from "@/components/person/person-avatar";
-import { Button } from "@/components/ui/button";
+import { PersonPhotoUpload } from "@/components/forms/person-photo-upload";
+import { personInitials } from "@/domain/person/display-name";
 import { removePersonAvatarAction } from "@/actions/media.actions";
 import type { PersonRecord } from "@/domain/person/person.repository";
 
@@ -30,18 +30,15 @@ export function AvatarEditor({
   >;
 }) {
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isRemoving, startRemoveTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const hasAvatar = Boolean(person.photoMediaId);
-  const isBusy = isUploading || isRemoving;
+  const previewUrl = person.photoMediaId
+    ? `/api/media/${person.photoMediaId}?familyId=${familyId}`
+    : null;
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  async function handleFileSelect(file: File) {
     setIsUploading(true);
     setError(null);
 
@@ -68,7 +65,6 @@ export function AvatarEditor({
       );
     } finally {
       setIsUploading(false);
-      if (inputRef.current) inputRef.current.value = "";
     }
   }
 
@@ -84,52 +80,16 @@ export function AvatarEditor({
   }
 
   return (
-    <div className="flex items-center gap-4">
-      <PersonAvatar
-        person={person}
-        familyId={familyId}
-        className="size-16! text-lg"
+    <div className="flex flex-col gap-1">
+      <PersonPhotoUpload
+        previewUrl={previewUrl}
+        fallback={<span>{personInitials(person)}</span>}
+        onFileSelect={handleFileSelect}
+        onRemove={handleRemove}
+        isBusy={isUploading || isRemoving}
+        size="compact"
       />
-      <div className="flex flex-col gap-2">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/heic"
-          onChange={handleFileChange}
-          disabled={isBusy}
-          className="hidden"
-          id="avatar-upload-input"
-        />
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={isBusy}
-            aria-busy={isUploading}
-            onClick={() => inputRef.current?.click()}
-          >
-            {isUploading
-              ? "Загружаем…"
-              : hasAvatar
-                ? "Изменить фото"
-                : "Загрузить фото"}
-          </Button>
-          {hasAvatar && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={isBusy}
-              aria-busy={isRemoving}
-              onClick={handleRemove}
-            >
-              {isRemoving ? "Удаляем…" : "Удалить"}
-            </Button>
-          )}
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 }
