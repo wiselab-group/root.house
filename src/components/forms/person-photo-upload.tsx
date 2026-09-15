@@ -79,8 +79,7 @@ export function PersonPhotoUpload({
           aria-busy={isBusy}
           className={cn(
             "group/dropzone relative cursor-pointer overflow-hidden rounded-full border border-dashed border-border text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-            !previewUrl &&
-              "hover:border-primary/40 hover:bg-primary/5 hover:text-primary",
+            !previewUrl && "hover:border-primary/40",
             styles.dropzone,
             isDragging && "border-primary bg-primary/5",
             previewUrl && "border-solid border-transparent",
@@ -106,38 +105,30 @@ export function PersonPhotoUpload({
           />
           <Avatar size="lg" className={cn(styles.avatar, "after:border-none")}>
             {previewUrl && <AvatarImage src={previewUrl} alt="" />}
-            <AvatarFallback
-              className={cn(
-                styles.fallbackText,
-                !previewUrl && "group-hover/dropzone:text-primary",
-              )}
-            >
-              {isBusy ? (
-                size === "default" && (
-                  <span className="text-xs text-muted-foreground">
-                    Загружаем…
-                  </span>
-                )
-              ) : previewUrl ? null : (
-                <>
-                  <span className="group-hover/dropzone:hidden">
-                    {fallback}
-                  </span>
-                  <Camera
-                    className={cn(
-                      styles.camera,
-                      "hidden group-hover/dropzone:block",
-                    )}
-                    strokeWidth={1.5}
-                  />
-                </>
-              )}
+            <AvatarFallback className={styles.fallbackText}>
+              {isBusy
+                ? size === "default" && (
+                    <span className="text-xs text-muted-foreground">
+                      Загружаем…
+                    </span>
+                  )
+                : previewUrl
+                  ? null
+                  : fallback}
             </AvatarFallback>
           </Avatar>
-          {previewUrl && (
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-foreground/40 opacity-0 transition-opacity group-hover/dropzone:opacity-100">
+          {!isBusy && (
+            <div
+              className={cn(
+                "pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover/dropzone:opacity-100",
+                previewUrl ? "bg-foreground/40" : "bg-muted",
+              )}
+            >
               <Camera
-                className={cn(styles.camera, "text-background")}
+                className={cn(
+                  styles.camera,
+                  previewUrl ? "text-background" : "text-primary",
+                )}
                 strokeWidth={1.5}
               />
             </div>

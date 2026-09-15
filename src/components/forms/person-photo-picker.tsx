@@ -45,7 +45,9 @@ export function PersonPhotoPicker({
   return (
     <PersonPhotoUpload
       previewUrl={previewUrl}
-      fallback={<UserRound className="size-6 text-current" strokeWidth={1.5} />}
+      fallback={
+        <UserRound className="size-6 text-muted-foreground" strokeWidth={1.5} />
+      }
       onFileSelect={handleFileSelect}
       onRemove={handleRemove}
       disabled={disabled}
