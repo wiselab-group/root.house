@@ -120,7 +120,7 @@ export function PersonPhotoUpload({
           {!isBusy && (
             <div
               className={cn(
-                "pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover/dropzone:opacity-100",
+                "pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover/dropzone:opacity-100 pointer-coarse:opacity-100",
                 previewUrl ? "bg-foreground/40" : "bg-muted",
               )}
             >
