@@ -39,6 +39,7 @@ export function PhotoTileMenu({
   albumId?: string | null;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const handleSetCover = () => {
@@ -57,36 +58,44 @@ export function PhotoTileMenu({
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              type="button"
-              variant="secondary"
-              size="icon-sm"
-              aria-label="Действия с фото"
-              className="rounded-full shadow-sm [&_svg]:size-4.5"
-            />
-          }
-        >
-          <MoreVerticalIcon />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          {albumId && (
-            <DropdownMenuItem onClick={handleSetCover} disabled={isPending}>
-              <ImageIcon />
-              Сделать обложкой альбома
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem
-            variant="destructive"
-            onClick={() => setConfirmOpen(true)}
+      <div
+        className={
+          menuOpen
+            ? "opacity-100"
+            : "opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+        }
+      >
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon-sm"
+                aria-label="Действия с фото"
+                className="rounded-full shadow-sm [&_svg]:size-4.5"
+              />
+            }
           >
-            <Trash2Icon />
-            Удалить фото
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <MoreVerticalIcon />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 min-w-56">
+            {albumId && (
+              <DropdownMenuItem onClick={handleSetCover} disabled={isPending}>
+                <ImageIcon />
+                Сделать обложкой альбома
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={() => setConfirmOpen(true)}
+            >
+              <Trash2Icon />
+              Удалить фото
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
