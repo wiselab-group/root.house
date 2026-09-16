@@ -94,6 +94,7 @@ function useTagCursorMarker(
 function useTagDrag(
   containerRef: RefObject<HTMLDivElement | null>,
   canTag: boolean,
+  taggingMode: boolean,
   {
     familyId,
     familySlug,
@@ -112,7 +113,7 @@ function useTagDrag(
     event: React.PointerEvent<HTMLButtonElement>,
     personId: string,
   ) {
-    if (!canTag) return;
+    if (!canTag || !taggingMode) return;
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
     setDraggingPersonId(personId);
@@ -199,7 +200,7 @@ export function PhotoTagLayer({
   const [pendingPoint, setPendingPoint] = useState<Point | null>(null);
   const [, startTransition] = useTransition();
   const coarsePointer = useCoarsePointer();
-  const drag = useTagDrag(containerRef, canTag, {
+  const drag = useTagDrag(containerRef, canTag, taggingMode, {
     familyId,
     familySlug,
     mediaId,
@@ -265,6 +266,7 @@ export function PhotoTagLayer({
               : person
           }
           isHighlighted={taggingMode || highlightedPersonId === person.id}
+          taggingMode={taggingMode}
           canTag={canTag}
           familySlug={familySlug}
           onDragStart={(e) => drag.onDragStart(e, person.id)}
@@ -318,6 +320,7 @@ function PhotoTagMarker({
   person,
   point,
   isHighlighted,
+  taggingMode,
   canTag,
   familySlug,
   onDragStart,
@@ -329,6 +332,7 @@ function PhotoTagMarker({
   person: MediaTaggedPerson;
   point: Point;
   isHighlighted: boolean;
+  taggingMode: boolean;
   canTag: boolean;
   familySlug: string;
   onDragStart: (event: React.PointerEvent<HTMLButtonElement>) => void;
@@ -362,7 +366,11 @@ function PhotoTagMarker({
     </button>
   );
 
-  if (!canTag) {
+  // The management menu (open profile/untag/remove) is a tagging-mode
+  // affordance only — outside it, this hit area exists purely so hover/
+  // focus can reveal the dot (isHighlighted above), and a plain-view click
+  // should do nothing rather than surprise the viewer with a popover.
+  if (!canTag || !taggingMode) {
     return <div title={name}>{marker}</div>;
   }
 
