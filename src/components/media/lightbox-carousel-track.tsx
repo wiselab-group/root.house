@@ -233,7 +233,19 @@ function LightboxSlide({
   useEffect(() => {
     if (!taggingMode) return;
     const img = containerRef.current?.querySelector("img");
-    if (img?.complete && img.naturalWidth) {
+    // next/image reuses the same <img> DOM node across a src change (the
+    // slide component doesn't remount on next/prev) — right after `src`
+    // changes, `img.complete`/`naturalWidth` can still briefly reflect the
+    // *previous* photo until the browser actually starts loading the new
+    // one. Requiring currentSrc to already match the new photo's URL is
+    // what rules that stale read out; the real bug this guards (caught on
+    // a real screenshot) was the frame settling on the wrong aspect ratio
+    // after clicking next/prev in tagging mode.
+    if (
+      img?.complete &&
+      img.naturalWidth &&
+      img.currentSrc.includes(photo.media.id)
+    ) {
       recomputeContainRect(img.naturalWidth, img.naturalHeight);
     }
     function onResize() {
