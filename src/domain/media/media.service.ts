@@ -1,5 +1,7 @@
 import { vercelBlobStorageService } from "./storage.vercel-blob";
 import { canView, type ActingMember } from "@/domain/family/permissions";
+import { logActivity } from "@/domain/activity-log/activity-log.service";
+import { personDisplayName } from "@/domain/person/display-name";
 import type { PrivacyLevel } from "@/db/schema";
 import {
   createMedia,
@@ -60,7 +62,7 @@ export async function uploadPersonPhoto(
   });
 
   try {
-    return await createMedia({
+    const result = await createMedia({
       familyId: input.familyId,
       kind: "photo",
       storageKey,
@@ -74,12 +76,46 @@ export async function uploadPersonPhoto(
       personIds: input.personIds,
       albumIds: input.albumIds,
     });
+
+    if (input.personIds.length > 0) {
+      const taggedPeople = await getTaggedPeopleForMedia(
+        result.id,
+        input.familyId,
+      );
+      await logActivity({
+        familyId: input.familyId,
+        actorId: input.uploadedBy,
+        action: "create",
+        entityType: "media",
+        entityId: result.id,
+        entityLabel: mediaLabel(taggedPeople),
+      });
+    } else {
+      await logActivity({
+        familyId: input.familyId,
+        actorId: input.uploadedBy,
+        action: "create",
+        entityType: "media",
+        entityId: result.id,
+        entityLabel: "Фото",
+      });
+    }
+
+    return result;
   } catch (error) {
     await storage.delete(storageKey).catch(() => {
       // Best-effort cleanup — the DB insert error is what actually matters to the caller.
     });
     throw error;
   }
+}
+
+/** "Фото" alone, or "Фото — Имя" when tagged with at least one person — media
+ *  has no title field of its own, unlike Event/Story/Album. */
+function mediaLabel(taggedPeople: MediaTaggedPerson[]): string {
+  if (taggedPeople.length === 0) return "Фото";
+  const name = personDisplayName(taggedPeople[0]);
+  return taggedPeople.length > 1 ? `Фото — ${name} и другие` : `Фото — ${name}`;
 }
 
 /**
@@ -274,12 +310,28 @@ export async function getMediaStream(mediaId: string, familyId: string) {
 export async function removeMedia(
   mediaId: string,
   familyId: string,
+  actorId: string,
 ): Promise<boolean> {
   const record = await getMediaById(mediaId, familyId);
   if (!record) return false;
 
+  const taggedPeople = await getTaggedPeopleForMedia(mediaId, familyId);
+
   await storage.delete(record.storageKey);
-  return deleteMediaRow(mediaId, familyId);
+  const deleted = await deleteMediaRow(mediaId, familyId);
+
+  if (deleted) {
+    await logActivity({
+      familyId,
+      actorId,
+      action: "delete",
+      entityType: "media",
+      entityId: mediaId,
+      entityLabel: mediaLabel(taggedPeople),
+    });
+  }
+
+  return deleted;
 }
 
 export type { CreateMediaData, UpsertPhotoTagPositionData };

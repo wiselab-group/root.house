@@ -10,3 +10,4 @@ export * from "./event";
 export * from "./story";
 export * from "./album";
 export * from "./media";
+export * from "./activity-log";

@@ -2,6 +2,8 @@ import {
   getPersonById,
   listPersonsByFamily,
 } from "@/domain/person/person.repository";
+import { personDisplayName } from "@/domain/person/display-name";
+import { logActivity } from "@/domain/activity-log/activity-log.service";
 import { getAncestorDepths, isAncestorOf } from "./graph.service";
 import {
   computeRelationshipPath,
@@ -18,7 +20,9 @@ import {
   getAllParentChildEdges,
   getAllPartnershipEdges,
   getChildrenOf,
+  getParentChildById,
   getParentsOf,
+  getPartnershipById,
   getPartnershipsOf,
   getSiblingsOf,
   insertParentChild,
@@ -94,6 +98,22 @@ export async function validateParentChild(
   }
 }
 
+/** Builds the "Имя А — Имя Б" style label used for relationship-log entries — both Persons are assumed to already exist in `familyId`. */
+async function relationshipPairLabel(
+  familyId: string,
+  aId: string,
+  bId: string,
+  separator: string,
+): Promise<string> {
+  const [a, b] = await Promise.all([
+    getPersonById(aId, familyId),
+    getPersonById(bId, familyId),
+  ]);
+  const aName = a ? personDisplayName(a) : "Человек";
+  const bName = b ? personDisplayName(b) : "Человек";
+  return `${aName} ${separator} ${bName}`;
+}
+
 /**
  * Creates a parent -> child relationship after validateParentChild() passes.
  * More than two biological parents is unusual but not invalid (surrogacy,
@@ -102,6 +122,7 @@ export async function validateParentChild(
  */
 export async function addParentChild(
   familyId: string,
+  actorId: string,
   input: { parentId: string; childId: string; parentRole?: ParentRole },
 ): Promise<{ id: string }> {
   await validateParentChild(familyId, input, {
@@ -109,12 +130,28 @@ export async function addParentChild(
     isAncestorOf,
   });
 
-  return insertParentChild({
+  const result = await insertParentChild({
     familyId,
     parentId: input.parentId,
     childId: input.childId,
     parentRole: input.parentRole,
   });
+
+  await logActivity({
+    familyId,
+    actorId,
+    action: "create",
+    entityType: "relationship_parent_child",
+    entityId: result.id,
+    entityLabel: await relationshipPairLabel(
+      familyId,
+      input.parentId,
+      input.childId,
+      "→",
+    ),
+  });
+
+  return result;
 }
 
 export interface AddPartnershipInput {
@@ -159,24 +196,81 @@ export async function validatePartnership(
  */
 export async function addPartnership(
   familyId: string,
+  actorId: string,
   input: AddPartnershipInput,
 ): Promise<{ id: string }> {
   await validatePartnership(familyId, input, { personExists: getPersonById });
-  return insertPartnership({ familyId, ...input });
+  const result = await insertPartnership({ familyId, ...input });
+
+  await logActivity({
+    familyId,
+    actorId,
+    action: "create",
+    entityType: "relationship_partnership",
+    entityId: result.id,
+    entityLabel: await relationshipPairLabel(
+      familyId,
+      input.person1Id,
+      input.person2Id,
+      "—",
+    ),
+  });
+
+  return result;
 }
 
 export async function removeParentChild(
   id: string,
   familyId: string,
+  actorId: string,
 ): Promise<boolean> {
-  return deleteParentChild(id, familyId);
+  const edge = await getParentChildById(id, familyId);
+  const deleted = await deleteParentChild(id, familyId);
+
+  if (deleted && edge) {
+    await logActivity({
+      familyId,
+      actorId,
+      action: "delete",
+      entityType: "relationship_parent_child",
+      entityId: id,
+      entityLabel: await relationshipPairLabel(
+        familyId,
+        edge.parentId,
+        edge.childId,
+        "→",
+      ),
+    });
+  }
+
+  return deleted;
 }
 
 export async function removePartnership(
   id: string,
   familyId: string,
+  actorId: string,
 ): Promise<boolean> {
-  return deletePartnership(id, familyId);
+  const edge = await getPartnershipById(id, familyId);
+  const deleted = await deletePartnership(id, familyId);
+
+  if (deleted && edge) {
+    await logActivity({
+      familyId,
+      actorId,
+      action: "delete",
+      entityType: "relationship_partnership",
+      entityId: id,
+      entityLabel: await relationshipPairLabel(
+        familyId,
+        edge.person1Id,
+        edge.person2Id,
+        "—",
+      ),
+    });
+  }
+
+  return deleted;
 }
 
 /**

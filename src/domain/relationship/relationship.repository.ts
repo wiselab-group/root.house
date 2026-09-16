@@ -30,6 +30,34 @@ export interface PartnershipRecord {
   isCurrent: boolean;
 }
 
+/** Fetches a single parent_child edge, scoped to a family in the SAME query as the id lookup — same IDOR-safe pattern as person.repository.ts::getPersonById. */
+export async function getParentChildById(
+  id: string,
+  familyId: string,
+): Promise<ParentChildRecord | null> {
+  const row = await db.query.relationshipsParentChild.findFirst({
+    where: and(
+      eq(relationshipsParentChild.id, id),
+      eq(relationshipsParentChild.familyId, familyId),
+    ),
+  });
+  return row ?? null;
+}
+
+/** Fetches a single partnership row, scoped to a family in the SAME query as the id lookup — same IDOR-safe pattern as person.repository.ts::getPersonById. */
+export async function getPartnershipById(
+  id: string,
+  familyId: string,
+): Promise<PartnershipRecord | null> {
+  const row = await db.query.relationshipsPartnership.findFirst({
+    where: and(
+      eq(relationshipsPartnership.id, id),
+      eq(relationshipsPartnership.familyId, familyId),
+    ),
+  });
+  return row ? toPartnershipRecord(row) : null;
+}
+
 /** All parent_child rows where `personId` is the child — i.e. their direct parents. */
 export async function getParentsOf(
   personId: string,

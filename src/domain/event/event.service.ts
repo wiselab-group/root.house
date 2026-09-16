@@ -3,6 +3,7 @@ import { comparePartialDates } from "@/domain/shared/partial-date";
 import { getPersonById } from "@/domain/person/person.repository";
 import { personDisplayName } from "@/domain/person/display-name";
 import { canView, type ActingMember } from "@/domain/family/permissions";
+import { logActivity } from "@/domain/activity-log/activity-log.service";
 import { EVENT_ROLE_LABELS } from "./event-roles";
 import {
   createEvent,
@@ -45,7 +46,18 @@ export async function getParticipantsWithNames(
 }
 
 export async function addEvent(data: CreateEventData): Promise<{ id: string }> {
-  return createEvent(data);
+  const result = await createEvent(data);
+
+  await logActivity({
+    familyId: data.familyId,
+    actorId: data.createdBy,
+    action: "create",
+    entityType: "event",
+    entityId: result.id,
+    entityLabel: data.title,
+  });
+
+  return result;
 }
 
 /** Wrapped in React.cache so a page's generateMetadata and its own render
@@ -60,8 +72,23 @@ export const getEvent = cache(
 export async function removeEvent(
   eventId: string,
   familyId: string,
+  actorId: string,
 ): Promise<boolean> {
-  return deleteEvent(eventId, familyId);
+  const event = await getEvent(eventId, familyId);
+  const deleted = await deleteEvent(eventId, familyId);
+
+  if (deleted && event) {
+    await logActivity({
+      familyId,
+      actorId,
+      action: "delete",
+      entityType: "event",
+      entityId: eventId,
+      entityLabel: event.title,
+    });
+  }
+
+  return deleted;
 }
 
 /** Filters a list of Events down to what `member` may see per the PRIVATE

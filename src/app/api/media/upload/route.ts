@@ -128,7 +128,7 @@ export async function POST(request: Request): Promise<Response> {
     await setPersonAvatar(avatarPersonId, familyId, avatarMedia.id);
 
     if (previousAvatarMediaId) {
-      await removeMedia(previousAvatarMediaId, familyId);
+      await removeMedia(previousAvatarMediaId, familyId, session.user.id);
     }
 
     return NextResponse.json({ id: avatarMedia.id }, { status: 201 });

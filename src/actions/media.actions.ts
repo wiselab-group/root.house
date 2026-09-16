@@ -80,7 +80,7 @@ export async function deleteMediaAction(
     }
   }
 
-  await removeMedia(mediaId, familyId);
+  await removeMedia(mediaId, familyId, session.user.id);
 
   for (const person of taggedPeople) {
     revalidatePath(`/families/${familySlug}/people/${person.slug}`);
@@ -112,7 +112,7 @@ export async function removePersonAvatarAction(
 
   await setPersonAvatar(personId, familyId, null);
   if (avatarMediaId) {
-    await removeMedia(avatarMediaId, familyId);
+    await removeMedia(avatarMediaId, familyId, session.user.id);
   }
 
   const familySlug = await getFamilySlugById(familyId);

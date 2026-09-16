@@ -40,11 +40,14 @@ export async function createAlbumAction(
     return { fieldErrors };
   }
 
-  await addAlbum({
-    familyId,
-    name: parsed.data.name,
-    description: parsed.data.description || undefined,
-  });
+  await addAlbum(
+    {
+      familyId,
+      name: parsed.data.name,
+      description: parsed.data.description || undefined,
+    },
+    session.user.id,
+  );
 
   const slug = await getFamilySlugById(familyId);
   revalidatePath(`/families/${slug}/photos`);
@@ -75,7 +78,7 @@ export async function updateAlbumAction(
     return { fieldErrors };
   }
 
-  const updated = await editAlbum(albumId, familyId, {
+  const updated = await editAlbum(albumId, familyId, session.user.id, {
     name: parsed.data.name,
     description: parsed.data.description || undefined,
   });
@@ -100,7 +103,7 @@ export async function deleteAlbumAction(
   if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
-  await removeAlbum(albumId, familyId);
+  await removeAlbum(albumId, familyId, session.user.id);
 
   const slug = await getFamilySlugById(familyId);
   revalidatePath(`/families/${slug}/photos`);

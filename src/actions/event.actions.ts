@@ -100,7 +100,7 @@ export async function deleteEventAction(
     throw new ForbiddenError("У вас нет прав на удаление этого события.");
   }
 
-  await removeEvent(eventId, familyId);
+  await removeEvent(eventId, familyId, session.user.id);
   const familySlug = await getFamilySlugById(familyId);
   const personSlug = await getPersonSlugById(personId, familyId);
   revalidatePath(`/families/${familySlug}/people/${personSlug}`);

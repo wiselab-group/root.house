@@ -8,6 +8,8 @@ import {
 } from "@/domain/person/slug";
 import { reconcileLivingStatus } from "@/domain/person/reconcile-living-status";
 import { canView, type ActingMember } from "@/domain/family/permissions";
+import { logActivity } from "@/domain/activity-log/activity-log.service";
+import { personDisplayName } from "@/domain/person/display-name";
 import {
   createPerson,
   deletePerson,
@@ -88,6 +90,20 @@ export async function addPerson(
     slug,
     isPlaceholder: false,
     ...input,
+  });
+
+  await logActivity({
+    familyId,
+    actorId: createdBy,
+    action: "create",
+    entityType: "person",
+    entityId: id,
+    entityLabel: personDisplayName({
+      firstName: input.firstName ?? null,
+      lastName: input.lastName ?? null,
+      nickname: input.nickname ?? null,
+      isPlaceholder: false,
+    }),
   });
 
   return { id, slug };
@@ -201,9 +217,28 @@ export async function getVisiblePerson(
 export async function editPerson(
   personId: string,
   familyId: string,
+  actorId: string,
   rawPatch: UpdatePersonData,
 ): Promise<boolean> {
-  return updatePerson(personId, familyId, reconcileLivingStatus(rawPatch));
+  const updated = await updatePerson(
+    personId,
+    familyId,
+    reconcileLivingStatus(rawPatch),
+  );
+
+  if (updated) {
+    const person = await getPersonById(personId, familyId);
+    await logActivity({
+      familyId,
+      actorId,
+      action: "update",
+      entityType: "person",
+      entityId: personId,
+      entityLabel: person ? personDisplayName(person) : "Человек",
+    });
+  }
+
+  return updated;
 }
 
 /**
@@ -238,8 +273,23 @@ export async function renamePersonSlug(
 export async function removePerson(
   personId: string,
   familyId: string,
+  actorId: string,
 ): Promise<boolean> {
-  return deletePerson(personId, familyId);
+  const person = await getPersonById(personId, familyId);
+  const deleted = await deletePerson(personId, familyId);
+
+  if (deleted) {
+    await logActivity({
+      familyId,
+      actorId,
+      action: "delete",
+      entityType: "person",
+      entityId: personId,
+      entityLabel: person ? personDisplayName(person) : "Человек",
+    });
+  }
+
+  return deleted;
 }
 
 /**

@@ -163,7 +163,7 @@ export async function deletePersonAction(
     throw new ForbiddenError("У вас нет прав на удаление этой записи.");
   }
 
-  await removePerson(personId, familyId);
+  await removePerson(personId, familyId, session.user.id);
 
   const slug = await getFamilySlugById(familyId);
   revalidatePath(`/families/${slug}/people`);
@@ -220,7 +220,7 @@ export async function updatePersonAction(
     return { fieldErrors };
   }
 
-  const updated = await editPerson(personId, familyId, {
+  const updated = await editPerson(personId, familyId, session.user.id, {
     firstName: parsed.data.firstName || null,
     lastName: parsed.data.lastName || null,
     middleName: parsed.data.middleName || null,

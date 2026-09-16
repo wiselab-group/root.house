@@ -6,6 +6,7 @@ import { FamilySettingsFocusRow } from "@/components/family/family-settings-focu
 import { FamilySettingsDeleteRow } from "@/components/family/family-settings-delete-row";
 import { FamilyMembersSection } from "@/components/family/family-members-section";
 import { ShareLinkSection } from "@/components/family/share-link-section";
+import { ActivityLogSection } from "@/components/family/activity-log-section";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -15,6 +16,7 @@ import {
 } from "@/domain/family/family.service";
 import { listPendingInvitationsForFamily } from "@/domain/invitation/invitation.service";
 import { listShareLinksForFamilyWithStatus } from "@/domain/share-link/share-link.service";
+import { listActivityLog } from "@/domain/activity-log/activity-log.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 
 export const metadata: Metadata = {
@@ -36,12 +38,16 @@ export default async function FamilySettingsPage({
     : null;
   const isOwner = member?.role === "owner";
 
-  const [family, members, pendingInvitations, shareLinks] = await Promise.all([
-    getFamilySummary(familyId),
-    isOwner ? listFamilyMembersWithUsers(familyId) : Promise.resolve([]),
-    isOwner ? listPendingInvitationsForFamily(familyId) : Promise.resolve([]),
-    isOwner ? listShareLinksForFamilyWithStatus(familyId) : Promise.resolve([]),
-  ]);
+  const [family, members, pendingInvitations, shareLinks, activityEntries] =
+    await Promise.all([
+      getFamilySummary(familyId),
+      isOwner ? listFamilyMembersWithUsers(familyId) : Promise.resolve([]),
+      isOwner ? listPendingInvitationsForFamily(familyId) : Promise.resolve([]),
+      isOwner
+        ? listShareLinksForFamilyWithStatus(familyId)
+        : Promise.resolve([]),
+      isOwner ? listActivityLog(familyId) : Promise.resolve([]),
+    ]);
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12 sm:py-16">
@@ -98,6 +104,15 @@ export default async function FamilySettingsPage({
           description="Анонимный доступ только для чтения к публичным данным семьи — без регистрации и без прав редактирования."
         >
           <ShareLinkSection familyId={familyId} shareLinks={shareLinks} />
+        </ProfileSection>
+      )}
+
+      {isOwner && member && (
+        <ProfileSection
+          title="История действий"
+          description="Кто и что изменил в архиве — видно только владельцу."
+        >
+          <ActivityLogSection entries={activityEntries} />
         </ProfileSection>
       )}
 
