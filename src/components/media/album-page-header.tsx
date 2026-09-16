@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { PencilIcon } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeftIcon, PencilIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AlbumTitleEditor } from "@/components/forms/album-title-editor";
 import { DeleteAlbumButton } from "@/components/forms/delete-album-button";
@@ -77,6 +78,13 @@ export function AlbumPageHeader({
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="flex flex-col gap-2">
+        <Link
+          href={`/families/${familySlug}/photos`}
+          className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeftIcon className="size-3.5" />
+          Все альбомы
+        </Link>
         <div className="flex items-center gap-1">
           <h1 className="font-heading text-3xl font-medium tracking-tight text-balance sm:text-4xl">
             {activeAlbumName}
