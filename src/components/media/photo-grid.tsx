@@ -85,6 +85,7 @@ export function PhotoGrid({
           onClose={() => setOpenIndex(null)}
           familyId={familyId}
           familySlug={familySlug}
+          canTag={canEdit}
         />
       )}
     </>

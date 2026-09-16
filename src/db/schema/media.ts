@@ -1,12 +1,15 @@
+import { sql } from "drizzle-orm";
 import {
   pgTable,
   text,
   timestamp,
   uuid,
   integer,
+  numeric,
   jsonb,
   index,
   uniqueIndex,
+  check,
   pgEnum,
 } from "drizzle-orm/pg-core";
 import { families } from "./family";
@@ -75,10 +78,24 @@ export const mediaPerson = pgTable(
     personId: uuid("person_id")
       .notNull()
       .references(() => persons.id, { onDelete: "cascade" }),
+    /**
+     * Tap-to-tag point, 0.00–100.00, relative to the rendered (uncropped,
+     * object-contain) image's own content box — see photo-lightbox.tsx /
+     * photo-tag-layer.tsx. Both null means "tagged in this photo, no
+     * specific point" (the pre-existing bulk-tag-at-upload semantics via
+     * PersonMultiCombobox); both set means a positioned point-tag. Never
+     * one-set-one-null — enforced by media_person_xy_check below.
+     */
+    xPercent: numeric("x_percent", { precision: 5, scale: 2 }),
+    yPercent: numeric("y_percent", { precision: 5, scale: 2 }),
   },
   (table) => [
     uniqueIndex("media_person_unique").on(table.mediaId, table.personId),
     index("media_person_person_idx").on(table.personId),
+    check(
+      "media_person_xy_check",
+      sql`(${table.xPercent} IS NULL) = (${table.yPercent} IS NULL)`,
+    ),
   ],
 );
 

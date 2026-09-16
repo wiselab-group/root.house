@@ -10,10 +10,14 @@ import {
   getMediaForFamily,
   getMediaForPerson,
   getPeopleForMedia,
+  upsertPhotoTagPosition,
+  clearPhotoTagPosition,
+  removePersonFromMedia,
   type CreateMediaData,
   type MediaRecord,
   type MediaTaggedAlbum,
   type MediaTaggedPerson,
+  type UpsertPhotoTagPositionData,
 } from "./media.repository";
 
 export type { MediaRecord, MediaTaggedAlbum, MediaTaggedPerson };
@@ -278,4 +282,5 @@ export async function removeMedia(
   return deleteMediaRow(mediaId, familyId);
 }
 
-export type { CreateMediaData };
+export type { CreateMediaData, UpsertPhotoTagPositionData };
+export { upsertPhotoTagPosition, clearPhotoTagPosition, removePersonFromMedia };

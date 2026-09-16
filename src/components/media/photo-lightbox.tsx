@@ -2,12 +2,19 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useState } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import { ChevronLeftIcon, ChevronRightIcon, XIcon } from "lucide-react";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  UserPlusIcon,
+  XIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { personDisplayName } from "@/domain/person/display-name";
 import { BLUR_PLACEHOLDER } from "./blur-placeholder";
+import { PhotoTagLayer } from "./photo-tag-layer";
 import type { GalleryPhotoView } from "./gallery-photo";
 
 /**
@@ -27,6 +34,7 @@ export function PhotoLightbox({
   onClose,
   familyId,
   familySlug,
+  canTag = false,
 }: {
   photos: GalleryPhotoView[];
   index: number;
@@ -34,8 +42,11 @@ export function PhotoLightbox({
   onClose: () => void;
   familyId: string;
   familySlug: string;
+  /** Contributor+ may place/move/remove point-tags — see photo-tag-layer.tsx. */
+  canTag?: boolean;
 }) {
   const photo = photos[index];
+  const [taggingMode, setTaggingMode] = useState(false);
   if (!photo) return null;
 
   const hasPrev = index > 0;
@@ -56,6 +67,19 @@ export function PhotoLightbox({
           </DialogPrimitive.Title>
 
           <div className="flex items-center justify-end gap-2 p-3">
+            {canTag && (
+              <Button
+                type="button"
+                variant={taggingMode ? "default" : "secondary"}
+                size="sm"
+                className="rounded-full shadow-sm"
+                aria-pressed={taggingMode}
+                onClick={() => setTaggingMode((v) => !v)}
+              >
+                <UserPlusIcon />
+                Отметить людей
+              </Button>
+            )}
             <DialogPrimitive.Close
               render={
                 <Button
@@ -81,6 +105,14 @@ export function PhotoLightbox({
                 placeholder="blur"
                 blurDataURL={BLUR_PLACEHOLDER}
                 unoptimized
+              />
+              <PhotoTagLayer
+                mediaId={photo.media.id}
+                people={photo.people}
+                taggingMode={taggingMode}
+                canTag={canTag}
+                familyId={familyId}
+                familySlug={familySlug}
               />
             </div>
 

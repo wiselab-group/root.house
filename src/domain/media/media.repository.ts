@@ -35,6 +35,9 @@ export interface MediaTaggedPerson {
   nickname: string | null;
   isPlaceholder: boolean;
   photoMediaId: string | null;
+  /** Tap-to-tag point, 0–100, or null for an untagged/positionless mediaPerson row. */
+  xPercent: number | null;
+  yPercent: number | null;
 }
 
 /** Lean projection of an Album a photo belongs to — enough for a chip/link, no need for the full AlbumRecord. */
@@ -168,7 +171,12 @@ export async function getPeopleForMedia(
   if (mediaIds.length === 0) return result;
 
   const rows = await db
-    .select({ mediaId: mediaPerson.mediaId, person: persons })
+    .select({
+      mediaId: mediaPerson.mediaId,
+      person: persons,
+      xPercent: mediaPerson.xPercent,
+      yPercent: mediaPerson.yPercent,
+    })
     .from(mediaPerson)
     .innerJoin(persons, eq(mediaPerson.personId, persons.id))
     .where(
@@ -187,6 +195,8 @@ export async function getPeopleForMedia(
       nickname: row.person.nickname,
       isPlaceholder: row.person.isPlaceholder,
       photoMediaId: row.person.photoMediaId,
+      xPercent: row.xPercent === null ? null : Number(row.xPercent),
+      yPercent: row.yPercent === null ? null : Number(row.yPercent),
     };
     const existing = result.get(row.mediaId);
     if (existing) existing.push(tagged);
@@ -291,5 +301,108 @@ export async function deleteMediaRow(
     .delete(media)
     .where(and(eq(media.id, mediaId), eq(media.familyId, familyId)))
     .returning({ id: media.id });
+  return result.length > 0;
+}
+
+export interface UpsertPhotoTagPositionData {
+  mediaId: string;
+  personId: string;
+  familyId: string;
+  xPercent: number;
+  yPercent: number;
+}
+
+/**
+ * Places (or moves) a tap-to-tag point for `personId` on `mediaId`. Upserts
+ * on the existing media_person_unique(mediaId, personId) index rather than
+ * insert-or-fail: if this person is already tagged untagged-style (a row
+ * with null x/y from the bulk-tag-at-upload flow), placing a point tag fills
+ * in that SAME row's coordinates instead of violating the unique index.
+ * mediaId/personId are validated against familyId in the same statement so a
+ * cross-family id never silently succeeds.
+ */
+export async function upsertPhotoTagPosition(
+  data: UpsertPhotoTagPositionData,
+): Promise<boolean> {
+  const [mediaRow] = await db
+    .select({ id: media.id })
+    .from(media)
+    .where(and(eq(media.id, data.mediaId), eq(media.familyId, data.familyId)));
+  const [personRow] = await db
+    .select({ id: persons.id })
+    .from(persons)
+    .where(
+      and(eq(persons.id, data.personId), eq(persons.familyId, data.familyId)),
+    );
+  if (!mediaRow || !personRow) return false;
+
+  await db
+    .insert(mediaPerson)
+    .values({
+      mediaId: data.mediaId,
+      personId: data.personId,
+      xPercent: String(data.xPercent),
+      yPercent: String(data.yPercent),
+    })
+    .onConflictDoUpdate({
+      target: [mediaPerson.mediaId, mediaPerson.personId],
+      set: { xPercent: String(data.xPercent), yPercent: String(data.yPercent) },
+    });
+  return true;
+}
+
+/**
+ * "Снять точку" — clears a point-tag back to positionless without removing
+ * the mediaPerson row, so the person stays in the photo's "who's tagged"
+ * chip list. Distinct from removePersonFromMedia below, which deletes the
+ * row entirely ("Убрать из фото").
+ */
+export async function clearPhotoTagPosition(
+  mediaId: string,
+  personId: string,
+  familyId: string,
+): Promise<boolean> {
+  const result = await db
+    .update(mediaPerson)
+    .set({ xPercent: null, yPercent: null })
+    .where(
+      and(
+        eq(mediaPerson.mediaId, mediaId),
+        eq(mediaPerson.personId, personId),
+        inArray(
+          mediaPerson.personId,
+          db
+            .select({ id: persons.id })
+            .from(persons)
+            .where(eq(persons.familyId, familyId)),
+        ),
+      ),
+    )
+    .returning({ id: mediaPerson.id });
+  return result.length > 0;
+}
+
+/** "Убрать из фото" — removes the person from this photo entirely (deletes the media_person row). */
+export async function removePersonFromMedia(
+  mediaId: string,
+  personId: string,
+  familyId: string,
+): Promise<boolean> {
+  const result = await db
+    .delete(mediaPerson)
+    .where(
+      and(
+        eq(mediaPerson.mediaId, mediaId),
+        eq(mediaPerson.personId, personId),
+        inArray(
+          mediaPerson.personId,
+          db
+            .select({ id: persons.id })
+            .from(persons)
+            .where(eq(persons.familyId, familyId)),
+        ),
+      ),
+    )
+    .returning({ id: mediaPerson.id });
   return result.length > 0;
 }
