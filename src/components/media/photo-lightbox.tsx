@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import {
@@ -12,11 +11,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { personDisplayName } from "@/domain/person/display-name";
-import { BLUR_PLACEHOLDER } from "./blur-placeholder";
-import { PhotoTagLayer } from "./photo-tag-layer";
-import { useSwipeNavigation } from "./use-swipe-navigation";
+import { LightboxCarouselTrack } from "./lightbox-carousel-track";
 import type { GalleryPhotoView } from "./gallery-photo";
 
 /**
@@ -27,9 +23,9 @@ import type { GalleryPhotoView } from "./gallery-photo";
  * current photo (linking to their profile) and lets the user step through
  * the gallery with prev/next without closing the overlay — via the chevron
  * buttons, or by dragging/swiping the image left/right — touch on mobile,
- * mouse/trackpad drag on desktop (useSwipeNavigation, Pointer Events cover
- * both; disabled while tagging mode is on since taps there place tags
- * instead).
+ * mouse/trackpad drag on desktop. The actual sliding-track mechanics live
+ * in LightboxCarouselTrack (see its module doc for why it's a real
+ * carousel track and not a single `<img src>` swap).
  * Delete lives on the grid thumbnail (PhotoGrid), not here — a full-screen
  * viewer isn't the place for a destructive action that's one hover away on
  * the grid itself.
@@ -54,20 +50,10 @@ export function PhotoLightbox({
 }) {
   const photo = photos[index];
   const [taggingMode, setTaggingMode] = useState(false);
-  const reducedMotion = useReducedMotion();
+  if (!photo) return null;
 
   const hasPrev = index > 0;
   const hasNext = index < photos.length - 1;
-
-  // Disabled while tagging mode is on — taps there place tags
-  // (PhotoTagLayer), and swipe tracking would fight that gesture.
-  const { dragOffset, isDragging, pointerHandlers } = useSwipeNavigation({
-    hasPrev,
-    hasNext,
-    onPrev: () => onIndexChange(index - 1),
-    onNext: () => onIndexChange(index + 1),
-    disabled: taggingMode,
-  });
 
   return (
     <DialogPrimitive.Root
@@ -111,40 +97,16 @@ export function PhotoLightbox({
             </DialogPrimitive.Close>
           </div>
 
-          <div className="relative flex flex-1 items-center justify-center px-4 pb-4">
-            <div
-              className={cn(
-                "relative h-full w-full max-w-4xl touch-pan-y select-none",
-                !isDragging &&
-                  !reducedMotion &&
-                  "transition-transform duration-200 ease-(--ease-transition)",
-              )}
-              style={
-                dragOffset !== 0
-                  ? { transform: `translateX(${dragOffset}px)` }
-                  : undefined
-              }
-              {...pointerHandlers}
-            >
-              <Image
-                src={`/api/media/${photo.media.id}?familyId=${familyId}`}
-                alt={photo.media.title ?? "Семейное фото"}
-                fill
-                sizes="100vw"
-                className="object-contain"
-                placeholder="blur"
-                blurDataURL={BLUR_PLACEHOLDER}
-                unoptimized
-              />
-              <PhotoTagLayer
-                mediaId={photo.media.id}
-                people={photo.people}
-                taggingMode={taggingMode}
-                canTag={canTag}
-                familyId={familyId}
-                familySlug={familySlug}
-              />
-            </div>
+          <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 pb-4">
+            <LightboxCarouselTrack
+              photos={photos}
+              index={index}
+              onIndexChange={onIndexChange}
+              familyId={familyId}
+              familySlug={familySlug}
+              taggingMode={taggingMode}
+              canTag={canTag}
+            />
 
             {hasPrev && (
               <LightboxNavButton

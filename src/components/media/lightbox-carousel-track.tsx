@@ -1,0 +1,209 @@
+"use client";
+
+import Image from "next/image";
+import { useEffect } from "react";
+import { cn } from "@/lib/utils";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { BLUR_PLACEHOLDER } from "./blur-placeholder";
+import { PhotoTagLayer } from "./photo-tag-layer";
+import { useSwipeNavigation, SWIPE_SETTLE_MS } from "./use-swipe-navigation";
+import type { GalleryPhotoView } from "./gallery-photo";
+
+/**
+ * The lightbox's actual sliding surface — prev/current/next photos mounted
+ * side by side in a fixed 3-slot flex track (an empty slot renders where a
+ * neighbor doesn't exist, at the first/last photo, so the track is always
+ * exactly 3 equal-width slides and the resting `translateX(-100%)` always
+ * lands on the middle one), the whole track translated to keep `current`
+ * centered. See use-swipe-navigation.ts's module doc for why a track (not
+ * a single `<img src>` swap): the neighbor is already painted and
+ * positioned before a drag even starts, so a swipe is one continuous slide
+ * instead of "old photo vanishes, blank gap, new photo pops in." Split out
+ * of PhotoLightbox to keep that component under the 150-line limit — this
+ * piece owns the whole drag/slide/settle lifecycle.
+ */
+export function LightboxCarouselTrack({
+  photos,
+  index,
+  onIndexChange,
+  familyId,
+  familySlug,
+  taggingMode,
+  canTag,
+}: {
+  photos: GalleryPhotoView[];
+  index: number;
+  onIndexChange: (index: number) => void;
+  familyId: string;
+  familySlug: string;
+  taggingMode: boolean;
+  canTag: boolean;
+}) {
+  const reducedMotion = useReducedMotion();
+
+  const hasPrev = index > 0;
+  const hasNext = index < photos.length - 1;
+  const current = photos[index];
+
+  const {
+    dragOffsetPx,
+    settleUnits,
+    isDragging,
+    suppressTransition,
+    onSettleTransitionEnd,
+    onSuppressedResetPainted,
+    pointerHandlers,
+  } = useSwipeNavigation({
+    hasPrev,
+    hasNext,
+    onPrev: () => onIndexChange(index - 1),
+    onNext: () => onIndexChange(index + 1),
+    // Taps place tags in tagging mode (PhotoTagLayer) — swipe tracking
+    // would fight that gesture, so it's off for the duration.
+    disabled: taggingMode,
+  });
+
+  // Turns the transition back on the frame *after* the transition-less
+  // reset (settleUnits -> 0, index committed) has actually painted — see
+  // use-swipe-navigation.ts's suppressTransition doc for why this can't
+  // just happen in the same render as the reset.
+  useEffect(() => {
+    if (!suppressTransition) return;
+    const raf = requestAnimationFrame(onSuppressedResetPainted);
+    return () => cancelAnimationFrame(raf);
+  }, [suppressTransition, onSuppressedResetPainted]);
+
+  if (!current) return null;
+
+  // Reduced motion: no follow-the-pointer/slide animation at all — a swipe
+  // past the threshold jumps straight to the neighbor, same as clicking a
+  // chevron.
+  if (reducedMotion) {
+    return (
+      <div className="relative h-full w-full max-w-4xl">
+        <LightboxSlide
+          photo={current}
+          familyId={familyId}
+          familySlug={familySlug}
+          taggingMode={taggingMode}
+          canTag={canTag}
+        />
+      </div>
+    );
+  }
+
+  const isSettling = settleUnits !== 0;
+  const canDrag = hasPrev || hasNext;
+
+  return (
+    <div
+      className="relative h-full w-full max-w-4xl touch-pan-y select-none"
+      style={{
+        cursor: !canDrag ? undefined : isDragging ? "grabbing" : "grab",
+      }}
+      {...pointerHandlers}
+    >
+      <div
+        className={cn(
+          "flex h-full w-full",
+          !isDragging &&
+            !suppressTransition &&
+            "transition-transform ease-(--ease-transition)",
+        )}
+        style={{
+          transform: `translateX(calc((${settleUnits} - 1) * 100% + ${dragOffsetPx}px))`,
+          transitionDuration:
+            isDragging || suppressTransition
+              ? undefined
+              : `${SWIPE_SETTLE_MS}ms`,
+        }}
+        onTransitionEnd={() => {
+          if (isSettling) onSettleTransitionEnd();
+        }}
+      >
+        <TrackSlot
+          photo={hasPrev ? photos[index - 1] : undefined}
+          familyId={familyId}
+          familySlug={familySlug}
+        />
+        <TrackSlot
+          photo={current}
+          familyId={familyId}
+          familySlug={familySlug}
+          taggingMode={taggingMode}
+          canTag={canTag}
+        />
+        <TrackSlot
+          photo={hasNext ? photos[index + 1] : undefined}
+          familyId={familyId}
+          familySlug={familySlug}
+        />
+      </div>
+    </div>
+  );
+}
+
+function TrackSlot({
+  photo,
+  familyId,
+  familySlug,
+  taggingMode = false,
+  canTag = false,
+}: {
+  photo: GalleryPhotoView | undefined;
+  familyId: string;
+  familySlug: string;
+  taggingMode?: boolean;
+  canTag?: boolean;
+}) {
+  return (
+    <div className="relative h-full w-full shrink-0">
+      {photo && (
+        <LightboxSlide
+          photo={photo}
+          familyId={familyId}
+          familySlug={familySlug}
+          taggingMode={taggingMode}
+          canTag={canTag}
+        />
+      )}
+    </div>
+  );
+}
+
+function LightboxSlide({
+  photo,
+  familyId,
+  familySlug,
+  taggingMode,
+  canTag,
+}: {
+  photo: GalleryPhotoView;
+  familyId: string;
+  familySlug: string;
+  taggingMode: boolean;
+  canTag: boolean;
+}) {
+  return (
+    <>
+      <Image
+        src={`/api/media/${photo.media.id}?familyId=${familyId}`}
+        alt={photo.media.title ?? "Семейное фото"}
+        fill
+        sizes="100vw"
+        className="object-contain"
+        placeholder="blur"
+        blurDataURL={BLUR_PLACEHOLDER}
+        unoptimized
+      />
+      <PhotoTagLayer
+        mediaId={photo.media.id}
+        people={photo.people}
+        taggingMode={taggingMode}
+        canTag={canTag}
+        familyId={familyId}
+        familySlug={familySlug}
+      />
+    </>
+  );
+}
