@@ -74,6 +74,16 @@ export function PhotoTagLayer({
   }
 
   function handleTapToPlace(event: React.MouseEvent) {
+    // Popover/DropdownMenu content is rendered via a portal, but React's
+    // synthetic event system still bubbles clicks from inside it up through
+    // the React tree (not just the DOM tree) to this container's onClick —
+    // without this guard, selecting a person in the just-opened popover (a
+    // React descendant of this div despite living elsewhere in the DOM)
+    // also re-triggers a NEW tap-to-place at the same screen position the
+    // instant the first popover closes, immediately opening an empty one on
+    // top of the marker that was just placed. Only an actual click directly
+    // on this div (never bubbled from a portaled descendant) should count.
+    if (event.target !== event.currentTarget) return;
     if (!taggingMode || draggingPersonId) return;
     setPendingPoint(pointFromEvent(event));
   }
