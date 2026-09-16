@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeftIcon, PencilIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowLeftIcon } from "lucide-react";
 import { AlbumTitleEditor } from "@/components/forms/album-title-editor";
-import { DeleteAlbumButton } from "@/components/forms/delete-album-button";
+import { AlbumActionsMenu } from "./album-actions-menu";
 
 /**
  * Title row for /families/[slug]/photos and .../photos/[albumId] — plain
@@ -40,13 +39,16 @@ import { DeleteAlbumButton } from "@/components/forms/delete-album-button";
  * for the identical reason.
  *
  * On the active-album branch, `headerActions` sits in its own row with the
- * back link — NOT next to the (long, icon-adorned) album title — because
- * the title row wraps at realistic album-name lengths + rename/delete
- * icons, which used to drop the button onto its own line below the title
- * (caught live on a real album name: see the screenshot that prompted this).
- * The back-link row is short and never wraps, so pinning the button there
- * keeps it reliably on one line with something, instead of it landing
- * wherever the title row happens to break.
+ * back link — NOT next to the (long) album title — because the title row
+ * wraps at realistic album-name lengths, which used to drop the button
+ * onto its own line below the title (caught live on a real album name: see
+ * the screenshot that prompted this). The back-link row is short and never
+ * wraps, so pinning the button there keeps it reliably on one line with
+ * something, instead of it landing wherever the title row happens to
+ * break. Rename/delete are AlbumActionsMenu's single `⋮` trigger next to
+ * the title, not separate icon buttons — two bare pencil/trash icons
+ * competing with the title for attention (user-requested consolidation
+ * after seeing it live).
  */
 export function AlbumPageHeader({
   familyId,
@@ -114,24 +116,13 @@ export function AlbumPageHeader({
           {activeAlbumName}
         </h1>
         {canEdit && (
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              aria-label="Переименовать альбом"
-              className="rounded-full text-muted-foreground hover:text-foreground"
-              onClick={() => setEditing(true)}
-            >
-              <PencilIcon />
-            </Button>
-            <DeleteAlbumButton
-              familyId={familyId}
-              familySlug={familySlug}
-              albumId={activeAlbumId}
-              albumName={activeAlbumName}
-            />
-          </div>
+          <AlbumActionsMenu
+            familyId={familyId}
+            familySlug={familySlug}
+            albumId={activeAlbumId}
+            albumName={activeAlbumName}
+            onRename={() => setEditing(true)}
+          />
         )}
       </div>
       {activeAlbumDescription && (
