@@ -12,9 +12,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { personDisplayName } from "@/domain/person/display-name";
 import { BLUR_PLACEHOLDER } from "./blur-placeholder";
 import { PhotoTagLayer } from "./photo-tag-layer";
+import { useSwipeNavigation } from "./use-swipe-navigation";
 import type { GalleryPhotoView } from "./gallery-photo";
 
 /**
@@ -23,9 +25,14 @@ import type { GalleryPhotoView } from "./gallery-photo";
  * capped at sm:max-w-sm) so it gets focus-trap/Escape/scroll-lock "for
  * free" while filling the viewport edge to edge. Shows who's tagged on the
  * current photo (linking to their profile) and lets the user step through
- * the gallery with prev/next without closing the overlay. Delete lives on
- * the grid thumbnail (PhotoGrid), not here — a full-screen viewer isn't the
- * place for a destructive action that's one hover away on the grid itself.
+ * the gallery with prev/next without closing the overlay — via the chevron
+ * buttons, or by dragging/swiping the image left/right — touch on mobile,
+ * mouse/trackpad drag on desktop (useSwipeNavigation, Pointer Events cover
+ * both; disabled while tagging mode is on since taps there place tags
+ * instead).
+ * Delete lives on the grid thumbnail (PhotoGrid), not here — a full-screen
+ * viewer isn't the place for a destructive action that's one hover away on
+ * the grid itself.
  */
 export function PhotoLightbox({
   photos,
@@ -47,10 +54,20 @@ export function PhotoLightbox({
 }) {
   const photo = photos[index];
   const [taggingMode, setTaggingMode] = useState(false);
-  if (!photo) return null;
+  const reducedMotion = useReducedMotion();
 
   const hasPrev = index > 0;
   const hasNext = index < photos.length - 1;
+
+  // Disabled while tagging mode is on — taps there place tags
+  // (PhotoTagLayer), and swipe tracking would fight that gesture.
+  const { dragOffset, isDragging, pointerHandlers } = useSwipeNavigation({
+    hasPrev,
+    hasNext,
+    onPrev: () => onIndexChange(index - 1),
+    onNext: () => onIndexChange(index + 1),
+    disabled: taggingMode,
+  });
 
   return (
     <DialogPrimitive.Root
@@ -95,7 +112,20 @@ export function PhotoLightbox({
           </div>
 
           <div className="relative flex flex-1 items-center justify-center px-4 pb-4">
-            <div className="relative h-full w-full max-w-4xl">
+            <div
+              className={cn(
+                "relative h-full w-full max-w-4xl touch-pan-y select-none",
+                !isDragging &&
+                  !reducedMotion &&
+                  "transition-transform duration-200 ease-(--ease-transition)",
+              )}
+              style={
+                dragOffset !== 0
+                  ? { transform: `translateX(${dragOffset}px)` }
+                  : undefined
+              }
+              {...pointerHandlers}
+            >
               <Image
                 src={`/api/media/${photo.media.id}?familyId=${familyId}`}
                 alt={photo.media.title ?? "Семейное фото"}
@@ -117,26 +147,16 @@ export function PhotoLightbox({
             </div>
 
             {hasPrev && (
-              <button
-                type="button"
-                aria-label="Предыдущее фото"
+              <LightboxNavButton
+                direction="prev"
                 onClick={() => onIndexChange(index - 1)}
-                className={cn(
-                  "absolute left-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60",
-                )}
-              >
-                <ChevronLeftIcon className="size-5" />
-              </button>
+              />
             )}
             {hasNext && (
-              <button
-                type="button"
-                aria-label="Следующее фото"
+              <LightboxNavButton
+                direction="next"
                 onClick={() => onIndexChange(index + 1)}
-                className="absolute right-2 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60"
-              >
-                <ChevronRightIcon className="size-5" />
-              </button>
+              />
             )}
           </div>
 
@@ -156,5 +176,28 @@ export function PhotoLightbox({
         </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
+  );
+}
+
+function LightboxNavButton({
+  direction,
+  onClick,
+}: {
+  direction: "prev" | "next";
+  onClick: () => void;
+}) {
+  const Icon = direction === "prev" ? ChevronLeftIcon : ChevronRightIcon;
+  return (
+    <button
+      type="button"
+      aria-label={direction === "prev" ? "Предыдущее фото" : "Следующее фото"}
+      onClick={onClick}
+      className={cn(
+        "absolute top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60",
+        direction === "prev" ? "left-2" : "right-2",
+      )}
+    >
+      <Icon className="size-5" />
+    </button>
   );
 }

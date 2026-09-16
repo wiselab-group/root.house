@@ -33,7 +33,7 @@ import { RelationshipEdge } from "./relationship-edge";
 import { UnionChildEdge } from "./union-child-edge";
 import { useTreeCardStyle, type TreeCardStyle } from "./use-tree-card-style";
 import { useCoarsePointer } from "./use-coarse-pointer";
-import { useReducedMotion } from "./use-reduced-motion";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useHasMounted } from "./use-has-mounted";
 import { TreeCardStyleControl } from "./tree-card-style-control";
 import { useCollapsedBranches } from "./use-collapsed-branches";
