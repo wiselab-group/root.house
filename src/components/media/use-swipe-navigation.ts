@@ -47,6 +47,9 @@ export const SWIPE_SETTLE_MS = 220;
  * - `onSettleTransitionEnd` — call from the track's `onTransitionEnd` once
  *   `settleUnits` is non-zero and its transition finishes; commits the
  *   index change.
+ * - `triggerStep` — same settle animation as a released swipe, without a
+ *   real pointer gesture; for the prev/next chevron buttons, so clicking
+ *   them slides the track instead of snapping the photo in instantly.
  * - `pointerHandlers` — spread onto the swipeable element.
  *
  * dragStart is a ref, not state, since pointermove fires on every pixel of
@@ -149,6 +152,17 @@ export function useSwipeNavigation({
     setSuppressTransition(false);
   }
 
+  /** Programmatic equivalent of a released swipe past the threshold. */
+  function triggerStep(direction: "prev" | "next") {
+    // A step is already animating — let it finish and commit before
+    // starting another, same as a real drag can't interrupt mid-settle.
+    if (pendingDirection.current) return;
+    if (direction === "next" && !hasNext) return;
+    if (direction === "prev" && !hasPrev) return;
+    pendingDirection.current = direction;
+    setSettleUnits(direction === "next" ? -1 : 1);
+  }
+
   return {
     dragOffsetPx,
     settleUnits,
@@ -156,6 +170,7 @@ export function useSwipeNavigation({
     suppressTransition,
     onSettleTransitionEnd,
     onSuppressedResetPainted,
+    triggerStep,
     pointerHandlers: {
       onPointerDown,
       onPointerMove,

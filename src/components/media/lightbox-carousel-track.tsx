@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { BLUR_PLACEHOLDER } from "./blur-placeholder";
@@ -54,6 +55,7 @@ export function LightboxCarouselTrack({
     suppressTransition,
     onSettleTransitionEnd,
     onSuppressedResetPainted,
+    triggerStep,
     pointerHandlers,
   } = useSwipeNavigation({
     hasPrev,
@@ -91,6 +93,18 @@ export function LightboxCarouselTrack({
           canTag={canTag}
           highlightedPersonId={highlightedPersonId}
         />
+        {hasPrev && (
+          <LightboxNavButton
+            direction="prev"
+            onClick={() => onIndexChange(index - 1)}
+          />
+        )}
+        {hasNext && (
+          <LightboxNavButton
+            direction="next"
+            onClick={() => onIndexChange(index + 1)}
+          />
+        )}
       </div>
     );
   }
@@ -143,7 +157,43 @@ export function LightboxCarouselTrack({
           familySlug={familySlug}
         />
       </div>
+
+      {hasPrev && (
+        <LightboxNavButton
+          direction="prev"
+          onClick={() => triggerStep("prev")}
+        />
+      )}
+      {hasNext && (
+        <LightboxNavButton
+          direction="next"
+          onClick={() => triggerStep("next")}
+        />
+      )}
     </div>
+  );
+}
+
+function LightboxNavButton({
+  direction,
+  onClick,
+}: {
+  direction: "prev" | "next";
+  onClick: () => void;
+}) {
+  const Icon = direction === "prev" ? ChevronLeftIcon : ChevronRightIcon;
+  return (
+    <button
+      type="button"
+      aria-label={direction === "prev" ? "Предыдущее фото" : "Следующее фото"}
+      onClick={onClick}
+      className={cn(
+        "absolute top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60",
+        direction === "prev" ? "left-2" : "right-2",
+      )}
+    >
+      <Icon className="size-5" />
+    </button>
   );
 }
 

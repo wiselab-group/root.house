@@ -3,13 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import {
-  CheckIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  UserPlusIcon,
-  XIcon,
-} from "lucide-react";
+import { CheckIcon, UserPlusIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { personDisplayName } from "@/domain/person/display-name";
@@ -55,9 +49,6 @@ export function PhotoLightbox({
     null,
   );
   if (!photo) return null;
-
-  const hasPrev = index > 0;
-  const hasNext = index < photos.length - 1;
 
   return (
     <DialogPrimitive.Root
@@ -112,19 +103,6 @@ export function PhotoLightbox({
               canTag={canTag}
               highlightedPersonId={highlightedPersonId}
             />
-
-            {hasPrev && (
-              <LightboxNavButton
-                direction="prev"
-                onClick={() => onIndexChange(index - 1)}
-              />
-            )}
-            {hasNext && (
-              <LightboxNavButton
-                direction="next"
-                onClick={() => onIndexChange(index + 1)}
-              />
-            )}
           </div>
 
           <TaggedPeopleStrip
@@ -172,28 +150,5 @@ function TaggedPeopleStrip({
         </Link>
       ))}
     </div>
-  );
-}
-
-function LightboxNavButton({
-  direction,
-  onClick,
-}: {
-  direction: "prev" | "next";
-  onClick: () => void;
-}) {
-  const Icon = direction === "prev" ? ChevronLeftIcon : ChevronRightIcon;
-  return (
-    <button
-      type="button"
-      aria-label={direction === "prev" ? "Предыдущее фото" : "Следующее фото"}
-      onClick={onClick}
-      className={cn(
-        "absolute top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60",
-        direction === "prev" ? "left-2" : "right-2",
-      )}
-    >
-      <Icon className="size-5" />
-    </button>
   );
 }
