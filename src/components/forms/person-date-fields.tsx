@@ -23,7 +23,7 @@ export function PersonDateFields({
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="text-sm font-medium mb-1">{legend}</legend>
-      <div className="grid grid-cols-4 gap-2 items-end">
+      <div className="grid grid-cols-2 items-end gap-2 sm:grid-cols-4">
         <div className="flex flex-col gap-1">
           <Label
             htmlFor={`${prefix}Day`}

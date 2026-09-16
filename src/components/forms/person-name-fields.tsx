@@ -5,7 +5,7 @@ import type { PersonRecord } from "@/domain/person/person.service";
 /** Name/nickname fields — split out to keep PersonForm under the 150-line limit. */
 export function PersonNameFields({ person }: { person?: PersonRecord | null }) {
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div className="flex flex-col gap-2">
         <Label htmlFor="firstName">Имя</Label>
         <Input
@@ -38,7 +38,7 @@ export function PersonNameFields({ person }: { person?: PersonRecord | null }) {
           defaultValue={person?.maidenName ?? ""}
         />
       </div>
-      <div className="flex flex-col gap-2 col-span-2">
+      <div className="flex flex-col gap-2 sm:col-span-2">
         <Label htmlFor="nickname">Прозвище</Label>
         <Input
           id="nickname"

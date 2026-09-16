@@ -20,7 +20,7 @@ export function PersonGenderLivingFields({
   onIsLivingChange: (value: boolean) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div className="flex flex-col gap-2">
         <Label htmlFor="gender">Пол</Label>
         <NativeSelect
@@ -35,7 +35,7 @@ export function PersonGenderLivingFields({
           ))}
         </NativeSelect>
       </div>
-      <div className="flex items-center gap-2.5 pt-6">
+      <div className="flex items-center gap-2.5 sm:pt-6">
         <Switch
           id="isLiving"
           name="isLiving"
