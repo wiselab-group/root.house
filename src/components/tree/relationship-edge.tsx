@@ -16,16 +16,14 @@ import { UnionCollapseBadge } from "./union-collapse-badge";
 /**
  * Relationship Trace's line color — terracotta (--primary), matching traced
  * cards' own border (see person-node-parts.tsx's buildCardFrameClassName —
- * isTraced uses --primary). The focus person is the one exception: even
- * while it's an endpoint of an active trace, it stays on the sage identity
- * color (--tree-accent) instead, just with an extra ring for emphasis (see
- * person-node.tsx's own isTraceHighlighted, which excludes isFocus).
- * Terracotta is reserved across the whole app for "what the user is
- * doing/looking at right now" — a trace is exactly that — while sage
- * (--tree-accent/--chart-N) means "this is a person", the tree's permanent
- * per-card identity color (see globals.css's own comment on the three-hue
- * role split). Also keeps the traced path visually distinct from --branch,
- * the warm brown used for every other (non-traced) tree line.
+ * isTraced uses --primary). Terracotta is the tree's default per-card
+ * identity color now, so a traced card reads as an emphasized double-ring
+ * version of the same hue everyone already has — the one exception is
+ * whichever card currently has its own click-popover open, which switches
+ * to sage (--tree-accent) instead, the one color reserved for "the person
+ * you're looking at right now" (see person-node.tsx's isPopoverOpen). Also
+ * keeps the traced path visually distinct from --branch, the warm brown
+ * used for every other (non-traced) tree line.
  */
 export const TRACE_COLOR = "var(--primary)";
 

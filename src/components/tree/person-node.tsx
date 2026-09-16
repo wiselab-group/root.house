@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import {
   Popover,
@@ -49,6 +50,15 @@ import { PersonNodePopoverActions } from "./person-node-popover-actions";
  * explicit and lets a plain click also serve as "read this card" without
  * side effects.
  *
+ * The Popover is controlled (isPopoverOpen) rather than left to its own
+ * uncontrolled open state, because that open/closed state is also this
+ * card's `isOpen` — the one card in the tree the user is currently looking
+ * at gets the sage identity ring instead of the default terracotta one (see
+ * person-node-parts.tsx's buildCardFrameClassName doc comment). This is
+ * deliberately separate from data.isFocus (the tree layout's center person,
+ * ?focus= in the URL), which keeps its own terracotta emphasis ring —
+ * isOpen just wins when both happen to be true on the same card.
+ *
  * Also carries the collapse/expand "+N" badge (rewrite plan §7 Stage 5, see
  * person-node-parts.tsx's CollapseBadge) — floating at the card's own
  * bottom-center, outside the popover trigger so a click there toggles
@@ -59,15 +69,13 @@ import { PersonNodePopoverActions } from "./person-node-popover-actions";
  * ONE badge on their partnership line, never one per card.
  */
 export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const name = personLabel(data);
   const years = yearRange(data);
   const initials = personInitials(data);
 
   const isDimmed = data.isFilterMatch === false || data.isOnTracePath === false;
-  // The focus person can itself be one end of an active trace (isOnTracePath
-  // true) — it still stays on the sage identity color, not terracotta, so
-  // this excludes isFocus explicitly rather than just checking isOnTracePath.
-  const isTraceHighlighted = data.isOnTracePath === true && !data.isFocus;
+  const isTraceHighlighted = data.isOnTracePath === true;
 
   const cardBody = (
     <>
@@ -85,6 +93,7 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
           name={name}
           years={years}
           initials={initials}
+          isOpen={isPopoverOpen}
           isFocus={data.isFocus}
           isTraced={isTraceHighlighted}
           isSelected={selected}
@@ -101,6 +110,7 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
 
   const cardFrameClassName = buildCardFrameClassName({
     cardStyle: data.cardStyle,
+    isOpen: isPopoverOpen,
     isFocus: data.isFocus,
     isTraced: isTraceHighlighted,
     isPlaceholder: data.isPlaceholder,
@@ -118,7 +128,9 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
     boxShadow: selectedCardBoxShadow({
       cardStyle: data.cardStyle,
       isSelected: Boolean(selected),
+      isFocus: data.isFocus,
       isTraced: isTraceHighlighted,
+      isOpen: isPopoverOpen,
     }),
   };
 
@@ -148,7 +160,7 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
       {cardBody}
     </div>
   ) : (
-    <Popover>
+    <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
       <PopoverTrigger
         nativeButton={false}
         render={<div className={cardFrameClassName} style={cardFrameStyle} />}
