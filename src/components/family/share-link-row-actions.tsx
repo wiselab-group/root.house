@@ -39,9 +39,10 @@ export function ShareLinkRowActions({
         size="sm"
         variant="ghost"
         disabled={disabled || isPending}
+        aria-busy={isPending}
         onClick={handleRevoke}
       >
-        Отозвать
+        {isPending ? "Отзываем…" : "Отозвать"}
       </Button>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>

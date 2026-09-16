@@ -75,18 +75,20 @@ export function InvitationRowActions({
           size="sm"
           variant="outline"
           disabled={isPending}
+          aria-busy={isPending}
           onClick={handleResend}
         >
-          Отправить снова
+          {isPending ? "Отправляем…" : "Отправить снова"}
         </Button>
         <Button
           type="button"
           size="sm"
           variant="ghost"
           disabled={isPending}
+          aria-busy={isPending}
           onClick={handleRevoke}
         >
-          Отозвать
+          {isPending ? "Отзываем…" : "Отозвать"}
         </Button>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}
