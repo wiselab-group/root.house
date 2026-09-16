@@ -16,11 +16,11 @@ function getSnapshot(): boolean {
 
 /**
  * True on touch/coarse-pointer devices (phones, tablets) — same signal the
- * CSS `pointer-coarse:` variant uses elsewhere in the tree (MiniMap
- * visibility, control button sizing), but as a live JS value for props that
- * can't be conditioned by a CSS class, like ReactFlow's `Controls
- * showZoom`. SSR snapshot is `false` (desktop-shaped) so hydration matches;
- * the real value replaces it on mount, same pattern as useTreeCardStyle.
+ * CSS `pointer-coarse:` variant uses elsewhere in the app, but as a live JS
+ * value for logic that can't be conditioned by a CSS class alone (e.g.
+ * skipping a hover-only pointer-follow cursor in PhotoTagLayer, since a
+ * coarse pointer has no hover to follow). SSR snapshot is `false` (desktop-
+ * shaped) so hydration matches; the real value replaces it on mount.
  */
 export function useCoarsePointer(): boolean {
   return useSyncExternalStore(subscribe, getSnapshot, () => false);

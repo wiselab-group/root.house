@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import {
+  CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   UserPlusIcon,
@@ -79,8 +80,8 @@ export function PhotoLightbox({
                 aria-pressed={taggingMode}
                 onClick={() => setTaggingMode((v) => !v)}
               >
-                <UserPlusIcon />
-                Отметить людей
+                {taggingMode ? <CheckIcon /> : <UserPlusIcon />}
+                {taggingMode ? "Готово" : "Отметить людей"}
               </Button>
             )}
             <DialogPrimitive.Close
@@ -122,22 +123,33 @@ export function PhotoLightbox({
             )}
           </div>
 
-          {photo.people.length > 0 && (
-            <div className="flex flex-wrap gap-2 border-t border-white/10 p-3">
-              {photo.people.map((person) => (
-                <Link
-                  key={person.id}
-                  href={`/families/${familySlug}/people/${person.slug}`}
-                  className="rounded-full bg-white/10 px-3 py-1 text-sm text-white transition-colors hover:bg-white/20"
-                >
-                  {personDisplayName(person)}
-                </Link>
-              ))}
-            </div>
-          )}
+          <TaggedPeopleStrip people={photo.people} familySlug={familySlug} />
         </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
+  );
+}
+
+function TaggedPeopleStrip({
+  people,
+  familySlug,
+}: {
+  people: GalleryPhotoView["people"];
+  familySlug: string;
+}) {
+  if (people.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2 border-t border-white/10 p-3">
+      {people.map((person) => (
+        <Link
+          key={person.id}
+          href={`/families/${familySlug}/people/${person.slug}`}
+          className="rounded-full bg-white/10 px-3 py-1 text-sm text-white transition-colors hover:bg-white/20"
+        >
+          {personDisplayName(person)}
+        </Link>
+      ))}
+    </div>
   );
 }
 

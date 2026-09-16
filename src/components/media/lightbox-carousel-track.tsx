@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { BLUR_PLACEHOLDER } from "./blur-placeholder";
@@ -184,8 +184,52 @@ function LightboxSlide({
   taggingMode: boolean;
   canTag: boolean;
 }) {
+  // No media.width/height in the data (see PhotoTagLayer's own doc comment)
+  // — the actual object-contain rectangle (which can letterbox top/bottom
+  // or left/right depending on aspect ratio) is only knowable once the
+  // image has actually decoded. Only measured while taggingMode is on: the
+  // frame it drives is purely a tagging-mode affordance, so plain viewing
+  // does the usual zero-JS fill+object-contain with no ResizeObserver cost.
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containRect, setContainRect] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
+
+  function recomputeContainRect(naturalWidth: number, naturalHeight: number) {
+    const container = containerRef.current;
+    if (!container || !naturalWidth || !naturalHeight) return;
+    const { width: cw, height: ch } = container.getBoundingClientRect();
+    const scale = Math.min(cw / naturalWidth, ch / naturalHeight);
+    const width = naturalWidth * scale;
+    const height = naturalHeight * scale;
+    setContainRect({
+      left: (cw - width) / 2,
+      top: (ch - height) / 2,
+      width,
+      height,
+    });
+  }
+
+  useEffect(() => {
+    if (!taggingMode) return;
+    const img = containerRef.current?.querySelector("img");
+    if (img?.complete && img.naturalWidth) {
+      recomputeContainRect(img.naturalWidth, img.naturalHeight);
+    }
+    function onResize() {
+      if (img?.naturalWidth) {
+        recomputeContainRect(img.naturalWidth, img.naturalHeight);
+      }
+    }
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [taggingMode]);
+
   return (
-    <>
+    <div ref={containerRef} className="relative size-full">
       <Image
         src={`/api/media/${photo.media.id}?familyId=${familyId}`}
         alt={photo.media.title ?? "Семейное фото"}
@@ -195,7 +239,25 @@ function LightboxSlide({
         placeholder="blur"
         blurDataURL={BLUR_PLACEHOLDER}
         unoptimized
+        onLoad={(e) => {
+          const img = e.currentTarget;
+          if (taggingMode) {
+            recomputeContainRect(img.naturalWidth, img.naturalHeight);
+          }
+        }}
       />
+      {taggingMode && containRect && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute ring-3 ring-inset ring-primary"
+          style={{
+            left: containRect.left,
+            top: containRect.top,
+            width: containRect.width,
+            height: containRect.height,
+          }}
+        />
+      )}
       <PhotoTagLayer
         mediaId={photo.media.id}
         people={photo.people}
@@ -204,6 +266,6 @@ function LightboxSlide({
         familyId={familyId}
         familySlug={familySlug}
       />
-    </>
+    </div>
   );
 }

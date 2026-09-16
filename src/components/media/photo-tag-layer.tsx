@@ -10,6 +10,7 @@ import {
 } from "@/actions/photo-tag.actions";
 import { personDisplayName } from "@/domain/person/display-name";
 import type { MediaTaggedPerson } from "@/domain/media/media.service";
+import { useCoarsePointer } from "@/hooks/use-coarse-pointer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,10 +51,13 @@ export function PhotoTagLayer({
   familySlug: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const cursorMarkerRef = useRef<HTMLDivElement>(null);
   const [pendingPoint, setPendingPoint] = useState<Point | null>(null);
   const [draggingPersonId, setDraggingPersonId] = useState<string | null>(null);
   const [dragPoint, setDragPoint] = useState<Point | null>(null);
   const [, startTransition] = useTransition();
+  const coarsePointer = useCoarsePointer();
+  const showCursorMarker = taggingMode && !coarsePointer && !draggingPersonId;
 
   const positioned = people.filter(
     (person): person is MediaTaggedPerson & Point =>
@@ -71,6 +75,18 @@ export function PhotoTagLayer({
       Math.max(0, ((event.clientY - rect.top) / rect.height) * 100),
     );
     return { xPercent, yPercent };
+  }
+
+  function handleCursorMove(event: React.MouseEvent) {
+    if (!showCursorMarker || !cursorMarkerRef.current) return;
+    const point = pointFromEvent(event);
+    cursorMarkerRef.current.hidden = false;
+    cursorMarkerRef.current.style.left = `${point.xPercent}%`;
+    cursorMarkerRef.current.style.top = `${point.yPercent}%`;
+  }
+
+  function handleCursorLeave() {
+    if (cursorMarkerRef.current) cursorMarkerRef.current.hidden = true;
   }
 
   function handleTapToPlace(event: React.MouseEvent) {
@@ -156,8 +172,21 @@ export function PhotoTagLayer({
       ref={containerRef}
       className="absolute inset-0"
       onClick={handleTapToPlace}
-      style={{ cursor: taggingMode ? "crosshair" : undefined }}
+      onMouseMove={handleCursorMove}
+      onMouseLeave={handleCursorLeave}
+      style={{ cursor: showCursorMarker ? "none" : undefined }}
     >
+      {showCursorMarker && (
+        <div
+          ref={cursorMarkerRef}
+          aria-hidden
+          hidden
+          className="pointer-events-none absolute flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+        >
+          <span className="size-3.5 rounded-full border-2 border-background bg-primary shadow-md" />
+        </div>
+      )}
+
       {positioned.map((person) => {
         const isDragging = draggingPersonId === person.id;
         const point = isDragging && dragPoint ? dragPoint : person;
