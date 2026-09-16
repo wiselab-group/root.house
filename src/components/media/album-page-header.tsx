@@ -11,22 +11,15 @@ import { photoCountLabel } from "@/domain/shared/pluralize-ru";
  * Title row for /families/[slug]/photos and .../photos/[albumId] — plain
  * "Фото" + intro copy for the family-wide feed, or the album's own name +
  * description with rename/delete actions when one album is open. Renaming
- * swaps the h1 + description for AlbumTitleEditor in place, rather than
- * opening a separate form card next to the (still visible) title — that
- * used to duplicate the name on screen and push the page layout around.
+ * opens AlbumTitleEditor as a Dialog over the page rather than swapping the
+ * h1 for an inline form — an earlier version did the latter (see
+ * AlbumTitleEditor's own doc comment for why that changed); the header
+ * below no longer branches on an editing state at all, since the dialog
+ * renders independently on top of it.
  *
  * `headerActions` (PhotosPageLayout's UploadPhotoDialog) renders next to
- * the "Все альбомы" back link in the non-editing state, but is dropped
- * entirely while renaming — the two used to sit side by side in a shared
- * `flex justify-between` row regardless of which state this was in, so once
- * AlbumTitleEditor's full-width form took the title's place, the row still
- * tried to space its now-narrow form away from the button, leaving an
- * awkward empty gap between them (caught live: see the screenshot this
- * fixed). Hiding the action during editing reads as "you're mid-rename,
- * finish that first" instead — a real, if minor, affordance, not just a
- * layout patch.
- *
- * On the unfiltered-feed branch (no active album), `headerActions` sits on
+ * the "Все альбомы" back link. On the unfiltered-feed branch (no active
+ * album), `headerActions` sits on
  * the SAME row as the `h1` itself (`items-center justify-between`, no
  * `flex-wrap`), with the description paragraph moved below as its own
  * full-width line — not the description's original spot next to the h1
@@ -99,19 +92,6 @@ export function AlbumPageHeader({
     );
   }
 
-  if (editing) {
-    return (
-      <AlbumTitleEditor
-        familyId={familyId}
-        albumId={activeAlbumId}
-        defaultName={activeAlbumName}
-        defaultDescription={activeAlbumDescription}
-        onCancel={() => setEditing(false)}
-        onSaved={() => setEditing(false)}
-      />
-    );
-  }
-
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -144,6 +124,16 @@ export function AlbumPageHeader({
       </div>
       {activeAlbumDescription && (
         <p className="text-muted-foreground">{activeAlbumDescription}</p>
+      )}
+      {canEdit && (
+        <AlbumTitleEditor
+          familyId={familyId}
+          albumId={activeAlbumId}
+          defaultName={activeAlbumName}
+          defaultDescription={activeAlbumDescription}
+          open={editing}
+          onOpenChange={setEditing}
+        />
       )}
     </div>
   );
