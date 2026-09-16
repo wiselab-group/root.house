@@ -26,6 +26,19 @@ import { DeleteAlbumButton } from "@/components/forms/delete-album-button";
  * finish that first" instead — a real, if minor, affordance, not just a
  * layout patch.
  *
+ * On the unfiltered-feed branch (no active album), `headerActions` sits on
+ * the SAME row as the `h1` itself (`items-center justify-between`, no
+ * `flex-wrap`), with the description paragraph moved below as its own
+ * full-width line — not the description's original spot next to the h1
+ * inside a wrapping flex row. That wrapping version dropped "Добавить
+ * фото" onto its own line below the title+description block on mobile,
+ * since the text column claimed the full row width before the wrap point
+ * (user-reported on a live mobile screenshot). Pinning the button to the
+ * h1's own (always-short, never-wrapping) row keeps it reliably beside the
+ * title at every width — same fix shape as the active-album branch below,
+ * which already pins its own headerActions next to the short back-link row
+ * for the identical reason.
+ *
  * On the active-album branch, `headerActions` sits in its own row with the
  * back link — NOT next to the (long, icon-adorned) album title — because
  * the title row wraps at realistic album-name lengths + rename/delete
@@ -56,17 +69,17 @@ export function AlbumPageHeader({
 
   if (!activeAlbumId || !activeAlbumName) {
     return (
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-4">
           <h1 className="font-heading text-4xl font-medium tracking-tight text-balance sm:text-5xl">
             Фото
           </h1>
-          <p className="max-w-md text-muted-foreground">
-            Все фотографии семьи в одном месте — те же снимки видны и в профилях
-            отмеченных на них людей.
-          </p>
+          {headerActions}
         </div>
-        {headerActions}
+        <p className="max-w-md text-muted-foreground">
+          Все фотографии семьи в одном месте — те же снимки видны и в профилях
+          отмеченных на них людей.
+        </p>
       </div>
     );
   }
