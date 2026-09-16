@@ -50,10 +50,17 @@ export function FamilyTreeLaunchCard({
 }
 
 /**
- * A secondary section link (People / Photos / Places / Settings) — lighter
- * in every dimension than FamilyTreeLaunchCard: smaller type, no fill,
- * plain foreground icon. Deliberately not the same visual weight as the
- * tree card; see family-nav-card's module doc.
+ * A secondary section link (People / Photos / Places / Settings) — still
+ * lighter than FamilyTreeLaunchCard (no terracotta, no fill on the card
+ * itself — that stays exclusive to the tree card, see its module doc, and
+ * no shadow — flat like the rest of the app's non-tree surfaces), but a
+ * solid `bg-card` surface gives each tile real object presence instead of
+ * reading as outlined whitespace, and the icon sits in a filled neutral
+ * roundel (the product register's "second neutral layer", `bg-muted` —
+ * never `bg-primary/*`) so it carries weight without competing with the
+ * tree card's action color. `h-full` on the tile + `items-stretch` on the
+ * grid (page.tsx) keep all four tiles the same height regardless of
+ * description line count.
  */
 export function FamilyNavCard({
   href,
@@ -69,17 +76,15 @@ export function FamilyNavCard({
   return (
     <Link
       href={href}
-      className="group flex flex-col gap-2.5 rounded-xl px-4 py-4 ring-1 ring-border transition-colors hover:bg-accent/40 hover:ring-primary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="group flex h-full items-center gap-4 rounded-xl border border-border bg-card px-5 py-4 transition-all duration-200 ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <div className="flex items-center gap-2">
-        <Icon
-          className="size-5 shrink-0 text-primary"
-          strokeWidth={1.75}
-          aria-hidden="true"
-        />
-        <span className="text-sm font-medium">{label}</span>
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground transition-colors group-hover:bg-primary/12 group-hover:text-primary">
+        <Icon className="size-5" strokeWidth={1.75} aria-hidden="true" />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="font-semibold tracking-tight">{label}</span>
+        <span className="text-sm text-muted-foreground">{description}</span>
       </div>
-      <span className="text-sm text-muted-foreground">{description}</span>
     </Link>
   );
 }

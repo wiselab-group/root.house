@@ -83,7 +83,7 @@ export default async function FamilyDashboardPage({
           {secondaryLinks.map((link, index) => (
             <div
               key={link.href}
-              className="animate-content-enter"
+              className="animate-content-enter h-full"
               style={{ animationDelay: `${80 + index * 60}ms` }}
             >
               <FamilyNavCard {...link} />
