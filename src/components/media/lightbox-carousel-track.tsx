@@ -1,14 +1,24 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import {
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type Ref,
+} from "react";
 import { cn } from "@/lib/utils";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { BLUR_PLACEHOLDER } from "./blur-placeholder";
 import { PhotoTagLayer } from "./photo-tag-layer";
 import { useSwipeNavigation, SWIPE_SETTLE_MS } from "./use-swipe-navigation";
 import type { GalleryPhotoView } from "./gallery-photo";
+
+/** Imperative escape hatch for PhotoLightbox's chevron buttons — see module doc. */
+export type LightboxCarouselTrackHandle = {
+  triggerStep: (direction: "prev" | "next") => void;
+};
 
 /**
  * The lightbox's actual sliding surface — prev/current/next photos mounted
@@ -22,8 +32,19 @@ import type { GalleryPhotoView } from "./gallery-photo";
  * instead of "old photo vanishes, blank gap, new photo pops in." Split out
  * of PhotoLightbox to keep that component under the 150-line limit — this
  * piece owns the whole drag/slide/settle lifecycle.
+ *
+ * The prev/next chevron buttons live in PhotoLightbox, not here — they must
+ * be positioned against the full-screen lightbox, not this track's own
+ * `max-w-4xl` box (real bug: chevrons rendered inside the track drifted off
+ * the screen edge on narrower photos), and they must sit outside the
+ * `pointerHandlers`-bearing div below (real bug: a button nested inside it
+ * had its pointerdown/pointerup swallowed by the drag gesture's
+ * `setPointerCapture`, so clicking a chevron silently did nothing). Exposes
+ * `triggerStep` via ref so PhotoLightbox's buttons still drive the same
+ * settle animation as a swipe.
  */
 export function LightboxCarouselTrack({
+  ref,
   photos,
   index,
   onIndexChange,
@@ -33,6 +54,7 @@ export function LightboxCarouselTrack({
   canTag,
   highlightedPersonId,
 }: {
+  ref?: Ref<LightboxCarouselTrackHandle>;
   photos: GalleryPhotoView[];
   index: number;
   onIndexChange: (index: number) => void;
@@ -67,6 +89,20 @@ export function LightboxCarouselTrack({
     disabled: taggingMode,
   });
 
+  // Reduced motion: no follow-the-pointer/slide animation at all — a swipe
+  // past the threshold (or a triggerStep call) jumps straight to the
+  // neighbor, same as clicking a chevron does everywhere else.
+  useImperativeHandle(
+    ref,
+    () => ({
+      triggerStep: reducedMotion
+        ? (direction) =>
+            onIndexChange(direction === "next" ? index + 1 : index - 1)
+        : triggerStep,
+    }),
+    [reducedMotion, triggerStep, onIndexChange, index],
+  );
+
   // Turns the transition back on the frame *after* the transition-less
   // reset (settleUnits -> 0, index committed) has actually painted — see
   // use-swipe-navigation.ts's suppressTransition doc for why this can't
@@ -79,9 +115,6 @@ export function LightboxCarouselTrack({
 
   if (!current) return null;
 
-  // Reduced motion: no follow-the-pointer/slide animation at all — a swipe
-  // past the threshold jumps straight to the neighbor, same as clicking a
-  // chevron.
   if (reducedMotion) {
     return (
       <div className="relative h-full w-full max-w-4xl">
@@ -93,18 +126,6 @@ export function LightboxCarouselTrack({
           canTag={canTag}
           highlightedPersonId={highlightedPersonId}
         />
-        {hasPrev && (
-          <LightboxNavButton
-            direction="prev"
-            onClick={() => onIndexChange(index - 1)}
-          />
-        )}
-        {hasNext && (
-          <LightboxNavButton
-            direction="next"
-            onClick={() => onIndexChange(index + 1)}
-          />
-        )}
       </div>
     );
   }
@@ -157,43 +178,7 @@ export function LightboxCarouselTrack({
           familySlug={familySlug}
         />
       </div>
-
-      {hasPrev && (
-        <LightboxNavButton
-          direction="prev"
-          onClick={() => triggerStep("prev")}
-        />
-      )}
-      {hasNext && (
-        <LightboxNavButton
-          direction="next"
-          onClick={() => triggerStep("next")}
-        />
-      )}
     </div>
-  );
-}
-
-function LightboxNavButton({
-  direction,
-  onClick,
-}: {
-  direction: "prev" | "next";
-  onClick: () => void;
-}) {
-  const Icon = direction === "prev" ? ChevronLeftIcon : ChevronRightIcon;
-  return (
-    <button
-      type="button"
-      aria-label={direction === "prev" ? "Предыдущее фото" : "Следующее фото"}
-      onClick={onClick}
-      className={cn(
-        "absolute top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60",
-        direction === "prev" ? "left-2" : "right-2",
-      )}
-    >
-      <Icon className="size-5" />
-    </button>
   );
 }
 
