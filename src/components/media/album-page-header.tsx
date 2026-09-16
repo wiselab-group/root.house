@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, ImagesIcon } from "lucide-react";
 import { AlbumTitleEditor } from "@/components/forms/album-title-editor";
 import { AlbumActionsMenu } from "./album-actions-menu";
+import { photoCountLabel } from "@/domain/shared/pluralize-ru";
 
 /**
  * Title row for /families/[slug]/photos and .../photos/[albumId] — plain
@@ -49,6 +50,16 @@ import { AlbumActionsMenu } from "./album-actions-menu";
  * the title, not separate icon buttons — two bare pencil/trash icons
  * competing with the title for attention (user-requested consolidation
  * after seeing it live).
+ *
+ * The ImagesIcon + "Альбом · N фото" line under the title carries the same
+ * "this is an album" visual language as AlbumTile's grid card (icon +
+ * photoCountLabel) onto the opened album's own page — without it, an open
+ * album was just a bare h1 indistinguishable from a person's profile
+ * heading or any other titled page (user-reported after seeing it live).
+ * The literal word "Альбом" was folded into this same line rather than
+ * given its own eyebrow row above the h1 — a separate label would have
+ * stacked three redundant "you're in an album" signals (eyebrow, title,
+ * icon+count) in one small area (user-requested consolidation).
  */
 export function AlbumPageHeader({
   familyId,
@@ -57,6 +68,7 @@ export function AlbumPageHeader({
   activeAlbumId,
   activeAlbumName,
   activeAlbumDescription,
+  activeAlbumPhotoCount,
   headerActions,
 }: {
   familyId: string;
@@ -65,6 +77,7 @@ export function AlbumPageHeader({
   activeAlbumId: string | null;
   activeAlbumName: string | null;
   activeAlbumDescription: string | null;
+  activeAlbumPhotoCount: number;
   headerActions?: React.ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
@@ -124,6 +137,10 @@ export function AlbumPageHeader({
             onRename={() => setEditing(true)}
           />
         )}
+      </div>
+      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <ImagesIcon className="size-3.5" />
+        <span>Альбом · {photoCountLabel(activeAlbumPhotoCount)}</span>
       </div>
       {activeAlbumDescription && (
         <p className="text-muted-foreground">{activeAlbumDescription}</p>

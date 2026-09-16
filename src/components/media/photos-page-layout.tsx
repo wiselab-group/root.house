@@ -90,6 +90,7 @@ export function PhotosPageLayout({
         activeAlbumId={activeAlbumId}
         activeAlbumName={activeAlbumName}
         activeAlbumDescription={activeAlbumDescription}
+        activeAlbumPhotoCount={photos.length}
         headerActions={
           canUpload && (
             <UploadPhotoDialog
