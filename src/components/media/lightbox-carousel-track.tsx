@@ -197,6 +197,14 @@ function LightboxSlide({
     width: number;
     height: number;
   } | null>(null);
+  // "Adjust state during rendering" (not in an effect) to drop a stale
+  // rect the instant `photo` changes — an effect-only reset would still
+  // paint one frame with the previous photo's frame before it ran.
+  const [measuredForId, setMeasuredForId] = useState(photo.media.id);
+  if (measuredForId !== photo.media.id) {
+    setMeasuredForId(photo.media.id);
+    if (containRect) setContainRect(null);
+  }
 
   function recomputeContainRect(naturalWidth: number, naturalHeight: number) {
     const container = containerRef.current;
@@ -226,7 +234,7 @@ function LightboxSlide({
     }
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [taggingMode]);
+  }, [taggingMode, photo.media.id]);
 
   return (
     <div ref={containerRef} className="relative size-full">

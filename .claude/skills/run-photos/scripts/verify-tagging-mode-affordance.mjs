@@ -23,9 +23,7 @@ const TEST_PASSWORD = "verify-test-password-123";
 const TEST_NAME = "Affordance Verifier";
 const FAMILY_NAME = "Проверка режима";
 
-function makeTestPng() {
-  const width = 4;
-  const height = 4;
+function makeTestPng(width, height, rgb) {
   function chunk(type, data) {
     const typeBuf = Buffer.from(type, "ascii");
     const body = Buffer.concat([typeBuf, data]);
@@ -61,9 +59,9 @@ function makeTestPng() {
     raw[rowStart] = 0;
     for (let x = 0; x < width; x++) {
       const px = rowStart + 1 + x * 3;
-      raw[px] = 200;
-      raw[px + 1] = 90;
-      raw[px + 2] = 60;
+      raw[px] = rgb[0];
+      raw[px + 1] = rgb[1];
+      raw[px + 2] = rgb[2];
     }
   }
   const idatData = zlib.deflateSync(raw);
@@ -101,17 +99,25 @@ async function main() {
     await page.waitForURL(/\/families\/(?!new$)[^/]+$/, { timeout: 15000 });
     const familySlug = new URL(page.url()).pathname.split("/")[2];
 
-    const imagePath = path.join(__dirname, "_test-photo-affordance.png");
-    await writeFile(imagePath, makeTestPng());
+    // Two photos with different aspect ratios — a wide one and a tall one —
+    // so switching between them while tagging mode is already on produces a
+    // visibly different contain rectangle each time (needed to catch a
+    // stale-frame flash: same-shape photos would hide the bug).
+    const widePath = path.join(__dirname, "_test-photo-wide.png");
+    const tallPath = path.join(__dirname, "_test-photo-tall.png");
+    await writeFile(widePath, makeTestPng(40, 10, [200, 90, 60]));
+    await writeFile(tallPath, makeTestPng(10, 40, [60, 120, 90]));
     await page.goto(`${BASE_URL}/families/${familySlug}/photos`, {
       waitUntil: "networkidle",
     });
-    await page.getByRole("button", { name: "Добавить фото" }).click();
-    await page.setInputFiles("#family-photo-upload-input", imagePath);
-    await page.getByRole("button", { name: "Загрузить" }).click();
-    await page.getByRole("button", { name: "Готово" }).waitFor({ timeout: 20000 });
-    await page.getByRole("button", { name: "Готово" }).click();
-    await page.waitForLoadState("networkidle");
+    for (const imagePath of [widePath, tallPath]) {
+      await page.getByRole("button", { name: "Добавить фото" }).click();
+      await page.setInputFiles("#family-photo-upload-input", imagePath);
+      await page.getByRole("button", { name: "Загрузить" }).click();
+      await page.getByRole("button", { name: "Готово" }).waitFor({ timeout: 20000 });
+      await page.getByRole("button", { name: "Готово" }).click();
+      await page.waitForLoadState("networkidle");
+    }
 
     console.log("Opening lightbox…");
     await page.locator("img[alt]").first().waitFor({ timeout: 15000 });
@@ -131,7 +137,12 @@ async function main() {
 
     await page.waitForTimeout(500); // let onLoad/measurement settle
     const frameDebug = await page.evaluate(() => {
-      const img = document.querySelector("img.object-contain");
+      const img = Array.from(
+        document.querySelectorAll("img.object-contain"),
+      ).find((el) => {
+        const overlay = el.parentElement?.querySelector("div.absolute.inset-0");
+        return overlay && getComputedStyle(overlay).cursor === "none";
+      });
       const container = img?.parentElement;
       const ringDiv = container?.querySelector('[aria-hidden].ring-primary');
       return {
@@ -153,18 +164,32 @@ async function main() {
     });
     console.log("  frame debug:", JSON.stringify(frameDebug, null, 2));
 
-    const imageBox = await page.locator("img.object-contain").first().boundingBox();
-    if (!imageBox) throw new Error("could not measure image box");
+    const imageHandle = await page.evaluateHandle(() =>
+      Array.from(document.querySelectorAll("img.object-contain")).find(
+        (el) => {
+          const overlay = el.parentElement?.querySelector(
+            "div.absolute.inset-0",
+          );
+          return overlay && getComputedStyle(overlay).cursor === "none";
+        },
+      ),
+    );
+    const boundingBox = await imageHandle.asElement()?.boundingBox();
+    if (!boundingBox) throw new Error("could not measure image box");
 
     // Move mouse over the photo and inspect cursor + marker element.
     await page.mouse.move(
-      imageBox.x + imageBox.width / 2,
-      imageBox.y + imageBox.height / 2,
+      boundingBox.x + boundingBox.width / 2,
+      boundingBox.y + boundingBox.height / 2,
     );
     await page.waitForTimeout(150);
     const cursorAndMarker = await page.evaluate(() => {
-      const img = document.querySelector("img.object-contain");
-      // PhotoTagLayer renders as the sibling after the frame ring div.
+      const img = Array.from(
+        document.querySelectorAll("img.object-contain"),
+      ).find((el) => {
+        const overlay = el.parentElement?.querySelector("div.absolute.inset-0");
+        return overlay && getComputedStyle(overlay).cursor === "none";
+      });
       const overlay = img?.parentElement?.querySelector(
         "div.absolute.inset-0",
       );
@@ -180,6 +205,60 @@ async function main() {
     });
     console.log("  cursor + marker state:", cursorAndMarker);
     await screenshot(page, "on-state-hovering");
+
+    console.log("Switching to next photo while tagging mode stays on…");
+    const rectBeforeSwitch = frameDebug.ringDivStyle;
+    const nextButton = page.getByRole("button", { name: "Следующее фото" });
+    const hasNext = await nextButton.count();
+    if (hasNext) {
+      await nextButton.click();
+      // Rapid-poll right after navigation — a stale-frame flash would show
+      // up as a rect matching the PREVIOUS photo's dimensions in an early
+      // sample, before settling on the new photo's own rect.
+      // The current slide is the one whose PhotoTagLayer overlay has
+      // cursor:none (taggingMode on) — the prev/next neighbor slots always
+      // render with taggingMode=false, so this disambiguates the two <img>
+      // elements now in the DOM (one per visible track slot).
+      const samples = [];
+      for (let i = 0; i < 15; i++) {
+        const sample = await page.evaluate(() => {
+          const imgs = Array.from(
+            document.querySelectorAll("img.object-contain"),
+          );
+          const current = imgs.find((img) => {
+            const overlay = img.parentElement?.querySelector(
+              "div.absolute.inset-0",
+            );
+            return overlay && getComputedStyle(overlay).cursor === "none";
+          });
+          const ringDiv = current?.parentElement?.querySelector(
+            "[aria-hidden].ring-primary",
+          );
+          return {
+            currentNaturalWidth: current?.naturalWidth,
+            ring: ringDiv
+              ? { w: ringDiv.style.width, h: ringDiv.style.height }
+              : "no-ring",
+          };
+        });
+        samples.push(sample);
+        await page.waitForTimeout(60);
+      }
+      console.log("  rect before switch:", rectBeforeSwitch);
+      console.log("  rect samples after switch (current slide only):");
+      for (const s of samples) console.log("   ", JSON.stringify(s));
+      const staleFlash = samples.some(
+        (s) =>
+          s.ring !== "no-ring" &&
+          rectBeforeSwitch &&
+          s.ring.w === rectBeforeSwitch.width &&
+          s.ring.h === rectBeforeSwitch.height,
+      );
+      console.log("  stale-frame flash on CURRENT slide (should be false):", staleFlash);
+      await screenshot(page, "after-photo-switch");
+    } else {
+      console.log("  only one photo uploaded — skipping switch check");
+    }
 
     console.log("Toggling tagging mode OFF…");
     await page.getByRole("button", { name: "Готово" }).click();
