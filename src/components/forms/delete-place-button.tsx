@@ -16,17 +16,21 @@ import {
 export function DeletePlaceButton({
   familyId,
   placeId,
+  onDeleted,
 }: {
   familyId: string;
   placeId: string;
+  /** Called inside the same transition as the delete action, before it resolves — lets PlacesList remove the row from its optimistic list immediately instead of waiting for deletePlaceAction's revalidatePath. */
+  onDeleted: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const handleConfirm = () => {
     startTransition(async () => {
-      await deletePlaceAction(familyId, placeId);
+      onDeleted();
       setOpen(false);
+      await deletePlaceAction(familyId, placeId);
     });
   };
 

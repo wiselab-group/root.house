@@ -29,24 +29,28 @@ export function RemoveRelationshipButton({
   relationshipId,
   relationshipKind,
   relativeName,
+  onRemoved,
 }: {
   familyId: string;
   personId: string;
   relationshipId: string;
   relationshipKind: "parent_child" | "partnership";
   relativeName: string;
+  /** Called inside the same transition as the remove action, before it resolves — lets RelativeGroup drop the pill from its optimistic list immediately instead of waiting for the action's revalidatePath. */
+  onRemoved: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const handleConfirm = () => {
     startTransition(async () => {
+      onRemoved();
+      setOpen(false);
       if (relationshipKind === "parent_child") {
         await removeParentChildAction(familyId, personId, relationshipId);
       } else {
         await removePartnershipAction(familyId, personId, relationshipId);
       }
-      setOpen(false);
     });
   };
 

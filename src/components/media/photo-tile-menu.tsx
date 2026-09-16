@@ -32,11 +32,14 @@ export function PhotoTileMenu({
   familySlug,
   mediaId,
   albumId,
+  onDeleted,
 }: {
   familyId: string;
   familySlug: string;
   mediaId: string;
   albumId?: string | null;
+  /** Called inside the same transition as the delete action, before it resolves — lets PhotoGrid remove the tile from its optimistic list immediately instead of waiting for deleteMediaAction's revalidatePath. */
+  onDeleted: () => void;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -51,8 +54,9 @@ export function PhotoTileMenu({
 
   const handleDelete = () => {
     startTransition(async () => {
-      await deleteMediaAction(familyId, familySlug, mediaId);
+      onDeleted();
       setConfirmOpen(false);
+      await deleteMediaAction(familyId, familySlug, mediaId);
     });
   };
 

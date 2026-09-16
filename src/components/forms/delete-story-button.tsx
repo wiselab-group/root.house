@@ -17,18 +17,22 @@ export function DeleteStoryButton({
   familyId,
   personId,
   storyId,
+  onDeleted,
 }: {
   familyId: string;
   personId: string;
   storyId: string;
+  /** Called inside the same transition as the delete action, before it resolves — lets the caller remove the story from its optimistic list immediately instead of waiting for deleteStoryAction's revalidatePath. */
+  onDeleted: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const handleConfirm = () => {
     startTransition(async () => {
-      await deleteStoryAction(familyId, personId, storyId);
+      onDeleted();
       setOpen(false);
+      await deleteStoryAction(familyId, personId, storyId);
     });
   };
 

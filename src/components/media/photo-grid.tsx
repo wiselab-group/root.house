@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useOptimistic, useState } from "react";
 import Image from "next/image";
 import { PhotoLightbox } from "./photo-lightbox";
 import { BLUR_PLACEHOLDER } from "./blur-placeholder";
@@ -18,6 +18,13 @@ export type { GalleryPhotoView };
  * viewer. The delete button is a sibling of the photo's own <button>, not
  * nested inside it — a <button> inside a <button> is invalid HTML and would
  * make a delete click also fire the lightbox-opening click.
+ *
+ * Deletion is optimistic: PhotoTileMenu calls onDelete inside its own
+ * startTransition (wrapping both the optimistic update and the actual
+ * server action, as React 19 requires), so the tile disappears immediately
+ * on confirm instead of waiting for deleteMediaAction's revalidatePath
+ * round-trip. If the action throws, the transition rolls back and the tile
+ * reappears — no separate error-recovery path needed.
  */
 export function PhotoGrid({
   photos,
@@ -34,11 +41,16 @@ export function PhotoGrid({
   albumId?: string | null;
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const [optimisticPhotos, removeOptimisticPhoto] = useOptimistic(
+    photos,
+    (state, deletedMediaId: string) =>
+      state.filter((photo) => photo.media.id !== deletedMediaId),
+  );
 
   return (
     <>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {photos.map((photo, i) => (
+        {optimisticPhotos.map((photo, i) => (
           <div
             key={photo.media.id}
             className="group relative aspect-square overflow-hidden rounded-md border border-border"
@@ -70,6 +82,7 @@ export function PhotoGrid({
                   familySlug={familySlug}
                   mediaId={photo.media.id}
                   albumId={albumId}
+                  onDeleted={() => removeOptimisticPhoto(photo.media.id)}
                 />
               </div>
             )}
@@ -79,7 +92,7 @@ export function PhotoGrid({
 
       {openIndex !== null && (
         <PhotoLightbox
-          photos={photos}
+          photos={optimisticPhotos}
           index={openIndex}
           onIndexChange={setOpenIndex}
           onClose={() => setOpenIndex(null)}

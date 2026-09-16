@@ -1,3 +1,6 @@
+"use client";
+
+import { useOptimistic } from "react";
 import { DeletePlaceButton } from "@/components/forms/delete-place-button";
 import type { PlaceRecord } from "@/domain/place/place.service";
 
@@ -7,6 +10,10 @@ import type { PlaceRecord } from "@/domain/place/place.service";
  * ArrowRight/Link affordance: a place has no detail page of its own to
  * navigate to, so each row is a static row with an inline delete action
  * instead of a whole-row link.
+ *
+ * Deletion is optimistic — DeletePlaceButton calls onDeleted inside its own
+ * startTransition, so the row disappears immediately on confirm instead of
+ * waiting for deletePlaceAction's revalidatePath round-trip.
  */
 export function PlacesList({
   familyId,
@@ -17,9 +24,15 @@ export function PlacesList({
   places: PlaceRecord[];
   canEdit: boolean;
 }) {
+  const [optimisticPlaces, removeOptimisticPlace] = useOptimistic(
+    places,
+    (state, deletedPlaceId: string) =>
+      state.filter((place) => place.id !== deletedPlaceId),
+  );
+
   return (
     <ul className="flex flex-col divide-y divide-border border-y border-border">
-      {places.map((place, index) => (
+      {optimisticPlaces.map((place, index) => (
         <li
           key={place.id}
           className="animate-content-enter flex items-start justify-between gap-4 py-4"
@@ -41,7 +54,11 @@ export function PlacesList({
             )}
           </div>
           {canEdit && (
-            <DeletePlaceButton familyId={familyId} placeId={place.id} />
+            <DeletePlaceButton
+              familyId={familyId}
+              placeId={place.id}
+              onDeleted={() => removeOptimisticPlace(place.id)}
+            />
           )}
         </li>
       ))}

@@ -31,6 +31,7 @@ export function PartnershipStatusToggle({
   relationshipId,
   isCurrent,
   relativeName,
+  onToggled,
 }: {
   familyId: string;
   personId: string;
@@ -38,12 +39,16 @@ export function PartnershipStatusToggle({
   relationshipId: string;
   isCurrent: boolean;
   relativeName: string;
+  /** Called inside the same transition as the status action, before it resolves — lets RelativeGroup flip the pill's isCurrent immediately instead of waiting for setPartnershipStatusAction's revalidatePath. */
+  onToggled: (isCurrent: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const handleConfirm = () => {
     startTransition(async () => {
+      onToggled(!isCurrent);
+      setOpen(false);
       await setPartnershipStatusAction(
         familyId,
         personId,
@@ -51,7 +56,6 @@ export function PartnershipStatusToggle({
         relationshipId,
         !isCurrent,
       );
-      setOpen(false);
     });
   };
 
