@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Lora } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -33,6 +33,15 @@ export const metadata: Metadata = {
   },
   description:
     "Семейный архив: родословная, дерево, профили, события и фотографии одной семьи.",
+};
+
+// Disables page pinch/double-tap zoom on mobile — the tree canvas has its
+// own independent pinch-zoom via XYFlow, unaffected by this.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
