@@ -30,6 +30,7 @@ export function LightboxCarouselTrack({
   familySlug,
   taggingMode,
   canTag,
+  highlightedPersonId,
 }: {
   photos: GalleryPhotoView[];
   index: number;
@@ -38,6 +39,7 @@ export function LightboxCarouselTrack({
   familySlug: string;
   taggingMode: boolean;
   canTag: boolean;
+  highlightedPersonId: string | null;
 }) {
   const reducedMotion = useReducedMotion();
 
@@ -87,6 +89,7 @@ export function LightboxCarouselTrack({
           familySlug={familySlug}
           taggingMode={taggingMode}
           canTag={canTag}
+          highlightedPersonId={highlightedPersonId}
         />
       </div>
     );
@@ -132,6 +135,7 @@ export function LightboxCarouselTrack({
           familySlug={familySlug}
           taggingMode={taggingMode}
           canTag={canTag}
+          highlightedPersonId={highlightedPersonId}
         />
         <TrackSlot
           photo={hasNext ? photos[index + 1] : undefined}
@@ -149,12 +153,14 @@ function TrackSlot({
   familySlug,
   taggingMode = false,
   canTag = false,
+  highlightedPersonId = null,
 }: {
   photo: GalleryPhotoView | undefined;
   familyId: string;
   familySlug: string;
   taggingMode?: boolean;
   canTag?: boolean;
+  highlightedPersonId?: string | null;
 }) {
   return (
     <div className="relative h-full w-full shrink-0">
@@ -165,6 +171,7 @@ function TrackSlot({
           familySlug={familySlug}
           taggingMode={taggingMode}
           canTag={canTag}
+          highlightedPersonId={highlightedPersonId}
         />
       )}
     </div>
@@ -177,12 +184,14 @@ function LightboxSlide({
   familySlug,
   taggingMode,
   canTag,
+  highlightedPersonId,
 }: {
   photo: GalleryPhotoView;
   familyId: string;
   familySlug: string;
   taggingMode: boolean;
   canTag: boolean;
+  highlightedPersonId: string | null;
 }) {
   // No media.width/height in the data (see PhotoTagLayer's own doc comment)
   // — the actual object-contain rectangle (which can letterbox top/bottom
@@ -273,6 +282,7 @@ function LightboxSlide({
         canTag={canTag}
         familyId={familyId}
         familySlug={familySlug}
+        highlightedPersonId={highlightedPersonId}
       />
     </div>
   );

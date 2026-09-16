@@ -51,6 +51,9 @@ export function PhotoLightbox({
 }) {
   const photo = photos[index];
   const [taggingMode, setTaggingMode] = useState(false);
+  const [highlightedPersonId, setHighlightedPersonId] = useState<string | null>(
+    null,
+  );
   if (!photo) return null;
 
   const hasPrev = index > 0;
@@ -107,6 +110,7 @@ export function PhotoLightbox({
               familySlug={familySlug}
               taggingMode={taggingMode}
               canTag={canTag}
+              highlightedPersonId={highlightedPersonId}
             />
 
             {hasPrev && (
@@ -123,7 +127,12 @@ export function PhotoLightbox({
             )}
           </div>
 
-          <TaggedPeopleStrip people={photo.people} familySlug={familySlug} />
+          <TaggedPeopleStrip
+            people={photo.people}
+            familySlug={familySlug}
+            highlightedPersonId={highlightedPersonId}
+            onHighlight={setHighlightedPersonId}
+          />
         </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
@@ -133,9 +142,13 @@ export function PhotoLightbox({
 function TaggedPeopleStrip({
   people,
   familySlug,
+  highlightedPersonId,
+  onHighlight,
 }: {
   people: GalleryPhotoView["people"];
   familySlug: string;
+  highlightedPersonId: string | null;
+  onHighlight: (personId: string | null) => void;
 }) {
   if (people.length === 0) return null;
   return (
@@ -144,7 +157,16 @@ function TaggedPeopleStrip({
         <Link
           key={person.id}
           href={`/families/${familySlug}/people/${person.slug}`}
-          className="rounded-full bg-white/10 px-3 py-1 text-sm text-white transition-colors hover:bg-white/20"
+          onMouseEnter={() => onHighlight(person.id)}
+          onMouseLeave={() => onHighlight(null)}
+          onFocus={() => onHighlight(person.id)}
+          onBlur={() => onHighlight(null)}
+          className={cn(
+            "rounded-full px-3 py-1 text-sm text-white transition-colors",
+            highlightedPersonId === person.id
+              ? "bg-white/25"
+              : "bg-white/10 hover:bg-white/20",
+          )}
         >
           {personDisplayName(person)}
         </Link>

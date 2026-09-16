@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition, type RefObject } from "react";
 import { ExternalLinkIcon, MoveIcon, XIcon } from "lucide-react";
 import {
   setPhotoTagPositionAction,
@@ -11,6 +11,7 @@ import {
 import { personDisplayName } from "@/domain/person/display-name";
 import type { MediaTaggedPerson } from "@/domain/media/media.service";
 import { useCoarsePointer } from "@/hooks/use-coarse-pointer";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,101 +27,88 @@ import { TagPersonCombobox } from "./tag-person-combobox";
 
 type Point = { xPercent: number; yPercent: number };
 
+function pointFromEvent(
+  event: { clientX: number; clientY: number },
+  container: HTMLElement,
+): Point {
+  const rect = container.getBoundingClientRect();
+  const xPercent = Math.min(
+    100,
+    Math.max(0, ((event.clientX - rect.left) / rect.width) * 100),
+  );
+  const yPercent = Math.min(
+    100,
+    Math.max(0, ((event.clientY - rect.top) / rect.height) * 100),
+  );
+  return { xPercent, yPercent };
+}
+
 /**
- * Overlay layer inside PhotoLightbox's image container — renders existing
- * tap-to-tag markers and, when `taggingMode` is on, catches taps to place
- * new ones. Coordinates are computed from the overlay div's own
- * getBoundingClientRect(), which occupies exactly the same box as the
- * object-contain <Image> next to it (both are absolutely positioned at
- * inset-0 within the same parent) — no dependency on media.width/height,
- * which nothing in this codebase populates yet.
+ * The tagging-mode pointer-follow marker (a preview of where a tap will
+ * place a tag) — a separate piece since it owns its own ref/DOM mutation
+ * loop (direct style writes on mousemove, not React state, to avoid a
+ * re-render per pixel of movement — see PhotoTagLayer's own handlers for
+ * the same pattern on drag). Returns the handlers to spread onto the
+ * pointer-tracking container plus the marker element itself.
  */
-export function PhotoTagLayer({
-  mediaId,
-  people,
-  taggingMode,
-  canTag,
-  familyId,
-  familySlug,
-}: {
-  mediaId: string;
-  people: MediaTaggedPerson[];
-  taggingMode: boolean;
-  canTag: boolean;
-  familyId: string;
-  familySlug: string;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const cursorMarkerRef = useRef<HTMLDivElement>(null);
-  const [pendingPoint, setPendingPoint] = useState<Point | null>(null);
+function useTagCursorMarker(
+  containerRef: RefObject<HTMLDivElement | null>,
+  enabled: boolean,
+) {
+  const markerRef = useRef<HTMLDivElement>(null);
+
+  function onMouseMove(event: React.MouseEvent) {
+    if (!enabled || !markerRef.current || !containerRef.current) return;
+    const point = pointFromEvent(event, containerRef.current);
+    markerRef.current.hidden = false;
+    markerRef.current.style.left = `${point.xPercent}%`;
+    markerRef.current.style.top = `${point.yPercent}%`;
+  }
+
+  function onMouseLeave() {
+    if (markerRef.current) markerRef.current.hidden = true;
+  }
+
+  return {
+    onMouseMove,
+    onMouseLeave,
+    element: enabled && (
+      <div
+        ref={markerRef}
+        aria-hidden
+        hidden
+        className="pointer-events-none absolute flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+      >
+        <span className="size-3.5 rounded-full border-2 border-background bg-primary shadow-md" />
+      </div>
+    ),
+  };
+}
+
+/**
+ * Drag-to-move plus untag/remove for the already-placed markers — the
+ * per-person mutation lifecycle, separate from tap-to-place-a-new-tag
+ * (which PhotoTagLayer keeps, since it also owns the popover that assigns
+ * a person to a fresh point).
+ */
+function useTagDrag(
+  containerRef: RefObject<HTMLDivElement | null>,
+  canTag: boolean,
+  {
+    familyId,
+    familySlug,
+    mediaId,
+  }: {
+    familyId: string;
+    familySlug: string;
+    mediaId: string;
+  },
+) {
   const [draggingPersonId, setDraggingPersonId] = useState<string | null>(null);
   const [dragPoint, setDragPoint] = useState<Point | null>(null);
   const [, startTransition] = useTransition();
-  const coarsePointer = useCoarsePointer();
-  const showCursorMarker = taggingMode && !coarsePointer && !draggingPersonId;
 
-  const positioned = people.filter(
-    (person): person is MediaTaggedPerson & Point =>
-      person.xPercent != null && person.yPercent != null,
-  );
-
-  function pointFromEvent(event: React.PointerEvent | React.MouseEvent): Point {
-    const rect = containerRef.current!.getBoundingClientRect();
-    const xPercent = Math.min(
-      100,
-      Math.max(0, ((event.clientX - rect.left) / rect.width) * 100),
-    );
-    const yPercent = Math.min(
-      100,
-      Math.max(0, ((event.clientY - rect.top) / rect.height) * 100),
-    );
-    return { xPercent, yPercent };
-  }
-
-  function handleCursorMove(event: React.MouseEvent) {
-    if (!showCursorMarker || !cursorMarkerRef.current) return;
-    const point = pointFromEvent(event);
-    cursorMarkerRef.current.hidden = false;
-    cursorMarkerRef.current.style.left = `${point.xPercent}%`;
-    cursorMarkerRef.current.style.top = `${point.yPercent}%`;
-  }
-
-  function handleCursorLeave() {
-    if (cursorMarkerRef.current) cursorMarkerRef.current.hidden = true;
-  }
-
-  function handleTapToPlace(event: React.MouseEvent) {
-    // Popover/DropdownMenu content is rendered via a portal, but React's
-    // synthetic event system still bubbles clicks from inside it up through
-    // the React tree (not just the DOM tree) to this container's onClick —
-    // without this guard, selecting a person in the just-opened popover (a
-    // React descendant of this div despite living elsewhere in the DOM)
-    // also re-triggers a NEW tap-to-place at the same screen position the
-    // instant the first popover closes, immediately opening an empty one on
-    // top of the marker that was just placed. Only an actual click directly
-    // on this div (never bubbled from a portaled descendant) should count.
-    if (event.target !== event.currentTarget) return;
-    if (!taggingMode || draggingPersonId) return;
-    setPendingPoint(pointFromEvent(event));
-  }
-
-  function handleAssign(person: { id: string; name: string }) {
-    if (!pendingPoint) return;
-    const point = pendingPoint;
-    setPendingPoint(null);
-    startTransition(async () => {
-      await setPhotoTagPositionAction(
-        familyId,
-        familySlug,
-        mediaId,
-        person.id,
-        point.xPercent,
-        point.yPercent,
-      );
-    });
-  }
-
-  function handleDragStart(
+  function onDragStart(
     event: React.PointerEvent<HTMLButtonElement>,
     personId: string,
   ) {
@@ -128,15 +116,15 @@ export function PhotoTagLayer({
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
     setDraggingPersonId(personId);
-    setDragPoint(pointFromEvent(event));
+    setDragPoint(pointFromEvent(event, containerRef.current!));
   }
 
-  function handleDragMove(event: React.PointerEvent<HTMLButtonElement>) {
+  function onDragMove(event: React.PointerEvent<HTMLButtonElement>) {
     if (!draggingPersonId) return;
-    setDragPoint(pointFromEvent(event));
+    setDragPoint(pointFromEvent(event, containerRef.current!));
   }
 
-  function handleDragEnd(event: React.PointerEvent<HTMLButtonElement>) {
+  function onDragEnd(event: React.PointerEvent<HTMLButtonElement>) {
     if (!draggingPersonId || !dragPoint) return;
     const personId = draggingPersonId;
     const point = dragPoint;
@@ -155,15 +143,104 @@ export function PhotoTagLayer({
     });
   }
 
-  function handleUntag(personId: string) {
+  function onUntag(personId: string) {
     startTransition(async () => {
       await untagPhotoPointAction(familyId, familySlug, mediaId, personId);
     });
   }
 
-  function handleRemove(personId: string) {
+  function onRemove(personId: string) {
     startTransition(async () => {
       await removePhotoTagAction(familyId, familySlug, mediaId, personId);
+    });
+  }
+
+  return {
+    draggingPersonId,
+    dragPoint,
+    onDragStart,
+    onDragMove,
+    onDragEnd,
+    onUntag,
+    onRemove,
+  };
+}
+
+/**
+ * Overlay layer inside PhotoLightbox's image container — renders existing
+ * tap-to-tag markers and, when `taggingMode` is on, catches taps to place
+ * new ones. Coordinates are computed from the overlay div's own
+ * getBoundingClientRect(), which occupies exactly the same box as the
+ * object-contain <Image> next to it (both are absolutely positioned at
+ * inset-0 within the same parent) — no dependency on media.width/height,
+ * which nothing in this codebase populates yet.
+ */
+export function PhotoTagLayer({
+  mediaId,
+  people,
+  taggingMode,
+  canTag,
+  familyId,
+  familySlug,
+  highlightedPersonId,
+}: {
+  mediaId: string;
+  people: MediaTaggedPerson[];
+  taggingMode: boolean;
+  canTag: boolean;
+  familyId: string;
+  familySlug: string;
+  /** Hovering/focusing a person's chip in TaggedPeopleStrip (outside
+   *  taggingMode) briefly reveals just their marker — see the `marker`
+   *  visibility logic below. */
+  highlightedPersonId?: string | null;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [pendingPoint, setPendingPoint] = useState<Point | null>(null);
+  const [, startTransition] = useTransition();
+  const coarsePointer = useCoarsePointer();
+  const drag = useTagDrag(containerRef, canTag, {
+    familyId,
+    familySlug,
+    mediaId,
+  });
+  const showCursorMarker =
+    taggingMode && !coarsePointer && !drag.draggingPersonId;
+  const cursorMarker = useTagCursorMarker(containerRef, showCursorMarker);
+
+  const positioned = people.filter(
+    (person): person is MediaTaggedPerson & Point =>
+      person.xPercent != null && person.yPercent != null,
+  );
+
+  function handleTapToPlace(event: React.MouseEvent) {
+    // Popover/DropdownMenu content is rendered via a portal, but React's
+    // synthetic event system still bubbles clicks from inside it up through
+    // the React tree (not just the DOM tree) to this container's onClick —
+    // without this guard, selecting a person in the just-opened popover (a
+    // React descendant of this div despite living elsewhere in the DOM)
+    // also re-triggers a NEW tap-to-place at the same screen position the
+    // instant the first popover closes, immediately opening an empty one on
+    // top of the marker that was just placed. Only an actual click directly
+    // on this div (never bubbled from a portaled descendant) should count.
+    if (event.target !== event.currentTarget) return;
+    if (!taggingMode || drag.draggingPersonId) return;
+    setPendingPoint(pointFromEvent(event, containerRef.current!));
+  }
+
+  function handleAssign(person: { id: string; name: string }) {
+    if (!pendingPoint) return;
+    const point = pendingPoint;
+    setPendingPoint(null);
+    startTransition(async () => {
+      await setPhotoTagPositionAction(
+        familyId,
+        familySlug,
+        mediaId,
+        person.id,
+        point.xPercent,
+        point.yPercent,
+      );
     });
   }
 
@@ -172,85 +249,31 @@ export function PhotoTagLayer({
       ref={containerRef}
       className="absolute inset-0"
       onClick={handleTapToPlace}
-      onMouseMove={handleCursorMove}
-      onMouseLeave={handleCursorLeave}
+      onMouseMove={cursorMarker.onMouseMove}
+      onMouseLeave={cursorMarker.onMouseLeave}
       style={{ cursor: showCursorMarker ? "none" : undefined }}
     >
-      {showCursorMarker && (
-        <div
-          ref={cursorMarkerRef}
-          aria-hidden
-          hidden
-          className="pointer-events-none absolute flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
-        >
-          <span className="size-3.5 rounded-full border-2 border-background bg-primary shadow-md" />
-        </div>
-      )}
+      {cursorMarker.element}
 
-      {positioned.map((person) => {
-        const isDragging = draggingPersonId === person.id;
-        const point = isDragging && dragPoint ? dragPoint : person;
-        const name = personDisplayName(person);
-
-        const marker = (
-          <button
-            type="button"
-            aria-label={name}
-            style={{ left: `${point.xPercent}%`, top: `${point.yPercent}%` }}
-            className="group absolute flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            onPointerDown={(e) => handleDragStart(e, person.id)}
-            onPointerMove={handleDragMove}
-            onPointerUp={handleDragEnd}
-          >
-            <span
-              aria-hidden
-              className="size-3.5 rounded-full border-2 border-background bg-primary shadow-md transition-transform motion-reduce:transition-none group-hover:scale-125 group-focus-visible:scale-125"
-            />
-            <span className="sr-only">{name}</span>
-          </button>
-        );
-
-        if (!canTag) {
-          return (
-            <div key={person.id} title={name}>
-              {marker}
-            </div>
-          );
-        }
-
-        return (
-          <DropdownMenu key={person.id}>
-            <DropdownMenuTrigger className="contents" render={marker} />
-            <DropdownMenuContent align="center">
-              <DropdownMenuItem
-                render={
-                  <Link
-                    href={`/families/${familySlug}/people/${person.slug}`}
-                  />
-                }
-              >
-                <ExternalLinkIcon />
-                Открыть профиль
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled className="text-muted-foreground">
-                <MoveIcon />
-                Перетащите метку, чтобы переместить
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleUntag(person.id)}>
-                <XIcon />
-                Снять точку
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => handleRemove(person.id)}
-              >
-                <XIcon />
-                Убрать из фото
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      })}
+      {positioned.map((person) => (
+        <PhotoTagMarker
+          key={person.id}
+          person={person}
+          point={
+            drag.draggingPersonId === person.id && drag.dragPoint
+              ? drag.dragPoint
+              : person
+          }
+          isHighlighted={taggingMode || highlightedPersonId === person.id}
+          canTag={canTag}
+          familySlug={familySlug}
+          onDragStart={(e) => drag.onDragStart(e, person.id)}
+          onDragMove={drag.onDragMove}
+          onDragEnd={drag.onDragEnd}
+          onUntag={() => drag.onUntag(person.id)}
+          onRemove={() => drag.onRemove(person.id)}
+        />
+      ))}
 
       {pendingPoint && (
         <Popover
@@ -278,5 +301,96 @@ export function PhotoTagLayer({
         </Popover>
       )}
     </div>
+  );
+}
+
+/**
+ * One already-placed tag: a draggable dot plus (canTag only) its dropdown
+ * menu. Outside tagging mode the dot itself is invisible by default —
+ * `isHighlighted` (set by the caller from `taggingMode` or a hover/focus on
+ * the person's chip in TaggedPeopleStrip) reveals it, matching Instagram/
+ * Google Photos: dots don't clutter the photo, only a highlighted one shows.
+ * The hit area (`button`) stays in the DOM either way, so a keyboard/
+ * screen-reader user can still reach the marker without the hover-only
+ * highlight.
+ */
+function PhotoTagMarker({
+  person,
+  point,
+  isHighlighted,
+  canTag,
+  familySlug,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
+  onUntag,
+  onRemove,
+}: {
+  person: MediaTaggedPerson;
+  point: Point;
+  isHighlighted: boolean;
+  canTag: boolean;
+  familySlug: string;
+  onDragStart: (event: React.PointerEvent<HTMLButtonElement>) => void;
+  onDragMove: (event: React.PointerEvent<HTMLButtonElement>) => void;
+  onDragEnd: (event: React.PointerEvent<HTMLButtonElement>) => void;
+  onUntag: () => void;
+  onRemove: () => void;
+}) {
+  const name = personDisplayName(person);
+
+  const marker = (
+    <button
+      type="button"
+      aria-label={name}
+      style={{ left: `${point.xPercent}%`, top: `${point.yPercent}%` }}
+      className="group absolute flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      onPointerDown={onDragStart}
+      onPointerMove={onDragMove}
+      onPointerUp={onDragEnd}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          "size-3.5 rounded-full border-2 border-background bg-primary shadow-md transition-[transform,opacity] duration-150 motion-reduce:transition-none",
+          isHighlighted
+            ? "scale-100 opacity-100 group-hover:scale-125 group-focus-visible:scale-125"
+            : "scale-75 opacity-0",
+        )}
+      />
+      <span className="sr-only">{name}</span>
+    </button>
+  );
+
+  if (!canTag) {
+    return <div title={name}>{marker}</div>;
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="contents" render={marker} />
+      <DropdownMenuContent align="center">
+        <DropdownMenuItem
+          render={
+            <Link href={`/families/${familySlug}/people/${person.slug}`} />
+          }
+        >
+          <ExternalLinkIcon />
+          Открыть профиль
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled className="text-muted-foreground">
+          <MoveIcon />
+          Перетащите метку, чтобы переместить
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onUntag}>
+          <XIcon />
+          Снять точку
+        </DropdownMenuItem>
+        <DropdownMenuItem variant="destructive" onClick={onRemove}>
+          <XIcon />
+          Убрать из фото
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
