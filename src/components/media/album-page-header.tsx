@@ -16,15 +16,24 @@ import { DeleteAlbumButton } from "@/components/forms/delete-album-button";
  * used to duplicate the name on screen and push the page layout around.
  *
  * `headerActions` (PhotosPageLayout's UploadPhotoDialog) renders next to
- * the title in the non-editing state, but is dropped entirely while
- * renaming — the two used to sit side by side in a shared `flex
- * justify-between` row regardless of which state this was in, so once
+ * the "Все альбомы" back link in the non-editing state, but is dropped
+ * entirely while renaming — the two used to sit side by side in a shared
+ * `flex justify-between` row regardless of which state this was in, so once
  * AlbumTitleEditor's full-width form took the title's place, the row still
  * tried to space its now-narrow form away from the button, leaving an
  * awkward empty gap between them (caught live: see the screenshot this
  * fixed). Hiding the action during editing reads as "you're mid-rename,
  * finish that first" instead — a real, if minor, affordance, not just a
  * layout patch.
+ *
+ * On the active-album branch, `headerActions` sits in its own row with the
+ * back link — NOT next to the (long, icon-adorned) album title — because
+ * the title row wraps at realistic album-name lengths + rename/delete
+ * icons, which used to drop the button onto its own line below the title
+ * (caught live on a real album name: see the screenshot that prompted this).
+ * The back-link row is short and never wraps, so pinning the button there
+ * keeps it reliably on one line with something, instead of it landing
+ * wherever the title row happens to break.
  */
 export function AlbumPageHeader({
   familyId,
@@ -76,8 +85,8 @@ export function AlbumPageHeader({
   }
 
   return (
-    <div className="flex flex-wrap items-start justify-between gap-4">
-      <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <Link
           href={`/families/${familySlug}/photos`}
           className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -85,36 +94,36 @@ export function AlbumPageHeader({
           <ArrowLeftIcon className="size-3.5" />
           Все альбомы
         </Link>
-        <div className="flex items-center gap-1">
-          <h1 className="font-heading text-3xl font-medium tracking-tight text-balance sm:text-4xl">
-            {activeAlbumName}
-          </h1>
-          {canEdit && (
-            <div className="flex items-center gap-1">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                aria-label="Переименовать альбом"
-                className="rounded-full text-muted-foreground hover:text-foreground"
-                onClick={() => setEditing(true)}
-              >
-                <PencilIcon />
-              </Button>
-              <DeleteAlbumButton
-                familyId={familyId}
-                familySlug={familySlug}
-                albumId={activeAlbumId}
-                albumName={activeAlbumName}
-              />
-            </div>
-          )}
-        </div>
-        {activeAlbumDescription && (
-          <p className="text-muted-foreground">{activeAlbumDescription}</p>
+        {headerActions}
+      </div>
+      <div className="flex items-center gap-1">
+        <h1 className="font-heading text-3xl font-medium tracking-tight text-balance sm:text-4xl">
+          {activeAlbumName}
+        </h1>
+        {canEdit && (
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              aria-label="Переименовать альбом"
+              className="rounded-full text-muted-foreground hover:text-foreground"
+              onClick={() => setEditing(true)}
+            >
+              <PencilIcon />
+            </Button>
+            <DeleteAlbumButton
+              familyId={familyId}
+              familySlug={familySlug}
+              albumId={activeAlbumId}
+              albumName={activeAlbumName}
+            />
+          </div>
         )}
       </div>
-      {headerActions}
+      {activeAlbumDescription && (
+        <p className="text-muted-foreground">{activeAlbumDescription}</p>
+      )}
     </div>
   );
 }
