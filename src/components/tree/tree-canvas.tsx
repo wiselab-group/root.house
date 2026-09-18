@@ -35,7 +35,7 @@ import { useTreeCardStyle, type TreeCardStyle } from "./use-tree-card-style";
 import { useCoarsePointer } from "@/hooks/use-coarse-pointer";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useHasMounted } from "./use-has-mounted";
-import { TreeCardStyleControl } from "./tree-card-style-control";
+import { TreeToolsMenu } from "./tree-tools-menu";
 import { useCollapsedBranches } from "./use-collapsed-branches";
 import {
   pruneCollapsedDescendants,
@@ -236,6 +236,10 @@ export function TreeCanvas({
   highlight,
   readOnly = false,
   shareToken,
+  onOpenTrace,
+  onOpenFilter,
+  isTraceActive,
+  isFilterActive,
 }: {
   graph: TreeLayoutGraph;
   /**
@@ -263,6 +267,17 @@ export function TreeCanvas({
    *  instead of the auth-gated /api/media/[mediaId] (see
    *  xyflow-adapter.ts::buildPhotoUrl). */
   shareToken?: string;
+  /** Opens TreeToolbar's own TreeTracePanel/TreeFilterPanel — passed through
+   *  so the "Инструменты" menu inside TreeCanvas (tree-tools-menu.tsx) can
+   *  trigger them without TreeCanvas owning any of that dialog state itself.
+   *  Omitted by TreeToolbar's read-only rendering path (there isn't one —
+   *  TreeToolbar itself is never rendered for the Share Link surface, only
+   *  a plain TreeCanvas), so these stay undefined there and the menu hides
+   *  both rows entirely. */
+  onOpenTrace?: () => void;
+  onOpenFilter?: () => void;
+  isTraceActive?: boolean;
+  isFilterActive?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -271,7 +286,7 @@ export function TreeCanvas({
   const isCoarsePointer = useCoarsePointer();
   // Global drag lock — starts LOCKED (false): cards are meant to stay put at
   // their computed layout position, dragging is an opt-in "let me nudge this
-  // one card" mode the lock button in TreeCardStyleControl toggles. Plain
+  // one card" mode the lock row in TreeToolsMenu toggles. Plain
   // session state (not persisted like cardStyle) — every visit re-opens
   // locked, matching the layout the server just computed. Deliberately does
   // NOT also gate elementsSelectable: a card's click-to-open-popover
@@ -643,21 +658,28 @@ export function TreeCanvas({
             <CardStyleInternalsSync cardStyle={cardStyle} nodeIds={nodeIds} />
             <Background gap={24} />
             {readOnly ? (
-              // No drag-lock toggle to show (dragging is force-disabled above);
+              // No drag-lock toggle to show (dragging is force-disabled
+              // above), and no Trace/Filter rows either (TreeToolbar itself
+              // isn't rendered on the read-only Share Link surface, so
+              // onOpenTrace/onOpenFilter are never passed down there) —
               // card style (compact/portrait) is still a harmless viewing
-              // preference, offered without the drag control.
-              <TreeCardStyleControl
+              // preference, offered without any of that.
+              <TreeToolsMenu
                 cardStyle={cardStyle}
                 setCardStyle={setCardStyle}
                 showZoom={!isCoarsePointer}
               />
             ) : (
-              <TreeCardStyleControl
+              <TreeToolsMenu
                 cardStyle={cardStyle}
                 setCardStyle={setCardStyle}
                 draggable={nodesDraggable}
                 setDraggable={setNodesDraggable}
                 showZoom={!isCoarsePointer}
+                onOpenTrace={onOpenTrace}
+                onOpenFilter={onOpenFilter}
+                isTraceActive={isTraceActive}
+                isFilterActive={isFilterActive}
               />
             )}
             {/* Minimap needs room to read as a map, not a smudge — skip it below

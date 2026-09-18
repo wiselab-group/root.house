@@ -85,7 +85,7 @@ export function CompactCardBody({
           // non-focus/non-traced/non-selected card was completely invisible,
           // not just subtle). The border keeps the frame's own SHAPE always
           // visible, whatever color it's currently filled with.
-          "relative shrink-0 rounded-4xl border p-1 transition-colors duration-200",
+          "relative shrink-0 rounded-4xl border-2 p-1 transition-colors duration-200",
         )}
         style={{
           backgroundColor: frameColor,
