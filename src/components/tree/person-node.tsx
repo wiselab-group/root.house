@@ -94,7 +94,6 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
           years={years}
           initials={initials}
           isOpen={isPopoverOpen}
-          isFocus={data.isFocus}
           isTraced={isTraceHighlighted}
           isSelected={selected}
         />

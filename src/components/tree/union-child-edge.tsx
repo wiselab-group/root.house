@@ -165,7 +165,7 @@ export function UnionChildEdge({
       pathLength={justExpanded ? 1 : undefined}
       className={cn(justExpanded && "animate-tree-edge-draw")}
       style={{
-        strokeWidth: 2,
+        strokeWidth: 1,
         stroke: "var(--branch)",
         opacity: isDimmed ? 0.35 : 1,
       }}

@@ -41,6 +41,8 @@
   --color-card: var(--card);
   --color-tree-accent: var(--tree-accent);
   --color-branch: var(--branch);
+  --color-tree-card-ring: var(--tree-card-ring);
+  --color-tree-canvas: var(--tree-canvas);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -76,6 +78,14 @@
   --border: oklch(0.89 0.012 55);
   --input: oklch(0.89 0.012 55);
   --ring: oklch(0.55 0.14 45 / 50%);
+  /* Tree-only "subtle relationship line" — a lighter step of --branch's own
+     hue, from the exact reference palette the user handed over 2026-09-18
+     (hex "Subtle relationship line" #B9AAA0, converted to OKLCH via actual
+     sRGB math, not eyeballed). Not currently wired into any component — kept
+     here as the exact token the reference defines, for whichever future
+     tree UI needs a de-emphasized line/divider distinct from --branch's own
+     full-strength connector color. */
+  --branch-subtle: oklch(0.748 0.022 56);
   /* Family tree accent — a second, distinct hue (dusty sage/olive green,
      ~126) used ONLY inside src/components/tree/: one flat card border/ring
      color for every card, the same shade regardless of generation (no
@@ -94,14 +104,45 @@
      so the three read as bark/leaves/warm-light rather than clashing. bg vs
      branch contrast ≈ 8.2:1. */
   --tree-accent: oklch(0.58 0.05 126);
-  /* TEMPORARY, 2026-09-18: lightened from oklch(0.42 0.045 55) (8.21:1
-     contrast) to match a reference screenshot's pale, almost-beige tree
-     connector lines — user explicitly chose "match the reference" over the
-     3:1 UI-border contrast floor CLAUDE.md normally requires here, with the
-     contrast gap to be revisited in a later pass, not this one. Do not
-     "fix" this back to a darker/higher-contrast value without that
-     follow-up conversation — see tree-visual-reference-v1 memory. */
-  --branch: oklch(0.68 0.03 50);
+  /* The tree canvas's OWN background — distinct from the app-wide
+     --background, per an exact hex the user handed over 2026-09-18
+     (Canvas #F7EEE9 — refined once from an earlier #F9F3E9 pass, converted
+     to OKLCH via actual sRGB math both times) that reads slightly warmer/
+     more saturated than --background (0.985 0.008 60). Applied directly on
+     tree-canvas.tsx's ReactFlow wrapper div (bg-tree-canvas), not by
+     overriding --background globally — this color is a tree-specific
+     reference match, not a repaint of the whole app's base surface. */
+  --tree-canvas: oklch(0.955 0.012 51);
+  /* Tree connector line color AND the photo frame's resting border color
+     (compact-card-body.tsx's frameBorderColor) — exact hex #D1C1B3 the user
+     handed over 2026-09-18, converted to OKLCH via actual sRGB math.
+     Replaces a PRIOR exact-hex value (#6B574C, ~6.16:1 contrast) that the
+     user then corrected again with this lighter one — #D1C1B3 sits much
+     closer to --tree-canvas above (~1.53:1 contrast against the final
+     #F7EEE9 canvas revision, below the normal 3:1 UI-border floor) by
+     design: the reference genuinely wants connector lines that nearly
+     disappear into the canvas, matching the very first visual-reference
+     request in this design pass (see the tree-visual-reference-v1 memory
+     for the full back-and-forth: an eyeballed pale guess was replaced by an
+     exact-but-too-dark hex, which was itself then replaced by this exact-
+     and-intentionally-low-contrast one, with --tree-canvas itself refined
+     once more afterward — four iterations total, each on more precise
+     input, converging on the user's real intent rather than an
+     accessibility default). */
+  --branch: oklch(0.82 0.026 64);
+  /* Tree-card-only ring/identity color — the photo frame's isOpen/isTraced/
+     isSelected fill (compact-card-body.tsx). Went through 3 iterations the
+     same day (2026-09-18): the exact reference hex #B95C28 read as harsh/
+     "cutting" as a thin (p-1, 4px) frame border once rendered; a lighter
+     hex #E8C6B5 the user then supplied was closer but still felt like a
+     new, disconnected color; the user's actual ask, stated directly, was
+     "the same color as the 'Посмотреть профиль' hover state" — i.e. just
+     reuse --accent (already used for that hover, see
+     person-node-popover-actions.tsx's hover:bg-accent) rather than invent a
+     fourth terracotta shade. Aliasing to --accent keeps this frame's active
+     color visually tied to a hover state the user already associates with
+     "you're interacting with this card" elsewhere in the same UI. */
+  --tree-card-ring: var(--accent);
   /* Unused shadcn scaffolding — no generation color-coding in the tree
      anymore (removed: every card border/ring is now flat --tree-accent,
      regardless of |generation| distance from focus — see
@@ -154,12 +195,22 @@
      background — see :root's own comment for why these stay separate from
      --primary and where the hue/chroma came from. */
   --tree-accent: oklch(0.72 0.04 126);
-  /* TEMPORARY, 2026-09-18 — see :root's own comment on --branch above for
-     why this is dimmer/lower-contrast than CLAUDE.md's normal 3:1 UI-border
-     floor (was oklch(0.62 0.06 55), 4.90:1). Dimmed to roughly the same
-     contrast ratio as the light-theme change (~2.4:1), not just the same
-     raw OKLCH numbers, since dark's own background lightness differs. */
-  --branch: oklch(0.45 0.03 50);
+  /* Relit for dark's darker background — see :root's own comment on
+     --tree-canvas for the exact reference hex (#F7EEE9) this is calibrated
+     from; a warm dark surface distinct from --background, matching the
+     same relative lift over dark's own --background that the light theme's
+     --tree-canvas has over ITS --background. */
+  --tree-canvas: oklch(0.225 0.016 60);
+  /* Relit for dark's darker background — see :root's own comment on
+     --branch for the exact reference hex (#D1C1B3) and why the contrast
+     against --tree-canvas is intentionally low (~1.5:1 in both themes, not
+     the usual 3:1 UI-border floor — the reference wants connector lines
+     that nearly disappear into the canvas). oklch(0.35 0.03 55) reproduces
+     that same ~1.5:1 ratio against dark's own --tree-canvas. */
+  --branch: oklch(0.35 0.03 55);
+  /* See :root's own comment on --tree-card-ring — aliased to --accent, same
+     as light. */
+  --tree-card-ring: var(--accent);
   /* Unused shadcn scaffolding, see :root's own comment — not the tree hue. */
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);

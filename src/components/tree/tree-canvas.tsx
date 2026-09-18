@@ -597,7 +597,7 @@ export function TreeCanvas({
       <TreeJustExpandedEdgesProvider value={justExpandedEdgeIds}>
         <div
           className={cn(
-            "w-full overflow-hidden",
+            "w-full overflow-hidden bg-tree-canvas",
             readOnly ? "fixed inset-0" : "h-[calc(100svh-4.5rem)]",
           )}
         >

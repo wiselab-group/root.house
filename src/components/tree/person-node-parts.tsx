@@ -160,12 +160,12 @@ export function CollapseBadge({
 /**
  * PersonNode's own outer card-frame className — split out purely to keep
  * that file's render body short (CLAUDE.md's 150-line component limit).
- * "compact" cardStyle has NO card frame at all — the round avatar itself
- * carries the border/ring states (see compact-card-body.tsx's own
- * isOpen/isTraced/isSelected/isPlaceholder handling) so the parent_child
+ * "compact" cardStyle has NO card frame at all — the photo's own matte
+ * frame carries the isOpen/isFocus/isTraced/isSelected/isPlaceholder
+ * handling instead (see compact-card-body.tsx) so the parent_child
  * connector line, anchored to this div's own top/bottom edges via
- * InvisibleConnectorHandles, visibly touches the avatar instead of stopping
- * at an invisible card boundary.
+ * InvisibleConnectorHandles, visibly touches (goes under) that frame
+ * instead of stopping at an invisible card boundary.
  *
  * Color roles (see globals.css's own comment): terracotta (--primary) is now
  * the default, permanent border on every card — the same flat shade
@@ -235,8 +235,8 @@ export function buildCardFrameClassName({
  * frame (see buildCardFrameClassName's own doc comment) — undefined when it
  * doesn't apply, so callers can spread it into their existing style object
  * without an empty boxShadow key colliding with cardStyle "compact" (which
- * draws its own selected ring on the avatar instead, see
- * compact-card-body.tsx). isOpen, isFocus, and isTraced all win over
+ * draws its own selected state as the photo's matte frame color instead,
+ * see compact-card-body.tsx). isOpen, isFocus, and isTraced all win over
  * isSelected, matching buildCardFrameClassName's own precedence — each of
  * their rings already lives in the className, so this only needs to step
  * aside for them here.

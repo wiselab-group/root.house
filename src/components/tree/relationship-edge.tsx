@@ -403,7 +403,7 @@ function DivorceGapOccluder({
       x2={x2}
       y2={y2}
       stroke="var(--background)"
-      // Matches the underlying partnership line's own strokeWidth (2) exactly
+      // Matches the underlying partnership line's own strokeWidth (1) exactly
       // (no extra overlap needed at this width), not a much thicker 4 — a noticeably thicker
       // occluder painted a visibly wider white band than the thin line it's
       // covering, reading as an oversized gap around the slash rather than
@@ -411,7 +411,7 @@ function DivorceGapOccluder({
       // caught on real data, Елена/Николай Купчик, via exact SVG coordinates
       // confirming the occluder's x-span already matched the slash exactly
       // — the mismatch was in strokeWidth, not position).
-      strokeWidth={2}
+      strokeWidth={1}
       strokeLinecap="butt"
     />
   );
@@ -566,7 +566,7 @@ function ParentChildEdgeLine({
       pathLength={justExpanded ? 1 : undefined}
       className={cn(justExpanded && "animate-tree-edge-draw")}
       style={{
-        strokeWidth: 2,
+        strokeWidth: 1,
         stroke: "var(--branch)",
         opacity: isDimmed ? 0.35 : 1,
       }}
@@ -690,7 +690,7 @@ function PartnershipEdgeLine({
           pathLength={justExpanded ? 1 : undefined}
           className={cn(justExpanded && "animate-tree-edge-draw")}
           style={{
-            strokeWidth: 2,
+            strokeWidth: 1,
             stroke: "var(--branch)",
             opacity: isDimmed ? 0.35 : 1,
           }}
@@ -758,7 +758,7 @@ function PartnershipEdgeLine({
           pathLength={1}
           className="animate-tree-edge-draw"
           style={{
-            strokeWidth: 2,
+            strokeWidth: 1,
             stroke: "var(--branch)",
             opacity: isDimmed ? 0.35 : 1,
           }}
@@ -768,7 +768,7 @@ function PartnershipEdgeLine({
           pathLength={1}
           className="animate-tree-edge-draw"
           style={{
-            strokeWidth: 2,
+            strokeWidth: 1,
             stroke: "var(--branch)",
             opacity: isDimmed ? 0.35 : 1,
           }}
@@ -793,7 +793,7 @@ function PartnershipEdgeLine({
         id={id}
         path={path}
         style={{
-          strokeWidth: 2,
+          strokeWidth: 1,
           stroke: "var(--branch)",
           opacity: isDimmed ? 0.35 : 1,
         }}

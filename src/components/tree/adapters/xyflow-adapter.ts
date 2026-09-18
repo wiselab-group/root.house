@@ -4,6 +4,7 @@ import type {
   LayoutNode,
 } from "@/domain/tree/tree-layout.builder";
 import type { TreeCardStyle } from "../use-tree-card-style";
+import { FRAME_SIZE } from "../card-dimensions";
 import {
   personIdsNeedingOwnBadge,
   findUnionsWithChildren,
@@ -220,62 +221,69 @@ const PORTRAIT_Y_SPACING = 260;
 // (read by relationship-edge.tsx/union-child-edge.tsx to draw connector
 // lines through each card's live bottom edge) is ALWAYS exactly this
 // number, never the real rendered content height, for a card style whose
-// actual content is shorter than what's declared here. compact's real
-// content (compact-card-body.tsx: an 88px round avatar + two lines of text,
-// no bottom padding beyond pb-3) renders at ~128px tall, not 200px — the
-// leftover ~72px was empty space the connector line's fixed
-// COMPACT_CHILD_TAIL_LENGTH tail (relationship-edge.tsx) never reached,
-// reading as a broken/disconnected line hanging in mid-air above the child
-// card. Real bug the user caught with screenshots, present even on a fresh
-// page load with no cardStyle toggle involved — this stale value (previously
-// 200) predates the round-avatar compact redesign mentioned above and was
-// simply never updated alongside it. Keep in sync by hand with
-// compact-card-body.tsx's actual rendered height if it changes again — there
-// is no way to ask XYFlow to auto-size the node to content while keeping the
-// layout engine's own predictable row spacing (COMPACT_Y_SPACING above).
+// actual content is shorter than what's declared here. Keep in sync by hand
+// with compact-card-body.tsx's actual rendered height if it changes again —
+// there is no way to ask XYFlow to auto-size the node to content while
+// keeping the layout engine's own predictable row spacing
+// (COMPACT_Y_SPACING above). compact's real content (compact-card-body.tsx,
+// 2026-09-18 v2 restyle: a thick matte frame around the photo, FRAME_SIZE
+// tall, with the name/years pill sitting flush below it — no overlap, see
+// compact-card-body.tsx's own comment on why the overlap approach was
+// dropped) measures ~166px tall (Playwright getBoundingClientRect on the
+// rendered DOM) — re-measure and update if PHOTO_FRAME_PADDING or the
+// pill's own py-* value change again.
 const NODE_DIMENSIONS: Record<
   TreeCardStyle,
   { width: number; height: number }
 > = {
-  compact: { width: 160, height: 128 },
+  compact: { width: 160, height: 166 },
   portrait: { width: 160, height: 220 },
 };
 
 /**
- * How far below each card's own top edge its *photo's* vertical center sits
- * — used by RelationshipEdge/UnionChildEdge to draw the partnership line (and
- * the trunk line hanging off it) through each avatar's own center rather
- * than the card's overall center. The two differ because neither card style
- * has its photo spanning the card's full height:
- * - compact: an 88px round avatar (size-22, compact-card-body.tsx) flush
- *   against the card's top edge (no top padding) → center at 88/2 = 44.
+ * How far below each card's own top edge its *photo frame's* vertical
+ * center sits — used by RelationshipEdge/UnionChildEdge to draw the
+ * partnership line (and the trunk line hanging off it) through each card's
+ * own center rather than the card's overall center. The two card styles
+ * differ because neither has its photo spanning the card's full height:
+ * - compact: a FRAME_SIZE-tall matte frame (card-dimensions.ts,
+ *   compact-card-body.tsx) flush against the card's top edge (no top
+ *   padding) → center at FRAME_SIZE/2.
  * - portrait: a full-width square photo (aspect-square, portrait-card-
  *   body.tsx) — height equals the card's own width (160px) → center at
  *   160/2 = 80.
  * Exported for the edge components (see relationship-edge.tsx,
- * union-child-edge.tsx) — must be kept in sync by hand with the actual
- * avatar/photo size in each *-card-body.tsx if either ever changes.
+ * union-child-edge.tsx) — compact's value is derived from card-dimensions.ts
+ * (shared with compact-card-body.tsx, so the two can't drift independently);
+ * portrait's 80 must still be kept in sync by hand if portrait-card-body.tsx
+ * ever changes.
  */
 export const CONNECTOR_CENTER_Y: Record<TreeCardStyle, number> = {
-  compact: 44,
+  compact: FRAME_SIZE / 2,
   portrait: 80,
 };
 
 /**
  * Half-width, in px, of the one opaque element a partnership line must stop
- * at before reaching a card's center — compact's round avatar (44px radius,
- * see CONNECTOR_CENTER_Y above). compact-card-body.tsx's outer frame has NO
- * background of its own (buildCardFrameClassName's own comment — so the
- * parent_child connector visibly touches the avatar), so a straight line
- * drawn all the way to the card's horizontal center (relationship-edge.tsx)
- * would cross the fully transparent padding around the circle with nothing
- * opaque left to paint over it, reading as the line "leaking" across the
- * card instead of stopping under the photo. Clamping each endpoint to this
- * radius keeps the line's very last segment inside the one element that
- * actually hides it. Portrait has no equivalent — its square photo already
- * spans the card's full width, so nothing transparent surrounds it.
+ * at before reaching a card's center — compact's matte frame around the
+ * photo (FRAME_SIZE/2 radius, see CONNECTOR_CENTER_Y above and
+ * card-dimensions.ts). compact-card-body.tsx's outer card frame
+ * (buildCardFrameClassName) has NO background of its own — so the
+ * parent_child connector visibly touches the matte frame — but the matte
+ * frame itself is opaque (card-dimensions.ts's FRAME_SIZE padding around the
+ * photo, colored per compact-card-body.tsx's frameColor, even at rest when
+ * that color equals --background) all the way to its own outer edge. A line
+ * drawn all the way to the card's horizontal center would cross past that
+ * edge into the fully transparent card padding beyond it with nothing
+ * opaque left to paint over it. Clamping each endpoint to this radius keeps
+ * the line's very last segment inside the frame (visually reading as the
+ * line disappearing "under" the frame, per the 2026-09-18 reference
+ * screenshot — the earlier v1 treatment stopped the line at the photo's own
+ * edge instead, one padding-width short of this). Portrait has no
+ * equivalent — its square photo already spans the card's full width, so
+ * nothing transparent surrounds it.
  */
-export const AVATAR_RADIUS = 44;
+export const AVATAR_RADIUS = FRAME_SIZE / 2;
 
 /**
  * The avatar image endpoint differs between the authenticated tree (family-
