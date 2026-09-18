@@ -94,7 +94,14 @@
      so the three read as bark/leaves/warm-light rather than clashing. bg vs
      branch contrast ≈ 8.2:1. */
   --tree-accent: oklch(0.58 0.05 126);
-  --branch: oklch(0.42 0.045 55);
+  /* TEMPORARY, 2026-09-18: lightened from oklch(0.42 0.045 55) (8.21:1
+     contrast) to match a reference screenshot's pale, almost-beige tree
+     connector lines — user explicitly chose "match the reference" over the
+     3:1 UI-border contrast floor CLAUDE.md normally requires here, with the
+     contrast gap to be revisited in a later pass, not this one. Do not
+     "fix" this back to a darker/higher-contrast value without that
+     follow-up conversation — see tree-visual-reference-v1 memory. */
+  --branch: oklch(0.68 0.03 50);
   /* Unused shadcn scaffolding — no generation color-coding in the tree
      anymore (removed: every card border/ring is now flat --tree-accent,
      regardless of |generation| distance from focus — see
@@ -147,7 +154,12 @@
      background — see :root's own comment for why these stay separate from
      --primary and where the hue/chroma came from. */
   --tree-accent: oklch(0.72 0.04 126);
-  --branch: oklch(0.62 0.06 55);
+  /* TEMPORARY, 2026-09-18 — see :root's own comment on --branch above for
+     why this is dimmer/lower-contrast than CLAUDE.md's normal 3:1 UI-border
+     floor (was oklch(0.62 0.06 55), 4.90:1). Dimmed to roughly the same
+     contrast ratio as the light-theme change (~2.4:1), not just the same
+     raw OKLCH numbers, since dark's own background lightness differs. */
+  --branch: oklch(0.45 0.03 50);
   /* Unused shadcn scaffolding, see :root's own comment — not the tree hue. */
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);

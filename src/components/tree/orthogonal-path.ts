@@ -14,7 +14,13 @@ export interface Point {
   y: number;
 }
 
-const CORNER_RADIUS = 8;
+// 24, not the original 8 — a softer, more "organic" bend at every corner
+// per direct user request (matching a warm hand-drawn family-tree reference
+// screenshot's rounded connectors), still clamped per-corner to half of
+// whichever adjoining segment is shorter (see below) so short segments (a
+// union trunk's near-zero-length start hop) never overshoot into a visible
+// self-intersecting loop.
+const CORNER_RADIUS = 24;
 
 /**
  * Drops any interior point that isn't a REAL turn — i.e. sits exactly on

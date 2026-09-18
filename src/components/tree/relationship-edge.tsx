@@ -403,8 +403,8 @@ function DivorceGapOccluder({
       x2={x2}
       y2={y2}
       stroke="var(--background)"
-      // Matches the underlying partnership line's own strokeWidth (1.5) plus
-      // a hair of overlap (2), not a much thicker 4 — a noticeably thicker
+      // Matches the underlying partnership line's own strokeWidth (2) exactly
+      // (no extra overlap needed at this width), not a much thicker 4 — a noticeably thicker
       // occluder painted a visibly wider white band than the thin line it's
       // covering, reading as an oversized gap around the slash rather than
       // a clean break exactly the line's own width (real bug the user
@@ -690,7 +690,7 @@ function PartnershipEdgeLine({
           pathLength={justExpanded ? 1 : undefined}
           className={cn(justExpanded && "animate-tree-edge-draw")}
           style={{
-            strokeWidth: 1.5,
+            strokeWidth: 2,
             stroke: "var(--branch)",
             opacity: isDimmed ? 0.35 : 1,
           }}
@@ -758,7 +758,7 @@ function PartnershipEdgeLine({
           pathLength={1}
           className="animate-tree-edge-draw"
           style={{
-            strokeWidth: 1.5,
+            strokeWidth: 2,
             stroke: "var(--branch)",
             opacity: isDimmed ? 0.35 : 1,
           }}
@@ -768,7 +768,7 @@ function PartnershipEdgeLine({
           pathLength={1}
           className="animate-tree-edge-draw"
           style={{
-            strokeWidth: 1.5,
+            strokeWidth: 2,
             stroke: "var(--branch)",
             opacity: isDimmed ? 0.35 : 1,
           }}
@@ -793,7 +793,7 @@ function PartnershipEdgeLine({
         id={id}
         path={path}
         style={{
-          strokeWidth: 1.5,
+          strokeWidth: 2,
           stroke: "var(--branch)",
           opacity: isDimmed ? 0.35 : 1,
         }}
