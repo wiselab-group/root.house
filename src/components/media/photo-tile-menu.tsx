@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ImageIcon, MoreVerticalIcon, Trash2Icon } from "lucide-react";
+import {
+  DownloadIcon,
+  ImageIcon,
+  MoreVerticalIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { deleteMediaAction } from "@/actions/media.actions";
 import { setAlbumCoverAction } from "@/actions/album.actions";
 import { Button } from "@/components/ui/button";
@@ -41,6 +46,7 @@ export function PhotoTileMenu({
   /** Called inside the same transition as the delete action, before it resolves — lets PhotoGrid remove the tile from its optimistic list immediately instead of waiting for deleteMediaAction's revalidatePath. */
   onDeleted: () => void;
 }) {
+  const downloadHref = `/api/media/${mediaId}?familyId=${familyId}&download=1`;
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -84,6 +90,10 @@ export function PhotoTileMenu({
             <MoreVerticalIcon />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 min-w-56">
+            <DropdownMenuItem render={<a href={downloadHref} download />}>
+              <DownloadIcon />
+              Скачать
+            </DropdownMenuItem>
             {albumId && (
               <DropdownMenuItem onClick={handleSetCover} disabled={isPending}>
                 <ImageIcon />

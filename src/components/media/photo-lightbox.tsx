@@ -7,6 +7,7 @@ import {
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  DownloadIcon,
   UserPlusIcon,
   XIcon,
 } from "lucide-react";
@@ -32,7 +33,9 @@ import type { GalleryPhotoView } from "./gallery-photo";
  * carousel track and not a single `<img src>` swap).
  * Delete lives on the grid thumbnail (PhotoGrid), not here — a full-screen
  * viewer isn't the place for a destructive action that's one hover away on
- * the grid itself.
+ * the grid itself. Download DOES live here too (same /api/media/[id] route,
+ * ?download=1 for Content-Disposition: attachment) since viewing a photo
+ * full-size is exactly when someone decides they want to keep a copy of it.
  */
 export function PhotoLightbox({
   photos,
@@ -91,6 +94,20 @@ export function PhotoLightbox({
                 {taggingMode ? "Готово" : "Отметить людей"}
               </Button>
             )}
+            <Button
+              variant="secondary"
+              size="icon-sm"
+              className="rounded-full shadow-sm"
+              aria-label="Скачать фото"
+              render={
+                <a
+                  href={`/api/media/${photo.media.id}?familyId=${familyId}&download=1`}
+                  download
+                />
+              }
+            >
+              <DownloadIcon />
+            </Button>
             <DialogPrimitive.Close
               render={
                 <Button

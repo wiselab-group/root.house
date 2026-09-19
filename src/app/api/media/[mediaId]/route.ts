@@ -14,6 +14,12 @@ import { getVisibleMedia, getMediaStream } from "@/domain/media/media.service";
  * `familyId` is required as a query param rather than looked up from the
  * Media row first — this keeps the same "never resolve by id without
  * family_id in the same check" pattern as every other IDOR-safe lookup.
+ *
+ * `?download=1` is the only difference between "view" and "save as" — same
+ * auth/visibility check, same bytes, just a Content-Disposition: attachment
+ * header so the browser saves the file instead of rendering it inline. No
+ * separate route or extra permission tier: downloading a photo is the same
+ * capability as viewing it (canView), never a distinct "may download" role.
  */
 export async function GET(
   request: Request,
@@ -60,10 +66,24 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  return new Response(result.stream, {
-    headers: {
-      "Content-Type": result.contentType,
-      "Cache-Control": "private, max-age=3600",
-    },
-  });
+  const isDownload = new URL(request.url).searchParams.get("download") === "1";
+  const headers: Record<string, string> = {
+    "Content-Type": result.contentType,
+    "Cache-Control": "private, max-age=3600",
+  };
+  if (isDownload) {
+    headers["Content-Disposition"] =
+      `attachment; filename="${downloadFilename(media.title, result.contentType)}"`;
+  }
+
+  return new Response(result.stream, { headers });
+}
+
+/** A human-friendly download filename — Media has no stored original
+ *  filename (only storageKey, an internal detail), so this falls back to a
+ *  generic name plus the right extension for the content type. */
+function downloadFilename(title: string | null, contentType: string): string {
+  const extension = contentType.split("/")[1]?.split("+")[0] ?? "jpg";
+  const base = title?.trim() || "Фото";
+  return `${base}.${extension}`;
 }
