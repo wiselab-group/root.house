@@ -1,3 +1,4 @@
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { PartialDate } from "@/domain/shared/partial-date";
@@ -72,19 +73,22 @@ export function PersonDateFields({
             defaultValue={date?.year ?? ""}
           />
         </div>
-        <label
-          htmlFor={`${prefix}Approximate`}
-          className="flex items-center gap-1.5 pb-2 text-xs text-muted-foreground"
-        >
-          <input
-            id={`${prefix}Approximate`}
-            name={`${prefix}Approximate`}
-            type="checkbox"
-            defaultChecked={date?.isApproximate ?? false}
-            className="size-4"
-          />
-          примерно
-        </label>
+        <div className="flex flex-col gap-1">
+          <span aria-hidden="true" className="text-xs leading-4">
+            &nbsp;
+          </span>
+          <label
+            htmlFor={`${prefix}Approximate`}
+            className="flex h-11 items-center gap-1.5 text-xs text-muted-foreground"
+          >
+            <Checkbox
+              id={`${prefix}Approximate`}
+              name={`${prefix}Approximate`}
+              defaultChecked={date?.isApproximate ?? false}
+            />
+            примерно
+          </label>
+        </div>
       </div>
     </fieldset>
   );

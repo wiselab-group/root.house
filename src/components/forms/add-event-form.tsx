@@ -7,6 +7,7 @@ import {
   type EventFormState,
 } from "@/actions/event.actions";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -74,11 +75,9 @@ export function AddEventForm({
       <PersonDateFields prefix="date" legend="Дата" />
 
       <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <input
-          type="checkbox"
+        <Checkbox
           checked={showRange}
-          onChange={(e) => setShowRange(e.target.checked)}
-          className="size-4"
+          onCheckedChange={(checked) => setShowRange(checked)}
         />
         Есть дата окончания (например, военная служба)
       </label>

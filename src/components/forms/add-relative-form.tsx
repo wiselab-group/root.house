@@ -7,6 +7,7 @@ import {
   type RelationshipFormState,
 } from "@/actions/relationship.actions";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -116,7 +117,7 @@ export function AddRelativeForm({
             </div>
           </div>
           <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <input type="checkbox" name="isPlaceholder" className="size-4" />
+            <Checkbox name="isPlaceholder" />
             Имя неизвестно — создать запись-заглушку
           </label>
         </div>
