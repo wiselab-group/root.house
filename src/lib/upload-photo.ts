@@ -10,7 +10,17 @@
  * fetch() has no upload-progress event, and AvatarEditor (the only other
  * caller of /api/media/upload) doesn't need a percentage, so it keeps the
  * simpler fetch() path directly instead of going through this helper.
+ *
+ * The browser's upload-progress event only covers sending request bytes,
+ * not the server-side work after (storing the blob, writing the DB row) —
+ * on a fast connection/small file that send finishes in a fraction of a
+ * second, so an unscaled progress bar jumps straight to 100% and then
+ * stalls there while the server is still working. Scaling the real
+ * upload.onprogress fraction into the 0-90% range and reserving the last
+ * 10% for the actual server response keeps the bar's motion truthful: it's
+ * always reporting a real, currently-in-flight phase, never a fake timer.
  */
+const UPLOAD_PHASE_CEILING = 0.9;
 export async function uploadPhoto({
   familyId,
   personIds,
@@ -54,7 +64,9 @@ export async function uploadPhoto({
     xhr.open("POST", "/api/media/upload");
 
     xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) onProgress(event.loaded / event.total);
+      if (event.lengthComputable) {
+        onProgress((event.loaded / event.total) * UPLOAD_PHASE_CEILING);
+      }
     };
 
     xhr.onload = () => {

@@ -7,6 +7,12 @@ import type { QueuedPhoto } from "./photo-upload-grid";
 
 let queuedPhotoIdCounter = 0;
 
+/** How long a "done" tile stays visible (checkmark) before autoUpload
+ *  removes it from the queue — long enough to register as feedback, short
+ *  enough that a multi-photo batch doesn't linger before the grid above
+ *  (already refreshed) is all that's left. */
+const DONE_TILE_LINGER_MS = 600;
+
 /**
  * Owns the queue of picked-but-not-yet-uploaded photos for PhotoUploadPanel
  * and PersonPhotoUploadPanel — split out from the panel components
@@ -84,7 +90,9 @@ export function usePhotoBatchUpload(
               patchPhoto(photo.id, { progress: fraction }),
           });
           patchPhoto(photo.id, { status: "done", progress: 1 });
-          if (autoUpload) removePhoto(photo.id);
+          if (autoUpload) {
+            setTimeout(() => removePhoto(photo.id), DONE_TILE_LINGER_MS);
+          }
         } catch (err) {
           patchPhoto(photo.id, {
             status: "error",

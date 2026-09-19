@@ -62,7 +62,7 @@ export function PhotoUploadGrid({
           {photo.status === "uploading" && (
             <div className="absolute inset-x-1.5 bottom-1.5 h-1 overflow-hidden rounded-full bg-foreground/25">
               <div
-                className="h-full rounded-full bg-background transition-[width]"
+                className="h-full rounded-full bg-primary transition-[width]"
                 style={{ width: `${Math.round(photo.progress * 100)}%` }}
               />
             </div>
