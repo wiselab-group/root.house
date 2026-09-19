@@ -181,8 +181,10 @@ export interface UpdateFamilyDetailsInput {
 /**
  * Updates a family's display name/description — caller must have already
  * verified (via requireFamilyAccess) that the actor may edit the family.
- * Unlike the slug, these are cosmetic fields that don't back any URL or
- * external link, so any editor (not just the owner) may change them.
+ * Owner-only: the name is the archive's shared identity, seen by every
+ * member regardless of who chose it, so changing it carries the same bar
+ * as changing the slug (see updateFamilySlug) rather than the lower editor
+ * bar used for Person/Event/Media content.
  */
 export async function updateFamilyDetails(
   familyId: string,

@@ -100,9 +100,10 @@ function DetailsEditForm({
   );
 }
 
-/** Family name/description — visible to everyone, editable by any
- *  editor-or-above (unlike the slug, these are cosmetic fields and don't
- *  back any URL, so they don't need the owner-only bar). */
+/** Family name/description — visible to everyone, editable by the owner
+ *  only. The name is the archive's shared identity (seen by every member
+ *  regardless of who chose it), so it carries the same bar as the slug
+ *  rather than the lower editor bar used for Person/Event/Media content. */
 export function FamilyDetailsSettings({
   familyId,
   name: initialName,
@@ -117,7 +118,7 @@ export function FamilyDetailsSettings({
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
-  const canEdit = role === "editor" || role === "owner";
+  const canEdit = role === "owner";
 
   if (editing) {
     return (

@@ -62,6 +62,10 @@ function SlugEditForm({
           Отмена
         </Button>
       </div>
+      <p className="text-xs text-destructive">
+        Старая ссылка перестанет работать для всех участников семьи — включая
+        уже сохранённые закладки.
+      </p>
       {state.fieldErrors?.slug && (
         <p className="text-sm text-destructive">{state.fieldErrors.slug}</p>
       )}

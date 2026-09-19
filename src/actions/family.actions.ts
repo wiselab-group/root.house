@@ -78,8 +78,10 @@ export async function updateFamilyDetailsAction(
     return { error: "Сессия истекла — войдите заново." };
   }
 
-  // Cosmetic fields (not the public slug/URL) — any editor may change them.
-  await requireFamilyAccess(familyId, session.user.id, "editor");
+  // The family's name is its identity, not cosmetic decoration — changing
+  // it affects how every member (including ones who didn't choose it)
+  // experiences the archive, so it's owner-only, same bar as the slug.
+  await requireFamilyAccess(familyId, session.user.id, "owner");
 
   const parsed = updateFamilyDetailsSchema.safeParse({
     name: formData.get("name"),
