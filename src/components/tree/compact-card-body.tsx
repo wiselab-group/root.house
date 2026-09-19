@@ -130,17 +130,18 @@ export function CompactCardBody({
       </div>
       <div
         className={cn(
-          // Name/years pill, wider than the photo/frame. mt-0 (no overlap) —
+          // Name/years block, wider than the photo/frame. mt-0 (no overlap) —
           // every negative margin tried (-mt-4, then -mt-2, then -mt-1) kept
-          // crowding the pill's own text under the photo frame above it
-          // (real bug the user caught repeatedly: the name kept reading as
-          // cramped/cut off), so the frame and pill now sit flush against
-          // each other instead of overlapping. No bg/shadow (2026-09-19,
-          // removed per direct user request) — plain text directly on the
-          // canvas; the reference screenshot's floating white card look may
-          // come back later, don't reintroduce bg-card/shadow-md without a
-          // new explicit request.
-          "relative min-w-0 max-w-[calc(100%+1.5rem)] rounded-lg px-3 py-2",
+          // crowding the text under the photo frame above it (real bug the
+          // user caught repeatedly: the name kept reading as cramped/cut
+          // off), so the frame and text now sit flush against each other
+          // instead of overlapping. No bg/shadow/horizontal padding
+          // (2026-09-19, removed per direct user request) — plain text
+          // directly on the canvas, only vertical breathing room (py-2)
+          // kept; the reference screenshot's floating white card look may
+          // come back later, don't reintroduce bg-card/shadow-md/px-3
+          // without a new explicit request.
+          "relative min-w-0 max-w-[calc(100%+1.5rem)] rounded-lg py-2",
         )}
       >
         <p
@@ -148,14 +149,26 @@ export function CompactCardBody({
           className={cn(
             // font-heading (Lora) — per the reference screenshot, whose
             // name text reads as a serif headline, not the app's usual
-            // Geist Sans UI font (2026-09-18).
-            "truncate font-heading text-sm font-medium",
+            // Geist Sans UI font (2026-09-18). Wraps onto a second line
+            // instead of truncating with an ellipsis (2026-09-19, per direct
+            // user request) — line-clamp-2 caps it there so a very long name
+            // still can't grow the card unbounded. leading-tight (not the
+            // default ~1.5) keeps two wrapped lines reading as one compact
+            // headline instead of loosely spaced text; mb-0.5 gives the
+            // years line below a small deliberate gap rather than the two
+            // sitting flush (both tuned together for a "premium" tight-but-
+            // legible feel, not derived from any specific reference pixel
+            // value).
+            "line-clamp-2 font-heading text-sm leading-tight font-medium",
+            years && "mb-0.5",
             data.isPlaceholder && "italic text-muted-foreground",
           )}
         >
           {name}
         </p>
-        {years && <p className="text-xs text-muted-foreground">{years}</p>}
+        {years && (
+          <p className="text-xs leading-tight text-muted-foreground">{years}</p>
+        )}
       </div>
     </div>
   );

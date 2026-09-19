@@ -99,7 +99,7 @@ export function TreeToolsMenu({
           Инструменты
           <ChevronUpIcon className="size-3.5 fill-none! text-muted-foreground" />
         </PopoverTrigger>
-        <PopoverContent side="top" align="center" className="w-72 p-1">
+        <PopoverContent side="top" align="center" className="w-72">
           {onOpenTrace && (
             <ToolRow
               icon={<RouteIcon />}
