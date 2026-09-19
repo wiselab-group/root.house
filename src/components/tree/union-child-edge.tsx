@@ -10,7 +10,7 @@ import {
 import { COMPACT_CHILD_TAIL_LENGTH, TracedLine } from "./relationship-edge";
 import { roundedOrthogonalPath } from "./orthogonal-path";
 import { useTreeNodeGeometry } from "./tree-layout-positions-context";
-import { useIsJustExpandedEdge } from "./tree-just-expanded-edges-context";
+import { useJustExpandedEdge } from "./tree-just-expanded-edges-context";
 
 /**
  * The trunk line from a couple's partnership line down to one of their
@@ -39,7 +39,13 @@ export function UnionChildEdge({
   const parentA = useTreeNodeGeometry(data?.parentAId ?? "");
   const parentB = useTreeNodeGeometry(data?.parentBId ?? "");
   const targetNode = useTreeNodeGeometry(target);
-  const justExpanded = useIsJustExpandedEdge(id);
+  // Never reversed — a union trunk always connects a couple's shared
+  // partnership midpoint straight down to their own blood child, never a
+  // spouse's ancestor chain (see LayoutEdge.isCollapseAnimationReversed's
+  // own doc comment on which edges CAN need that), so its own attachment
+  // point is always the top (the union) regardless of collapse/expand.
+  const { justExpanded } = useJustExpandedEdge(id);
+  const isCollapsing = data?.isCollapsing === true;
   const isOnTracePath = data?.isOnTracePath === true;
   // Same undefined-vs-false distinction as RelationshipEdge's own isDimmed:
   // undefined means no trace is active (never dim), false means a trace IS
@@ -162,8 +168,11 @@ export function UnionChildEdge({
     <BaseEdge
       id={id}
       path={path}
-      pathLength={justExpanded ? 1 : undefined}
-      className={cn(justExpanded && "animate-tree-edge-draw")}
+      pathLength={justExpanded || isCollapsing ? 1 : undefined}
+      className={cn(
+        justExpanded && "animate-tree-edge-draw",
+        isCollapsing && "animate-tree-edge-collapse",
+      )}
       style={{
         strokeWidth: 1.5,
         stroke: "var(--branch)",

@@ -40,6 +40,7 @@ import {
   pruneCollapsedDescendants,
   personIdsNeedingOwnBadge,
   findUnionsWithChildren,
+  computeCollapseAnimationDirections,
 } from "./prune-collapsed";
 import { TreeLayoutPositionsProvider } from "./tree-layout-positions-context";
 import { TreeJustExpandedEdgesProvider } from "./tree-just-expanded-edges-context";
@@ -429,7 +430,8 @@ export function TreeCanvas({
   // are both computed off the FULL graph (before pruning) so a
   // currently-collapsed person/union's badge doesn't disappear just because
   // their own children are no longer in the pruned edge list.
-  const { collapsedIds, toggleCollapse } = useCollapsedBranches();
+  const { collapsedIds, pendingCollapseIds, lastExpandedKey, toggleCollapse } =
+    useCollapsedBranches();
   const personIdsNeedingBadge = useMemo(
     () => personIdsNeedingOwnBadge(effectiveGraph),
     [effectiveGraph],
@@ -438,9 +440,24 @@ export function TreeCanvas({
     () => findUnionsWithChildren(effectiveGraph),
     [effectiveGraph],
   );
+  // `collapsedIds` (COMMITTED) is what actually removes nodes/edges;
+  // `pendingCollapseIds` (already clicked, still playing its reverse
+  // draw-out/fade-out) is passed alongside it so pruneCollapsedDescendants
+  // can mark that branch's own nodes/edges `isCollapsing: true` WITHOUT
+  // removing them yet — see prune-collapsed.ts's own doc comment. That flag
+  // flows straight through toReactFlow into each node/edge's own `data`
+  // (xyflow-adapter.ts), which is what person-node.tsx/relationship-edge.tsx/
+  // union-child-edge.tsx read to play their exit animations — no separate
+  // cross-render diffing needed on this side (unlike justExpandedEdgeIds
+  // below), since pendingCollapseIds is itself unambiguous input.
   const prunedGraph = useMemo(
-    () => pruneCollapsedDescendants(effectiveGraph, collapsedIds),
-    [effectiveGraph, collapsedIds],
+    () =>
+      pruneCollapsedDescendants(
+        effectiveGraph,
+        collapsedIds,
+        pendingCollapseIds,
+      ),
+    [effectiveGraph, collapsedIds, pendingCollapseIds],
   );
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
@@ -523,8 +540,27 @@ export function TreeCanvas({
     [initialEdges],
   );
   const [justExpandedEdgeIds, setJustExpandedEdgeIds] = useState<
-    ReadonlySet<string>
-  >(new Set());
+    ReadonlyMap<string, boolean>
+  >(new Map());
+
+  // Direction for a just-revealed branch's entrance sweep — symmetric with
+  // the exit sweep it played while collapsing (see prune-collapsed.ts's
+  // computeCollapseAnimationDirections and LayoutEdge.isCollapseAnimationReversed's
+  // own doc comment). Computed off `effectiveGraph` (the FULL, pre-prune
+  // graph) rather than `prunedGraph` — the reversed set is a property of the
+  // branch's structure relative to lastExpandedKey's own anchor, independent
+  // of what else happens to be collapsed elsewhere.
+  const lastExpandedReversedEdgeIds = useMemo(
+    () =>
+      lastExpandedKey
+        ? computeCollapseAnimationDirections(
+            effectiveGraph,
+            new Set([lastExpandedKey]),
+          )
+        : new Set<string>(),
+    [effectiveGraph, lastExpandedKey],
+  );
+
   const prevCommittedEdgesRef = useRef<{
     effectiveGraph: TreeLayoutGraph;
     edgeIds: ReadonlySet<string>;
@@ -532,16 +568,18 @@ export function TreeCanvas({
   useEffect(() => {
     const prev = prevCommittedEdgesRef.current;
     if (prev && prev.effectiveGraph === effectiveGraph) {
-      const revealed = new Set<string>();
+      const revealed = new Map<string, boolean>();
       for (const id of currentEdgeIds) {
-        if (!prev.edgeIds.has(id)) revealed.add(id);
+        if (!prev.edgeIds.has(id)) {
+          revealed.set(id, lastExpandedReversedEdgeIds.has(id));
+        }
       }
       setJustExpandedEdgeIds(revealed);
     } else {
-      setJustExpandedEdgeIds(new Set());
+      setJustExpandedEdgeIds(new Map());
     }
     prevCommittedEdgesRef.current = { effectiveGraph, edgeIds: currentEdgeIds };
-  }, [effectiveGraph, currentEdgeIds]);
+  }, [effectiveGraph, currentEdgeIds, lastExpandedReversedEdgeIds]);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 

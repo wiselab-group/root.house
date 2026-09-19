@@ -53,37 +53,21 @@ import type {
  */
 
 /**
- * Returns a NEW TreeLayoutGraph with every person strictly BELOW a
- * collapsed person/union removed (and any edge touching a removed person),
- * plus `collapsedDescendantCount` attached to the node that should carry the
- * "+N" badge for each collapse key — the collapsed person themselves for a
- * `person:` key, or the lexicographically-first partner for a `union:` key
- * (see findUnionsWithChildren's own doc comment on why either partner works
- * — they share the exact same children).
- *
- * A person nested under TWO different collapsed branches (rare — e.g. a
- * remarried descendant reachable via two different collapsed branches) is
- * removed once; the count charged to the OUTER collapsed branch is every
- * descendant reachable from it, regardless of whether a nested collapsed
- * branch would also claim some of the same people — counts intentionally
- * are NOT mutually exclusive between two collapsed branches, since each
- * badge answers "how many people are hidden below ME", independent of
- * whatever else happens to also be collapsed elsewhere in the tree.
+ * Shared graph-indexing step for both pruneCollapsedDescendants and
+ * computeCollapseAnimationDirections below — building these Maps is an O(E)
+ * scan over every edge, done once per call site rather than duplicated.
  */
-export function pruneCollapsedDescendants(
-  graph: TreeLayoutGraph,
-  collapsedIds: ReadonlySet<string>,
-): TreeLayoutGraph {
-  if (collapsedIds.size === 0) return graph;
-
+function buildCollapseIndexes(graph: TreeLayoutGraph) {
   const childrenOf = new Map<string, string[]>();
   const parentsOf = new Map<string, string[]>();
+  const parentChildEdgeId = new Map<string, string>(); // "parentId::childId" -> edge id
   for (const edge of graph.edges) {
     if (edge.kind !== "parent_child") continue;
     if (!childrenOf.has(edge.source)) childrenOf.set(edge.source, []);
     childrenOf.get(edge.source)!.push(edge.target);
     if (!parentsOf.has(edge.target)) parentsOf.set(edge.target, []);
     parentsOf.get(edge.target)!.push(edge.source);
+    parentChildEdgeId.set(`${edge.source}::${edge.target}`, edge.id);
   }
   const spousesOf = new Map<string, string[]>();
   const partnershipEdgeById = new Map<
@@ -101,9 +85,115 @@ export function pruneCollapsedDescendants(
       target: edge.target,
     });
   }
+  return {
+    childrenOf,
+    parentsOf,
+    parentChildEdgeId,
+    spousesOf,
+    partnershipEdgeById,
+  };
+}
+
+/**
+ * Computes ONLY the reversed-direction edge set (see
+ * LayoutEdge.isCollapseAnimationReversed's own doc comment) for a given set
+ * of collapse keys, WITHOUT hiding/pruning anything — used by TreeCanvas for
+ * the EXPAND side of the animation. A branch that visibly retracted toward
+ * its attachment point while collapsing must grow back out from that exact
+ * same point when re-expanded, but by the time a branch is expanded it's no
+ * longer collapsed/pending in any state pruneCollapsedDescendants reads — so
+ * the direction has to be recomputed fresh from the collapse key that was
+ * just toggled off (see use-collapsed-branches.ts's lastExpandedKey),
+ * run against the graph exactly as if collapsing it right now.
+ */
+export function computeCollapseAnimationDirections(
+  graph: TreeLayoutGraph,
+  collapseKeys: ReadonlySet<string>,
+): ReadonlySet<string> {
+  if (collapseKeys.size === 0) return new Set();
+  const {
+    childrenOf,
+    parentsOf,
+    parentChildEdgeId,
+    spousesOf,
+    partnershipEdgeById,
+  } = buildCollapseIndexes(graph);
+  const reversedEdgeIds = new Set<string>();
+  for (const key of collapseKeys) {
+    const resolved = resolveCollapseRoot(key, partnershipEdgeById);
+    if (!resolved) continue;
+    const rootChildIds = resolved.isUnion
+      ? sharedChildrenOf(resolved.parentIds, childrenOf)
+      : (childrenOf.get(resolved.anchorId) ?? []);
+    collectDescendantIds(
+      rootChildIds,
+      childrenOf,
+      parentsOf,
+      spousesOf,
+      parentChildEdgeId,
+      reversedEdgeIds,
+    );
+  }
+  return reversedEdgeIds;
+}
+
+/**
+ * Returns a NEW TreeLayoutGraph with every person strictly BELOW a
+ * collapsed person/union removed (and any edge touching a removed person),
+ * plus `collapsedDescendantCount` attached to the node that should carry the
+ * "+N" badge for each collapse key — the collapsed person themselves for a
+ * `person:` key, or the lexicographically-first partner for a `union:` key
+ * (see findUnionsWithChildren's own doc comment on why either partner works
+ * — they share the exact same children).
+ *
+ * A person nested under TWO different collapsed branches (rare — e.g. a
+ * remarried descendant reachable via two different collapsed branches) is
+ * removed once; the count charged to the OUTER collapsed branch is every
+ * descendant reachable from it, regardless of whether a nested collapsed
+ * branch would also claim some of the same people — counts intentionally
+ * are NOT mutually exclusive between two collapsed branches, since each
+ * badge answers "how many people are hidden below ME", independent of
+ * whatever else happens to also be collapsed elsewhere in the tree.
+ *
+ * `pendingCollapseIds` (use-collapsed-branches.ts) — keys already clicked
+ * but not yet committed to `collapsedIds`, still mid reverse-animation — are
+ * treated almost the same as `collapsedIds` for badge purposes (the "+N"
+ * count updates the INSTANT the toggle is clicked, not once the branch is
+ * actually removed, so the badge, the connector lines' draw-out sweep, and
+ * the cards' own fade-out all change in the same visible instant per user
+ * feedback) but their nodes/edges are NOT filtered out yet — only marked
+ * `isCollapsing: true` — so they stay mounted long enough to actually play
+ * that exit animation. The flag flows straight through xyflow-adapter.ts
+ * into each node/edge's own `data.isCollapsing` (person-node.tsx reads it
+ * for its own fade/scale-out; relationship-edge.tsx/union-child-edge.tsx
+ * read it for their reverse draw-out sweep) — no separate React context
+ * needed on the collapse side, unlike the expand-side entrance animation
+ * (which has no committed graph state to key off — see
+ * computeCollapseAnimationDirections above and
+ * tree-just-expanded-edges-context.tsx). A key present in BOTH sets
+ * (shouldn't normally happen — toggleCollapse moves a key from pending to
+ * committed atomically — but handled defensively) behaves as committed:
+ * actually removed.
+ */
+export function pruneCollapsedDescendants(
+  graph: TreeLayoutGraph,
+  collapsedIds: ReadonlySet<string>,
+  pendingCollapseIds: ReadonlySet<string> = new Set(),
+): TreeLayoutGraph {
+  if (collapsedIds.size === 0 && pendingCollapseIds.size === 0) return graph;
+
+  const {
+    childrenOf,
+    parentsOf,
+    parentChildEdgeId,
+    spousesOf,
+    partnershipEdgeById,
+  } = buildCollapseIndexes(graph);
 
   const descendantCountByAnchorId = new Map<string, number>();
-  const hiddenIds = new Set<string>();
+  const hiddenIds = new Set<string>(); // actually removed (committed)
+  const collapsingIds = new Set<string>(); // present, but mid exit-animation (pending)
+  const reversedEdgeIds = new Set<string>(); // see LayoutEdge.isCollapseAnimationReversed
 
   for (const collapsedId of collapsedIds) {
     const resolved = resolveCollapseRoot(collapsedId, partnershipEdgeById);
@@ -112,14 +202,36 @@ export function pruneCollapsedDescendants(
       ? sharedChildrenOf(resolved.parentIds, childrenOf)
       : (childrenOf.get(resolved.anchorId) ?? []);
 
-    const descendants = collectDescendantIds(
+    const { descendants } = collectDescendantIds(
       rootChildIds,
       childrenOf,
       parentsOf,
       spousesOf,
+      parentChildEdgeId,
+      reversedEdgeIds,
     );
     descendantCountByAnchorId.set(resolved.anchorId, descendants.size);
     for (const id of descendants) hiddenIds.add(id);
+  }
+
+  for (const pendingId of pendingCollapseIds) {
+    if (collapsedIds.has(pendingId)) continue; // defensive — see this function's own doc comment
+    const resolved = resolveCollapseRoot(pendingId, partnershipEdgeById);
+    if (!resolved) continue;
+    const rootChildIds = resolved.isUnion
+      ? sharedChildrenOf(resolved.parentIds, childrenOf)
+      : (childrenOf.get(resolved.anchorId) ?? []);
+
+    const { descendants } = collectDescendantIds(
+      rootChildIds,
+      childrenOf,
+      parentsOf,
+      spousesOf,
+      parentChildEdgeId,
+      reversedEdgeIds,
+    );
+    descendantCountByAnchorId.set(resolved.anchorId, descendants.size);
+    for (const id of descendants) collapsingIds.add(id);
   }
 
   // The current focus person's own card must never disappear as a side
@@ -131,6 +243,7 @@ export function pruneCollapsedDescendants(
   // "+N" doesn't silently under-report just because one of the N is exempt
   // from being hidden.
   hiddenIds.delete(graph.focusPersonId);
+  collapsingIds.delete(graph.focusPersonId);
 
   // An anchor nested inside ANOTHER collapsed branch's own hidden subtree
   // has no visible card left to carry a badge on — drop it from the count
@@ -143,14 +256,30 @@ export function pruneCollapsedDescendants(
     .filter((node) => !hiddenIds.has(node.id))
     .map((node) => {
       const count = descendantCountByAnchorId.get(node.id);
-      return count === undefined
-        ? node
-        : { ...node, collapsedDescendantCount: count };
+      const isCollapsing = collapsingIds.has(node.id);
+      if (count === undefined && !isCollapsing) return node;
+      return {
+        ...node,
+        ...(count === undefined ? null : { collapsedDescendantCount: count }),
+        ...(isCollapsing ? { isCollapsing: true } : null),
+      };
     });
 
-  const edges = graph.edges.filter(
-    (edge) => !hiddenIds.has(edge.source) && !hiddenIds.has(edge.target),
-  );
+  const edges = graph.edges
+    .filter(
+      (edge) => !hiddenIds.has(edge.source) && !hiddenIds.has(edge.target),
+    )
+    .map((edge) =>
+      collapsingIds.has(edge.source) || collapsingIds.has(edge.target)
+        ? {
+            ...edge,
+            isCollapsing: true,
+            ...(reversedEdgeIds.has(edge.id)
+              ? { isCollapseAnimationReversed: true }
+              : null),
+          }
+        : edge,
+    );
 
   return { ...graph, nodes, edges };
 }
@@ -310,13 +439,24 @@ function sharedChildrenOf(
  * it). Each descendant found this way also pulls in their OWN spouse(s) and
  * that spouse's entire ancestor branch (walking UP parent_child edges from
  * the spouse) — see this file's own doc comment for why.
+ *
+ * `reversedEdgeIds` is an OUT parameter (mutated, not returned) — every
+ * parent_child edge id whose collapse animation must sweep opposite its
+ * recorded source→target direction (see LayoutEdge.isCollapseAnimationReversed's
+ * own doc comment). A plain blood-descent step (childrenOf) never reverses —
+ * the branch attaches at its top, growth is downward either way. Only a
+ * spouse's own ancestor walk (collectAncestorIds below) does, since THAT
+ * chain attaches to the rest of the tree at its bottom (the spouse), not its
+ * top.
  */
 function collectDescendantIds(
   rootChildIds: string[],
   childrenOf: Map<string, string[]>,
   parentsOf: Map<string, string[]>,
   spousesOf: Map<string, string[]>,
-): Set<string> {
+  parentChildEdgeId: Map<string, string>,
+  reversedEdgeIds: Set<string>,
+): { descendants: Set<string> } {
   const visited = new Set<string>();
   // Each frontier entry tracks whether it's a BLOOD descendant of the
   // collapsed root (reached via childrenOf) as opposed to an in-law pulled
@@ -346,31 +486,48 @@ function collectDescendantIds(
       // descendants).
       for (const spouseId of spousesOf.get(id) ?? []) {
         if (!visited.has(spouseId)) next.push({ id: spouseId, isBlood: false });
-        for (const ancestorId of collectAncestorIds(spouseId, parentsOf)) {
+        collectAncestorIds(
+          spouseId,
+          parentsOf,
+          parentChildEdgeId,
+          reversedEdgeIds,
+        ).forEach((ancestorId) => {
           if (!visited.has(ancestorId)) {
             next.push({ id: ancestorId, isBlood: false });
           }
-        }
+        });
       }
     }
     frontier = next;
   }
-  return visited;
+  return { descendants: visited };
 }
 
-/** BFS up parent_child edges from personId (personId itself excluded) — every ancestor: parents, grandparents, and so on. */
+/**
+ * BFS up parent_child edges from personId (personId itself excluded) —
+ * every ancestor: parents, grandparents, and so on. Every edge walked this
+ * way (child→parent, opposite the recorded parent→child direction) is added
+ * to `reversedEdgeIds` — see collectDescendantIds's own doc comment on that
+ * out parameter.
+ */
 function collectAncestorIds(
   personId: string,
   parentsOf: Map<string, string[]>,
+  parentChildEdgeId: Map<string, string>,
+  reversedEdgeIds: Set<string>,
 ): Set<string> {
   const visited = new Set<string>();
-  let frontier = parentsOf.get(personId) ?? [];
+  let frontier = [personId];
   while (frontier.length > 0) {
     const next: string[] = [];
-    for (const id of frontier) {
-      if (visited.has(id)) continue;
-      visited.add(id);
-      for (const parentId of parentsOf.get(id) ?? []) next.push(parentId);
+    for (const childId of frontier) {
+      for (const parentId of parentsOf.get(childId) ?? []) {
+        const edgeId = parentChildEdgeId.get(`${parentId}::${childId}`);
+        if (edgeId) reversedEdgeIds.add(edgeId);
+        if (visited.has(parentId)) continue;
+        visited.add(parentId);
+        next.push(parentId);
+      }
     }
     frontier = next;
   }

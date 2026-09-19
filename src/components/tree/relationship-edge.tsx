@@ -10,7 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { roundedOrthogonalPath } from "./orthogonal-path";
 import { useTreeNodeGeometry } from "./tree-layout-positions-context";
-import { useIsJustExpandedEdge } from "./tree-just-expanded-edges-context";
+import { useJustExpandedEdge } from "./tree-just-expanded-edges-context";
 import { UnionCollapseBadge } from "./union-collapse-badge";
 
 /**
@@ -476,6 +476,8 @@ export function RelationshipEdge({
         isDimmed={isDimmed}
         traceDirection={traceDirection}
         isMiddleSibling={data?.isMiddleSibling === true}
+        isCollapsing={data?.isCollapsing === true}
+        isCollapseAnimationReversed={data?.isCollapseAnimationReversed === true}
       />
     );
   }
@@ -491,6 +493,7 @@ export function RelationshipEdge({
       traceDirection={traceDirection}
       tracedPartnerId={data?.tracedPartnerId}
       unionCollapse={data?.unionCollapse}
+      isCollapsing={data?.isCollapsing === true}
     />
   );
 }
@@ -503,6 +506,8 @@ function ParentChildEdgeLine({
   isDimmed,
   traceDirection,
   isMiddleSibling,
+  isCollapsing,
+  isCollapseAnimationReversed,
 }: {
   id: string;
   source: string;
@@ -511,10 +516,13 @@ function ParentChildEdgeLine({
   isDimmed: boolean;
   traceDirection: 1 | -1;
   isMiddleSibling: boolean;
+  isCollapsing: boolean;
+  isCollapseAnimationReversed: boolean;
 }) {
   const sourceNode = useTreeNodeGeometry(source);
   const targetNode = useTreeNodeGeometry(target);
-  const justExpanded = useIsJustExpandedEdge(id);
+  const { justExpanded, reversed: justExpandedReversed } =
+    useJustExpandedEdge(id);
   if (!sourceNode || !targetNode) return null;
 
   // Read the parent's bottom edge from the committed layout position
@@ -547,13 +555,29 @@ function ParentChildEdgeLine({
   // reads as an ugly zigzag when rounded, so it's drawn sharp instead. The
   // OTHER bend, (sourceX, midY), is the T-off-the-trunk point — already a
   // clean rounded corner regardless of sibling count, left untouched.
+  const orderedPoints = [
+    { x: sourceCenterX, y: sourceBottomY },
+    { x: sourceCenterX, y: midY },
+    { x: targetCenterX, y: midY },
+    { x: targetCenterX, y: targetTopY },
+  ];
+  // Collapse/expand animation direction (prune-collapsed.ts's
+  // isCollapseAnimationReversed / computeCollapseAnimationDirections — see
+  // their own doc comments): both the exit sweep (collapsing) AND the
+  // entrance sweep (justExpanded, symmetric — user-requested) must always
+  // run toward/from wherever this branch attaches to the rest of the
+  // visible tree, which for a spouse's own ancestor chain is the CHILD end
+  // (source, here) rather than the recorded parent (target) — reversing the
+  // point order flips which end the `stroke-dashoffset` sweep starts from
+  // without changing the line's visible geometry at all (same path, just
+  // walked the other way).
+  const points =
+    (isCollapsing && isCollapseAnimationReversed) ||
+    (justExpanded && justExpandedReversed)
+      ? [...orderedPoints].reverse()
+      : orderedPoints;
   const path = roundedOrthogonalPath(
-    [
-      { x: sourceCenterX, y: sourceBottomY },
-      { x: sourceCenterX, y: midY },
-      { x: targetCenterX, y: midY },
-      { x: targetCenterX, y: targetTopY },
-    ],
+    points,
     isMiddleSibling ? [{ x: targetCenterX, y: midY }] : [],
   );
   // isOnTracePath draws via TracedLine — see its own doc comment for why
@@ -571,8 +595,11 @@ function ParentChildEdgeLine({
     <BaseEdge
       id={id}
       path={path}
-      pathLength={justExpanded ? 1 : undefined}
-      className={cn(justExpanded && "animate-tree-edge-draw")}
+      pathLength={justExpanded || isCollapsing ? 1 : undefined}
+      className={cn(
+        justExpanded && "animate-tree-edge-draw",
+        isCollapsing && "animate-tree-edge-collapse",
+      )}
       style={{
         strokeWidth: 1.5,
         stroke: "var(--branch)",
@@ -601,6 +628,7 @@ function PartnershipEdgeLine({
   traceDirection,
   tracedPartnerId,
   unionCollapse,
+  isCollapsing,
 }: {
   id: string;
   source: string;
@@ -611,10 +639,11 @@ function PartnershipEdgeLine({
   traceDirection: 1 | -1;
   tracedPartnerId?: string;
   unionCollapse?: RelationshipEdgeData["unionCollapse"];
+  isCollapsing: boolean;
 }) {
   const sourceNode = useTreeNodeGeometry(source);
   const targetNode = useTreeNodeGeometry(target);
-  const justExpanded = useIsJustExpandedEdge(id);
+  const { justExpanded } = useJustExpandedEdge(id);
   if (!sourceNode || !targetNode) return null;
 
   const sourceLeft = sourceNode.x;
@@ -695,8 +724,11 @@ function PartnershipEdgeLine({
         <BaseEdge
           id={id}
           path={`M${midX},${midY} L${plainX},${plainY}`}
-          pathLength={justExpanded ? 1 : undefined}
-          className={cn(justExpanded && "animate-tree-edge-draw")}
+          pathLength={justExpanded || isCollapsing ? 1 : undefined}
+          className={cn(
+            justExpanded && "animate-tree-edge-draw",
+            isCollapsing && "animate-tree-edge-collapse",
+          )}
           style={{
             strokeWidth: 1.5,
             stroke: "var(--branch)",
@@ -740,31 +772,41 @@ function PartnershipEdgeLine({
       </>
     );
   }
-  // Draw-in, spouse-to-spouse case: user feedback, 2026-09-14 — "между
-  // супругами анимация должна идти от центра их союза и к ним" (between
-  // spouses the line should grow from the union's own center out toward
-  // each of them), not sweep across from one spouse to the other the way a
-  // single `pathLength`/`stroke-dashoffset` sweep along the ONE path above
-  // reads (it visually grows from x1 toward x2, i.e. "out of" one spouse's
-  // card, not "out of" the union). A single dash animation can only ever
-  // draw in one direction along its own path, so getting a from-the-middle
-  // look needs two independent half-paths, each own its OWN `<path>` element
-  // starting at the same union midpoint (midX, midY — the same point the
-  // collapse badge and the UnionChildEdge trunk both already anchor to) and
-  // ending at one spouse — same draw-in technique (`pathLength={1}` +
-  // `.animate-tree-edge-draw`) applied to each half independently, so both
-  // halves sweep outward from the center at once. Only rendered while
-  // `justExpanded` — the plain single-path version below stays the
-  // unanimated steady-state shape, so this split never affects hit-testing/
-  // layout once the entrance animation has finished playing.
-  if (justExpanded) {
+  // Draw-in/draw-out, spouse-to-spouse case: user feedback, 2026-09-14 —
+  // "между супругами анимация должна идти от центра их союза и к ним"
+  // (between spouses the line should grow from the union's own center out
+  // toward each of them), not sweep across from one spouse to the other the
+  // way a single `pathLength`/`stroke-dashoffset` sweep along the ONE path
+  // above reads (it visually grows from x1 toward x2, i.e. "out of" one
+  // spouse's card, not "out of" the union). A single dash animation can only
+  // ever draw in one direction along its own path, so getting a
+  // from-the-middle look needs two independent half-paths, each own its OWN
+  // `<path>` element starting at the same union midpoint (midX, midY — the
+  // same point the collapse badge and the UnionChildEdge trunk both already
+  // anchor to) and ending at one spouse — same technique (`pathLength={1}` +
+  // `.animate-tree-edge-draw`/`.animate-tree-edge-collapse`) applied to each
+  // half independently, so both halves sweep outward from (or, symmetrically,
+  // retract back into) the center at once.
+  //
+  // Collapsing plays the exact same two-half split as expanding — just the
+  // reverse keyframe (`.animate-tree-edge-collapse`, globals.css) — so a
+  // branch that grew "out of the union" when it appeared visibly retracts
+  // "back into the union" right before it disappears, user-requested. Only
+  // rendered while `justExpanded || isCollapsing` — the plain single-path
+  // version below stays the unanimated steady-state shape, so this split
+  // never affects hit-testing/layout once either animation has finished
+  // playing.
+  if (justExpanded || isCollapsing) {
+    const animationClassName = justExpanded
+      ? "animate-tree-edge-draw"
+      : "animate-tree-edge-collapse";
     return (
       <>
         <BaseEdge
           id={id}
           path={`M${midX},${midY} L${x1},${y}`}
           pathLength={1}
-          className="animate-tree-edge-draw"
+          className={animationClassName}
           style={{
             strokeWidth: 1.5,
             stroke: "var(--branch)",
@@ -774,7 +816,7 @@ function PartnershipEdgeLine({
         <BaseEdge
           path={`M${midX},${midY} L${x2},${yTarget}`}
           pathLength={1}
-          className="animate-tree-edge-draw"
+          className={animationClassName}
           style={{
             strokeWidth: 1.5,
             stroke: "var(--branch)",

@@ -89,9 +89,22 @@ export interface LayoutNode {
    * currently hidden below this person, rendered as a "+N" badge on their
    * card. Undefined for every node the server itself produces (collapse
    * state never reaches the server — see use-collapsed-branches.ts) and for
-   * any node here that isn't currently collapsed.
+   * any node here that isn't currently collapsed OR currently mid-collapse
+   * (see isCollapsing — the count is set as soon as the toggle is clicked,
+   * not only once the branch is actually removed, so the badge's own "+N"
+   * updates in the same instant as everything else, not after a delay).
    */
   collapsedDescendantCount?: number;
+  /**
+   * True for exactly COLLAPSE_ANIMATION_MS (use-collapsed-branches.ts) after
+   * a collapse toggle is clicked — this node is still present in the graph
+   * (pruneCollapsedDescendants keeps a pending branch mounted on purpose)
+   * but is playing its own fade/scale exit animation
+   * (.animate-tree-node-collapse, globals.css) in lockstep with its
+   * connector lines' reverse draw-out sweep, before actually being removed.
+   * Always undefined from the server — purely a client-side prune concern.
+   */
+  isCollapsing?: boolean;
 }
 
 export type LayoutEdgeKind = "parent_child" | "partnership";
@@ -102,6 +115,27 @@ export interface LayoutEdge {
   source: string; // personId
   target: string; // personId
   isCurrent?: boolean; // partnership edges only
+  /** Same meaning as LayoutNode.isCollapsing — see its own doc comment. Set by prune-collapsed.ts when either endpoint is mid-collapse. */
+  isCollapsing?: boolean;
+  /**
+   * Only meaningful alongside isCollapsing. `source`/`target` always reflect
+   * the recorded parent→child (or person1→person2) direction — but the
+   * collapse exit animation must always sweep from wherever this branch
+   * attaches to the rest of the still-visible tree outward, matching the
+   * entrance animation's own "grows outward from the attachment point" feel
+   * (user-requested). A plain blood-descent edge inside the collapsing
+   * branch attaches at its TOP (the collapsed root), so growth is downward
+   * either way and this stays false. But a hidden descendant's spouse's own
+   * ANCESTOR chain (prune-collapsed.ts's collectAncestorIds — pulled in
+   * because a descendant's spouse and their whole up-line fold away too, see
+   * prune-collapsed.ts's own doc comment) attaches to the rest of the tree
+   * at the BOTTOM of that chain (the spouse's own card), not the top — the
+   * recorded parent_child edge still points parent→child (e.g.
+   * grandparent→parent), but the branch's actual attachment point is the
+   * child's end, so the animation must sweep child→parent, reversed from
+   * what source/target say. True marks exactly that case.
+   */
+  isCollapseAnimationReversed?: boolean;
 }
 
 export interface TreeLayoutGraph {

@@ -270,6 +270,32 @@
     animation: tree-node-enter 320ms var(--ease-reveal) backwards;
   }
 
+  /* Card fade/scale-out on collapse — the exact reverse of
+     .animate-tree-node-enter above, timed to match
+     .animate-tree-edge-collapse's own 420ms (relationship-edge.tsx/
+     union-child-edge.tsx) so a collapsing branch's cards and connector lines
+     fade/retract in the same visible instant, not the line finishing first
+     and the cards only then popping out (user feedback: collapse must read
+     as one parallel motion — badge count, lines, and cards all changing
+     together — not three sequential steps). Driven by
+     LayoutNode.isCollapsing (prune-collapsed.ts), which keeps a mid-collapse
+     branch's cards mounted for exactly this animation's duration before
+     they're actually removed — see use-collapsed-branches.ts's
+     COLLAPSE_ANIMATION_MS. */
+  @keyframes tree-node-collapse {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.94);
+    }
+  }
+  .animate-tree-node-collapse {
+    animation: tree-node-collapse 420ms var(--ease-reveal) forwards;
+  }
+
   /* Generic list/section entrance (families list, family dashboard) — same
      opacity+translateY reveal as the tree's own entrance, just not tied to
      |generation| distance: callers stagger via inline animation-delay on
@@ -379,6 +405,30 @@
   .animate-tree-edge-draw {
     stroke-dasharray: 1;
     animation: tree-edge-draw 420ms var(--ease-reveal) backwards;
+  }
+
+  /* Edge "draw-out" on collapse — the exact reverse of .animate-tree-edge-draw
+     above (same 420ms/easing, so the sweep visually feels symmetric with the
+     expand direction), user-requested: a collapsing branch's lines should
+     retract before disappearing instead of just popping out. Gated on
+     tree-collapsing-edges-context.tsx's `useIsCollapsingEdge(id)`, which
+     stays true for exactly COLLAPSE_ANIMATION_MS
+     (use-collapsed-branches.ts) — the one window where
+     pruneCollapsedDescendants hasn't removed the branch's nodes/edges from
+     the DOM yet but the toggle has already committed to collapsing it. Same
+     `pathLength={1}` requirement as the draw-in version — see its own
+     comment above for why a 0-1 fraction is used instead of real px. */
+  @keyframes tree-edge-collapse {
+    from {
+      stroke-dashoffset: 0;
+    }
+    to {
+      stroke-dashoffset: 1;
+    }
+  }
+  .animate-tree-edge-collapse {
+    stroke-dasharray: 1;
+    animation: tree-edge-collapse 420ms var(--ease-reveal) forwards;
   }
 }
 

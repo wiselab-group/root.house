@@ -195,6 +195,7 @@ export function buildCardFrameClassName({
   isPlaceholder,
   isDimmed,
   readOnly,
+  isCollapsing,
 }: {
   cardStyle: PersonFlowNode["data"]["cardStyle"];
   isOpen: boolean;
@@ -203,10 +204,12 @@ export function buildCardFrameClassName({
   isPlaceholder: boolean;
   isDimmed: boolean;
   readOnly: boolean;
+  /** True for exactly COLLAPSE_ANIMATION_MS while this card plays its fade/scale exit animation, in lockstep with its own connector lines' reverse draw-out — see globals.css's own comment on .animate-tree-node-collapse. */
+  isCollapsing?: boolean;
 }): string {
   return cn(
     "w-40 origin-center",
-    "animate-tree-node-enter",
+    isCollapsing ? "animate-tree-node-collapse" : "animate-tree-node-enter",
     "transition-[opacity,box-shadow] duration-200 ease-(--ease-tree-focus)",
     cardStyle === "compact"
       ? "overflow-visible"

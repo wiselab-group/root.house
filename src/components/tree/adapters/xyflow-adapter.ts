@@ -74,6 +74,8 @@ export interface PersonNodeData extends Record<string, unknown> {
   collapsedDescendantCount?: number;
   /** Toggles this person's collapsed state (see use-collapsed-branches.ts) — undefined in read-only mode, matching onFocusPerson's own pattern (no collapse state exists to toggle on the anonymous Share Link view, which renders a static snapshot). Always called with the `person:<personId>` collapse key (see prune-collapsed.ts) — PersonNode itself doesn't need to know that shape, it just forwards its own personId. */
   onToggleCollapse?: (personId: string) => void;
+  /** Mirrors LayoutNode.isCollapsing — see its own doc comment. True for exactly COLLAPSE_ANIMATION_MS while this card plays its fade/scale exit animation before actually being removed. */
+  isCollapsing?: boolean;
 }
 
 export interface RelationshipEdgeData extends Record<string, unknown> {
@@ -117,6 +119,10 @@ export interface RelationshipEdgeData extends Record<string, unknown> {
     collapsedDescendantCount: number | undefined;
     onToggleCollapse: (collapseKey: string) => void;
   };
+  /** Mirrors LayoutEdge.isCollapsing — see its own doc comment. True while either endpoint is mid-collapse, driving this edge's reverse draw-out sweep. */
+  isCollapsing?: boolean;
+  /** Mirrors LayoutEdge.isCollapseAnimationReversed — see its own doc comment. Only meaningful alongside isCollapsing. */
+  isCollapseAnimationReversed?: boolean;
 }
 
 /**
@@ -163,6 +169,8 @@ export interface UnionChildEdgeData extends Record<string, unknown> {
    * up the row.
    */
   isMiddleSibling?: boolean;
+  /** Mirrors the target child's LayoutNode.isCollapsing — see RelationshipEdgeData.isCollapsing's own doc comment. This trunk has no LayoutEdge of its own (see this interface's own doc comment), so it reads the flag off the child node it points at instead. */
+  isCollapsing?: boolean;
 }
 
 export type PersonFlowNode = Node<PersonNodeData, "person">;
@@ -362,6 +370,7 @@ function toFlowNode(
         readOnly || !onToggleCollapse
           ? undefined
           : (personId: string) => onToggleCollapse(`person:${personId}`),
+      isCollapsing: node.isCollapsing,
     },
     // XYFlow needs explicit dimensions before layout/fitView math is
     // reliable; matches the fixed size PersonNode renders each style at.
@@ -526,6 +535,9 @@ function toFlowEdges(
   const collapsedCountByPersonId = new Map(
     graph.nodes.map((n) => [n.id, n.collapsedDescendantCount]),
   );
+  const isCollapsingByPersonId = new Map(
+    graph.nodes.map((n) => [n.id, n.isCollapsing === true]),
+  );
   const edges: (RelationshipFlowEdge | UnionChildFlowEdge)[] = [];
 
   for (const edge of graph.edges) {
@@ -553,6 +565,9 @@ function toFlowEdges(
             : undefined,
           traceDirection: highlight.traceEdgeDirections?.get(edge.id),
           isMiddleSibling: middleSiblingEdgeIds.has(edge.id),
+          isCollapsing: edge.isCollapsing === true,
+          isCollapseAnimationReversed:
+            edge.isCollapseAnimationReversed === true,
         },
       });
       continue;
@@ -630,6 +645,7 @@ function toFlowEdges(
                 onToggleCollapse,
               }
             : undefined,
+        isCollapsing: edge.isCollapsing === true,
       },
     });
 
@@ -667,6 +683,7 @@ function toFlowEdges(
           isMiddleSibling: middleSiblingEdgeIds.has(
             `union-${edge.id}-${childId}`,
           ),
+          isCollapsing: isCollapsingByPersonId.get(childId) === true,
         },
       });
     }

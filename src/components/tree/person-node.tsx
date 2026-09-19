@@ -115,6 +115,7 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
     isPlaceholder: data.isPlaceholder,
     isDimmed,
     readOnly: Boolean(data.readOnly),
+    isCollapsing: data.isCollapsing,
   });
   const cardFrameStyle = {
     // Entrance stagger, per DESIGN.md's "смена focus-person — stagger
