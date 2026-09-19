@@ -1,2 +1,2 @@
-screenshots/*.png
-scripts/_test-photo.png
+screenshots/**/*.png
+scripts/_test-photo*.png
