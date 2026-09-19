@@ -87,12 +87,14 @@ export function traceMarchClassName(traceDirection: 1 | -1): string {
  * edge — two edges meeting near the same point don't share one exact
  * corner), so a backdrop only as wide as the stroke left a thin sliver of
  * that neighboring line visible right at the bend (real bug caught on real
- * data, screenshot arrow pointing at exactly that sliver). `--background`
- * is used rather than transparency or a card-colored fill because the
- * canvas's dotted Background pattern (tree-canvas.tsx) sits in its own
- * layer below every edge; painting over it with the flat page background is
- * the only way to fully occlude a line underneath without also punching a
- * visible dot-pattern gap that doesn't match the surrounding canvas.
+ * data, screenshot arrow pointing at exactly that sliver). `--tree-canvas`
+ * (not the app-wide `--background`) is used because the tree canvas's own
+ * background is a separate, warmer token (see globals.css, split off
+ * 2026-09-18) — painting this backdrop in plain `--background` left a
+ * visibly mismatched pale strip against the actual (warmer) canvas color, a
+ * real bug the user caught on real data (Елена/Николай Купчик's partnership
+ * line, same real couple this file's other occluder bug below was also
+ * caught on).
  */
 export function TracedLine({
   path,
@@ -108,7 +110,7 @@ export function TracedLine({
       <path
         d={path}
         fill="none"
-        stroke="var(--background)"
+        stroke="var(--tree-canvas)"
         strokeWidth={strokeWidth + 6}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -402,7 +404,12 @@ function DivorceGapOccluder({
       y1={y1}
       x2={x2}
       y2={y2}
-      stroke="var(--background)"
+      // --tree-canvas, not --background — this occluder must match the
+      // tree canvas's own (warmer) color, split into its own token
+      // 2026-09-18; painting it in the plain app-wide background left a
+      // visible pale strip here (real bug the user caught on real data,
+      // Елена/Николай Купчик, same couple as the strokeWidth bug below).
+      stroke="var(--tree-canvas)"
       // Matches the underlying partnership line's own strokeWidth (1.5)
       // exactly (no extra overlap needed at this width), not a much thicker
       // 4 — a noticeably thicker occluder painted a visibly wider white band
