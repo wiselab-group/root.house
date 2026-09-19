@@ -1,16 +1,15 @@
 /**
  * Shared client-side helper for POSTing a photo to /api/media/upload (a
  * Route Handler, not a Server Action — see that route's doc comment for
- * why: private-blob storage + multipart body size). Used by both the
- * single-person PhotoUploadForm (person profile gallery, never passes
- * albumIds) and the family-wide gallery's upload panel, which may tag
- * zero, one, or several people AND add the photo to zero, one, or several
- * albums at once.
+ * why: private-blob storage + multipart body size). Used by usePhotoBatchUpload
+ * for both the person-profile gallery (always tags the one person, never
+ * passes albumIds) and the family-wide gallery (may tag zero, one, or
+ * several albums, never tags people at upload time).
  *
  * Uses XMLHttpRequest instead of fetch() only when `onProgress` is given —
- * fetch() has no upload-progress event, and most callers (PhotoUploadForm,
- * AvatarEditor) don't need a percentage, so they keep the simpler fetch()
- * path with identical behavior to before.
+ * fetch() has no upload-progress event, and AvatarEditor (the only other
+ * caller of /api/media/upload) doesn't need a percentage, so it keeps the
+ * simpler fetch() path directly instead of going through this helper.
  */
 export async function uploadPhoto({
   familyId,

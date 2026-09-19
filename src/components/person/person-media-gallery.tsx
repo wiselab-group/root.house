@@ -2,7 +2,7 @@ import {
   getPersonGallery,
   filterVisibleGalleryPhotos,
 } from "@/domain/media/media.service";
-import { PhotoUploadForm } from "@/components/forms/photo-upload-form";
+import { PersonPhotoUploadPanel } from "@/components/media/person-photo-upload-panel";
 import { PhotoGrid } from "@/components/media/photo-grid";
 import { ProfileSection } from "./profile-section";
 import type { ActingMember } from "@/domain/family/permissions";
@@ -53,7 +53,7 @@ export async function PersonMediaGallery({
         )}
 
         {canContribute && (
-          <PhotoUploadForm familyId={familyId} personId={personId} />
+          <PersonPhotoUploadPanel familyId={familyId} personId={personId} />
         )}
       </div>
     </ProfileSection>

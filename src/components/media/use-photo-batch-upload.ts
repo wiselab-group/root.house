@@ -9,12 +9,30 @@ let queuedPhotoIdCounter = 0;
 
 /**
  * Owns the queue of picked-but-not-yet-uploaded photos for PhotoUploadPanel
- * — split out from the panel component itself to keep it under CLAUDE.md's
- * 150-line ceiling. Each queued photo uploads independently (Promise.all,
- * not sequential) so one slow/failing upload doesn't block the rest of the
- * batch from finishing.
+ * and PersonPhotoUploadPanel — split out from the panel components
+ * themselves to keep them under CLAUDE.md's 150-line ceiling. Each queued
+ * photo uploads independently (Promise.all, not sequential) so one
+ * slow/failing upload doesn't block the rest of the batch from finishing.
+ *
+ * `personIds` tags every photo in the batch with the same person (or
+ * persons) — used by PersonPhotoUploadPanel to pin uploads to the profile
+ * they were started from, since that page has no per-photo tagging step.
+ * Defaults to untagged for the family-wide gallery, where tagging happens
+ * later against each already-uploaded photo.
+ *
+ * `autoUpload` starts uploading a file the moment it's dropped/picked
+ * (no separate "Загрузить" confirmation step) and drops each tile from the
+ * queue as soon as it finishes — used by PersonPhotoUploadPanel, where the
+ * photo reappears immediately in the gallery grid above via router.refresh(),
+ * so leaving a "done" checkmark tile behind would just show the same photo
+ * twice. The family-wide gallery keeps the manual confirm + lingering
+ * "done" grid (see PhotoUploadPanel's own doc comment for why).
  */
-export function usePhotoBatchUpload(familyId: string) {
+export function usePhotoBatchUpload(
+  familyId: string,
+  personIds: string[] = [],
+  autoUpload = false,
+) {
   const router = useRouter();
   const [photos, setPhotos] = useState<QueuedPhoto[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -28,6 +46,7 @@ export function usePhotoBatchUpload(familyId: string) {
       status: "queued",
     }));
     setPhotos((prev) => [...prev, ...newPhotos]);
+    if (autoUpload) void uploadAll([], newPhotos);
   }
 
   function removePhoto(id: string) {
@@ -44,8 +63,10 @@ export function usePhotoBatchUpload(familyId: string) {
     );
   }
 
-  async function uploadAll(albumIds: string[]) {
-    const pending = photos.filter((photo) => photo.status === "queued");
+  async function uploadAll(albumIds: string[], only?: QueuedPhoto[]) {
+    const pending = (only ?? photos).filter(
+      (photo) => photo.status === "queued",
+    );
     if (pending.length === 0) return;
 
     setIsUploading(true);
@@ -56,13 +77,14 @@ export function usePhotoBatchUpload(familyId: string) {
         try {
           await uploadPhoto({
             familyId,
-            personIds: [],
+            personIds,
             albumIds,
             file: photo.file,
             onProgress: (fraction) =>
               patchPhoto(photo.id, { progress: fraction }),
           });
           patchPhoto(photo.id, { status: "done", progress: 1 });
+          if (autoUpload) removePhoto(photo.id);
         } catch (err) {
           patchPhoto(photo.id, {
             status: "error",
