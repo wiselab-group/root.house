@@ -32,7 +32,7 @@ export function ToolRow({
           onClick={onClick}
           aria-pressed={pressed}
           className={cn(
-            "flex h-11 w-full items-center gap-3 rounded-md px-3 text-sm text-foreground hover:bg-muted",
+            "flex h-11 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-sm text-foreground hover:bg-muted",
             pressed && "bg-muted",
           )}
         />
