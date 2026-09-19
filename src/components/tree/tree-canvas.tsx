@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   ReactFlow,
-  Background,
   MiniMap,
   useNodesState,
   useEdgesState,
@@ -656,7 +655,6 @@ export function TreeCanvas({
               isInitialLoad={isInitialLoad}
             />
             <CardStyleInternalsSync cardStyle={cardStyle} nodeIds={nodeIds} />
-            <Background gap={24} />
             {readOnly ? (
               // No drag-lock toggle to show (dragging is force-disabled
               // above), and no Trace/Filter rows either (TreeToolbar itself
