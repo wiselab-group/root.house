@@ -16,6 +16,7 @@ import {
   getMedia,
   getTaggedPeopleForMedia,
   removeMedia,
+  reorderGalleryPhotos,
 } from "@/domain/media/media.service";
 
 /**
@@ -121,4 +122,35 @@ export async function removePersonAvatarAction(
   revalidatePath(`/families/${familySlug}/people`);
   revalidatePath(`/families/${familySlug}/tree`);
   revalidatePath(`/families/${familySlug}/people/${personSlug}/edit`);
+}
+
+/**
+ * Persists a drag-reordered gallery grid. sortOrder lives on Media itself
+ * (a single global order, not one per person/album/family view — see
+ * db/schema/media.ts's own doc comment), so a reorder made from any one
+ * gallery is visible from every other gallery containing the same photos —
+ * but only `revalidatePath` is asked to refresh the page the drag actually
+ * happened on; the others pick up the new order naturally next time they're
+ * visited/refreshed, same lazy-revalidation tradeoff as everywhere else in
+ * this app.
+ *
+ * Requires `contributor` and up, same floor as deleteMediaAction — a
+ * contributor may reorder photos they didn't upload, unlike canEdit's
+ * "creator owns it" rule for editing a single photo's own fields, because
+ * reordering is fundamentally an operation over the whole visible list, not
+ * over any one photo's ownership.
+ */
+export async function reorderMediaAction(
+  familyId: string,
+  orderedMediaIds: string[],
+  revalidateOnPath: string,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+
+  await requireFamilyAccess(familyId, session.user.id, "contributor");
+
+  await reorderGalleryPhotos(orderedMediaIds, familyId);
+
+  revalidatePath(revalidateOnPath);
 }

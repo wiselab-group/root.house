@@ -63,6 +63,16 @@ export const media = pgTable(
     uploadedBy: uuid("uploaded_by")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
+    /**
+     * Manual gallery display order — higher sorts first (newest-uploads-on-
+     * top semantics, same direction as the old createdAt DESC default), so
+     * a fresh upload getting `max(sortOrder) + 1` lands on top even after a
+     * family has hand-reordered older photos. Null for every row created
+     * before drag-to-reorder shipped; getMediaFor*'s ORDER BY falls back to
+     * createdAt for those so they keep their pre-existing relative order
+     * instead of all colliding at the same NULL rank.
+     */
+    sortOrder: integer("sort_order"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [index("media_family_idx").on(table.familyId)],

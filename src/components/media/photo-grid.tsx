@@ -1,10 +1,17 @@
 "use client";
 
 import { useOptimistic, useState } from "react";
-import Image from "next/image";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
 import { PhotoLightbox } from "./photo-lightbox";
-import { BLUR_PLACEHOLDER } from "./blur-placeholder";
-import { PhotoTileMenu } from "./photo-tile-menu";
+import { PhotoGridTile } from "./photo-grid-tile";
+import { usePhotoGridReorder } from "./use-photo-grid-reorder";
 import type { GalleryPhotoView } from "./gallery-photo";
 
 export type { GalleryPhotoView };
@@ -25,6 +32,21 @@ export type { GalleryPhotoView };
  * on confirm instead of waiting for deleteMediaAction's revalidatePath
  * round-trip. If the action throws, the transition rolls back and the tile
  * reappears — no separate error-recovery path needed.
+ *
+ * Reordering (canEdit only — same floor as this page's other edit actions,
+ * see photos/page.tsx) is drag-and-drop via dnd-kit — state/persistence
+ * logic lives in usePhotoGridReorder (split out for CLAUDE.md's 150-line
+ * ceiling). sortOrder is a single global value on Media itself (see
+ * db/schema/media.ts), so a reorder here is visible in every other gallery
+ * containing the same photos too.
+ *
+ * DndContext's `id` prop is set explicitly (not left to dnd-kit's default
+ * auto-increment) — without it, the instance id baked into each tile's
+ * aria-describedby can come out different between the server-rendered HTML
+ * and the client's hydration pass on a page that also mounts other client
+ * components (breadcrumbs, dialogs, ...) consuming id-sequence slots in a
+ * different order, causing an intermittent hydration-mismatch warning that
+ * a fixed string avoids entirely.
  */
 export function PhotoGrid({
   photos,
@@ -41,54 +63,46 @@ export function PhotoGrid({
   albumId?: string | null;
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const { order, handleDragEnd } = usePhotoGridReorder(photos, familyId);
   const [optimisticPhotos, removeOptimisticPhoto] = useOptimistic(
-    photos,
+    order,
     (state, deletedMediaId: string) =>
       state.filter((photo) => photo.media.id !== deletedMediaId),
   );
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  );
+
   return (
     <>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {optimisticPhotos.map((photo, i) => (
-          <div
-            key={photo.media.id}
-            className="group relative aspect-square overflow-hidden rounded-md border border-border"
-          >
-            <button
-              type="button"
-              onClick={() => setOpenIndex(i)}
-              className="absolute inset-0 text-left"
-            >
-              <Image
-                src={`/api/media/${photo.media.id}?familyId=${familyId}`}
-                alt={photo.media.title ?? "Семейное фото"}
-                fill
-                sizes="(max-width: 640px) 50vw, 33vw"
-                className="object-cover transition-transform duration-200 group-hover:scale-105"
-                placeholder="blur"
-                blurDataURL={BLUR_PLACEHOLDER}
-                unoptimized
+      <DndContext
+        id="photo-grid-dnd"
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={optimisticPhotos.map((p) => p.media.id)}
+          strategy={rectSortingStrategy}
+        >
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {optimisticPhotos.map((photo, i) => (
+              <PhotoGridTile
+                key={photo.media.id}
+                photo={photo}
+                familyId={familyId}
+                familySlug={familySlug}
+                canEdit={canEdit}
+                canReorder={canEdit}
+                albumId={albumId}
+                onOpen={() => setOpenIndex(i)}
+                onDeleted={() => removeOptimisticPhoto(photo.media.id)}
               />
-            </button>
-
-            {canEdit && (
-              <div
-                className="absolute top-2 right-2"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <PhotoTileMenu
-                  familyId={familyId}
-                  familySlug={familySlug}
-                  mediaId={photo.media.id}
-                  albumId={albumId}
-                  onDeleted={() => removeOptimisticPhoto(photo.media.id)}
-                />
-              </div>
-            )}
+            ))}
           </div>
-        ))}
-      </div>
+        </SortableContext>
+      </DndContext>
 
       {openIndex !== null && (
         <PhotoLightbox

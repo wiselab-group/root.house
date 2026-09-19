@@ -12,6 +12,7 @@ import {
   getMediaForFamily,
   getMediaForPerson,
   getPeopleForMedia,
+  reorderMedia,
   upsertPhotoTagPosition,
   clearPhotoTagPosition,
   removePersonFromMedia,
@@ -332,6 +333,20 @@ export async function removeMedia(
   }
 
   return deleted;
+}
+
+/**
+ * Persists a drag-reordered gallery grid — see media.repository.ts::reorderMedia
+ * for the sortOrder scheme. familyId scoping happens inside reorderMedia's own
+ * UPDATE...WHERE, so an id belonging to another family is silently dropped
+ * rather than corrupting that family's ordering, same IDOR-safe shape as
+ * every other family-scoped mutation.
+ */
+export async function reorderGalleryPhotos(
+  orderedMediaIds: string[],
+  familyId: string,
+): Promise<void> {
+  await reorderMedia(orderedMediaIds, familyId);
 }
 
 export type { CreateMediaData, UpsertPhotoTagPositionData };

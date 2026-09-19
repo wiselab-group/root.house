@@ -1,4 +1,12 @@
-import { and, desc, eq, inArray, isNotNull, notInArray } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  notInArray,
+  sql,
+} from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   media,
@@ -23,6 +31,7 @@ export interface MediaRecord {
   description: string | null;
   privacyLevel: PrivacyLevel;
   uploadedBy: string;
+  sortOrder: number | null;
   createdAt: Date;
 }
 
@@ -61,9 +70,23 @@ function toRecord(row: typeof media.$inferSelect): MediaRecord {
     description: row.description,
     privacyLevel: row.privacyLevel,
     uploadedBy: row.uploadedBy,
+    sortOrder: row.sortOrder,
     createdAt: row.createdAt,
   };
 }
+
+/**
+ * Shared ORDER BY for every gallery query — sortOrder DESC (nulls last) with
+ * createdAt DESC as the tiebreaker/fallback. Manually reordered photos carry
+ * an explicit sortOrder and always sort by it; photos never touched by
+ * drag-to-reorder are all NULL and fall through to their pre-existing
+ * newest-first createdAt order, so a family that never reorders sees no
+ * behavior change at all.
+ */
+const GALLERY_ORDER = [
+  sql`${media.sortOrder} DESC NULLS LAST`,
+  desc(media.createdAt),
+];
 
 /** Fetches Media scoped to a family in the same query — same IDOR-safe pattern as getPersonById. */
 export async function getMediaById(
@@ -76,7 +99,7 @@ export async function getMediaById(
   return row ? toRecord(row) : null;
 }
 
-/** All Media linked to a given Person, newest first — the raw material for a Person's photo gallery. */
+/** All Media linked to a given Person, in gallery order (see GALLERY_ORDER) — the raw material for a Person's photo gallery. */
 export async function getMediaForPerson(
   personId: string,
   familyId: string,
@@ -88,14 +111,15 @@ export async function getMediaForPerson(
     .where(
       and(eq(mediaPerson.personId, personId), eq(media.familyId, familyId)),
     )
-    .orderBy(media.createdAt);
+    .orderBy(...GALLERY_ORDER);
 
-  return rows.map((r) => toRecord(r.media)).reverse();
+  return rows.map((r) => toRecord(r.media));
 }
 
 /**
- * All photo Media belonging to a family, newest first — the raw material
- * for the family-wide gallery (/families/[slug]/photos). Queries `media`
+ * All photo Media belonging to a family, in gallery order (see
+ * GALLERY_ORDER) — the raw material for the family-wide gallery
+ * (/families/[slug]/photos). Queries `media`
  * directly rather than joining through media_person like getMediaForPerson
  * does, because this must also include photos not (yet) tagged to anyone.
  *
@@ -115,7 +139,7 @@ export async function getMediaForFamily(
       eq(media.kind, "photo"),
       notInArray(media.id, avatarMediaIdsSubquery(familyId)),
     ),
-    orderBy: (table, { desc: descOrder }) => descOrder(table.createdAt),
+    orderBy: () => GALLERY_ORDER,
   });
   return rows.map(toRecord);
 }
@@ -131,8 +155,9 @@ function avatarMediaIdsSubquery(familyId: string) {
 }
 
 /**
- * All photo Media belonging to one Album, newest first — the raw material
- * for /families/[slug]/photos/[albumId]. Same avatar-exclusion defense as
+ * All photo Media belonging to one Album, in gallery order (see
+ * GALLERY_ORDER) — the raw material for /families/[slug]/photos/[albumId].
+ * Same avatar-exclusion defense as
  * getMediaForFamily, even though the upload panel never offers albumIds for
  * an avatar upload — an avatar should never be addable to an album at all.
  */
@@ -151,7 +176,7 @@ export async function getMediaForAlbum(
         notInArray(media.id, avatarMediaIdsSubquery(familyId)),
       ),
     )
-    .orderBy(desc(media.createdAt));
+    .orderBy(...GALLERY_ORDER);
 
   return rows.map((r) => toRecord(r.media));
 }
@@ -273,6 +298,13 @@ export async function createMedia(
       description: data.description ?? null,
       uploadedBy: data.uploadedBy,
       privacyLevel: data.privacyLevel ?? "family",
+      // One higher than this family's current max — a fresh upload always
+      // sorts above every previously (manually or implicitly) ordered
+      // photo, matching the old createdAt-DESC "newest on top" behavior
+      // even after some photos have been hand-reordered. Computed as a
+      // subquery in the same INSERT rather than read-then-write to avoid a
+      // race between two concurrent uploads picking the same next value.
+      sortOrder: sql<number>`coalesce((select max(${media.sortOrder}) from ${media} where ${media.familyId} = ${data.familyId}), 0) + 1`,
     })
     .returning({ id: media.id });
 
@@ -405,4 +437,41 @@ export async function removePersonFromMedia(
     )
     .returning({ id: mediaPerson.id });
   return result.length > 0;
+}
+
+/**
+ * Persists a drag-reordered gallery — `orderedMediaIds[0]` becomes the
+ * top/first photo. Assigns strictly decreasing sortOrder values counting
+ * down from `orderedMediaIds.length` so the whole reordered set sorts above
+ * every not-included row (which stays at its old, possibly lower or NULL,
+ * value) — consistent with createMedia's "new upload always on top" contract
+ * without needing to know the family's current max here too.
+ *
+ * A single `CASE id WHEN ... THEN ...` UPDATE, not one statement per photo —
+ * scoped to familyId in the same WHERE so an id from another family (or a
+ * stale id no longer in this family) is silently dropped rather than
+ * corrupting another family's ordering.
+ */
+export async function reorderMedia(
+  orderedMediaIds: string[],
+  familyId: string,
+): Promise<void> {
+  if (orderedMediaIds.length === 0) return;
+
+  const total = orderedMediaIds.length;
+  // Explicit ::uuid/::integer casts — without them Postgres can't infer a
+  // type for a bare $n parameter inside CASE...WHEN...THEN and the whole
+  // UPDATE fails at query time ("failed query", no type info to fall back
+  // on), unlike `eq()`/`inArray()` elsewhere which get their param's type
+  // from the column they're compared against for free.
+  const cases = orderedMediaIds
+    .map((id, index) => sql`WHEN ${id}::uuid THEN ${total - index}::integer`)
+    .reduce((acc, clause) => sql`${acc} ${clause}`);
+
+  await db
+    .update(media)
+    .set({ sortOrder: sql`CASE ${media.id} ${cases} END` })
+    .where(
+      and(eq(media.familyId, familyId), inArray(media.id, orderedMediaIds)),
+    );
 }
