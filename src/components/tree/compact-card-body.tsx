@@ -84,12 +84,18 @@ export function CompactCardBody({
           // canvas behind it (real bug the user caught: the frame around a
           // non-focus/non-traced/non-selected card was completely invisible,
           // not just subtle). The border keeps the frame's own SHAPE always
-          // visible, whatever color it's currently filled with.
-          "relative shrink-0 rounded-4xl border-2 p-1 transition-colors duration-200",
+          // visible, whatever color it's currently filled with. Width is set
+          // inline (borderWidth, not a Tailwind border-* class) to match the
+          // connector lines' own 1.5px strokeWidth exactly (relationship-
+          // edge.tsx/union-child-edge.tsx) — no built-in Tailwind utility
+          // lands on a non-integer px value, per direct user request that the
+          // frame border read as the same thickness as the tree's lines.
+          "relative shrink-0 rounded-4xl border p-1 transition-colors duration-200",
         )}
         style={{
           backgroundColor: frameColor,
           borderColor: frameBorderColor,
+          borderWidth: 1.5,
           width: PHOTO_SIZE + PHOTO_FRAME_PADDING * 2,
           height: PHOTO_SIZE + PHOTO_FRAME_PADDING * 2,
         }}
