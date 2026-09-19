@@ -32,7 +32,7 @@ export default async function NewPersonPage({
       <h1 className="font-heading text-3xl font-medium tracking-tight text-balance">
         Добавить человека
       </h1>
-      <PersonCreateForm familyId={familyId} places={places} />
+      <PersonCreateForm familyId={familyId} familySlug={slug} places={places} />
     </main>
   );
 }

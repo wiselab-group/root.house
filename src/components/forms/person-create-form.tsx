@@ -31,9 +31,11 @@ import type { PlaceRecord } from "@/domain/place/place.service";
  */
 export function PersonCreateForm({
   familyId,
+  familySlug,
   places,
 }: {
   familyId: string;
+  familySlug: string;
   places: PlaceRecord[];
 }) {
   const router = useRouter();
@@ -114,6 +116,7 @@ export function PersonCreateForm({
         places={places}
         submitLabel="Добавить"
         submitPendingLabel={isNavigating ? "Сохраняем фото…" : "Добавляем…"}
+        cancelHref={`/families/${familySlug}/people`}
       />
     </div>
   );

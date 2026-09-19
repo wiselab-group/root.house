@@ -81,6 +81,7 @@ export default async function EditPersonPage({
           places={places}
           submitLabel="Сохранить"
           submitPendingLabel="Сохраняем…"
+          cancelHref={`/families/${slug}/people/${personSlug}`}
         />
       </section>
     </main>

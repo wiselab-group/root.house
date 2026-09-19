@@ -3,12 +3,13 @@
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { PersonNameFields } from "./person-name-fields";
 import { PersonDateFields } from "./person-date-fields";
 import { PersonGenderLivingFields } from "./person-gender-living-fields";
+import { PersonMiscFields } from "./person-misc-fields";
 import { PlaceSelect } from "./place-select";
 import { PrivacyLevelSelect } from "./privacy-level-select";
 import type { PersonFormState } from "@/actions/person.actions";
@@ -36,6 +37,7 @@ export function PersonForm({
   places = [],
   submitLabel,
   submitPendingLabel,
+  cancelHref,
 }: {
   action: (
     state: PersonFormState,
@@ -45,6 +47,9 @@ export function PersonForm({
   places?: PlaceRecord[];
   submitLabel: string;
   submitPendingLabel: string;
+  /** Where "Отмена" navigates back to — omitted entirely (no button) when
+   *  the caller has no natural "back" page to name. */
+  cancelHref?: string;
 }) {
   const [state, formAction] = useActionState(action, {} as PersonFormState);
 
@@ -108,34 +113,7 @@ export function PersonForm({
         </>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="religion">Религия</Label>
-          <Input
-            id="religion"
-            name="religion"
-            defaultValue={person?.religion ?? ""}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="nationality">Национальность</Label>
-          <Input
-            id="nationality"
-            name="nationality"
-            defaultValue={person?.nationality ?? ""}
-          />
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="description">Описание</Label>
-        <Textarea
-          id="description"
-          name="description"
-          rows={4}
-          defaultValue={person?.description ?? ""}
-        />
-      </div>
+      <PersonMiscFields person={person} />
 
       <PrivacyLevelSelect defaultValue={person?.privacyLevel ?? "family"} />
 
@@ -147,7 +125,14 @@ export function PersonForm({
           </p>
         ))}
 
-      <SubmitButton label={submitLabel} pendingLabel={submitPendingLabel} />
+      <div className="flex items-center gap-3">
+        <SubmitButton label={submitLabel} pendingLabel={submitPendingLabel} />
+        {cancelHref && (
+          <LinkButton href={cancelHref} variant="ghost">
+            Отмена
+          </LinkButton>
+        )}
+      </div>
     </form>
   );
 }

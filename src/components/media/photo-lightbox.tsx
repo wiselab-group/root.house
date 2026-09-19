@@ -99,6 +99,7 @@ export function PhotoLightbox({
               size="icon-sm"
               className="rounded-full shadow-sm"
               aria-label="Скачать фото"
+              nativeButton={false}
               render={
                 <a
                   href={`/api/media/${photo.media.id}?familyId=${familyId}&download=1`}
