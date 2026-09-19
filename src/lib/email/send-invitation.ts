@@ -44,6 +44,22 @@ export async function sendInvitationEmail(
   }
 }
 
+/** Same base-URL precedence as invitation.service.ts::buildInviteUrl — see
+ *  that function's doc comment for the AUTH_URL/NEXTAUTH_URL/VERCEL_URL/
+ *  localhost fallback reasoning. Used for the logo's absolute <img> src:
+ *  email clients fetch images over the public internet, so a relative path
+ *  or a data: URI (blocked by Gmail and others) won't render. */
+function getBaseUrl(): string {
+  const base =
+    process.env.AUTH_URL ??
+    process.env.NEXTAUTH_URL ??
+    (process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : undefined) ??
+    "http://localhost:3000";
+  return base.replace(/\/$/, "");
+}
+
 /**
  * Colors below are hex snapshots of globals.css's light-theme OKLCH tokens
  * (--background/--card/--primary/--muted/--border) — email clients don't
@@ -55,6 +71,7 @@ function renderInvitationEmailHtml(input: SendInvitationEmailInput): string {
   const familyName = escapeHtml(input.familyName);
   const roleLabel = escapeHtml(ROLE_LABELS[input.role]);
   const inviteUrl = escapeHtml(input.inviteUrl);
+  const logoUrl = escapeHtml(`${getBaseUrl()}/email/logo-house.svg`);
   const greeting = input.inviterName
     ? `<strong>${escapeHtml(input.inviterName)}</strong> приглашает вас присоединиться к архиву своей семьи на Root house — общему дереву, историям и фотографиям.`
     : `Вас пригласили присоединиться к семейному архиву на Root house — общему дереву, историям и фотографиям.`;
@@ -72,7 +89,7 @@ function renderInvitationEmailHtml(input: SendInvitationEmailInput): string {
                 <table role="presentation" cellpadding="0" cellspacing="0">
                   <tr>
                     <td style="background:rgba(178,81,30,0.1);border-radius:8px;width:32px;height:32px;text-align:center;vertical-align:middle;">
-                      <img src="${escapeHtml(iconDataUri)}" width="18" height="18" alt="" style="display:inline-block;vertical-align:middle;" />
+                      <img src="${logoUrl}" width="18" height="18" alt="Root house" style="display:inline-block;vertical-align:middle;" />
                     </td>
                     <td style="padding-left:8px;font-family:Georgia,'Times New Roman',serif;font-size:20px;font-weight:500;color:#312620;">
                       Root house
@@ -134,15 +151,6 @@ function renderInvitationEmailHtml(input: SendInvitationEmailInput): string {
   </body>
 </html>`;
 }
-
-/** Inlined lucide "house" glyph (same path as BrandMark's icon), terracotta
- *  stroke — data URI so it renders without relying on remote asset hosting
- *  in email clients that block external images by default. */
-const iconDataUri =
-  "data:image/svg+xml;utf8," +
-  encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#b2511e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`,
-  );
 
 function escapeHtml(value: string): string {
   const map: Record<string, string> = {
