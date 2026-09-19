@@ -130,14 +130,17 @@ export function CompactCardBody({
       </div>
       <div
         className={cn(
-          // Floating white name/years pill, per the reference screenshot —
-          // wider than the photo/frame. mt-0 (no overlap) — every negative
-          // margin tried (-mt-4, then -mt-2, then -mt-1) kept crowding the
-          // pill's own text under the photo frame above it (real bug the
-          // user caught repeatedly: the name kept reading as cramped/cut
-          // off), so the frame and pill now sit flush against each other
-          // instead of overlapping.
-          "relative min-w-0 max-w-[calc(100%+1.5rem)] rounded-lg bg-card px-3 py-2 shadow-md",
+          // Name/years pill, wider than the photo/frame. mt-0 (no overlap) —
+          // every negative margin tried (-mt-4, then -mt-2, then -mt-1) kept
+          // crowding the pill's own text under the photo frame above it
+          // (real bug the user caught repeatedly: the name kept reading as
+          // cramped/cut off), so the frame and pill now sit flush against
+          // each other instead of overlapping. No bg/shadow (2026-09-19,
+          // removed per direct user request) — plain text directly on the
+          // canvas; the reference screenshot's floating white card look may
+          // come back later, don't reintroduce bg-card/shadow-md without a
+          // new explicit request.
+          "relative min-w-0 max-w-[calc(100%+1.5rem)] rounded-lg px-3 py-2",
         )}
       >
         <p
