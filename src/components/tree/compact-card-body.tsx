@@ -46,29 +46,35 @@ export function CompactCardBody({
   // At rest the matte frame is just the card's own background tone (reads
   // as "cut out of the page", per the reference) — it only becomes a
   // visible color once this card is in one of these three "look at me"
-  // states. All three (isOpen, isTraced, isSelected) use the SAME
-  // --tree-card-ring terracotta here — a deliberate, explicit exception to
-  // the tree's usual sage/terracotta split (buildCardFrameClassName's own
-  // doc comment: sage = "who you're looking at right now" / isOpen,
-  // terracotta = "what you selected/traced"), scoped to ONLY this compact
-  // card style's matte frame, per direct user request (2026-09-18): sage
-  // read as visually jarring here against this style's warm terracotta-only
-  // palette. Portrait's own card frame (person-node-parts.tsx) keeps the
-  // original sage-for-isOpen split untouched. The tree's focus person
-  // (isFocus) is deliberately NOT one of these states — per an earlier
-  // direct user request, the focus person's card should read as a plain,
-  // unhighlighted card, not singled out with a colored frame (the layout
-  // centering it is already enough of a "this is the center" signal).
+  // states. All three (isOpen, isTraced, isSelected) use the SAME --branch
+  // tone here — the tree's own connector-line/frame-border color — rather
+  // than a distinct accent (2026-09-19, per direct user request: a lighter
+  // terracotta fill, --tree-card-ring, read as too different from the
+  // frame's own border color; --branch keeps the whole frame reading as one
+  // consistent tone when "lit up", not a colored fill inside a
+  // differently-colored outline). This is still a deliberate, explicit
+  // exception to the tree's usual sage/terracotta split
+  // (buildCardFrameClassName's own doc comment: sage = "who you're looking
+  // at right now" / isOpen, terracotta = "what you selected/traced"),
+  // scoped to ONLY this compact card style's matte frame — portrait's own
+  // card frame (person-node-parts.tsx) keeps the original sage-for-isOpen
+  // split untouched. The tree's focus person (isFocus) is deliberately NOT
+  // one of these states — per an earlier direct user request, the focus
+  // person's card should read as a plain, unhighlighted card, not singled
+  // out with a colored frame (the layout centering it is already enough of
+  // a "this is the center" signal). --tree-card-ring (globals.css) is kept
+  // defined but currently unused here — this token's own value has already
+  // flip-flopped several times (see its own history in globals.css), don't
+  // delete it on the assumption this is final.
   const frameColor =
-    isOpen || isTraced || isSelected
-      ? "var(--tree-card-ring)"
-      : "var(--background)";
-  // The frame's border is ALWAYS --branch — the same color the tree's own
-  // connector lines are drawn in (relationship-edge.tsx/union-child-edge.tsx)
-  // — regardless of frameColor/state, per direct user request: the border
-  // must stay visible as a distinct outline even when the fill switches to
-  // --tree-card-ring, not disappear into the fill the way it briefly did
-  // when the border color tracked frameColor 1:1.
+    isOpen || isTraced || isSelected ? "var(--branch)" : "var(--background)";
+  // The frame's border is ALWAYS --branch too — same tone as the fill above
+  // when lit up, and the tree's own connector lines
+  // (relationship-edge.tsx/union-child-edge.tsx) — regardless of
+  // frameColor/state, per direct user request: the border must stay visible
+  // as a distinct outline even when the fill switches color, not disappear
+  // into the fill the way it briefly did when the border color used to
+  // track frameColor 1:1.
   const frameBorderColor = "var(--branch)";
 
   return (

@@ -1,6 +1,11 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/** Matches families/page.tsx's container + heading + family-row list shape. */
+/** Matches families/page.tsx's container + heading + family-row list shape.
+ *  Row dividers use divide-muted/border-muted (not the usual border-border)
+ *  to match the Skeleton blocks' own bg-muted color (2026-09-19, per direct
+ *  user request) — while loading, every placeholder shape (blocks and the
+ *  lines between them) should read as one consistent tone, not two
+ *  different grays. */
 export default function FamiliesLoading() {
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-12 px-6 py-12 sm:py-16">
@@ -12,7 +17,7 @@ export default function FamiliesLoading() {
         <Skeleton className="h-10 w-full sm:w-40" />
       </div>
 
-      <ul className="flex flex-col divide-y divide-border border-y border-border">
+      <ul className="flex flex-col divide-y divide-muted border-y border-muted">
         {Array.from({ length: 3 }).map((_, index) => (
           <li
             key={index}
