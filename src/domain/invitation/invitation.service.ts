@@ -84,14 +84,20 @@ export async function createInvitation(
     Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000,
   );
 
-  const invitation = await insertInvitation({
-    familyId: input.familyId,
-    email: input.email,
-    role: input.role,
-    tokenHash,
-    invitedBy: input.invitedBy,
-    expiresAt,
-  });
+  const [invitation, inviter] = await Promise.all([
+    insertInvitation({
+      familyId: input.familyId,
+      email: input.email,
+      role: input.role,
+      tokenHash,
+      invitedBy: input.invitedBy,
+      expiresAt,
+    }),
+    db.query.users.findFirst({
+      where: eq(users.id, input.invitedBy),
+      columns: { name: true },
+    }),
+  ]);
 
   const inviteUrl = buildInviteUrl(token);
 
@@ -99,6 +105,8 @@ export async function createInvitation(
   await sendInvitationEmail({
     to: input.email,
     familyName: input.familyName,
+    inviterName: inviter?.name ?? "",
+    role: input.role,
     inviteUrl,
   });
 
