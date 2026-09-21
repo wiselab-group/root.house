@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
+import { canDelete, canEdit } from "@/domain/family/permissions";
 import {
   getVisibleEvent,
   getParticipantsWithNames,
@@ -12,9 +13,11 @@ import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 import { formatPartialDate } from "@/domain/shared/partial-date";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { Badge } from "@/components/ui/badge";
+import { LinkButton } from "@/components/ui/link-button";
 import { ProfileSection } from "@/components/person/profile-section";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
+import { DeleteEventButton } from "@/components/event/delete-event-button";
 
 export async function generateMetadata({
   params,
@@ -58,6 +61,14 @@ export default async function EventDetailsPage({
   // Person whose timeline this was opened from) over the bare "Люди" list —
   // more useful than a fallback that drops the context entirely.
   const subject = participants[0];
+
+  const actingMember = { userId: session.user.id, role: member.role };
+  const ownership = {
+    privacyLevel: event.privacyLevel,
+    createdBy: event.createdBy ?? "",
+  };
+  const showEdit = canEdit(actingMember, ownership);
+  const showDelete = canDelete(actingMember, ownership);
   const breadcrumbItems = [
     { label: "Мои семьи", href: "/families" },
     { label: family?.name ?? slug, href: `/families/${slug}` },
@@ -75,18 +86,43 @@ export default async function EventDetailsPage({
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12 sm:py-16">
       <SetBreadcrumbs items={breadcrumbItems} />
-      <div className="flex flex-col gap-2">
-        <Badge variant="secondary" className="w-fit">
-          {EVENT_TYPE_LABELS[event.type]}
-        </Badge>
-        <h1 className="font-heading text-3xl font-medium tracking-tight text-balance">
-          {event.title}
-        </h1>
-        <p className="text-muted-foreground">
-          {formatPartialDate(event.date)}
-          {event.endDate && ` — ${formatPartialDate(event.endDate)}`}
-          {place && ` · ${place.name}`}
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-2">
+          <Badge variant="secondary" className="w-fit">
+            {EVENT_TYPE_LABELS[event.type]}
+          </Badge>
+          <h1 className="font-heading text-3xl font-medium tracking-tight text-balance">
+            {event.title}
+          </h1>
+          <p className="text-muted-foreground">
+            {formatPartialDate(event.date)}
+            {event.endDate && ` — ${formatPartialDate(event.endDate)}`}
+            {place && ` · ${place.name}`}
+          </p>
+        </div>
+        {(showEdit || showDelete) && (
+          <div className="flex gap-2">
+            {showEdit && (
+              <LinkButton
+                variant="outline"
+                size="sm"
+                href={`/families/${slug}/events/${eventId}/edit`}
+                className="flex-1 sm:flex-none"
+              >
+                Редактировать
+              </LinkButton>
+            )}
+            {showDelete && subject && (
+              <DeleteEventButton
+                familyId={familyId}
+                personId={subject.personId}
+                eventId={eventId}
+                eventTitle={event.title}
+                className="flex-1 sm:flex-none"
+              />
+            )}
+          </div>
+        )}
       </div>
 
       {event.description && (

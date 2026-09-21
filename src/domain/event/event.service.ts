@@ -14,8 +14,11 @@ import {
   getEventById,
   getEventsForPerson,
   getParticipantsOf,
+  replaceParticipants,
+  updateEvent,
   type CreateEventData,
   type EventRecord,
+  type UpdateEventData,
 } from "./event.repository";
 
 export type { EventRecord };
@@ -25,6 +28,10 @@ export interface EventParticipantWithName {
   /** null when the participant Person row no longer resolves (e.g. deleted) — no profile link to build. */
   slug: string | null;
   name: string;
+  /** Raw role key (e.g. "spouse"), as stored in event_participants.role —
+   *  needed by EditEventForm to preselect the right <option value>, distinct
+   *  from roleLabel below (which is display-only, already localized). */
+  role: string;
   roleLabel: string;
 }
 
@@ -41,6 +48,7 @@ export async function getParticipantsWithNames(
         personId: p.personId,
         slug: person?.slug ?? null,
         name: person ? personDisplayName(person) : "Неизвестно",
+        role: p.role,
         roleLabel: EVENT_ROLE_LABELS[p.role] ?? p.role,
       };
     }),
@@ -92,6 +100,43 @@ export async function removeEvent(
   }
 
   return deleted;
+}
+
+export interface EditEventInput extends UpdateEventData {
+  /** Replaces the event's full participant list when present — omit to
+   *  leave participants untouched (e.g. a field-only edit). */
+  participants?: Array<{ personId: string; role: string }>;
+}
+
+/** Edits an Event's fields and, if given, replaces its participant list —
+ *  same patch-then-log shape as person.service.ts::editPerson. */
+export async function editEvent(
+  eventId: string,
+  familyId: string,
+  actorId: string,
+  data: EditEventInput,
+): Promise<boolean> {
+  const { participants, ...patch } = data;
+  const updated = await updateEvent(eventId, familyId, patch);
+  if (!updated) return false;
+
+  if (participants !== undefined) {
+    await replaceParticipants(eventId, participants);
+  }
+
+  const event = await getEvent(eventId, familyId);
+  if (event) {
+    await logActivity({
+      familyId,
+      actorId,
+      action: "update",
+      entityType: "event",
+      entityId: eventId,
+      entityLabel: event.title,
+    });
+  }
+
+  return true;
 }
 
 /** Filters a list of Events down to what `member` may see per the PRIVATE

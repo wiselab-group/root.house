@@ -1,14 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { ForbiddenError } from "@/domain/family/errors";
-import { canCreate, canDelete } from "@/domain/family/permissions";
+import { canCreate, canDelete, canEdit } from "@/domain/family/permissions";
 import { getFamilySlugById } from "@/domain/family/family.service";
 import { getPersonSlugById } from "@/domain/person/person.service";
 import { createEventSchema } from "@/lib/validation/event";
-import { addEvent, getEvent, removeEvent } from "@/domain/event/event.service";
+import {
+  addEvent,
+  editEvent,
+  getEvent,
+  removeEvent,
+} from "@/domain/event/event.service";
 import { partialDateFromFormData } from "@/domain/shared/partial-date";
 
 export interface EventFormState {
@@ -108,4 +114,81 @@ export async function deleteEventAction(
   const familySlug = await getFamilySlugById(familyId);
   const personSlug = await getPersonSlugById(personId, familyId);
   revalidatePath(`/families/${familySlug}/people/${personSlug}`);
+  redirect(`/families/${familySlug}/people/${personSlug}`);
+}
+
+/**
+ * Edits an Event's fields and, via participantPersonId/participantRole
+ * (repeated form fields, matched by index — see EventParticipantsField),
+ * replaces its full participant list. Mirrors updatePersonAction's
+ * auth → canEdit → parse → call → redirect shape.
+ */
+export async function updateEventAction(
+  familyId: string,
+  eventId: string,
+  _prevState: EventFormState,
+  formData: FormData,
+): Promise<EventFormState> {
+  const session = await auth();
+  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+
+  const member = await requireFamilyAccess(
+    familyId,
+    session.user.id,
+    "contributor",
+  );
+
+  const existing = await getEvent(eventId, familyId);
+  if (!existing) return { error: "Событие не найдено." };
+  if (
+    !canEdit(
+      { userId: session.user.id, role: member.role },
+      {
+        privacyLevel: existing.privacyLevel,
+        createdBy: existing.createdBy ?? "",
+      },
+    )
+  ) {
+    return { error: "У вас нет прав на редактирование этого события." };
+  }
+
+  const parsed = createEventSchema.safeParse({
+    type: formData.get("type"),
+    title: formData.get("title"),
+    description: formData.get("description"),
+    placeId: formData.get("placeId"),
+    privacyLevel: formData.get("privacyLevel") || undefined,
+  });
+
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      fieldErrors[String(issue.path[0])] = issue.message;
+    }
+    return { fieldErrors };
+  }
+
+  const participantIds = formData.getAll("participantPersonId");
+  const participantRoles = formData.getAll("participantRole");
+  const participants = participantIds.map((id, i) => ({
+    personId: String(id),
+    role: String(participantRoles[i] ?? "participant"),
+  }));
+
+  const updated = await editEvent(eventId, familyId, session.user.id, {
+    type: parsed.data.type,
+    title: parsed.data.title,
+    description: parsed.data.description || null,
+    date: partialDateFromFormData(formData, "date") ?? null,
+    endDate: partialDateFromFormData(formData, "endDate") ?? null,
+    placeId: parsed.data.placeId || null,
+    privacyLevel: parsed.data.privacyLevel,
+    participants,
+  });
+
+  if (!updated) return { error: "Событие не найдено." };
+
+  const familySlug = await getFamilySlugById(familyId);
+  revalidatePath(`/families/${familySlug}/events/${eventId}`);
+  redirect(`/families/${familySlug}/events/${eventId}`);
 }

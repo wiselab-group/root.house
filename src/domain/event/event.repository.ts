@@ -184,3 +184,72 @@ export async function deleteEvent(
     .returning({ id: events.id });
   return result.length > 0;
 }
+
+export type UpdateEventData = Partial<
+  Omit<CreateEventData, "familyId" | "createdBy" | "participants">
+>;
+
+/** Partial update, same pattern as person.repository.ts::updatePerson — only
+ *  patches columns present in `data`, scoped by familyId in the WHERE clause. */
+export async function updateEvent(
+  eventId: string,
+  familyId: string,
+  data: UpdateEventData,
+): Promise<boolean> {
+  const patch: Partial<typeof events.$inferInsert> = {};
+
+  if (data.type !== undefined) patch.type = data.type;
+  if (data.title !== undefined) patch.title = data.title;
+  if (data.description !== undefined) patch.description = data.description;
+  if (data.placeId !== undefined) patch.placeId = data.placeId;
+  if (data.privacyLevel !== undefined) patch.privacyLevel = data.privacyLevel;
+
+  if (data.date !== undefined) {
+    const cols = toColumns(data.date);
+    patch.dateYear = cols.year;
+    patch.dateMonth = cols.month;
+    patch.dateDay = cols.day;
+    patch.datePrecision = cols.precision;
+    patch.dateApproximate = cols.approximate;
+  }
+  if (data.endDate !== undefined) {
+    const cols = toColumns(data.endDate);
+    patch.endDateYear = cols.year;
+    patch.endDateMonth = cols.month;
+    patch.endDateDay = cols.day;
+    patch.endDatePrecision = cols.precision;
+    patch.endDateApproximate = cols.approximate;
+  }
+
+  const result = await db
+    .update(events)
+    .set(patch)
+    .where(and(eq(events.id, eventId), eq(events.familyId, familyId)))
+    .returning({ id: events.id });
+  return result.length > 0;
+}
+
+/** Replaces an Event's full participant list — delete-then-reinsert rather
+ *  than diffing, since the set is always small (a handful of people) and
+ *  this avoids tracking which rows changed. Doesn't re-check familyId in its
+ *  own WHERE (the join table has no familyId column) — the caller must have
+ *  already verified the event belongs to `familyId` (event.service.ts::editEvent
+ *  does this via updateEvent's own scoped WHERE succeeding first). */
+export async function replaceParticipants(
+  eventId: string,
+  participants: Array<{ personId: string; role: string }>,
+): Promise<void> {
+  await db
+    .delete(eventParticipants)
+    .where(eq(eventParticipants.eventId, eventId));
+
+  if (participants.length > 0) {
+    await db.insert(eventParticipants).values(
+      participants.map((p) => ({
+        eventId,
+        personId: p.personId,
+        role: p.role,
+      })),
+    );
+  }
+}
