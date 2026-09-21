@@ -2,6 +2,7 @@
 
 import { useOptimistic } from "react";
 import { DeleteStoryButton } from "@/components/forms/delete-story-button";
+import { StoryBody } from "./story-body";
 import type { StoryRecord } from "@/domain/story/story.service";
 
 /**
@@ -35,9 +36,7 @@ export function PersonStoriesList({
           className="border-b border-border pb-4 last:border-0 last:pb-0"
         >
           <h3 className="font-medium">{story.title}</h3>
-          <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
-            {story.body}
-          </p>
+          <StoryBody body={story.body} />
           {story.canDelete && (
             <div className="mt-1">
               <DeleteStoryButton
