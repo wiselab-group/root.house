@@ -40,7 +40,11 @@ export function EventParticipantRow({
       >
         <XIcon className="size-4" />
       </button>
-      <input type="hidden" name="participantPersonId" value={participant.personId} />
+      <input
+        type="hidden"
+        name="participantPersonId"
+        value={participant.personId}
+      />
       <input type="hidden" name="participantRole" value={participant.role} />
     </li>
   );

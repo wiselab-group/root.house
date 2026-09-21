@@ -8,6 +8,16 @@ import { listPlaces } from "@/domain/place/place.service";
 import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 import { formatPartialDate } from "@/domain/shared/partial-date";
 import { Badge } from "@/components/ui/badge";
+import {
+  Timeline,
+  TimelineContent,
+  TimelineDate,
+  TimelineHeader,
+  TimelineIndicator,
+  TimelineItem,
+  TimelineSeparator,
+  TimelineTitle,
+} from "@/components/reui/timeline";
 import { AddEventForm } from "@/components/forms/add-event-form";
 import { CollapsibleForm } from "@/components/forms/collapsible-form";
 import { ProfileSection } from "./profile-section";
@@ -48,43 +58,47 @@ export async function PersonTimeline({
         {timeline.length === 0 ? (
           <p className="text-sm text-muted-foreground">Событий пока нет.</p>
         ) : (
-          <ol className="flex flex-col gap-3 border-l border-border pl-4">
-            {timeline.map((event) => {
-              const body = (
-                <>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">
-                      {EVENT_TYPE_LABELS[event.type]}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {formatPartialDate(event.date)}
-                    </span>
-                  </div>
+          <Timeline defaultValue={timeline.length}>
+            {timeline.map((event, index) => {
+              const title = (
+                <span className="flex items-center gap-2">
+                  <Badge variant="secondary">
+                    {EVENT_TYPE_LABELS[event.type]}
+                  </Badge>
                   <span className="text-sm font-medium">{event.title}</span>
-                  {event.placeId && placeNameById.has(event.placeId) && (
-                    <span className="text-xs text-muted-foreground">
-                      {placeNameById.get(event.placeId)}
-                    </span>
-                  )}
-                </>
+                </span>
               );
 
               return (
-                <li key={event.id}>
-                  {isSyntheticEventId(event.id) ? (
-                    <div className="flex flex-col gap-0.5">{body}</div>
-                  ) : (
-                    <Link
-                      href={`/families/${familySlug}/events/${event.id}`}
-                      className="flex flex-col gap-0.5 hover:opacity-80"
-                    >
-                      {body}
-                    </Link>
+                <TimelineItem key={event.id} step={index + 1}>
+                  <TimelineHeader>
+                    <TimelineSeparator />
+                    <TimelineIndicator />
+                    <TimelineDate>{formatPartialDate(event.date)}</TimelineDate>
+                    {isSyntheticEventId(event.id) ? (
+                      <TimelineTitle>{title}</TimelineTitle>
+                    ) : (
+                      <TimelineTitle
+                        render={
+                          <Link
+                            href={`/families/${familySlug}/events/${event.id}`}
+                            className="hover:opacity-80"
+                          />
+                        }
+                      >
+                        {title}
+                      </TimelineTitle>
+                    )}
+                  </TimelineHeader>
+                  {event.placeId && placeNameById.has(event.placeId) && (
+                    <TimelineContent>
+                      {placeNameById.get(event.placeId)}
+                    </TimelineContent>
                   )}
-                </li>
+                </TimelineItem>
               );
             })}
-          </ol>
+          </Timeline>
         )}
 
         {canContribute && (

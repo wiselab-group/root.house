@@ -75,8 +75,8 @@ export function PartnershipDateDialogContent({
       <DialogHeader>
         <DialogTitle>{label}</DialogTitle>
         <DialogDescription>
-          Необязательно — оставьте пустым, если дата неизвестна. Если
-          указываете месяц или день, год обязателен.
+          Необязательно — оставьте пустым, если дата неизвестна. Если указываете
+          месяц или день, год обязателен.
         </DialogDescription>
       </DialogHeader>
       <form
