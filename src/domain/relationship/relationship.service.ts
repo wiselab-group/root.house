@@ -28,6 +28,7 @@ import {
   insertParentChild,
   insertPartnership,
   setPartnershipCurrent,
+  updatePartnershipStartDate,
   type ParentChildRecord,
   type PartnershipRecord,
 } from "./relationship.repository";
@@ -286,6 +287,20 @@ export async function setPartnershipStatus(
   isCurrent: boolean,
 ): Promise<boolean> {
   return setPartnershipCurrent(id, familyId, isCurrent);
+}
+
+/**
+ * Sets (or clears) a partnership's start date after creation — for
+ * partnerships added before this field existed in the UI, or where the date
+ * wasn't known at the time. Same thin pass-through shape as
+ * setPartnershipStatus.
+ */
+export async function editPartnershipStartDate(
+  id: string,
+  familyId: string,
+  startDate: PartialDate | null,
+): Promise<boolean> {
+  return updatePartnershipStartDate(id, familyId, startDate);
 }
 
 export interface FamilyOfPerson {

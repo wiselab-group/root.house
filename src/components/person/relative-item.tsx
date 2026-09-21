@@ -1,3 +1,5 @@
+import type { PartialDate } from "@/domain/shared/partial-date";
+
 export interface RelativeItem {
   id: string;
   slug: string;
@@ -10,4 +12,6 @@ export interface RelativeItem {
   relationshipId?: string;
   /** partnership rows only — whether this marriage/union is still current (see setPartnershipStatus). */
   isCurrent?: boolean;
+  /** partnership rows only — when the union started, if known (see editPartnershipStartDate). */
+  startDate?: PartialDate | null;
 }

@@ -12,6 +12,7 @@ import {
 import {
   addParentChild,
   addPartnership,
+  editPartnershipStartDate,
   removeParentChild,
   removePartnership,
   setPartnershipStatus,
@@ -220,4 +221,50 @@ export async function setPartnershipStatusAction(
   revalidatePath(`/families/${familySlug}/people/${personSlug}`);
   revalidatePath(`/families/${familySlug}/people/${otherPersonSlug}`);
   revalidatePath(`/families/${familySlug}/tree`);
+}
+
+export interface UpdatePartnershipDateFormState {
+  error?: string;
+}
+
+/**
+ * Sets (or clears) an existing partnership's start date — the edit path for
+ * partnerships created before this field existed in the UI (see
+ * add-relative-form.tsx's spouse flow, which only sets it at creation time)
+ * or where it simply wasn't known yet. Same year-required-if-any-part-given
+ * validation as creation (parsePartnershipStartDate/addPartnershipSchema).
+ */
+export async function updatePartnershipDateAction(
+  familyId: string,
+  personId: string,
+  otherPersonId: string,
+  relationshipId: string,
+  _prevState: UpdatePartnershipDateFormState,
+  formData: FormData,
+): Promise<UpdatePartnershipDateFormState> {
+  const session = await auth();
+  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+
+  await requireFamilyAccess(familyId, session.user.id, "editor");
+
+  let startDate: PartialDate | null;
+  try {
+    startDate = parsePartnershipStartDate(formData);
+  } catch (error) {
+    if (error instanceof RelationshipValidationError) {
+      return { error: error.message };
+    }
+    throw error;
+  }
+
+  await editPartnershipStartDate(relationshipId, familyId, startDate);
+
+  const familySlug = await getFamilySlugById(familyId);
+  const [personSlug, otherPersonSlug] = await Promise.all([
+    getPersonSlugById(personId, familyId),
+    getPersonSlugById(otherPersonId, familyId),
+  ]);
+  revalidatePath(`/families/${familySlug}/people/${personSlug}`);
+  revalidatePath(`/families/${familySlug}/people/${otherPersonSlug}`);
+  return {};
 }

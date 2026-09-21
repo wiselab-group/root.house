@@ -3,6 +3,7 @@ import { personDisplayName } from "@/domain/person/display-name";
 import { PersonAvatar } from "./person-avatar";
 import { RemoveRelationshipButton } from "@/components/forms/remove-relationship-button";
 import { PartnershipStatusToggle } from "@/components/forms/partnership-status-toggle";
+import { PartnershipDateEditButton } from "@/components/forms/partnership-date-edit-button";
 import type { RelativeItem } from "./relative-item";
 
 /**
@@ -84,15 +85,25 @@ export function RelativeListItem({
         // control cluster.
         <span className="relative z-10 flex items-center -space-x-1">
           {relationshipKind === "partnership" && (
-            <PartnershipStatusToggle
-              familyId={familyId}
-              personId={personId}
-              otherPersonId={person.id}
-              relationshipId={person.relationshipId}
-              isCurrent={person.isCurrent ?? true}
-              relativeName={personDisplayName(person)}
-              onToggled={onToggleStatus}
-            />
+            <>
+              <PartnershipDateEditButton
+                familyId={familyId}
+                personId={personId}
+                otherPersonId={person.id}
+                relationshipId={person.relationshipId}
+                startDate={person.startDate}
+                relativeName={personDisplayName(person)}
+              />
+              <PartnershipStatusToggle
+                familyId={familyId}
+                personId={personId}
+                otherPersonId={person.id}
+                relationshipId={person.relationshipId}
+                isCurrent={person.isCurrent ?? true}
+                relativeName={personDisplayName(person)}
+                onToggled={onToggleStatus}
+              />
+            </>
           )}
           <RemoveRelationshipButton
             familyId={familyId}

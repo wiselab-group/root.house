@@ -265,6 +265,37 @@ export async function setPartnershipCurrent(
   return result.length > 0;
 }
 
+/**
+ * Sets (or clears) a partnership's start date — the one field
+ * setPartnershipCurrent's own doc comment flagged as "out of scope for now."
+ * Kept as its own narrow function rather than a general updatePartnership,
+ * matching setPartnershipCurrent's precedent: one function per UI action.
+ */
+export async function updatePartnershipStartDate(
+  id: string,
+  familyId: string,
+  startDate: PartialDate | null,
+): Promise<boolean> {
+  const cols = toColumns(startDate);
+  const result = await db
+    .update(relationshipsPartnership)
+    .set({
+      startDateYear: cols.year,
+      startDateMonth: cols.month,
+      startDateDay: cols.day,
+      startDatePrecision: cols.precision,
+      startDateApproximate: cols.approximate,
+    })
+    .where(
+      and(
+        eq(relationshipsPartnership.id, id),
+        eq(relationshipsPartnership.familyId, familyId),
+      ),
+    )
+    .returning({ id: relationshipsPartnership.id });
+  return result.length > 0;
+}
+
 export async function deletePartnership(
   id: string,
   familyId: string,

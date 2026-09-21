@@ -4,6 +4,7 @@ import { AddRelativePanel } from "@/components/forms/add-relative-panel";
 import { ProfileSection } from "./profile-section";
 import { RelativeGroup } from "./relative-group";
 import type { RelativeItem } from "./relative-item";
+import type { PartialDate } from "@/domain/shared/partial-date";
 
 /**
  * Renders a Person's parents/spouses/children/siblings plus inline
@@ -33,10 +34,11 @@ export async function PersonFamilyPanel({
     relatedPersonId: string,
     relationshipId: string,
     isCurrent?: boolean,
+    startDate?: PartialDate | null,
   ): RelativeItem | null => {
     const person = peopleById.get(relatedPersonId);
     if (!person) return null;
-    return { ...person, relationshipId, isCurrent };
+    return { ...person, relationshipId, isCurrent, startDate };
   };
 
   const parents = family.parents
@@ -51,6 +53,7 @@ export async function PersonFamilyPanel({
         r.person1Id === personId ? r.person2Id : r.person1Id,
         r.id,
         r.isCurrent,
+        r.startDate,
       ),
     )
     .filter((p) => p != null);
