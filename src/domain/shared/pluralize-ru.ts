@@ -30,3 +30,13 @@ export function photoCountLabel(count: number): string {
 export function placeCountLabel(count: number): string {
   return `${count} ${pluralizeRu(count, "место", "места", "мест")}`;
 }
+
+/** "1 история" / "2 истории" / "5 историй". */
+export function storyCountLabel(count: number): string {
+  return `${count} ${pluralizeRu(count, "история", "истории", "историй")}`;
+}
+
+/** "1 событие" / "2 события" / "5 событий". */
+export function eventCountLabel(count: number): string {
+  return `${count} ${pluralizeRu(count, "событие", "события", "событий")}`;
+}

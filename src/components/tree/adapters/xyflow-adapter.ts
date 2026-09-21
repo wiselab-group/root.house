@@ -245,20 +245,19 @@ const PORTRAIT_Y_SPACING = 260;
 // 2026-09-18 v2 restyle: a thick matte frame around the photo, FRAME_SIZE
 // tall, with the name/years pill sitting flush below it — no overlap, see
 // compact-card-body.tsx's own comment on why the overlap approach was
-// dropped) measures ~166px tall with no archive indicators, ~191px with the
-// ArchiveIndicators row showing (Phase 1 "Tree as Map of the Family
-// Archive" — Playwright getBoundingClientRect on a real card with non-zero
-// photo/story counts, 2026-09-21). Height stays the same regardless of how
-// many of the 3 indicator types are non-zero (photo/story/event sit on one
-// row, wrapping never happens at this card width) — 191 covers the worst
-// case. Re-measure and update if PHOTO_FRAME_PADDING, the pill's own py-*
-// value, or ArchiveIndicators' own sizing changes again.
+// dropped) measures ~166px tall (Playwright getBoundingClientRect on the
+// rendered DOM) — re-measure and update if PHOTO_FRAME_PADDING or the
+// pill's own py-* value change again. Phase 1 "Tree as Map of the Family
+// Archive" archive counts (PersonArchiveSummary) deliberately do NOT show
+// on the card itself — they live in the click popover only (see
+// person-node-popover-actions.tsx / archive-summary-line.tsx) — so this
+// card-height constant is unaffected by them.
 const NODE_DIMENSIONS: Record<
   TreeCardStyle,
   { width: number; height: number }
 > = {
-  compact: { width: 160, height: 191 },
-  portrait: { width: 160, height: 236 },
+  compact: { width: 160, height: 166 },
+  portrait: { width: 160, height: 220 },
 };
 
 /**

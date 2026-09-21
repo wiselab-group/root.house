@@ -24,16 +24,19 @@ import {
   EMPTY_ARCHIVE_SUMMARY,
 } from "./archive-summary";
 
-/** The rows getFocusTreeLayout/getRawTreeGraph both need — kept as one
- *  function so the two callers can never drift out of sync with each other
- *  (see getRawTreeGraph's own doc comment) — including the archive-summary
- *  aggregate (archive-summary.ts) added alongside persons/relationships
- *  here for the same reason. Each of getFocusTreeLayout/getRawTreeGraph
- *  still calls this once (matching this function's pre-existing shape —
- *  the tree page's own Promise.all runs both concurrently, not serially),
- *  so archive-summary's 3 queries run twice per page load, same as
- *  persons/relationships already did before archive counts existed. */
-async function fetchTreeRows(familyId: string, viewer: ActingMember) {
+export type TreeRows = Awaited<ReturnType<typeof fetchTreeRows>>;
+
+/**
+ * Fetches everything getFocusTreeLayout/getRawTreeGraph both need —
+ * persons, both relationship tables, and the archive-summary aggregate
+ * (archive-summary.ts) — in one batch. Exported (not the two functions'
+ * own private helper) so the tree page can call it exactly ONCE per page
+ * load and hand the same TreeRows to both getFocusTreeLayout and
+ * getRawTreeGraph, instead of each independently re-fetching (which used
+ * to double every query here, archive-summary's 3 queries included — see
+ * git history around 2026-09-21 for the version that duplicated them).
+ */
+export async function fetchTreeRows(familyId: string, viewer: ActingMember) {
   const [persons, parentChildRows, partnershipRows, archiveByPersonId] =
     await Promise.all([
       listPersonsByFamily(familyId),
@@ -61,7 +64,7 @@ async function fetchTreeRows(familyId: string, viewer: ActingMember) {
       }),
       getPersonArchiveSummaries(familyId, viewer),
     ]);
-  return { persons, parentChildRows, partnershipRows, archiveByPersonId };
+  return { familyId, persons, parentChildRows, partnershipRows, archiveByPersonId };
 }
 
 export interface GetFocusTreeLayoutOptions {
@@ -87,18 +90,24 @@ export interface GetFocusTreeLayoutOptions {
  * bridges the database to the (library-agnostic) layout contract —
  * components/tree/* never touch the database directly.
  *
+ * Takes an already-fetched TreeRows rather than familyId/viewer itself —
+ * the tree page fetches once (fetchTreeRows) and passes the SAME rows to
+ * both this function and getRawTreeGraph below, so a single page load never
+ * runs the underlying queries (archive-summary's 3 aggregates included)
+ * twice. focusPersonId is the only thing that varies per call (the client-
+ * side re-focus path, buildClientTreeLayout, mirrors this split too).
+ *
  * Returns a plain TreeLayoutGraph when no filter is requested (unchanged
  * shape, so every existing caller keeps working untouched) and a
  * FilteredTreeLayoutGraph (adds matchedIds/mode) once a filter is passed.
  */
-export async function getFocusTreeLayout(
-  familyId: string,
+export function getFocusTreeLayout(
+  rows: TreeRows,
   focusPersonId: string,
-  viewer: ActingMember,
   options?: GetFocusTreeLayoutOptions,
-): Promise<TreeLayoutGraph | FilteredTreeLayoutGraph> {
-  const { persons, parentChildRows, partnershipRows, archiveByPersonId } =
-    await fetchTreeRows(familyId, viewer);
+): TreeLayoutGraph | FilteredTreeLayoutGraph {
+  const { familyId, persons, parentChildRows, partnershipRows, archiveByPersonId } =
+    rows;
 
   const { graph, personById: personRecordById } = toTreeFamilyGraph({
     persons,
@@ -148,8 +157,9 @@ export async function getFocusTreeLayout(
 }
 
 /**
- * Fetches the same rows getFocusTreeLayout does (fetchTreeRows above, so
- * the two can never drift out of sync with each other), shaped down to the
+ * Shapes the same TreeRows getFocusTreeLayout takes (see its own doc
+ * comment — both are handed the SAME fetchTreeRows result by the tree page,
+ * so the underlying queries only ever run once per page load) down to the
  * narrow, client-safe TreeClientGraphPayload (rewrite plan §7 Stage 7,
  * tree-adapter.ts's own doc comment on TreePersonClientPayload). This is
  * what lets the tree page hand a Client Component (TreeCanvas) everything
@@ -164,12 +174,9 @@ export async function getFocusTreeLayout(
  * own doc comment) rather than needing this payload to carry filter state
  * too.
  */
-export async function getRawTreeGraph(
-  familyId: string,
-  viewer: ActingMember,
-): Promise<TreeClientGraphPayload> {
+export function getRawTreeGraph(rows: TreeRows): TreeClientGraphPayload {
   const { persons, parentChildRows, partnershipRows, archiveByPersonId } =
-    await fetchTreeRows(familyId, viewer);
+    rows;
 
   return {
     persons: persons.map((p) => ({

@@ -1,7 +1,6 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
-import { ArchiveIndicators } from "./archive-indicators";
 
 /** Photo-forward tree card: a large portrait photo (or an initials tile when none is set) with name/years below — for browsing faces rather than scanning structure. */
 export function PortraitCardBody({
@@ -62,10 +61,6 @@ export function PortraitCardBody({
           {name}
         </p>
         {years && <p className="text-xs text-muted-foreground">{years}</p>}
-        <ArchiveIndicators
-          archive={data.archive}
-          className="mt-1 flex items-center gap-2 text-[0.65rem] leading-none text-muted-foreground"
-        />
       </div>
     </>
   );

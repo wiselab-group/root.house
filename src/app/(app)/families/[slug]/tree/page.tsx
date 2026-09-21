@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { listPeople } from "@/domain/person/person.service";
 import {
+  fetchTreeRows,
   getFocusTreeLayout,
   getRawTreeGraph,
 } from "@/domain/tree/tree.service";
@@ -120,24 +121,30 @@ export default async function FamilyTreePage({
       ? traceB
       : null;
 
-  const [layoutGraph, traceOutcome, rawGraph] = await Promise.all([
-    getFocusTreeLayout(familyId, focusPersonId, member, {
-      // Show the whole connected family, not just a 2-generation window
-      // around the focus person — this app's family archives are small
-      // enough that there's no reason to make the user click through
-      // generation-by-generation to see everyone.
-      ancestorGenerations: Infinity,
-      descendantGenerations: Infinity,
-      filter: isEmptyFilter(filter) ? undefined : filter,
-    }),
+  // Fetched ONCE (persons/relationships/archive-summary) and handed to both
+  // getFocusTreeLayout and getRawTreeGraph below — each used to fetch these
+  // same rows independently, which silently doubled every underlying query
+  // (archive-summary's 3 aggregates included) every page load. See
+  // tree.service.ts::fetchTreeRows's own doc comment.
+  const [rows, traceOutcome] = await Promise.all([
+    fetchTreeRows(familyId, member),
     traceAId && traceBId
       ? findRelationshipPathFor(traceAId, traceBId, familyId)
       : Promise.resolve(null),
-    // Rewrite plan §7 Stage 7: lets TreeCanvas re-run buildTreeLayout
-    // entirely client-side when the user switches focus, instead of a full
-    // page reload — see getRawTreeGraph's own doc comment.
-    getRawTreeGraph(familyId, member),
   ]);
+  const layoutGraph = getFocusTreeLayout(rows, focusPersonId, {
+    // Show the whole connected family, not just a 2-generation window
+    // around the focus person — this app's family archives are small
+    // enough that there's no reason to make the user click through
+    // generation-by-generation to see everyone.
+    ancestorGenerations: Infinity,
+    descendantGenerations: Infinity,
+    filter: isEmptyFilter(filter) ? undefined : filter,
+  });
+  // Rewrite plan §7 Stage 7: lets TreeCanvas re-run buildTreeLayout entirely
+  // client-side when the user switches focus, instead of a full page reload
+  // — see getRawTreeGraph's own doc comment.
+  const rawGraph = getRawTreeGraph(rows);
 
   const tracedGraph = applyRelationshipTrace(layoutGraph, traceOutcome);
   const peopleById = new Map(people.map((p) => [p.id, p]));
