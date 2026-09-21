@@ -5,7 +5,7 @@ import { UserIcon, FocusIcon } from "lucide-react";
 import { PopoverClose } from "@/components/ui/popover";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
 import { personLabel, yearRange } from "./person-node-parts";
-import { ArchiveSummaryLine } from "./archive-summary-line";
+import { ArchiveSummaryLine } from "@/components/person/archive-summary-line";
 
 /**
  * The card's click popover: a small identity header (name/years — same

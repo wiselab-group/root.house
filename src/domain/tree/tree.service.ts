@@ -64,7 +64,13 @@ export async function fetchTreeRows(familyId: string, viewer: ActingMember) {
       }),
       getPersonArchiveSummaries(familyId, viewer),
     ]);
-  return { familyId, persons, parentChildRows, partnershipRows, archiveByPersonId };
+  return {
+    familyId,
+    persons,
+    parentChildRows,
+    partnershipRows,
+    archiveByPersonId,
+  };
 }
 
 export interface GetFocusTreeLayoutOptions {
@@ -106,8 +112,13 @@ export function getFocusTreeLayout(
   focusPersonId: string,
   options?: GetFocusTreeLayoutOptions,
 ): TreeLayoutGraph | FilteredTreeLayoutGraph {
-  const { familyId, persons, parentChildRows, partnershipRows, archiveByPersonId } =
-    rows;
+  const {
+    familyId,
+    persons,
+    parentChildRows,
+    partnershipRows,
+    archiveByPersonId,
+  } = rows;
 
   const { graph, personById: personRecordById } = toTreeFamilyGraph({
     persons,
@@ -175,8 +186,7 @@ export function getFocusTreeLayout(
  * too.
  */
 export function getRawTreeGraph(rows: TreeRows): TreeClientGraphPayload {
-  const { persons, parentChildRows, partnershipRows, archiveByPersonId } =
-    rows;
+  const { persons, parentChildRows, partnershipRows, archiveByPersonId } = rows;
 
   return {
     persons: persons.map((p) => ({

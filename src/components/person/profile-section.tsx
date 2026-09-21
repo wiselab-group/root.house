@@ -19,6 +19,8 @@ export function ProfileSection({
   title,
   description,
   tone = "default",
+  count,
+  id,
   children,
   className,
 }: {
@@ -31,11 +33,23 @@ export function ProfileSection({
    *  зона) — border and heading shift to --destructive instead of adding a
    *  one-off structure back in just for that one section. */
   tone?: "default" | "danger";
+  /** Item count shown next to the title in --primary (terracotta, the
+   *  app's one action/emphasis color — see CLAUDE.md's DESIGN TOKENS) —
+   *  lets a visitor tell an empty section from a full one without
+   *  scrolling into it. Omitted (not "(0)") when 0 or undefined, matching
+   *  every other archive-count empty-state rule in the app (see
+   *  PersonArchiveSummary's own doc comment) — a section either earns its
+   *  count or shows none, never a bare zero. */
+  count?: number;
+  /** Anchor target for PersonArchiveOverview's jump links — undefined for
+   *  sections nothing links to yet. */
+  id?: string;
   children: ReactNode;
   className?: string;
 }) {
   return (
     <section
+      id={id}
       className={`flex flex-col gap-4 border-t pt-8 ${tone === "danger" ? "border-destructive/30" : "border-border"} ${className ?? ""}`}
     >
       <div className="flex flex-col gap-1">
@@ -43,6 +57,11 @@ export function ProfileSection({
           className={`font-heading text-xl font-medium ${tone === "danger" ? "text-destructive" : ""}`}
         >
           {title}
+          {Boolean(count) && (
+            <span className="ml-2 text-base font-normal text-primary">
+              {count}
+            </span>
+          )}
         </h2>
         {description && (
           <p className="text-sm text-muted-foreground">{description}</p>

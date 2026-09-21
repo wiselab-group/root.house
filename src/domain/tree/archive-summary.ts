@@ -163,6 +163,101 @@ export async function getPersonArchiveSummaries(
   return summaries;
 }
 
+/** Single-person counterpart to buildPersonPhotoCountQuery — same shape,
+ *  scoped to one personId, no groupBy. Exported for archive-summary.test.ts,
+ *  same reasoning as the batch builders above. */
+export function buildPersonPhotoCountForPersonQuery(
+  personId: string,
+  familyId: string,
+  viewer: ActingMember,
+) {
+  return db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(mediaPerson)
+    .innerJoin(media, eq(media.id, mediaPerson.mediaId))
+    .where(
+      and(
+        eq(mediaPerson.personId, personId),
+        eq(media.familyId, familyId),
+        eq(media.kind, "photo"),
+        notInArray(media.id, avatarMediaIdsSubquery(familyId)),
+        visibleToViewerPredicate(viewer, media.privacyLevel, media.uploadedBy),
+      ),
+    );
+}
+
+/** Single-person counterpart to buildPersonStoryCountQuery. */
+export function buildPersonStoryCountForPersonQuery(
+  personId: string,
+  familyId: string,
+  viewer: ActingMember,
+) {
+  return db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(storyPerson)
+    .innerJoin(stories, eq(stories.id, storyPerson.storyId))
+    .where(
+      and(
+        eq(storyPerson.personId, personId),
+        eq(stories.familyId, familyId),
+        visibleToViewerPredicate(
+          viewer,
+          stories.privacyLevel,
+          stories.authorId,
+        ),
+      ),
+    );
+}
+
+/** Single-person counterpart to buildPersonEventCountQuery. */
+export function buildPersonEventCountForPersonQuery(
+  personId: string,
+  familyId: string,
+  viewer: ActingMember,
+) {
+  return db
+    .select({
+      count: sql<number>`count(distinct ${eventParticipants.eventId})::int`,
+    })
+    .from(eventParticipants)
+    .innerJoin(events, eq(events.id, eventParticipants.eventId))
+    .where(
+      and(
+        eq(eventParticipants.personId, personId),
+        eq(events.familyId, familyId),
+        visibleToViewerPredicate(viewer, events.privacyLevel, events.createdBy),
+      ),
+    );
+}
+
+/**
+ * The single-Person counterpart to getPersonArchiveSummaries — same three
+ * queries, same privacy predicate, but scoped to one personId (an extra
+ * `eq(...personId, personId)` filter, no groupBy needed) instead of
+ * batching the whole family. For the Person Profile page (one person per
+ * page load — batching the whole family the way the tree does would fetch
+ * every OTHER person's counts for nothing). Never call this in a loop over
+ * multiple people on the same page; use getPersonArchiveSummaries for that
+ * (see its own doc comment on the N+1 risk).
+ */
+export async function getPersonArchiveSummary(
+  personId: string,
+  familyId: string,
+  viewer: ActingMember,
+): Promise<PersonArchiveSummary> {
+  const [[photoRow], [storyRow], [eventRow]] = await Promise.all([
+    buildPersonPhotoCountForPersonQuery(personId, familyId, viewer),
+    buildPersonStoryCountForPersonQuery(personId, familyId, viewer),
+    buildPersonEventCountForPersonQuery(personId, familyId, viewer),
+  ]);
+
+  return {
+    photoCount: photoRow?.count ?? 0,
+    storyCount: storyRow?.count ?? 0,
+    eventCount: eventRow?.count ?? 0,
+  };
+}
+
 export const EMPTY_ARCHIVE_SUMMARY: PersonArchiveSummary = {
   photoCount: 0,
   storyCount: 0,

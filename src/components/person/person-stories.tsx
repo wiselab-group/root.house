@@ -31,7 +31,7 @@ export async function PersonStories({
   const stories = filterVisibleStories(allStories, member);
 
   return (
-    <ProfileSection title="Истории">
+    <ProfileSection id="stories" title="Истории" count={stories.length}>
       <div className="flex flex-col gap-4">
         {stories.length === 0 ? (
           <p className="text-sm text-muted-foreground">Историй пока нет.</p>

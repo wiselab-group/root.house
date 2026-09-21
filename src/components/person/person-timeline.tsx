@@ -43,7 +43,7 @@ export async function PersonTimeline({
   const placeNameById = new Map(places.map((place) => [place.id, place.name]));
 
   return (
-    <ProfileSection title="Хронология">
+    <ProfileSection id="timeline" title="Хронология" count={timeline.length}>
       <div className="flex flex-col gap-4">
         {timeline.length === 0 ? (
           <p className="text-sm text-muted-foreground">Событий пока нет.</p>

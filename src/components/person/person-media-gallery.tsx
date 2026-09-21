@@ -39,7 +39,7 @@ export async function PersonMediaGallery({
   const photos = filterVisibleGalleryPhotos(allPhotos, member);
 
   return (
-    <ProfileSection title="Фотографии">
+    <ProfileSection id="photos" title="Фотографии" count={photos.length}>
       <div className="flex flex-col gap-4">
         {photos.length === 0 ? (
           <p className="text-sm text-muted-foreground">Фотографий пока нет.</p>

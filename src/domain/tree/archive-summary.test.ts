@@ -11,10 +11,14 @@ const {
   buildPersonPhotoCountQuery,
   buildPersonStoryCountQuery,
   buildPersonEventCountQuery,
+  buildPersonPhotoCountForPersonQuery,
+  buildPersonStoryCountForPersonQuery,
+  buildPersonEventCountForPersonQuery,
   EMPTY_ARCHIVE_SUMMARY,
 } = await import("./archive-summary");
 
 const FAMILY_ID = "11111111-1111-1111-1111-111111111111";
+const PERSON_ID = "44444444-4444-4444-4444-444444444444";
 const OWNER = {
   userId: "22222222-2222-2222-2222-222222222222",
   role: "owner" as const,
@@ -86,12 +90,62 @@ describe("buildPersonEventCountQuery", () => {
   });
 });
 
+describe("buildPersonPhotoCountForPersonQuery", () => {
+  it("scopes to one person (no groupBy — a single count), family, kind='photo', excludes avatars", () => {
+    const { sql, params } = buildPersonPhotoCountForPersonQuery(
+      PERSON_ID,
+      FAMILY_ID,
+      OWNER,
+    ).toSQL();
+    expect(sql).toContain('"media_person"."person_id"');
+    expect(sql).not.toContain("group by");
+    expect(params).toContain(PERSON_ID);
+  });
+
+  it("non-owner viewer still gets the own-upload predicate", () => {
+    const { sql, params } = buildPersonPhotoCountForPersonQuery(
+      PERSON_ID,
+      FAMILY_ID,
+      VIEWER,
+    ).toSQL();
+    expect(sql).toContain("!= 'private'");
+    expect(params).toContain(VIEWER.userId);
+  });
+});
+
+describe("buildPersonStoryCountForPersonQuery", () => {
+  it("scopes to one person, no groupBy", () => {
+    const { sql, params } = buildPersonStoryCountForPersonQuery(
+      PERSON_ID,
+      FAMILY_ID,
+      OWNER,
+    ).toSQL();
+    expect(sql).toContain('"story_person"."person_id"');
+    expect(sql).not.toContain("group by");
+    expect(params).toContain(PERSON_ID);
+  });
+});
+
+describe("buildPersonEventCountForPersonQuery", () => {
+  it("scopes to one person and still counts DISTINCT event_id", () => {
+    const { sql, params } = buildPersonEventCountForPersonQuery(
+      PERSON_ID,
+      FAMILY_ID,
+      OWNER,
+    ).toSQL();
+    expect(sql.toLowerCase()).toContain("count(distinct");
+    expect(sql).not.toContain("group by");
+    expect(params).toContain(PERSON_ID);
+  });
+});
+
 describe("EMPTY_ARCHIVE_SUMMARY", () => {
-  // getPersonArchiveSummaries' own merge logic (Promise.all + fold into one
-  // Map) is exercised against the real dev Neon DB, not mocked here — see
-  // archive-summary.ts's own doc comment and CLAUDE.md's tree-layout
-  // testing-strategy note on preferring real data for exactly this kind of
-  // check. Verified manually: owner sees a private photo's count, a
+  // getPersonArchiveSummaries' and getPersonArchiveSummary's own merge logic
+  // (Promise.all + fold into one Map/object) is exercised against the real
+  // dev Neon DB, not mocked here — see archive-summary.ts's own doc comment
+  // and CLAUDE.md's tree-layout testing-strategy note on preferring real
+  // data for exactly this kind of check. Verified manually (both the batch
+  // and single-person paths): owner sees a private photo's count, a
   // non-owner/non-uploader viewer does not (count drops to 0), while an
   // unrelated family-level story stays visible to both.
   it("has all-zero counts — a person with no visible archive content renders identically to one with none at all", () => {

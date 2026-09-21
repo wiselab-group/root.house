@@ -14,9 +14,11 @@ import { PersonTimeline } from "@/components/person/person-timeline";
 import { PersonMediaGallery } from "@/components/person/person-media-gallery";
 import { PersonStories } from "@/components/person/person-stories";
 import { PersonProfileHeader } from "@/components/person/person-profile-header";
+import { PersonArchiveOverview } from "@/components/person/person-archive-overview";
 import { InfoRow } from "@/components/person/person-info-row";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
+import { getPersonArchiveSummary } from "@/domain/tree/archive-summary";
 
 export async function generateMetadata({
   params,
@@ -50,11 +52,9 @@ export default async function PersonProfilePage({
 
   const familyId = await resolveFamilyIdBySlug(slug);
   const member = await requireFamilyAccess(familyId, session.user.id, "viewer");
+  const viewer = { userId: session.user.id, role: member.role };
   const personId = await resolvePersonIdBySlug(personSlug, familyId);
-  const person = await getVisiblePerson(personId, familyId, {
-    userId: session.user.id,
-    role: member.role,
-  });
+  const person = await getVisiblePerson(personId, familyId, viewer);
   if (!person) notFound();
 
   const canEdit = member.role === "owner" || member.role === "editor";
@@ -63,10 +63,11 @@ export default async function PersonProfilePage({
   // the Person itself or anyone else's past contributions.
   const canContribute = canEdit || member.role === "contributor";
 
-  const [birthPlace, deathPlace, family] = await Promise.all([
+  const [birthPlace, deathPlace, family, archive] = await Promise.all([
     person.birthPlaceId ? getPlace(person.birthPlaceId, familyId) : null,
     person.deathPlaceId ? getPlace(person.deathPlaceId, familyId) : null,
     getFamilySummary(familyId),
+    getPersonArchiveSummary(personId, familyId, viewer),
   ]);
 
   const hasBasicInfo =
@@ -103,6 +104,7 @@ export default async function PersonProfilePage({
             Запись-заглушка — данные неизвестны
           </Badge>
         )}
+        <PersonArchiveOverview archive={archive} />
       </div>
 
       {hasBasicInfo && (
@@ -137,7 +139,7 @@ export default async function PersonProfilePage({
         personId={personId}
         canEdit={canEdit}
         canContribute={canContribute}
-        member={{ userId: session.user.id, role: member.role }}
+        member={viewer}
       />
       <PersonTimeline
         familyId={familyId}
@@ -145,14 +147,14 @@ export default async function PersonProfilePage({
         personId={personId}
         canEdit={canEdit}
         canContribute={canContribute}
-        member={{ userId: session.user.id, role: member.role }}
+        member={viewer}
       />
       <PersonStories
         familyId={familyId}
         personId={personId}
         canContribute={canContribute}
         canEdit={canEdit}
-        member={{ userId: session.user.id, role: member.role }}
+        member={viewer}
       />
     </main>
   );
