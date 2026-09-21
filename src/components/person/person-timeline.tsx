@@ -1,25 +1,14 @@
-import Link from "next/link";
 import {
   getPersonTimeline,
   filterVisibleEvents,
-  isSyntheticEventId,
 } from "@/domain/event/event.service";
 import { listPlaces } from "@/domain/place/place.service";
-import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
-import { formatPartialDate } from "@/domain/shared/partial-date";
-import { Badge } from "@/components/ui/badge";
-import {
-  Timeline,
-  TimelineContent,
-  TimelineDate,
-  TimelineHeader,
-  TimelineIndicator,
-  TimelineItem,
-  TimelineSeparator,
-  TimelineTitle,
-} from "@/components/reui/timeline";
+import { getPartnershipsOf } from "@/domain/relationship/relationship.repository";
 import { AddEventForm } from "@/components/forms/add-event-form";
 import { CollapsibleForm } from "@/components/forms/collapsible-form";
+import { TimelineListItem } from "./timeline-list-item";
+import { timelineRowTargetFor } from "./timeline-target";
+import { resolveOtherPersonNames, resolveEventEditData } from "./timeline-data";
 import { ProfileSection } from "./profile-section";
 import type { ActingMember } from "@/domain/family/permissions";
 
@@ -27,6 +16,20 @@ import type { ActingMember } from "@/domain/family/permissions";
  * A Person's chronological timeline of events — server component, fetches
  * its own data so the Person Profile page doesn't have to orchestrate it
  * (same pattern as PersonFamilyPanel).
+ *
+ * Renders as a plain static list with a neutral connector rail — not a
+ * step/progress component. A person's life events are settled fact, not a
+ * roadmap with a "current step"; an earlier version used a shadcn/reui
+ * roadmap-timeline primitive (step/activeStep/data-completed semantics)
+ * forced into an all-"completed" state to fake this look, which both
+ * misused --primary (terracotta, reserved for actions/selection — see
+ * CLAUDE.md's DESIGN TOKENS) as permanent idle decoration and read as an
+ * incongruously upbeat "all steps done!" visual next to entries like
+ * Смерть/Война/Заключение. Reverted per /impeccable critique findings.
+ * Row-target resolution lives in timeline-target.ts, its supporting
+ * queries in timeline-data.ts, row rendering in
+ * timeline-list-item.tsx/timeline-row.tsx — split out to stay under the
+ * 150-line component guideline once every row became clickable.
  */
 export async function PersonTimeline({
   familyId,
@@ -45,12 +48,29 @@ export async function PersonTimeline({
   canContribute?: boolean;
   member: ActingMember;
 }) {
-  const [allTimeline, places] = await Promise.all([
+  const [allTimeline, places, partnerships] = await Promise.all([
     getPersonTimeline(personId, familyId),
     listPlaces(familyId),
+    getPartnershipsOf(personId, familyId),
   ]);
   const timeline = filterVisibleEvents(allTimeline, member);
   const placeNameById = new Map(places.map((place) => [place.id, place.name]));
+  const partnershipById = new Map(
+    partnerships.map((partnership) => [partnership.id, partnership]),
+  );
+
+  const [otherPersonNameByPartnershipId, eventEditDataById] = await Promise.all(
+    [
+      resolveOtherPersonNames({
+        timeline,
+        partnerships,
+        personId,
+        familyId,
+        canEdit,
+      }),
+      resolveEventEditData({ timeline, member, familyId, places }),
+    ],
+  );
 
   return (
     <ProfileSection id="timeline" title="Хронология" count={timeline.length}>
@@ -58,47 +78,28 @@ export async function PersonTimeline({
         {timeline.length === 0 ? (
           <p className="text-sm text-muted-foreground">Событий пока нет.</p>
         ) : (
-          <Timeline defaultValue={timeline.length}>
-            {timeline.map((event, index) => {
-              const title = (
-                <span className="flex items-center gap-2">
-                  <Badge variant="secondary">
-                    {EVENT_TYPE_LABELS[event.type]}
-                  </Badge>
-                  <span className="text-sm font-medium">{event.title}</span>
-                </span>
-              );
-
-              return (
-                <TimelineItem key={event.id} step={index + 1}>
-                  <TimelineHeader>
-                    <TimelineSeparator />
-                    <TimelineIndicator />
-                    <TimelineDate>{formatPartialDate(event.date)}</TimelineDate>
-                    {isSyntheticEventId(event.id) ? (
-                      <TimelineTitle>{title}</TimelineTitle>
-                    ) : (
-                      <TimelineTitle
-                        render={
-                          <Link
-                            href={`/families/${familySlug}/events/${event.id}`}
-                            className="hover:opacity-80"
-                          />
-                        }
-                      >
-                        {title}
-                      </TimelineTitle>
-                    )}
-                  </TimelineHeader>
-                  {event.placeId && placeNameById.has(event.placeId) && (
-                    <TimelineContent>
-                      {placeNameById.get(event.placeId)}
-                    </TimelineContent>
-                  )}
-                </TimelineItem>
-              );
-            })}
-          </Timeline>
+          <ol className="flex flex-col">
+            {timeline.map((event, index) => (
+              <TimelineListItem
+                key={event.id}
+                event={event}
+                isLast={index === timeline.length - 1}
+                placeName={
+                  event.placeId ? placeNameById.get(event.placeId) : undefined
+                }
+                target={timelineRowTargetFor({
+                  event,
+                  familyId,
+                  familySlug,
+                  personId,
+                  canEdit,
+                  partnershipById,
+                  otherPersonNameByPartnershipId,
+                  eventEditDataById,
+                })}
+              />
+            ))}
+          </ol>
         )}
 
         {canContribute && (

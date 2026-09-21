@@ -10,6 +10,7 @@ import { getFamilySlugById } from "@/domain/family/family.service";
 import {
   createPersonSchema,
   createPlaceholderPersonSchema,
+  yearRequiredPartialDateSchema,
 } from "@/lib/validation/person";
 import {
   addPerson,
@@ -20,6 +21,7 @@ import {
   removePerson,
 } from "@/domain/person/person.service";
 import { partialDateFromFormData } from "@/domain/shared/partial-date";
+import type { PartialDate } from "@/domain/shared/partial-date";
 
 export interface PersonFormState {
   error?: string;
@@ -247,4 +249,87 @@ export async function updatePersonAction(
   const personSlug = await getPersonSlugById(personId, familyId);
   revalidatePath(`/families/${familySlug}/people/${personSlug}`);
   redirect(`/families/${familySlug}/people/${personSlug}`);
+}
+
+export interface UpdatePersonDateFormState {
+  error?: string;
+}
+
+/**
+ * Sets (or clears) only birthDate/deathDate — the date-edit dialog
+ * PersonTimeline opens from a synthetic Рождение/Смерть row (see
+ * TimelineRow) needs a narrow action, not the full updatePersonAction
+ * (which requires/overwrites every Person field via createPersonSchema —
+ * unsafe to call with only a date filled in). Same
+ * year-required-if-any-part-given validation as
+ * updatePartnershipDateAction's parsePartnershipStartDate, reused here via
+ * yearRequiredPartialDateSchema directly instead of duplicating the throw/
+ * catch shape for a single-field case.
+ */
+export async function updatePersonDateAction(
+  familyId: string,
+  personId: string,
+  field: "birthDate" | "deathDate",
+  _prevState: UpdatePersonDateFormState,
+  formData: FormData,
+): Promise<UpdatePersonDateFormState> {
+  const session = await auth();
+  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+
+  const member = await requireFamilyAccess(familyId, session.user.id, "editor");
+
+  const existingPerson = await getPerson(personId, familyId);
+  if (!existingPerson) return { error: "Человек не найден." };
+  if (
+    !canEdit(
+      { userId: session.user.id, role: member.role },
+      {
+        privacyLevel: existingPerson.privacyLevel,
+        createdBy: existingPerson.createdBy,
+      },
+    )
+  ) {
+    return { error: "У вас нет прав на редактирование этой записи." };
+  }
+
+  const yearRaw = formData.get("dateYear");
+  const monthRaw = formData.get("dateMonth");
+  const dayRaw = formData.get("dateDay");
+  const isApproximate = formData.get("dateApproximate") === "on";
+
+  const parsed = yearRequiredPartialDateSchema.safeParse({
+    year: yearRaw || undefined,
+    month: monthRaw || undefined,
+    day: dayRaw || undefined,
+    isApproximate,
+  });
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues[0]?.message ?? "Некорректная дата.",
+    };
+  }
+
+  const date: PartialDate | null = parsed.data?.year
+    ? {
+        year: parsed.data.year,
+        month: parsed.data.month ?? null,
+        day: parsed.data.day ?? null,
+        precision: parsed.data.day
+          ? "exact"
+          : parsed.data.month
+            ? "exact"
+            : "year_only",
+        isApproximate: parsed.data.isApproximate ?? false,
+      }
+    : null;
+
+  const updated = await editPerson(personId, familyId, session.user.id, {
+    [field]: date,
+  });
+  if (!updated) return { error: "Человек не найден." };
+
+  const familySlug = await getFamilySlugById(familyId);
+  const personSlug = await getPersonSlugById(personId, familyId);
+  revalidatePath(`/families/${familySlug}/people/${personSlug}`);
+  return {};
 }

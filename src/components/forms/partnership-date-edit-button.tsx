@@ -8,7 +8,8 @@ import { PartnershipDateDialogContent } from "./partnership-date-dialog-content"
 import type { PartialDate } from "@/domain/shared/partial-date";
 
 /**
- * Sets/edits an existing partnership's start date — the icon sits next to
+ * Sets/edits an existing partnership's date (stored as `startDate`, shown
+ * to the user as "дата свадьбы") — the icon sits next to
  * PartnershipStatusToggle/RemoveRelationshipButton on the spouse pill.
  * Needed because many partnerships were created before add-relative-form.tsx
  * had a date field at all (or the date simply wasn't known at the time), and
@@ -30,7 +31,7 @@ export function PartnershipDateEditButton({
   relativeName: string;
 }) {
   const [open, setOpen] = useState(false);
-  const label = `Дата начала отношений с ${relativeName}`;
+  const label = `Дата свадьбы с ${relativeName}`;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

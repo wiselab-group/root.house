@@ -122,10 +122,17 @@ export async function deleteEventAction(
  * (repeated form fields, matched by index — see EventParticipantsField),
  * replaces its full participant list. Mirrors updatePersonAction's
  * auth → canEdit → parse → call → redirect shape.
+ *
+ * `redirectTo` is bound by the caller: the standalone /events/[id]/edit
+ * page binds the event's own details URL (same full-page navigation as
+ * before); TimelineRow's in-place edit dialog (opened from a Person's
+ * profile, not the event's own page) binds `null` so a save just closes
+ * the dialog and revalidates the current page instead of navigating away.
  */
 export async function updateEventAction(
   familyId: string,
   eventId: string,
+  redirectTo: string | null,
   _prevState: EventFormState,
   formData: FormData,
 ): Promise<EventFormState> {
@@ -189,6 +196,16 @@ export async function updateEventAction(
   if (!updated) return { error: "Событие не найдено." };
 
   const familySlug = await getFamilySlugById(familyId);
+  if (redirectTo === null) {
+    // subject is this event's own primary participant — the Person
+    // profile page a Хронология dialog was opened from.
+    const subjectPersonId = participants[0]?.personId;
+    if (subjectPersonId) {
+      const personSlug = await getPersonSlugById(subjectPersonId, familyId);
+      revalidatePath(`/families/${familySlug}/people/${personSlug}`);
+    }
+    return {};
+  }
   revalidatePath(`/families/${familySlug}/events/${eventId}`);
-  redirect(`/families/${familySlug}/events/${eventId}`);
+  redirect(redirectTo);
 }
