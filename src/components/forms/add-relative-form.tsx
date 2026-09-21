@@ -1,20 +1,18 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   addRelativeAction,
   type RelationshipFormState,
 } from "@/actions/relationship.actions";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { PersonRecord } from "@/domain/person/person.service";
 import { personDisplayName } from "@/domain/person/display-name";
 import { useCollapsibleFormClose } from "./collapsible-form";
 import { PersonDateFields } from "./person-date-fields";
+import { NewRelativeFields } from "./new-relative-fields";
 
 const initialState: RelationshipFormState = {};
 
@@ -58,9 +56,24 @@ export function AddRelativeForm({
   const boundAction = (state: RelationshipFormState, formData: FormData) =>
     addRelativeAction(familyId, personId, kind, state, formData);
   const [state, formAction] = useActionState(boundAction, initialState);
+  // Closes the form back to its trigger on success — same reasoning as
+  // AddEventForm's identical fix: addRelativeAction only revalidatePath()s
+  // on success (no redirect), so without this the form stayed open with
+  // stale inputs after the relative was already added.
+  const submittedRef = useRef(false);
+  useEffect(() => {
+    if (!submittedRef.current) return;
+    if (!state.error) close();
+  }, [state, close]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-3">
+    <form
+      action={(formData) => {
+        submittedRef.current = true;
+        formAction(formData);
+      }}
+      className="flex flex-col gap-3"
+    >
       <div className="flex gap-3 text-sm">
         <label className="flex items-center gap-1.5">
           <input
@@ -96,32 +109,7 @@ export function AddRelativeForm({
           ))}
         </NativeSelect>
       ) : (
-        <div className="flex flex-col gap-2">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <div className="flex flex-col gap-1">
-              <Label
-                htmlFor={`${kind}-newFirstName`}
-                className="text-xs text-muted-foreground"
-              >
-                Имя
-              </Label>
-              <Input id={`${kind}-newFirstName`} name="newFirstName" />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label
-                htmlFor={`${kind}-newLastName`}
-                className="text-xs text-muted-foreground"
-              >
-                Фамилия
-              </Label>
-              <Input id={`${kind}-newLastName`} name="newLastName" />
-            </div>
-          </div>
-          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Checkbox name="isPlaceholder" />
-            Имя неизвестно — создать запись-заглушку
-          </label>
-        </div>
+        <NewRelativeFields kind={kind} />
       )}
 
       {kind === "spouse" && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import {
   createStoryAction,
@@ -34,10 +34,22 @@ export function AddStoryForm({
   const close = useCollapsibleFormClose();
   const boundAction = createStoryAction.bind(null, familyId, personId);
   const [state, formAction] = useActionState(boundAction, initialState);
+  // Closes the form back to its trigger on success — same fix as
+  // AddEventForm/AddRelativeForm: createStoryAction only revalidatePath()s
+  // on success (no redirect), so without this the form stayed open with
+  // stale inputs after the story was already added.
+  const submittedRef = useRef(false);
+  useEffect(() => {
+    if (!submittedRef.current) return;
+    if (!state.error && !state.fieldErrors) close();
+  }, [state, close]);
 
   return (
     <form
-      action={formAction}
+      action={(formData) => {
+        submittedRef.current = true;
+        formAction(formData);
+      }}
       className="flex flex-col gap-3 rounded-md border border-border p-3"
     >
       <p className="text-sm font-medium">Добавить историю</p>

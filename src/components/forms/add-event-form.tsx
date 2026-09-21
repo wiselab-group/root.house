@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   createEventAction,
@@ -43,10 +43,25 @@ export function AddEventForm({
   const boundAction = createEventAction.bind(null, familyId, personId);
   const [state, formAction] = useActionState(boundAction, initialState);
   const [showRange, setShowRange] = useState(false);
+  // Closes the form back to its trigger button on a successful submit —
+  // without this, createEventAction's revalidatePath-only success path (no
+  // redirect, unlike e.g. updatePersonAction) left the form sitting open
+  // with its stale inputs even though the event was already created, easily
+  // mistaken for "did that actually work?" (reported by the user). Gated on
+  // submittedRef so the effect never fires on initial mount (initialState
+  // is also error-free).
+  const submittedRef = useRef(false);
+  useEffect(() => {
+    if (!submittedRef.current) return;
+    if (!state.error && !state.fieldErrors) close();
+  }, [state, close]);
 
   return (
     <form
-      action={formAction}
+      action={(formData) => {
+        submittedRef.current = true;
+        formAction(formData);
+      }}
       className="flex flex-col gap-3 rounded-md border border-border p-3"
     >
       <p className="text-sm font-medium">Добавить событие</p>
