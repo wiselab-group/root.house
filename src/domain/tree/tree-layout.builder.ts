@@ -17,6 +17,22 @@
  * graph-viz library needs.
  */
 
+/**
+ * Per-person archive content counts (Phase 1 "Tree as Map of the Family
+ * Archive") — how many photos/stories/events this person is connected to,
+ * already restricted to what the current viewer may see (see
+ * archive-summary.ts's own doc comment on the privacy rule). A field is
+ * omitted here only by all counts being 0, never by privacy — a person with
+ * zero VISIBLE items looks identical whether they have no archive content at
+ * all or only content this viewer can't see, which is the correct behavior
+ * (no signal that hidden content exists).
+ */
+export interface PersonArchiveSummary {
+  photoCount: number;
+  storyCount: number;
+  eventCount: number;
+}
+
 export interface PersonNode {
   id: string;
   slug: string;
@@ -32,6 +48,8 @@ export interface PersonNode {
   gender: "male" | "female" | "unknown";
   religion: string | null;
   nationality: string | null;
+  /** See PersonArchiveSummary's own doc comment. */
+  archive: PersonArchiveSummary;
 }
 
 export interface ParentChildEdgeInput {

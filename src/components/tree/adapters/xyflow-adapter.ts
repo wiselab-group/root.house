@@ -2,6 +2,7 @@ import type { Node, Edge } from "@xyflow/react";
 import type {
   TreeLayoutGraph,
   LayoutNode,
+  PersonArchiveSummary,
 } from "@/domain/tree/tree-layout.builder";
 import type { TreeCardStyle } from "../use-tree-card-style";
 import { FRAME_SIZE } from "../card-dimensions";
@@ -31,6 +32,13 @@ export interface PersonNodeData extends Record<string, unknown> {
   birthYear: number | null;
   deathYear: number | null;
   photoMediaId: string | null;
+  /** Phase 1 "Tree as Map of the Family Archive" — how many photos/stories/
+   *  events this person is connected to, already viewer-filtered
+   *  server-side (see archive-summary.ts's own doc comment on the privacy
+   *  rule). A person with no archive content at all gets the all-zero
+   *  summary, same as one whose only content this viewer can't see — no
+   *  distinction, by design (see PersonArchiveSummary's own doc comment). */
+  archive: PersonArchiveSummary;
   /** Already-built avatar image URL (null when photoMediaId is null) —
    *  computed once in toFlowNode below, since which endpoint serves it
    *  differs between the authenticated tree (/api/media/[id]?familyId=...,
@@ -237,15 +245,20 @@ const PORTRAIT_Y_SPACING = 260;
 // 2026-09-18 v2 restyle: a thick matte frame around the photo, FRAME_SIZE
 // tall, with the name/years pill sitting flush below it — no overlap, see
 // compact-card-body.tsx's own comment on why the overlap approach was
-// dropped) measures ~166px tall (Playwright getBoundingClientRect on the
-// rendered DOM) — re-measure and update if PHOTO_FRAME_PADDING or the
-// pill's own py-* value change again.
+// dropped) measures ~166px tall with no archive indicators, ~191px with the
+// ArchiveIndicators row showing (Phase 1 "Tree as Map of the Family
+// Archive" — Playwright getBoundingClientRect on a real card with non-zero
+// photo/story counts, 2026-09-21). Height stays the same regardless of how
+// many of the 3 indicator types are non-zero (photo/story/event sit on one
+// row, wrapping never happens at this card width) — 191 covers the worst
+// case. Re-measure and update if PHOTO_FRAME_PADDING, the pill's own py-*
+// value, or ArchiveIndicators' own sizing changes again.
 const NODE_DIMENSIONS: Record<
   TreeCardStyle,
   { width: number; height: number }
 > = {
-  compact: { width: 160, height: 166 },
-  portrait: { width: 160, height: 220 },
+  compact: { width: 160, height: 191 },
+  portrait: { width: 160, height: 236 },
 };
 
 /**
@@ -342,6 +355,7 @@ function toFlowNode(
       birthYear: node.person.birthYear,
       deathYear: node.person.deathYear,
       photoMediaId: node.person.photoMediaId,
+      archive: node.person.archive,
       photoUrl: buildPhotoUrl(node.person.photoMediaId, familyId, shareToken),
       familyId,
       familySlug,

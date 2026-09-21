@@ -2,6 +2,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
 import { PHOTO_FRAME_PADDING, PHOTO_SIZE } from "./card-dimensions";
+import { ArchiveIndicators } from "./archive-indicators";
 
 /** Photo-forward, name-below tree card: a rounded-square photo sitting
  *  inside a thick "matte" frame (matching the card's own background color
@@ -175,6 +176,10 @@ export function CompactCardBody({
         {years && (
           <p className="text-xs leading-tight text-muted-foreground">{years}</p>
         )}
+        <ArchiveIndicators
+          archive={data.archive}
+          className="mt-1 flex items-center justify-center gap-2 text-[0.65rem] leading-none text-muted-foreground"
+        />
       </div>
     </div>
   );

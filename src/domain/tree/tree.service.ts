@@ -5,6 +5,7 @@ import {
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { listPersonsByFamily } from "@/domain/person/person.repository";
+import type { ActingMember } from "@/domain/family/permissions";
 import { buildTreeLayout } from "./layout/layout";
 import {
   toTreeFamilyGraph,
@@ -18,35 +19,49 @@ import {
   type FilteredTreeLayoutGraph,
   type PersonFilter,
 } from "./tree-filter";
+import {
+  getPersonArchiveSummaries,
+  EMPTY_ARCHIVE_SUMMARY,
+} from "./archive-summary";
 
-/** The rows getFocusTreeLayout/getRawTreeGraph both need — fetched once so the two never drift out of sync with each other (see getRawTreeGraph's own doc comment). */
-async function fetchTreeRows(familyId: string) {
-  const [persons, parentChildRows, partnershipRows] = await Promise.all([
-    listPersonsByFamily(familyId),
-    db.query.relationshipsParentChild.findMany({
-      where: eq(relationshipsParentChild.familyId, familyId),
-      // parentRole added ahead of the dashed-line (adoptive/step/foster)
-      // rendering work — see rewrite plan §5.1. Not yet consumed downstream.
-      columns: { id: true, parentId: true, childId: true, parentRole: true },
-    }),
-    db.query.relationshipsPartnership.findMany({
-      where: eq(relationshipsPartnership.familyId, familyId),
-      // startDate* added ahead of chronological multi-marriage ordering —
-      // see rewrite plan §1.4/§1.6/§5.4. Not yet consumed downstream.
-      columns: {
-        id: true,
-        person1Id: true,
-        person2Id: true,
-        status: true,
-        isCurrent: true,
-        startDateYear: true,
-        startDateMonth: true,
-        startDateDay: true,
-        startDateApproximate: true,
-      },
-    }),
-  ]);
-  return { persons, parentChildRows, partnershipRows };
+/** The rows getFocusTreeLayout/getRawTreeGraph both need — kept as one
+ *  function so the two callers can never drift out of sync with each other
+ *  (see getRawTreeGraph's own doc comment) — including the archive-summary
+ *  aggregate (archive-summary.ts) added alongside persons/relationships
+ *  here for the same reason. Each of getFocusTreeLayout/getRawTreeGraph
+ *  still calls this once (matching this function's pre-existing shape —
+ *  the tree page's own Promise.all runs both concurrently, not serially),
+ *  so archive-summary's 3 queries run twice per page load, same as
+ *  persons/relationships already did before archive counts existed. */
+async function fetchTreeRows(familyId: string, viewer: ActingMember) {
+  const [persons, parentChildRows, partnershipRows, archiveByPersonId] =
+    await Promise.all([
+      listPersonsByFamily(familyId),
+      db.query.relationshipsParentChild.findMany({
+        where: eq(relationshipsParentChild.familyId, familyId),
+        // parentRole added ahead of the dashed-line (adoptive/step/foster)
+        // rendering work — see rewrite plan §5.1. Not yet consumed downstream.
+        columns: { id: true, parentId: true, childId: true, parentRole: true },
+      }),
+      db.query.relationshipsPartnership.findMany({
+        where: eq(relationshipsPartnership.familyId, familyId),
+        // startDate* added ahead of chronological multi-marriage ordering —
+        // see rewrite plan §1.4/§1.6/§5.4. Not yet consumed downstream.
+        columns: {
+          id: true,
+          person1Id: true,
+          person2Id: true,
+          status: true,
+          isCurrent: true,
+          startDateYear: true,
+          startDateMonth: true,
+          startDateDay: true,
+          startDateApproximate: true,
+        },
+      }),
+      getPersonArchiveSummaries(familyId, viewer),
+    ]);
+  return { persons, parentChildRows, partnershipRows, archiveByPersonId };
 }
 
 export interface GetFocusTreeLayoutOptions {
@@ -79,16 +94,31 @@ export interface GetFocusTreeLayoutOptions {
 export async function getFocusTreeLayout(
   familyId: string,
   focusPersonId: string,
+  viewer: ActingMember,
   options?: GetFocusTreeLayoutOptions,
 ): Promise<TreeLayoutGraph | FilteredTreeLayoutGraph> {
-  const { persons, parentChildRows, partnershipRows } =
-    await fetchTreeRows(familyId);
+  const { persons, parentChildRows, partnershipRows, archiveByPersonId } =
+    await fetchTreeRows(familyId, viewer);
 
-  const { graph, personById } = toTreeFamilyGraph({
+  const { graph, personById: personRecordById } = toTreeFamilyGraph({
     persons,
     parentChildEdges: parentChildRows,
     partnershipEdges: partnershipRows,
   });
+  // fromTreeLayout reads PersonNode.archive off each record — join the
+  // batched archive-summary map on here rather than widening
+  // toTreeFamilyGraph's own generic (which buildClientTreeLayout also uses,
+  // with PersonRecord/TreePersonClientPayload never carrying archive counts
+  // pre-join).
+  const personById = new Map(
+    [...personRecordById].map(([id, record]) => [
+      id,
+      {
+        ...record,
+        archive: archiveByPersonId.get(id) ?? EMPTY_ARCHIVE_SUMMARY,
+      },
+    ]),
+  );
 
   let result;
   try {
@@ -136,9 +166,10 @@ export async function getFocusTreeLayout(
  */
 export async function getRawTreeGraph(
   familyId: string,
+  viewer: ActingMember,
 ): Promise<TreeClientGraphPayload> {
-  const { persons, parentChildRows, partnershipRows } =
-    await fetchTreeRows(familyId);
+  const { persons, parentChildRows, partnershipRows, archiveByPersonId } =
+    await fetchTreeRows(familyId, viewer);
 
   return {
     persons: persons.map((p) => ({
@@ -155,6 +186,7 @@ export async function getRawTreeGraph(
       photoMediaId: p.photoMediaId,
       religion: p.religion,
       nationality: p.nationality,
+      archive: archiveByPersonId.get(p.id) ?? EMPTY_ARCHIVE_SUMMARY,
     })),
     parentChildEdges: parentChildRows,
     partnershipEdges: partnershipRows,

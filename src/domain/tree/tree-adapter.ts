@@ -14,9 +14,11 @@ import { buildTreeLayout } from "./layout/layout";
 import type {
   LayoutEdge,
   LayoutNode,
+  PersonArchiveSummary,
   PersonNode,
   TreeLayoutGraph,
 } from "./tree-layout.builder";
+import { EMPTY_ARCHIVE_SUMMARY } from "./archive-summary";
 
 /**
  * tree-adapter.ts — bridges the DB's Person/ParentChildRecord/
@@ -92,7 +94,14 @@ export type TreePersonClientPayload = Pick<
   | "photoMediaId"
   | "religion"
   | "nationality"
->;
+> & {
+  /** Already viewer-filtered server-side (archive-summary.ts) before this
+   *  payload is built — see getRawTreeGraph's own doc comment. Carried
+   *  through the client-safe payload (rather than re-fetched) so a
+   *  client-side re-focus (buildClientTreeLayout) shows the same counts as
+   *  the initial server-rendered focus, not zeros. */
+  archive: PersonArchiveSummary;
+};
 
 /**
  * Everything a Client Component needs to re-run buildTreeLayout + fromTreeLayout
@@ -270,6 +279,7 @@ export function fromTreeLayout(
       gender: record.gender,
       religion: record.religion,
       nationality: record.nationality,
+      archive: record.archive ?? EMPTY_ARCHIVE_SUMMARY,
     };
     return {
       id: p.id,

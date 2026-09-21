@@ -12,6 +12,7 @@ import { getMediaById } from "@/domain/media/media.repository";
 import { buildTreeLayout } from "@/domain/tree/layout/layout";
 import { toTreeFamilyGraph, fromTreeLayout } from "@/domain/tree/tree-adapter";
 import type { TreeLayoutGraph } from "@/domain/tree/tree-layout.builder";
+import { EMPTY_ARCHIVE_SUMMARY } from "@/domain/tree/archive-summary";
 import {
   canViewViaShareLink,
   type ShareLinkVisibilityScope,
@@ -86,11 +87,22 @@ export async function getPublicTreeLayout(
     );
   }
 
-  const { graph, personById } = toTreeFamilyGraph({
+  const { graph, personById: personRecordById } = toTreeFamilyGraph({
     persons: visiblePersons,
     parentChildEdges: parentChildRows,
     partnershipEdges: partnershipRows,
   });
+  // Anonymous Share Link view: no authenticated viewer to privacy-filter
+  // archive counts against, and Phase 1 ("Tree as Map of the Family
+  // Archive") scopes archive indicators to the authenticated tree only — so
+  // every node here gets the all-zero summary, which renders identically to
+  // "no archive content" (see PersonArchiveSummary's own doc comment).
+  const personById = new Map(
+    [...personRecordById].map(([id, record]) => [
+      id,
+      { ...record, archive: EMPTY_ARCHIVE_SUMMARY },
+    ]),
+  );
 
   let result;
   try {

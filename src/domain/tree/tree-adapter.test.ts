@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PersonRecord } from "@/domain/person/person.repository";
 import { UNKNOWN_DATE } from "@/domain/shared/partial-date";
+import { EMPTY_ARCHIVE_SUMMARY } from "./archive-summary";
 import { buildTreeLayout } from "./layout/layout";
 import {
   toTreeFamilyGraph,
@@ -39,6 +40,20 @@ function personRecord(
     createdAt: new Date("2020-01-01T00:00:00Z"),
     ...overrides,
   };
+}
+
+/** fromTreeLayout's own personById param expects TreePersonClientPayload
+ *  (PersonRecord + archive) — join the all-zero summary onto plain
+ *  PersonRecord fixtures, same shape tree.service.ts's real callers use. */
+function withEmptyArchive<T extends { id: string }>(
+  personById: Map<string, T>,
+): Map<string, T & { archive: typeof EMPTY_ARCHIVE_SUMMARY }> {
+  return new Map(
+    [...personById].map(([id, record]) => [
+      id,
+      { ...record, archive: EMPTY_ARCHIVE_SUMMARY },
+    ]),
+  );
 }
 
 describe("toTreeFamilyGraph", () => {
@@ -201,7 +216,7 @@ describe("fromTreeLayout", () => {
     return fromTreeLayout(
       "focus",
       result,
-      personById,
+      withEmptyArchive(personById),
       parentChildEdges,
       partnershipIsCurrentById,
     );
@@ -229,6 +244,7 @@ describe("fromTreeLayout", () => {
       gender: "male",
       religion: "orthodox",
       nationality: "russian",
+      archive: EMPTY_ARCHIVE_SUMMARY,
     });
   });
 
@@ -287,7 +303,7 @@ describe("fromTreeLayout", () => {
       partnershipEdges,
     });
     const result = buildTreeLayout(graph, "focus");
-    const emptyPersonById = new Map<string, PersonRecord>();
+    const emptyPersonById = withEmptyArchive(new Map<string, PersonRecord>());
     expect(() =>
       fromTreeLayout(
         "focus",
@@ -324,6 +340,7 @@ describe("buildClientTreeLayout (rewrite plan §7 Stage 7 — client-side focus 
         photoMediaId: null,
         religion: null,
         nationality: null,
+        archive: EMPTY_ARCHIVE_SUMMARY,
       })),
       parentChildEdges: [
         { id: "pc-1", parentId: "grandpa", childId: "parent" },

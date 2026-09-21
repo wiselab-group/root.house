@@ -26,6 +26,7 @@ function person(id: string): PersonNode {
     gender: "unknown",
     religion: null,
     nationality: null,
+    archive: { photoCount: 0, storyCount: 0, eventCount: 0 },
   };
 }
 

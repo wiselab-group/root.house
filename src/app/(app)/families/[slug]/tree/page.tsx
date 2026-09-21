@@ -121,7 +121,7 @@ export default async function FamilyTreePage({
       : null;
 
   const [layoutGraph, traceOutcome, rawGraph] = await Promise.all([
-    getFocusTreeLayout(familyId, focusPersonId, {
+    getFocusTreeLayout(familyId, focusPersonId, member, {
       // Show the whole connected family, not just a 2-generation window
       // around the focus person — this app's family archives are small
       // enough that there's no reason to make the user click through
@@ -136,7 +136,7 @@ export default async function FamilyTreePage({
     // Rewrite plan §7 Stage 7: lets TreeCanvas re-run buildTreeLayout
     // entirely client-side when the user switches focus, instead of a full
     // page reload — see getRawTreeGraph's own doc comment.
-    getRawTreeGraph(familyId),
+    getRawTreeGraph(familyId, member),
   ]);
 
   const tracedGraph = applyRelationshipTrace(layoutGraph, traceOutcome);
