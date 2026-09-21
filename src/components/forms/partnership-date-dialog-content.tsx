@@ -86,7 +86,21 @@ export function PartnershipDateDialogContent({
         }}
         className="flex flex-col gap-3"
       >
-        <PersonDateFields prefix="startDate" legend="Дата" date={startDate} />
+        {/* Keyed on the initial date snapshot — PersonDateFields' Input
+            uses uncontrolled defaultValue, and this dialog's content stays
+            mounted while the Dialog animates closed. Without a key, the
+            server round-trip after a successful save (revalidatePath) flows
+            a changed `startDate` prop into the SAME Input instance, which
+            Base UI's FieldControl warns about ("changing the default value
+            state of an uncontrolled FieldControl after being initialized").
+            The key forces a fresh mount instead of a prop update whenever
+            the saved date actually changes. */}
+        <PersonDateFields
+          key={JSON.stringify(startDate ?? null)}
+          prefix="startDate"
+          legend="Дата"
+          date={startDate}
+        />
         {state.error && (
           <p className="text-sm text-destructive">{state.error}</p>
         )}
