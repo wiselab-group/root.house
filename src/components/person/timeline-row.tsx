@@ -95,7 +95,7 @@ export function TimelineRow({
         >
           {children}
         </DialogTrigger>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="flex max-h-[85vh] flex-col overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Редактировать событие</DialogTitle>
           </DialogHeader>
