@@ -2,10 +2,13 @@ import { z } from "zod";
 
 export const privacyLevelSchema = z.enum(["private", "family", "public"]);
 
+// birth/death/marriage are excluded — those three types are auto-derived
+// onto the timeline from Person.birthDate/deathDate and Partnership.startDate
+// (see event.service.ts::synthesizeDerivedEvents) and can no longer be
+// created as ordinary `events` rows. Mirrors event-roles.ts's
+// MANUAL_EVENT_TYPES — kept as a literal list here since this file must stay
+// framework/domain-import-free (validation schemas only).
 export const eventTypeSchema = z.enum([
-  "birth",
-  "death",
-  "marriage",
   "divorce",
   "baptism",
   "migration",

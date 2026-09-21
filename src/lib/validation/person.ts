@@ -23,6 +23,37 @@ export const partialDateInputSchema = z
   })
   .optional();
 
+/**
+ * Same field shape as partialDateInputSchema, but rejects month/day given
+ * without a year instead of accepting them — used where a date is entirely
+ * optional (e.g. partnership start date) but a "just remembered the month,
+ * not the year" input would otherwise silently mean something different
+ * from what the user typed. partialDateInputSchema itself keeps its current
+ * behavior (year-less month/day simply ignored downstream) since existing
+ * callers weren't built expecting a rejection here.
+ */
+export const yearRequiredPartialDateSchema = z
+  .object({
+    year: z.coerce
+      .number()
+      .int()
+      .min(1, "Год должен быть положительным")
+      .max(2100)
+      .optional(),
+    month: z.coerce.number().int().min(1).max(12).optional(),
+    day: z.coerce.number().int().min(1).max(31).optional(),
+    isApproximate: z.coerce.boolean().optional(),
+  })
+  .nullable()
+  .optional()
+  .refine(
+    (date) =>
+      !date ||
+      date.year !== undefined ||
+      (date.month === undefined && date.day === undefined),
+    { message: "Если указан месяц или день, укажите и год" },
+  );
+
 export const genderSchema = z.enum(["male", "female", "unknown"]);
 
 export const createPersonSchema = z.object({

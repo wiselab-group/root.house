@@ -14,6 +14,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import type { PersonRecord } from "@/domain/person/person.service";
 import { personDisplayName } from "@/domain/person/display-name";
 import { useCollapsibleFormClose } from "./collapsible-form";
+import { PersonDateFields } from "./person-date-fields";
 
 const initialState: RelationshipFormState = {};
 
@@ -121,6 +122,13 @@ export function AddRelativeForm({
             Имя неизвестно — создать запись-заглушку
           </label>
         </div>
+      )}
+
+      {kind === "spouse" && (
+        <PersonDateFields
+          prefix="startDate"
+          legend="Дата начала отношений (необязательно)"
+        />
       )}
 
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}

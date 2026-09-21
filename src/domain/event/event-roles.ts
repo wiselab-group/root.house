@@ -39,6 +39,33 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   other: "Другое",
 };
 
+/**
+ * Types no longer manually creatable via AddEventForm — birth/death are
+ * derived from Person.birthDate/deathDate, marriage from
+ * Partnership.startDate (see event.service.ts::synthesizeDerivedEvents).
+ * Kept as a named export so the form's option list and createEventSchema's
+ * rejection both read from one source of truth.
+ */
+export const MANUAL_EVENT_TYPES = [
+  "divorce",
+  "baptism",
+  "migration",
+  "emigration",
+  "education",
+  "military_service",
+  "war",
+  "occupation",
+  "imprisonment",
+  "other",
+] as const satisfies readonly EventType[];
+
+export const MANUAL_EVENT_TYPE_LABELS: Record<
+  (typeof MANUAL_EVENT_TYPES)[number],
+  string
+> = Object.fromEntries(
+  MANUAL_EVENT_TYPES.map((type) => [type, EVENT_TYPE_LABELS[type]]),
+) as Record<(typeof MANUAL_EVENT_TYPES)[number], string>;
+
 export const EVENT_ROLE_LABELS: Record<string, string> = {
   subject: "участник",
   spouse: "супруг(а)",

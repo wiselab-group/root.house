@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { yearRequiredPartialDateSchema } from "./person";
 
 export const parentRoleSchema = z.enum([
   "biological",
@@ -25,4 +26,11 @@ export const linkNewPersonSchema = z.object({
   firstName: z.string().trim().max(120).optional().or(z.literal("")),
   lastName: z.string().trim().max(120).optional().or(z.literal("")),
   isPlaceholder: z.coerce.boolean().default(false),
+});
+
+/** A new partnership's start date — entirely optional ("if the person
+ *  doesn't remember"), but if any part is given, at least the year is
+ *  required (see yearRequiredPartialDateSchema). */
+export const addPartnershipSchema = z.object({
+  startDate: yearRequiredPartialDateSchema,
 });

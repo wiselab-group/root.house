@@ -1,10 +1,13 @@
 import { cache } from "react";
 import { comparePartialDates } from "@/domain/shared/partial-date";
 import { getPersonById } from "@/domain/person/person.repository";
+import type { PersonRecord } from "@/domain/person/person.repository";
 import { personDisplayName } from "@/domain/person/display-name";
 import { canView, type ActingMember } from "@/domain/family/permissions";
 import { logActivity } from "@/domain/activity-log/activity-log.service";
-import { EVENT_ROLE_LABELS } from "./event-roles";
+import { getPartnershipsOf } from "@/domain/relationship/relationship.repository";
+import type { PartnershipRecord } from "@/domain/relationship/relationship.repository";
+import { EVENT_ROLE_LABELS, EVENT_TYPE_LABELS } from "./event-roles";
 import {
   createEvent,
   deleteEvent,
@@ -132,8 +135,80 @@ export async function getParticipants(eventId: string, familyId: string) {
   return getParticipantsOf(eventId, familyId);
 }
 
+const SYNTHETIC_PREFIX = "synthetic:";
+
+/** Whether an EventRecord's id is a synthesized pseudo-event (see
+ *  synthesizeDerivedEvents), never a real row in `events` — used by the
+ *  timeline UI to skip rendering a details link/delete action for it. */
+export function isSyntheticEventId(id: string): boolean {
+  return id.startsWith(SYNTHETIC_PREFIX);
+}
+
 /**
- * A Person's full timeline: every Event they participate in, sorted
+ * Birth/death/marriage pseudo-Events for a Person's timeline, sourced from
+ * Person.birthDate/deathDate and Partnership.startDate — never from real
+ * `events` rows, since those three types can no longer be manually created
+ * (see createEventSchema in lib/validation/event.ts). Ids are namespaced
+ * strings, never real uuids, so they can't collide with a genuine Event id.
+ */
+function synthesizeDerivedEvents(
+  person: PersonRecord,
+  partnerships: PartnershipRecord[],
+): EventRecord[] {
+  const derived: EventRecord[] = [];
+
+  if (person.birthDate) {
+    derived.push({
+      id: `${SYNTHETIC_PREFIX}birth:${person.id}`,
+      familyId: person.familyId,
+      type: "birth",
+      title: EVENT_TYPE_LABELS.birth,
+      description: null,
+      date: person.birthDate,
+      endDate: null,
+      placeId: person.birthPlaceId,
+      privacyLevel: person.privacyLevel,
+      createdBy: person.createdBy,
+    });
+  }
+
+  if (person.deathDate) {
+    derived.push({
+      id: `${SYNTHETIC_PREFIX}death:${person.id}`,
+      familyId: person.familyId,
+      type: "death",
+      title: EVENT_TYPE_LABELS.death,
+      description: null,
+      date: person.deathDate,
+      endDate: null,
+      placeId: person.deathPlaceId,
+      privacyLevel: person.privacyLevel,
+      createdBy: person.createdBy,
+    });
+  }
+
+  for (const partnership of partnerships) {
+    if (!partnership.startDate) continue; // partnership with no known date — nothing to place on the timeline
+    derived.push({
+      id: `${SYNTHETIC_PREFIX}marriage:${partnership.id}`,
+      familyId: partnership.familyId,
+      type: "marriage",
+      title: EVENT_TYPE_LABELS.marriage,
+      description: null,
+      date: partnership.startDate,
+      endDate: null,
+      placeId: null,
+      privacyLevel: "family",
+      createdBy: null,
+    });
+  }
+
+  return derived;
+}
+
+/**
+ * A Person's full timeline: every Event they participate in, plus derived
+ * birth/death/marriage pseudo-events (synthesizeDerivedEvents), sorted
  * chronologically. Events with unknown dates sort last (via
  * comparePartialDates' Infinity-for-unknown behavior) rather than being
  * dropped — an event worth recording is worth showing even if undated.
@@ -142,6 +217,15 @@ export async function getPersonTimeline(
   personId: string,
   familyId: string,
 ): Promise<EventRecord[]> {
-  const events = await getEventsForPerson(personId, familyId);
-  return [...events].sort((a, b) => comparePartialDates(a.date, b.date));
+  const [events, person, partnerships] = await Promise.all([
+    getEventsForPerson(personId, familyId),
+    getPersonById(personId, familyId),
+    getPartnershipsOf(personId, familyId),
+  ]);
+
+  const derived = person ? synthesizeDerivedEvents(person, partnerships) : [];
+
+  return [...events, ...derived].sort((a, b) =>
+    comparePartialDates(a.date, b.date),
+  );
 }

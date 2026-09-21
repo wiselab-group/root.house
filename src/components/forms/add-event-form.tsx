@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PersonDateFields } from "./person-date-fields";
 import { PlaceSelect } from "./place-select";
 import { PrivacyLevelSelect } from "./privacy-level-select";
-import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
+import { MANUAL_EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 import type { PlaceRecord } from "@/domain/place/place.service";
 import { useCollapsibleFormClose } from "./collapsible-form";
 
@@ -57,7 +57,7 @@ export function AddEventForm({
             Тип
           </Label>
           <NativeSelect id="type" name="type" defaultValue="other">
-            {Object.entries(EVENT_TYPE_LABELS).map(([value, label]) => (
+            {Object.entries(MANUAL_EVENT_TYPE_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>

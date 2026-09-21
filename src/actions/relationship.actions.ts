@@ -18,6 +18,8 @@ import {
   RelationshipValidationError,
   type ParentRole,
 } from "@/domain/relationship/relationship.service";
+import { addPartnershipSchema } from "@/lib/validation/relationship";
+import type { PartialDate } from "@/domain/shared/partial-date";
 
 export interface RelationshipFormState {
   error?: string;
@@ -60,6 +62,53 @@ async function resolveOtherPersonId(
   return created.id;
 }
 
+/**
+ * Parses the optional partnership start-date fields straight off the raw
+ * FormData (not via partialDateFromFormData) so "month/day filled, year
+ * blank" can be told apart from "nothing filled in at all" and rejected
+ * rather than silently discarded — see addPartnershipSchema's own doc.
+ * Returns `null` for "no date given" (valid — a partnership can exist with
+ * no known date) or throws RelationshipValidationError if a year is missing
+ * while month/day are present.
+ */
+function parsePartnershipStartDate(formData: FormData): PartialDate | null {
+  const yearRaw = formData.get("startDateYear");
+  const monthRaw = formData.get("startDateMonth");
+  const dayRaw = formData.get("startDateDay");
+  const isApproximate = formData.get("startDateApproximate") === "on";
+
+  const anyFieldFilled = [yearRaw, monthRaw, dayRaw].some(
+    (value) => typeof value === "string" && value !== "",
+  );
+  if (!anyFieldFilled) return null;
+
+  const parsed = addPartnershipSchema.safeParse({
+    startDate: {
+      year: yearRaw || undefined,
+      month: monthRaw || undefined,
+      day: dayRaw || undefined,
+      isApproximate,
+    },
+  });
+
+  if (!parsed.success) {
+    throw new RelationshipValidationError(
+      parsed.error.issues[0]?.message ?? "Некорректная дата.",
+    );
+  }
+
+  const date = parsed.data.startDate;
+  if (!date || date.year === undefined) return null;
+
+  return {
+    year: date.year,
+    month: date.month ?? null,
+    day: date.day ?? null,
+    precision: date.day || date.month ? "exact" : "year_only",
+    isApproximate: date.isApproximate ?? false,
+  };
+}
+
 export async function addRelativeAction(
   familyId: string,
   personId: string,
@@ -94,9 +143,11 @@ export async function addRelativeAction(
         parentRole,
       });
     } else {
+      const startDate = parsePartnershipStartDate(formData);
       await addPartnership(familyId, session.user.id, {
         person1Id: personId,
         person2Id: otherPersonId,
+        startDate,
       });
     }
   } catch (error) {

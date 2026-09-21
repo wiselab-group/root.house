@@ -80,6 +80,10 @@ export async function deleteEventAction(
   personId: string,
   eventId: string,
 ): Promise<void> {
+  // Pseudo-events (birth/death/marriage) are never real `events` rows — see
+  // event.service.ts::synthesizeDerivedEvents — so there's nothing to delete.
+  if (eventId.startsWith("synthetic:")) return;
+
   const session = await auth();
   if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
 

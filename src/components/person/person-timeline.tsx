@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   getPersonTimeline,
   filterVisibleEvents,
+  isSyntheticEventId,
 } from "@/domain/event/event.service";
 import { listPlaces } from "@/domain/place/place.service";
 import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
@@ -48,12 +49,9 @@ export async function PersonTimeline({
           <p className="text-sm text-muted-foreground">Событий пока нет.</p>
         ) : (
           <ol className="flex flex-col gap-3 border-l border-border pl-4">
-            {timeline.map((event) => (
-              <li key={event.id}>
-                <Link
-                  href={`/families/${familySlug}/events/${event.id}`}
-                  className="flex flex-col gap-0.5 hover:opacity-80"
-                >
+            {timeline.map((event) => {
+              const body = (
+                <>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">
                       {EVENT_TYPE_LABELS[event.type]}
@@ -68,9 +66,24 @@ export async function PersonTimeline({
                       {placeNameById.get(event.placeId)}
                     </span>
                   )}
-                </Link>
-              </li>
-            ))}
+                </>
+              );
+
+              return (
+                <li key={event.id}>
+                  {isSyntheticEventId(event.id) ? (
+                    <div className="flex flex-col gap-0.5">{body}</div>
+                  ) : (
+                    <Link
+                      href={`/families/${familySlug}/events/${event.id}`}
+                      className="flex flex-col gap-0.5 hover:opacity-80"
+                    >
+                      {body}
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
           </ol>
         )}
 
