@@ -2,6 +2,7 @@ import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 import { formatPartialDate } from "@/domain/shared/partial-date";
 import type { EventRecord } from "@/domain/event/event.service";
 import { TimelineRow } from "./timeline-row";
+import { PrivacyBadge } from "./privacy-badge";
 import {
   isTimelineRowInteractive,
   type TimelineRowTarget,
@@ -38,14 +39,17 @@ export function TimelineListItem({
 
   const body = (
     <>
-      <span
-        className={
-          isInteractive
-            ? "text-sm font-medium text-foreground underline decoration-border underline-offset-2"
-            : "text-sm font-medium text-foreground"
-        }
-      >
-        {titleDuplicatesType ? EVENT_TYPE_LABELS[event.type] : event.title}
+      <span className="flex items-center gap-1.5">
+        <span
+          className={
+            isInteractive
+              ? "text-sm font-medium text-foreground underline decoration-border underline-offset-2"
+              : "text-sm font-medium text-foreground"
+          }
+        >
+          {titleDuplicatesType ? EVENT_TYPE_LABELS[event.type] : event.title}
+        </span>
+        <PrivacyBadge privacyLevel={event.privacyLevel} compact />
       </span>
       <span className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground">
         {!titleDuplicatesType && <span>{EVENT_TYPE_LABELS[event.type]}</span>}

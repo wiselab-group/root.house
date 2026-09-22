@@ -15,9 +15,33 @@ import type { PrivacyLevel } from "@/db/schema";
  * variant="outline" (neutral border), not terracotta — privacy is a state,
  * not an action (see CLAUDE.md's DESIGN TOKENS: --primary is reserved for
  * actions/selection).
+ *
+ * `compact` drops the "Только я" label down to a bare icon (still with a
+ * title= tooltip and matching aria-label, so it stays announced to screen
+ * readers) — used inline in a list of many items (PersonStoriesList,
+ * TimelineListItem) where repeating the full text badge on every private row
+ * would out-shout the content itself. The profile header (one instance per
+ * page) keeps the full labeled badge.
  */
-export function PrivacyBadge({ privacyLevel }: { privacyLevel: PrivacyLevel }) {
+export function PrivacyBadge({
+  privacyLevel,
+  compact = false,
+}: {
+  privacyLevel: PrivacyLevel;
+  compact?: boolean;
+}) {
   if (privacyLevel !== "private") return null;
+
+  if (compact) {
+    return (
+      <span title="Только я" className="inline-flex shrink-0">
+        <LockIcon
+          aria-label="Только я"
+          className="size-3.5 text-muted-foreground"
+        />
+      </span>
+    );
+  }
 
   return (
     <Badge variant="outline" className="w-fit gap-1 text-muted-foreground">

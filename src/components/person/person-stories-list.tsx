@@ -3,6 +3,7 @@
 import { useOptimistic } from "react";
 import { DeleteStoryButton } from "@/components/forms/delete-story-button";
 import { StoryBody } from "./story-body";
+import { PrivacyBadge } from "./privacy-badge";
 import type { StoryRecord } from "@/domain/story/story.service";
 
 /**
@@ -35,7 +36,10 @@ export function PersonStoriesList({
           key={story.id}
           className="border-b border-border pb-4 last:border-0 last:pb-0"
         >
-          <h3 className="font-medium">{story.title}</h3>
+          <h3 className="flex items-center gap-1.5 font-medium">
+            {story.title}
+            <PrivacyBadge privacyLevel={story.privacyLevel} compact />
+          </h3>
           <StoryBody body={story.body} />
           {story.canDelete && (
             <div className="mt-1">
