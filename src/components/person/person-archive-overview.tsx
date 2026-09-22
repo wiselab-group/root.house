@@ -1,10 +1,16 @@
 import Link from "next/link";
-import { ImageIcon, BookOpenIcon, CalendarIcon } from "lucide-react";
+import {
+  ImageIcon,
+  BookOpenIcon,
+  CalendarIcon,
+  FileTextIcon,
+} from "lucide-react";
 import type { PersonArchiveSummary } from "@/domain/tree/tree-layout.builder";
 import {
   photoCountLabel,
   storyCountLabel,
   eventCountLabel,
+  documentCountLabel,
 } from "@/domain/shared/pluralize-ru";
 
 /**
@@ -25,11 +31,18 @@ import {
  * items is omitted entirely, never shown as "0 фото" — and the whole
  * component renders nothing when every count is 0, so a person with no
  * archive content yet shows no empty overview bar at all.
+ *
+ * documentCount is a separate prop, not folded into PersonArchiveSummary —
+ * that type is shared with the tree (tree-layout.builder.ts), and documents
+ * are profile-only (see person-documents.tsx's own doc comment on why the
+ * tree card/popover never shows a document count).
  */
 export function PersonArchiveOverview({
   archive,
+  documentCount = 0,
 }: {
   archive: PersonArchiveSummary;
+  documentCount?: number;
 }) {
   const items = [
     archive.photoCount > 0
@@ -51,6 +64,13 @@ export function PersonArchiveOverview({
           href: "#timeline",
           Icon: CalendarIcon,
           label: eventCountLabel(archive.eventCount),
+        }
+      : null,
+    documentCount > 0
+      ? {
+          href: "#documents",
+          Icon: FileTextIcon,
+          label: documentCountLabel(documentCount),
         }
       : null,
   ].filter((item): item is NonNullable<typeof item> => item !== null);

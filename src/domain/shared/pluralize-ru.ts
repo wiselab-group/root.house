@@ -40,3 +40,8 @@ export function storyCountLabel(count: number): string {
 export function eventCountLabel(count: number): string {
   return `${count} ${pluralizeRu(count, "событие", "события", "событий")}`;
 }
+
+/** "1 документ" / "2 документа" / "5 документов". */
+export function documentCountLabel(count: number): string {
+  return `${count} ${pluralizeRu(count, "документ", "документа", "документов")}`;
+}

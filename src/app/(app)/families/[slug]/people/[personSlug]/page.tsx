@@ -12,6 +12,7 @@ import { ProfileSection } from "@/components/person/profile-section";
 import { PersonFamilyPanel } from "@/components/person/person-family-panel";
 import { PersonTimeline } from "@/components/person/person-timeline";
 import { PersonMediaGallery } from "@/components/person/person-media-gallery";
+import { PersonDocuments } from "@/components/person/person-documents";
 import { PersonStories } from "@/components/person/person-stories";
 import { PersonProfileHeader } from "@/components/person/person-profile-header";
 import { PersonArchiveOverview } from "@/components/person/person-archive-overview";
@@ -20,6 +21,10 @@ import { InfoRow } from "@/components/person/person-info-row";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 import { getPersonArchiveSummary } from "@/domain/tree/archive-summary";
+import {
+  getPersonDocuments,
+  filterVisibleMedia,
+} from "@/domain/media/media.service";
 
 export async function generateMetadata({
   params,
@@ -64,12 +69,15 @@ export default async function PersonProfilePage({
   // the Person itself or anyone else's past contributions.
   const canContribute = canEdit || member.role === "contributor";
 
-  const [birthPlace, deathPlace, family, archive] = await Promise.all([
-    person.birthPlaceId ? getPlace(person.birthPlaceId, familyId) : null,
-    person.deathPlaceId ? getPlace(person.deathPlaceId, familyId) : null,
-    getFamilySummary(familyId),
-    getPersonArchiveSummary(personId, familyId, viewer),
-  ]);
+  const [birthPlace, deathPlace, family, archive, allDocuments] =
+    await Promise.all([
+      person.birthPlaceId ? getPlace(person.birthPlaceId, familyId) : null,
+      person.deathPlaceId ? getPlace(person.deathPlaceId, familyId) : null,
+      getFamilySummary(familyId),
+      getPersonArchiveSummary(personId, familyId, viewer),
+      getPersonDocuments(personId, familyId),
+    ]);
+  const documentCount = filterVisibleMedia(allDocuments, viewer).length;
 
   const hasBasicInfo =
     person.maidenName ||
@@ -110,7 +118,10 @@ export default async function PersonProfilePage({
             <PrivacyBadge privacyLevel={person.privacyLevel} />
           </div>
         )}
-        <PersonArchiveOverview archive={archive} />
+        <PersonArchiveOverview
+          archive={archive}
+          documentCount={documentCount}
+        />
       </div>
 
       {hasBasicInfo && (
@@ -152,6 +163,13 @@ export default async function PersonProfilePage({
         familySlug={slug}
         personId={personId}
         canEdit={canEdit}
+        canContribute={canContribute}
+        member={viewer}
+      />
+      <PersonDocuments
+        familyId={familyId}
+        familySlug={slug}
+        personId={personId}
         canContribute={canContribute}
         member={viewer}
       />

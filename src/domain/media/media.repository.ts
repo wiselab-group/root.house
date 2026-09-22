@@ -99,7 +99,7 @@ export async function getMediaById(
   return row ? toRecord(row) : null;
 }
 
-/** All Media linked to a given Person, in gallery order (see GALLERY_ORDER) — the raw material for a Person's photo gallery. */
+/** All photo Media linked to a given Person, in gallery order (see GALLERY_ORDER) — the raw material for a Person's photo gallery. Excludes kind='document' — see getDocumentsForPerson for that. */
 export async function getMediaForPerson(
   personId: string,
   familyId: string,
@@ -109,7 +109,36 @@ export async function getMediaForPerson(
     .from(mediaPerson)
     .innerJoin(media, eq(mediaPerson.mediaId, media.id))
     .where(
-      and(eq(mediaPerson.personId, personId), eq(media.familyId, familyId)),
+      and(
+        eq(mediaPerson.personId, personId),
+        eq(media.familyId, familyId),
+        eq(media.kind, "photo"),
+      ),
+    )
+    .orderBy(...GALLERY_ORDER);
+
+  return rows.map((r) => toRecord(r.media));
+}
+
+/** All document Media linked to a given Person, in gallery order (see
+ *  GALLERY_ORDER) — the raw material for a Person's Документы section.
+ *  Mirrors getMediaForPerson's shape exactly, filtered to kind='document'
+ *  instead of 'photo' — the two never mix in one query so a caller can't
+ *  accidentally render a document tile in a photo grid or vice versa. */
+export async function getDocumentsForPerson(
+  personId: string,
+  familyId: string,
+): Promise<MediaRecord[]> {
+  const rows = await db
+    .select({ media })
+    .from(mediaPerson)
+    .innerJoin(media, eq(mediaPerson.mediaId, media.id))
+    .where(
+      and(
+        eq(mediaPerson.personId, personId),
+        eq(media.familyId, familyId),
+        eq(media.kind, "document"),
+      ),
     )
     .orderBy(...GALLERY_ORDER);
 

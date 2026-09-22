@@ -7,6 +7,7 @@ import {
   createMedia,
   deleteMediaRow,
   getAlbumsForMedia,
+  getDocumentsForPerson,
   getMediaById,
   getMediaForAlbum,
   getMediaForFamily,
@@ -119,6 +120,70 @@ function mediaLabel(taggedPeople: MediaTaggedPerson[]): string {
   return taggedPeople.length > 1 ? `Фото — ${name} и другие` : `Фото — ${name}`;
 }
 
+export interface UploadDocumentInput {
+  familyId: string;
+  personId: string;
+  uploadedBy: string;
+  file: Buffer;
+  contentType: string;
+  originalFilename: string;
+  privacyLevel?: PrivacyLevel;
+}
+
+/**
+ * Uploads a document (scan/PDF — birth certificate, letter, ...) to storage
+ * and records it as Media with kind: 'document', linked to exactly one
+ * Person — same upload/compensating-delete shape as uploadPersonPhoto, but
+ * always exactly one personId (no group tagging — a document belongs to the
+ * one profile it was uploaded from, see DocumentUploadPanel) and no
+ * width/height (meaningless for a PDF). `title` is set from the original
+ * filename since documents, unlike photos, are identified by name in the
+ * list UI (DocumentList), not by a thumbnail.
+ */
+export async function uploadPersonDocument(
+  input: UploadDocumentInput,
+): Promise<{ id: string }> {
+  const key = `${input.familyId}/${crypto.randomUUID()}-${sanitizeFilename(input.originalFilename)}`;
+
+  const { storageKey } = await storage.upload({
+    key,
+    file: input.file,
+    contentType: input.contentType,
+  });
+
+  try {
+    const result = await createMedia({
+      familyId: input.familyId,
+      kind: "document",
+      storageKey,
+      storageProvider: storage.providerName,
+      mimeType: input.contentType,
+      sizeBytes: input.file.byteLength,
+      title: input.originalFilename,
+      uploadedBy: input.uploadedBy,
+      privacyLevel: input.privacyLevel,
+      personIds: [input.personId],
+      albumIds: [],
+    });
+
+    await logActivity({
+      familyId: input.familyId,
+      actorId: input.uploadedBy,
+      action: "create",
+      entityType: "media",
+      entityId: result.id,
+      entityLabel: `Документ — ${input.originalFilename}`,
+    });
+
+    return result;
+  } catch (error) {
+    await storage.delete(storageKey).catch(() => {
+      // Best-effort cleanup — the DB insert error is what actually matters to the caller.
+    });
+    throw error;
+  }
+}
+
 /**
  * Uploads a Person's avatar as its own Media row, deliberately NOT linked
  * via media_person or media_album — an avatar is a distinct thing from the
@@ -204,6 +269,21 @@ export async function getPersonGallery(
 ): Promise<GalleryPhoto[]> {
   const photos = await getMediaForPerson(personId, familyId);
   return buildGalleryPhotos(photos, familyId);
+}
+
+/**
+ * A Person's own documents (their profile page's Документы section) — plain
+ * MediaRecord list, not wrapped in GalleryPhoto: documents have no tagged-
+ * people/albums concept to pair in (DocumentList has no lightbox or
+ * cross-linking, unlike PhotoGrid), so there's nothing buildGalleryPhotos
+ * would add here. Filtering by kind happens in SQL (getDocumentsForPerson),
+ * not here, so this never accidentally mixes in the person's photos.
+ */
+export async function getPersonDocuments(
+  personId: string,
+  familyId: string,
+): Promise<MediaRecord[]> {
+  return getDocumentsForPerson(personId, familyId);
 }
 
 /** The family-wide photo gallery (/families/[slug]/photos). */

@@ -79,11 +79,16 @@ export async function GET(
   return new Response(result.stream, { headers });
 }
 
-/** A human-friendly download filename — Media has no stored original
- *  filename (only storageKey, an internal detail), so this falls back to a
- *  generic name plus the right extension for the content type. */
+/** A human-friendly download filename — Media has no dedicated "original
+ *  filename" column; a photo's title is usually null (falls back to
+ *  "Фото.<ext>"), but a document's title IS its original filename
+ *  (uploadPersonDocument sets it from originalFilename) and already carries
+ *  its own extension — appending the content-type extension again would
+ *  double it ("scan.pdf.pdf"), so skip appending when title already ends
+ *  with it. */
 function downloadFilename(title: string | null, contentType: string): string {
   const extension = contentType.split("/")[1]?.split("+")[0] ?? "jpg";
   const base = title?.trim() || "Фото";
+  if (base.toLowerCase().endsWith(`.${extension.toLowerCase()}`)) return base;
   return `${base}.${extension}`;
 }
