@@ -15,6 +15,7 @@ import { PersonMediaGallery } from "@/components/person/person-media-gallery";
 import { PersonStories } from "@/components/person/person-stories";
 import { PersonProfileHeader } from "@/components/person/person-profile-header";
 import { PersonArchiveOverview } from "@/components/person/person-archive-overview";
+import { PrivacyBadge } from "@/components/person/privacy-badge";
 import { InfoRow } from "@/components/person/person-info-row";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
@@ -99,10 +100,15 @@ export default async function PersonProfilePage({
           birthPlace={birthPlace}
           deathPlace={deathPlace}
         />
-        {person.isPlaceholder && (
-          <Badge variant="secondary" className="w-fit">
-            Запись-заглушка — данные неизвестны
-          </Badge>
+        {(person.isPlaceholder || person.privacyLevel === "private") && (
+          <div className="flex flex-wrap gap-2">
+            {person.isPlaceholder && (
+              <Badge variant="secondary" className="w-fit">
+                Запись-заглушка — данные неизвестны
+              </Badge>
+            )}
+            <PrivacyBadge privacyLevel={person.privacyLevel} />
+          </div>
         )}
         <PersonArchiveOverview archive={archive} />
       </div>
