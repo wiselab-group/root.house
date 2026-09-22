@@ -95,7 +95,7 @@ export default async function FamilyLayout({
             label: "Истории",
           },
           { href: `/families/${slug}/photos`, icon: "photos", label: "Архив" },
-          { href: `/families/${slug}/places`, icon: "places", label: "Места" },
+          { href: `/families/${slug}/map`, icon: "places", label: "Карта" },
           {
             href: `/families/${slug}/settings`,
             icon: "settings",

@@ -334,6 +334,76 @@ this codebase's actual (more carefully contrast-checked) token values.
 
 ## M. Map Technology Decision
 
+**Revised 2026-09-22** — the original recommendation below (kept for
+history) reasoned only from "no existing map code in repo, here's a
+reasonable pick." Re-examined properly against Leaflet before starting
+implementation, per user request. Full comparison:
+
+**Leaflet** (`react-leaflet`) — ~42KB gzip, DOM/Canvas renderer, no API
+key for raster OSM tiles, popups are plain DOM (compose directly with
+shadcn `Card`/`Badge`). Ecosystem is older/larger
+(`leaflet.markercluster`, etc). Real weaknesses for this product: raster
+tiles blur on zoom, styling is limited to CSS filters on pre-rendered
+tile images (no per-feature control — can't recolor water/roads/labels
+independently), and label language is baked into whichever tiles the
+provider serves (no guaranteed `name:ru` support) — all real constraints
+against CLAUDE.md's "Awwwards/FWA-level, warm family tone" visual bar
+and the fully-Russian UI.
+
+**MapLibre GL JS** — ~220KB gzip, WebGL + vector tiles, no API key
+needed for the renderer itself (a paid/free-tier key is only needed from
+whichever _tile provider_ is chosen, same as Leaflet would need for
+anything beyond raw public OSM). Vector tiles stay crisp at any
+zoom/DPI, support full per-feature style control (recolor
+water/parks/roads/labels independently via a JSON style spec — matches
+the warm/muted tree palette's own precedent of hand-tuned hues, not a
+generic basemap look), and can request `name:ru` labels directly.
+
+**Traffic-scale consideration**: Root House's actual shape is not "one
+public product with shared load" but many independent, small, private
+families (unlimited number of family _owners_, ~10 members each, low
+per-family map-open frequency) — so raw concurrent load on any single
+map view stays small regardless of total family count. What _does_ scale
+with family count is aggregate tile-request volume against whichever
+provider is chosen — and the public OSM raster tile endpoint's own usage
+policy (rate-limited, User-Agent-gated, explicitly not for
+production/heavy use) becomes the real bottleneck well before either
+library's rendering performance would. This pushed toward a paid-tier
+provider either way, which removes Leaflet's "no paid vendor" argument
+as a meaningful advantage once the product has any non-trivial number of
+families — at that point both libraries need a provider relationship,
+and MapLibre's is the one built for vector tiles (what a paid tier
+actually sells), while Leaflet would be paying the same provider for
+raster-only, leaving the vector capability of that spend unused.
+
+**Decision: MapLibre GL JS.** Both the near-term visual-quality
+requirement (crisp vector rendering, full style control, Russian
+labels) and the medium-term scaling path (paid vector tile provider,
+same infrastructure whether 10 families or 10,000) favor it over
+Leaflet. Leaflet remains the better choice only for a raster-only,
+zero-growth, purely-local use case that doesn't apply here.
+
+- **Tile provider: MapTiler** (decided 2026-09-22, over Stadia Maps) —
+  free tier (100k tile loads/month, commercial use explicitly permitted)
+  sufficient for early growth, paid tiers priced per-request from $25/mo
+  as family count grows. Chosen over Stadia Maps for its larger free
+  tier and documentation written specifically around MapLibre. Avoid the
+  public OSM vector demo endpoint (not production-safe, same
+  usage-policy risk as OSM raster).
+- Wrapped behind `components/map/map-view.tsx` (`MapView`, `MapMarker`,
+  `MapPopup` — brief §22's own suggested shape) — the only file allowed
+  to import `maplibre-gl`, exactly mirroring `xyflow-adapter.ts`'s
+  existing precedent for the tree. Dynamically imported
+  (`next/dynamic`, `ssr: false`) since MapLibre needs `window`/canvas —
+  keeps it off every route that isn't `/map`.
+- Tile provider API key goes in `.env.local` /
+  Vercel env vars, never hardcoded — same pattern as existing secrets
+  (`AUTH_SECRET`, `DATABASE_URL`, blob token).
+
+<details>
+<summary>Original 2026-09-22 recommendation (superseded by the analysis
+above, kept for history)</summary>
+
 No existing map code (`grep` across the repo for maplibre/leaflet/
 mapbox/google-maps — zero matches). Recommendation: **MapLibre GL JS**
 (not Leaflet, not Google Maps):
@@ -348,12 +418,8 @@ mapbox/google-maps — zero matches). Recommendation: **MapLibre GL JS**
   for v1 to avoid adding a new paid vendor dependency during this phase;
   document the swap point for a paid vector style later if the visual
   bar demands it.
-- Wrapped behind `components/map/map-view.tsx` (`MapView`, `MapMarker`,
-  `MapPopup` — brief §22's own suggested shape) — the only file allowed
-  to import `maplibre-gl`, exactly mirroring `xyflow-adapter.ts`'s
-  existing precedent for the tree. Dynamically imported
-  (`next/dynamic`, `ssr: false`) since MapLibre needs `window`/canvas —
-  keeps it off every route that isn't `/map`.
+
+</details>
 
 ## N. Migration Strategy
 
@@ -435,9 +501,117 @@ not replaced, when folded into Map's list view).
    linked-people changes persisted and reflected on the detail page after
    save.
 
-7. **Map** — biggest net-new phase. MapLibre integration, marker
-   projection service, privacy-filtered marker assembly, fold Places
-   management into this page.
+7. **Map** — DONE (2026-09-22). MapLibre GL JS + `react-map-gl` (not
+   Leaflet — see §M's revised decision, re-examined properly against
+   Leaflet at the user's explicit request before implementation) +
+   MapTiler vector tiles (`streets-v2` style). `components/map/` is the
+   only directory allowed to import maplibre-gl/react-map-gl, mirroring
+   `xyflow-adapter.ts`'s boundary rule for the tree — `map-view.tsx`
+   (MapView, the MapTiler style URL, the "no API key" fallback state),
+   `map-marker.tsx` (custom terracotta pin, `react-map-gl`'s own
+   `onClick` — NOT a nested `<button onClick>`, which real click-testing
+   caught never firing, since `Marker` attaches its click listener
+   directly to the underlying MapLibre element rather than relying on
+   React's synthetic bubbling), `map-popup.tsx` (plain-DOM popup content,
+   composes with ordinary Tailwind/shadcn classes), `family-map-canvas.tsx`
+   (composes the three with a page's marker data, viewport centered on
+   the average of all markers). `family-map-canvas-loader.tsx` is a thin
+   Client Component wrapping `next/dynamic(..., {ssr:false})` — Next.js
+   16 now throws a build error if `ssr:false` is passed to `dynamic()`
+   from inside a Server Component directly (a real breaking-change trap,
+   caught live), so `map/page.tsx` (Server Component) imports the loader
+   instead of calling `dynamic()` itself.
+
+   New domain layer: `place-marker.service.ts::getFamilyMapMarkers`
+   assembles one marker per Place-with-coordinates, privacy-filtering
+   which linked Person (birth/death) and Event records are visible to
+   the current viewer via the same `canView` rule as every other
+   `filterVisibleX` — Place itself carries no `privacyLevel`/`createdBy`
+   of its own (confirmed against `db/schema/place.ts`), so a pin's
+   existence is visible to any family member regardless of what's linked
+   to it; only the popup's _content_ is filtered per-viewer. Added
+   `getEventsWithPlace`/`listEventsWithPlace` (no prior family-wide,
+   participant-independent event query existed — events were only
+   fetched per-person). `PlaceRecord` now exposes `latitude`/`longitude`
+   (schema already had the columns; the repository just never surfaced
+   them — no map UI existed before this phase).
+
+   Geocoding: address search resolved via MapTiler's Geocoding API
+   (`lib/maptiler-geocode.ts`, direct client fetch — the same
+   `NEXT_PUBLIC_MAPTILER_API_KEY` already used by the map renderer) —
+   chosen over manual lat/lng entry or click-on-map per explicit user
+   choice. `PlaceGeocodeCombobox` (same single-select Combobox shape as
+   `media/tag-person-combobox.tsx`) is wired into both `CreatePlaceForm`
+   and the new `EditPlaceDialogContent`. Place editing did not exist at
+   all before this phase (create+delete only) — added
+   `updatePlace`/`editPlace`/`updatePlaceAction`, surfaced as an
+   in-place Dialog per `PlacesList` row (not a `/places/[id]/edit`
+   route) since `PlacesList`'s own doc comment establishes Place as
+   deliberately having no detail page to navigate to — same Dialog
+   pattern `PersonTimeline`'s synthetic rows already use.
+
+   Navigation: the family nav's "Места" item (and Family Home's matching
+   tile) now point at `/map` instead of `/places`, relabeled "Карта" —
+   `/places` itself is kept as a route (list management, reachable via
+   "Управлять списком мест" from the map's own header and from the map's
+   empty state) rather than deleted, per §N's migration strategy.
+
+   Verified end-to-end live (Playwright, desktop 1440px + mobile 390px):
+   empty state → geocode search returns real MapTiler results for a
+   Russian query → place created with coordinates → marker renders on
+   the map → click opens a popup → a Person's birthPlace linked to that
+   Place correctly appears in the popup as a clickable profile link, zero
+   console errors throughout.
+
+   **Two real bugs found only by looking at the actual rendered map, not
+   just checking for console errors — both caught after the user reported
+   "the map shows a blank beige background, zero geography" on a live
+   screenshot**:
+
+   1. **MapLibre's tile worker never started under Turbopack.** MapLibre
+      GL JS v6 resolves its tile-parsing Web Worker via
+      `new URL('./maplibre-gl-worker.mjs', import.meta.url)` instead of
+      the inlined-blob approach older versions used — Turbopack (Next.js
+      16's dev server) doesn't statically detect that pattern and never
+      emits the worker chunk. The failure is completely silent: no
+      console error, no failed network request, `page.workers()` stays
+      empty, and `onLoad` never fires — `style.json`/`sprite.json`/
+      `tiles.json` all return 200 normally (only the actual `.pbf` tile
+      requests never happen), so every earlier "no console errors, looks
+      fine" check passed while the map was, in fact, completely broken.
+      Root-caused via a live Playwright session driving the actual app
+      (not a synthetic repro) — confirmed matching a known upstream
+      issue. Fixed by copying maplibre-gl's own worker + its
+      `maplibre-gl-shared.mjs` dependency into `public/maplibre/`
+      (`scripts/copy-maplibre-worker.mjs`, run on every `pnpm install`
+      via a new `postinstall` script — never committed, regenerated from
+      `node_modules` each install) and calling
+      `setWorkerUrl('/maplibre/maplibre-gl-worker.mjs')` in
+      `map-view.tsx` before the first `<Map>` mounts.
+   2. **Labels rendered in English despite the fully-Russian UI.**
+      MapTiler's hosted `streets-v2` style hardcodes every label layer's
+      `text-field` to the `name:en` OSM tag — the style URL's
+      `?language=ru` query param has no effect on this pre-built style
+      (confirmed directly against the API: identical `text-field` values
+      with and without the param). MapTiler's own docs point to
+      `@maptiler/sdk`'s runtime `setLanguage()` for this — tried adding
+      it, but its `Map` class is tied to `@vis.gl/react-maplibre`'s own
+      peer-dependency resolution and isn't a clean drop-in via
+      `react-map-gl`'s `mapLib` prop, so it was removed again rather than
+      accepting that risk for a labels-only fix. Solved instead with zero
+      new dependencies: `lib/maptiler-style-language.ts::localizeStyleLabels`
+      fetches the style JSON client-side and rewrites every `text-field`
+      expression (`['get','name:en']`, `{name:en}`, and stops-object
+      variants all handled) to `name:ru` with a fallback to the
+      untranslated `name` — same `name:<lang>` OSM convention MapTiler's
+      own vector tiles already carry (confirmed against `tiles.json`'s
+      `tilestats`). `MapView` now fetches+rewrites the style before
+      mounting `<Map>` (falls back to the raw style URL if the fetch
+      itself fails, e.g. offline) rather than passing the style URL
+      straight through. A handful of untranslated region names remain
+      (e.g. Latvia's `VIDZEMES PLĀNOŠANAS REGIONS`) where OSM itself has
+      no `name:ru` tag — expected, not a bug in the rewrite.
+
 8. **Archive** — extend `/photos` to cover video/audio/document kinds +
    add person/story/event/place/date filters.
 9. **Navigation/mobile polish** — persistent desktop nav, six-item

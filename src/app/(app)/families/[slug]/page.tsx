@@ -98,9 +98,9 @@ export default async function FamilyDashboardPage({
       description: "Фото, видео и документы семьи",
     },
     {
-      href: `/families/${slug}/places`,
+      href: `/families/${slug}/map`,
       icon: MapPin,
-      label: "Места",
+      label: "Карта",
       description: "Места рождения, проживания и событий",
     },
     {

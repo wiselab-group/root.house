@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNotNull } from "drizzle-orm";
 import { db } from "@/db/client";
 import { events, eventParticipants, type PrivacyLevel } from "@/db/schema";
 import {
@@ -98,6 +98,20 @@ export async function getEventsForPerson(
     .orderBy(asc(events.dateYear));
 
   return rows.map((r) => toRecord(r.event));
+}
+
+/** All of a family's events that have a Place attached — the raw material
+ *  for map-marker.service.ts's marker assembly. Unlike getEventsForPerson,
+ *  this isn't participant-scoped (an event can appear with zero
+ *  participants attached) since a map pin cares about the event's place,
+ *  not who's in it. */
+export async function getEventsWithPlace(
+  familyId: string,
+): Promise<EventRecord[]> {
+  const rows = await db.query.events.findMany({
+    where: and(eq(events.familyId, familyId), isNotNull(events.placeId)),
+  });
+  return rows.map(toRecord);
 }
 
 export async function getParticipantsOf(

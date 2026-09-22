@@ -37,6 +37,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# generated on postinstall from node_modules/maplibre-gl — see
+# scripts/copy-maplibre-worker.mjs's own doc comment
+/public/maplibre/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

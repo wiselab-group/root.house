@@ -1,15 +1,20 @@
 "use client";
 
-import { useOptimistic } from "react";
+import { useOptimistic, useState } from "react";
+import { PencilIcon } from "lucide-react";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { DeletePlaceButton } from "@/components/forms/delete-place-button";
+import { EditPlaceDialogContent } from "@/components/forms/edit-place-dialog-content";
 import type { PlaceRecord } from "@/domain/place/place.service";
 
 /**
  * Places' own archive-list — same "divide-y, not a Card per row" treatment
  * as PeopleList/the /families list (see their doc comments), minus the
  * ArrowRight/Link affordance: a place has no detail page of its own to
- * navigate to, so each row is a static row with an inline delete action
- * instead of a whole-row link.
+ * navigate to, so editing happens in-place via a per-row Dialog
+ * (EditPlaceDialogContent) rather than a navigate-away edit route — same
+ * pattern PersonTimeline uses for its own synthetic rows.
  *
  * Deletion is optimistic — DeletePlaceButton calls onDeleted inside its own
  * startTransition, so the row disappears immediately on confirm instead of
@@ -54,14 +59,49 @@ export function PlacesList({
             )}
           </div>
           {canEdit && (
-            <DeletePlaceButton
-              familyId={familyId}
-              placeId={place.id}
-              onDeleted={() => removeOptimisticPlace(place.id)}
-            />
+            <div className="flex shrink-0 items-center gap-1">
+              <EditPlaceRowButton familyId={familyId} place={place} />
+              <DeletePlaceButton
+                familyId={familyId}
+                placeId={place.id}
+                onDeleted={() => removeOptimisticPlace(place.id)}
+              />
+            </div>
           )}
         </li>
       ))}
     </ul>
+  );
+}
+
+function EditPlaceRowButton({
+  familyId,
+  place,
+}: {
+  familyId: string;
+  place: PlaceRecord;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={`Редактировать «${place.name}»`}
+          />
+        }
+      >
+        <PencilIcon className="size-4" strokeWidth={1.75} />
+      </DialogTrigger>
+      <EditPlaceDialogContent
+        familyId={familyId}
+        place={place}
+        onOpenChange={setOpen}
+      />
+    </Dialog>
   );
 }

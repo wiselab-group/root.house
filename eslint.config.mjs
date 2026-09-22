@@ -17,6 +17,9 @@ const eslintConfig = defineConfig([
     ".claude/**",
     // Generated migration SQL/metadata — never hand-edited or linted.
     "src/db/migrations/**",
+    // Generated on postinstall from node_modules/maplibre-gl — see
+    // scripts/copy-maplibre-worker.mjs's own doc comment.
+    "public/maplibre/**",
   ]),
 ]);
 
