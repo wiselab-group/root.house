@@ -391,8 +391,15 @@ not replaced, when folded into Map's list view).
    explicitly dropped by user decision — «Семья» section
    (parents/spouses/children/siblings, already existed pre-refactor) was
    judged sufficient; a graph-shaped widget was offered and declined.
-5. **Tree visual pass** — smallest phase; already mostly done. Verify
-   against brief checklist, close any remaining gaps only.
+5. **Tree visual pass** — DONE (2026-09-22), no code changes needed.
+   Verified live (Playwright, desktop 1440px + mobile 390px): card style,
+   sage identity ring, terracotta focus ring, consolidated «Инструменты»
+   menu, hidden minimap on mobile, click → popover
+   («Посмотреть профиль» / «Сделать фокус-персоной») all render exactly
+   per §E's audit findings, zero console errors, zero regressions. The
+   two items §E flagged as "remaining tree work" (person-profile tree
+   context mini-view, Places section) were already explicitly declined
+   by the user in Phase 4 — nothing left to build here.
 6. **Stories** — DONE (2026-09-22). `/stories` (family-wide list +
    multi-person create form, editorial divide-y list per §L's visual
    direction) and `/stories/[storySlug]` (detail page, linked people,
