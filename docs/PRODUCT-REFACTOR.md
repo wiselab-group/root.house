@@ -371,11 +371,26 @@ not replaced, when folded into Map's list view).
    "verify no new primitives needed," not "build from scratch." Likely
    needs only: a `MapMarker`/`MapPopup` primitive, a `StoryCard`
    primitive, and a persistent-nav component.
-3. **Family Home** — redesign using already-existing data
-   (`ActivityLog`, `getPersonArchiveSummary`, gallery, tree preview via
-   existing `tree-adapter.ts`). No new domain work.
-4. **Person Profile** — add Places section + Tree-context mini-view;
-   otherwise visual/hero polish on already-complete sections.
+3. **Family Home** — DONE (2026-09-22). Stats line, recent-photos
+   preview, owner-only Активность семьи (reused from Settings, capped at
+   3 with a "Ещё" link to Settings' own capped-at-10 list). Persistent
+   desktop nav was attempted and explicitly rejected by the user — see
+   §G/§J's revision note; not part of this phase's final state.
+4. **Person Profile** — NO CHANGE (tried and reverted, 2026-09-22). A
+   standalone «Места» section was built (pulling birth/death place out of
+   «Основная информация» and out of the profile header into its own
+   section) — reverted same-day: «Хронология» already surfaces the same
+   place inline on its auto-derived «Рождение»/«Смерть» rows (e.g.
+   "9 февраля 1988 г., Пружаны"), so a separate «Места» section read as
+   duplicated information rather than a genuine new section. **Do not
+   re-add a standalone Места section without first checking whether
+   Хронология already covers the place in context** — if revisited, the
+   right fix is likely on the Хронология side (e.g. a dedicated places
+   list elsewhere, not a second copy of birth/death place) rather than
+   re-introducing this exact component. Tree-context mini-view also
+   explicitly dropped by user decision — «Семья» section
+   (parents/spouses/children/siblings, already existed pre-refactor) was
+   judged sufficient; a graph-shaped widget was offered and declined.
 5. **Tree visual pass** — smallest phase; already mostly done. Verify
    against brief checklist, close any remaining gaps only.
 6. **Stories** — new `/stories` + `/stories/[slug]` routes, new
