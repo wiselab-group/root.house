@@ -7,6 +7,7 @@ import { FamilySettingsDeleteRow } from "@/components/family/family-settings-del
 import { FamilyMembersSection } from "@/components/family/family-members-section";
 import { ShareLinkSection } from "@/components/family/share-link-section";
 import { ActivityLogSection } from "@/components/family/activity-log-section";
+import { ScrollToHash } from "@/components/scroll-to-hash";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -46,11 +47,12 @@ export default async function FamilySettingsPage({
       isOwner
         ? listShareLinksForFamilyWithStatus(familyId)
         : Promise.resolve([]),
-      isOwner ? listActivityLog(familyId) : Promise.resolve([]),
+      isOwner ? listActivityLog(familyId, { limit: 10 }) : Promise.resolve([]),
     ]);
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12 sm:py-16">
+      <ScrollToHash />
       <SetBreadcrumbs
         items={[
           { label: "Мои семьи", href: "/families" },
@@ -109,8 +111,9 @@ export default async function FamilySettingsPage({
 
       {isOwner && member && (
         <ProfileSection
-          title="История действий"
-          description="Кто и что изменил в архиве — видно только владельцу."
+          id="activity"
+          title="Активность семьи"
+          description="Кто и что изменил в архиве — видно только владельцу. Последние 10 записей."
         >
           <ActivityLogSection entries={activityEntries} />
         </ProfileSection>
