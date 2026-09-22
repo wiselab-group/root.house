@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import {
   TreeDeciduous,
   Users,
+  BookOpen,
   Images,
   MapPin,
   Settings,
@@ -21,6 +22,7 @@ import {
 const NAV_ICONS = {
   tree: TreeDeciduous,
   people: Users,
+  stories: BookOpen,
   photos: Images,
   places: MapPin,
   settings: Settings,

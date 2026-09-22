@@ -21,6 +21,11 @@ export const stories = pgTable(
     familyId: uuid("family_id")
       .notNull()
       .references(() => families.id, { onDelete: "cascade" }),
+    // Human-readable handle, unique per family (not globally — same
+    // reasoning as persons.slug in person.ts) — lets a Story be reached at
+    // /families/[familySlug]/stories/[slug] instead of a raw UUID. See
+    // domain/story/slug.ts.
+    slug: text("slug").notNull(),
     title: text("title").notNull(),
     body: text("body").notNull(),
     privacyLevel: privacyLevelEnum("privacy_level").notNull().default("family"),
@@ -30,7 +35,10 @@ export const stories = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (table) => [index("stories_family_idx").on(table.familyId)],
+  (table) => [
+    index("stories_family_idx").on(table.familyId),
+    uniqueIndex("stories_family_slug_unique").on(table.familyId, table.slug),
+  ],
 );
 
 export const storyPerson = pgTable(

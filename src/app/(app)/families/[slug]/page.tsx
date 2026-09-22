@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Users, Images, MapPin, Settings } from "lucide-react";
+import {
+  ArrowRight,
+  Users,
+  BookOpen,
+  Images,
+  MapPin,
+  Settings,
+} from "lucide-react";
 import {
   FamilyNavCard,
   FamilyTreeLaunchCard,
@@ -77,6 +84,12 @@ export default async function FamilyDashboardPage({
       icon: Users,
       label: "Люди",
       description: "Профили, поиск по имени и году",
+    },
+    {
+      href: `/families/${slug}/stories`,
+      icon: BookOpen,
+      label: "Истории",
+      description: "Семейные истории и воспоминания",
     },
     {
       href: `/families/${slug}/photos`,

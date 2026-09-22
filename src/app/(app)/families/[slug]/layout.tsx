@@ -72,15 +72,15 @@ export default async function FamilyLayout({
           : null,
       }}
     >
-      {/* Same 5 destinations as the dashboard's FamilyNavCard grid
-          (families/[slug]/page.tsx) — published here so they're available in
-          AppHeader's mobile panel on every page under this family section,
-          not just the dashboard itself. "Фото" relabeled "Архив" to match
-          the dashboard's own relabel (docs/PRODUCT-REFACTOR.md §I) — no
-          "Дом" item: Family Home stays the single hub you return to via the
-          brand mark/breadcrumb, per explicit user decision against a
-          persistent cross-section nav (see conversation — a two-tier header
-          with "Дом" duplicating the breadcrumb read as visually broken). */}
+      {/* Published here so they're available in AppHeader's mobile panel on
+          every page under this family section, not just the dashboard
+          itself. "Фото" relabeled "Архив" to match the dashboard's own
+          relabel (docs/PRODUCT-REFACTOR.md §I). "Истории" added as part of
+          the Stories phase (§O item 6) — no "Дом" item: Family Home stays
+          the single hub you return to via the brand mark/breadcrumb, per
+          explicit user decision against a persistent cross-section nav (see
+          conversation — a two-tier header with "Дом" duplicating the
+          breadcrumb read as visually broken). */}
       <SetFamilyNav
         items={[
           {
@@ -89,6 +89,11 @@ export default async function FamilyLayout({
             label: "Семейное дерево",
           },
           { href: `/families/${slug}/people`, icon: "people", label: "Люди" },
+          {
+            href: `/families/${slug}/stories`,
+            icon: "stories",
+            label: "Истории",
+          },
           { href: `/families/${slug}/photos`, icon: "photos", label: "Архив" },
           { href: `/families/${slug}/places`, icon: "places", label: "Места" },
           {

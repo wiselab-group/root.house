@@ -393,8 +393,41 @@ not replaced, when folded into Map's list view).
    judged sufficient; a graph-shaped widget was offered and declined.
 5. **Tree visual pass** — smallest phase; already mostly done. Verify
    against brief checklist, close any remaining gaps only.
-6. **Stories** — new `/stories` + `/stories/[slug]` routes, new
-   `listStories` family-scope service function, optional slug migration.
+6. **Stories** — DONE (2026-09-22). `/stories` (family-wide list +
+   multi-person create form, editorial divide-y list per §L's visual
+   direction) and `/stories/[storySlug]` (detail page, linked people,
+   delete). `stories.slug` column added (migration 0017, same nullable→
+   backfill→NOT NULL two-step pattern as `persons.slug`) — see
+   `domain/story/slug.ts`. `listStories`/`filterVisibleStories` already
+   existed pre-refactor (the audit's §C claim that family-scope listing
+   was missing was wrong — only the UI was missing, not the service).
+   `PersonMultiCombobox` (`components/media/person-multi-combobox.tsx`)
+   reused as-is for the new form's person picker — confirms its own doc
+   comment that it isn't actually media-specific. The existing
+   person-profile-scoped `AddStoryForm`/`createStoryAction` (single
+   person, no slug needed at call time) were left untouched; the new
+   family-scope path (`createStoryFromStoriesPageAction`,
+   `AddStoryFullForm`) supports linking any number of people and redirects
+   to the new story's own page. `storyEvent`/`storyPlace` join tables
+   remain unused (schema-only, as the original audit found) — out of
+   scope for this phase, would matter once Event/Place get their own
+   story cross-links surfaced. Verified end-to-end live (Playwright):
+   empty state → create with 2 linked people → detail page → list →
+   delete → back to empty state, zero console errors.
+
+   **Editing added same-day after user follow-up**: the initial pass only
+   shipped create+delete — story editing had never existed anywhere in
+   the app (not even the old person-profile-scoped form), which the user
+   caught by asking "why can't I edit?" on the detail page. Added
+   `editStory`/`updateStory`/`replaceStoryPeople` (delete-then-reinsert
+   for the person links, same pattern as
+   `event.repository.ts::replaceParticipants`), `updateStoryAction`, and
+   `/stories/[storySlug]/edit` + `EditStoryForm` (prefilled, same field
+   shape as the create form). A story's slug never changes on edit — only
+   content. Verified live: edit form prefilled correctly, title/body/
+   linked-people changes persisted and reflected on the detail page after
+   save.
+
 7. **Map** — biggest net-new phase. MapLibre integration, marker
    projection service, privacy-filtered marker assembly, fold Places
    management into this page.
