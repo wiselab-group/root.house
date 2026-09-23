@@ -151,6 +151,7 @@ export default async function FamilyDashboardPage({
             photos={photos}
             familyId={familyId}
             familySlug={slug}
+            canTag={member.role === "owner" || member.role === "editor"}
           />
         </div>
       )}
