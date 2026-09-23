@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { UserIcon, FocusIcon } from "lucide-react";
+import { UserIcon } from "lucide-react";
 import { PopoverClose } from "@/components/ui/popover";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
 import { personLabel, yearRange } from "./person-node-parts";
@@ -15,14 +15,16 @@ import { ArchiveSummaryLine } from "@/components/person/archive-summary-line";
  * own doc comment on why this is the ONLY place in the tree UI archive
  * counts show; the card itself stays plain), above the two actions — kept
  * separate from PersonNode so its already-long JSX doesn't grow a third
- * nesting level. Both actions are suppressed in read-only mode (see
- * PersonNodeData.readOnly): "Посмотреть профиль" links into the auth-gated,
- * editable profile page, which has no reason to exist on the anonymous
- * Share Link surface; "Сделать фокус-персоной" is already omitted upstream
- * (xyflow-adapter.ts never passes onFocusPerson when readOnly). The header/
- * archive line render in both modes — read-only visitors still benefit from
- * seeing who this is and what's attached to them, they just can't act on it
- * beyond browsing.
+ * nesting level. The "Посмотреть профиль" action is suppressed in read-only
+ * mode (see PersonNodeData.readOnly): it links into the auth-gated, editable
+ * profile page, which has no reason to exist on the anonymous Share Link
+ * surface. The header/archive line render in both modes — read-only
+ * visitors still benefit from seeing who this is and what's attached to
+ * them, they just can't act on it beyond browsing. "Сделать фокус-персоной"
+ * was removed from this popover per explicit user request 2026-09-23 —
+ * focus switching now lives only in settings; data.onFocusPerson is still
+ * threaded through (xyflow-adapter.ts) for that other surface, this
+ * component just no longer reads it.
  */
 export function PersonNodePopoverActions({
   data,
@@ -57,20 +59,6 @@ export function PersonNodePopoverActions({
         >
           <UserIcon className="size-3.5 shrink-0 text-muted-foreground" />
           Посмотреть профиль
-        </PopoverClose>
-      )}
-      {data.onFocusPerson && (
-        <PopoverClose
-          render={
-            <button
-              type="button"
-              onClick={() => data.onFocusPerson?.(data.personId)}
-              className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-[0.8rem] hover:bg-accent hover:text-accent-foreground"
-            />
-          }
-        >
-          <FocusIcon className="size-3.5 shrink-0 text-muted-foreground" />
-          Сделать фокус-персоной
         </PopoverClose>
       )}
     </div>
