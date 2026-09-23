@@ -105,8 +105,6 @@ export default async function PersonProfilePage({
           familyId={familyId}
           familySlug={slug}
           role={member.role}
-          birthPlace={birthPlace}
-          deathPlace={deathPlace}
         />
         {(person.isPlaceholder || person.privacyLevel === "private") && (
           <div className="flex flex-wrap gap-2">

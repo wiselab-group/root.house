@@ -1,29 +1,29 @@
 import { personDisplayName } from "@/domain/person/display-name";
 import { formatPartialDate } from "@/domain/shared/partial-date";
 import type { PersonRecord } from "@/domain/person/person.service";
-import type { PlaceRecord } from "@/domain/place/place.service";
 import type { FamilyRole } from "@/domain/family/roles";
 import { LinkButton } from "@/components/ui/link-button";
 import { PersonAvatar } from "@/components/person/person-avatar";
 import { DeletePersonButton } from "@/components/person/delete-person-button";
 
-/** Avatar + name + birth/death (with place) + edit/delete actions atop a Person's profile. */
+/**
+ * Avatar + name + birth/death years + edit/delete actions atop a Person's
+ * profile. Birth/death place is deliberately not repeated here — it already
+ * shows in the "Основная информация" section below, and per explicit user
+ * request the header stays to just dates.
+ */
 export function PersonProfileHeader({
   person,
   personSlug,
   familyId,
   familySlug,
   role,
-  birthPlace,
-  deathPlace,
 }: {
   person: PersonRecord;
   personSlug: string;
   familyId: string;
   familySlug: string;
   role: FamilyRole;
-  birthPlace: PlaceRecord | null;
-  deathPlace: PlaceRecord | null;
 }) {
   const canEdit = role === "owner" || role === "editor";
 
@@ -41,9 +41,7 @@ export function PersonProfileHeader({
           </h1>
           <p className="text-muted-foreground">
             {formatPartialDate(person.birthDate)}
-            {birthPlace && `, ${birthPlace.name}`}
-            {!person.isLiving &&
-              ` — ${formatPartialDate(person.deathDate)}${deathPlace ? `, ${deathPlace.name}` : ""}`}
+            {!person.isLiving && ` — ${formatPartialDate(person.deathDate)}`}
           </p>
         </div>
       </div>
