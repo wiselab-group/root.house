@@ -1,4 +1,5 @@
 import { vercelBlobStorageService } from "./storage.vercel-blob";
+import { sampleLeftEdgeColor } from "./sample-dominant-color";
 import { canView, type ActingMember } from "@/domain/family/permissions";
 import { logActivity } from "@/domain/activity-log/activity-log.service";
 import { personDisplayName } from "@/domain/person/display-name";
@@ -196,11 +197,14 @@ export async function uploadPersonAvatar(
 ): Promise<{ id: string }> {
   const key = `${input.familyId}/avatar-${crypto.randomUUID()}-${sanitizeFilename(input.originalFilename)}`;
 
-  const { storageKey } = await storage.upload({
-    key,
-    file: input.file,
-    contentType: input.contentType,
-  });
+  const [{ storageKey }, dominantColor] = await Promise.all([
+    storage.upload({
+      key,
+      file: input.file,
+      contentType: input.contentType,
+    }),
+    sampleLeftEdgeColor(input.file),
+  ]);
 
   try {
     return await createMedia({
@@ -212,6 +216,7 @@ export async function uploadPersonAvatar(
       sizeBytes: input.file.byteLength,
       width: input.width,
       height: input.height,
+      dominantColor,
       uploadedBy: input.uploadedBy,
       personIds: [], // not linked to the gallery — see doc comment above
       albumIds: [], // not linked to any album — see doc comment above

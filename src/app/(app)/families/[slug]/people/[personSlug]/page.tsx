@@ -14,7 +14,7 @@ import { PersonTimeline } from "@/components/person/person-timeline";
 import { PersonMediaGallery } from "@/components/person/person-media-gallery";
 import { PersonDocuments } from "@/components/person/person-documents";
 import { PersonStories } from "@/components/person/person-stories";
-import { PersonProfileHeader } from "@/components/person/person-profile-header";
+import { PersonProfileHero } from "@/components/person/person-profile-hero";
 import { PersonArchiveOverview } from "@/components/person/person-archive-overview";
 import { PrivacyBadge } from "@/components/person/privacy-badge";
 import { InfoRow } from "@/components/person/person-info-row";
@@ -22,7 +22,10 @@ import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 import { getPersonArchiveSummary } from "@/domain/tree/archive-summary";
 import {
+  getMedia,
+  getPersonGallery,
   getPersonDocuments,
+  filterVisibleGalleryPhotos,
   filterVisibleMedia,
 } from "@/domain/media/media.service";
 
@@ -69,15 +72,29 @@ export default async function PersonProfilePage({
   // the Person itself or anyone else's past contributions.
   const canContribute = canEdit || member.role === "contributor";
 
-  const [birthPlace, deathPlace, family, archive, allDocuments] =
-    await Promise.all([
-      person.birthPlaceId ? getPlace(person.birthPlaceId, familyId) : null,
-      person.deathPlaceId ? getPlace(person.deathPlaceId, familyId) : null,
-      getFamilySummary(familyId),
-      getPersonArchiveSummary(personId, familyId, viewer),
-      getPersonDocuments(personId, familyId),
-    ]);
+  const [
+    birthPlace,
+    deathPlace,
+    family,
+    archive,
+    allDocuments,
+    allPhotos,
+    avatarMedia,
+  ] = await Promise.all([
+    person.birthPlaceId ? getPlace(person.birthPlaceId, familyId) : null,
+    person.deathPlaceId ? getPlace(person.deathPlaceId, familyId) : null,
+    getFamilySummary(familyId),
+    getPersonArchiveSummary(personId, familyId, viewer),
+    getPersonDocuments(personId, familyId),
+    getPersonGallery(personId, familyId),
+    // The avatar is its own Media row, deliberately not tagged into this
+    // person's gallery (see media.service.ts::uploadPersonAvatar) — so it
+    // never shows up in getPersonGallery and must be fetched separately for
+    // PersonProfileHero's dimensions (portrait vs landscape crop).
+    person.photoMediaId ? getMedia(person.photoMediaId, familyId) : null,
+  ]);
   const documentCount = filterVisibleMedia(allDocuments, viewer).length;
+  const photos = filterVisibleGalleryPhotos(allPhotos, viewer);
 
   const hasBasicInfo =
     person.maidenName ||
@@ -89,7 +106,7 @@ export default async function PersonProfilePage({
     person.deathCause;
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12 sm:py-16">
+    <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 pb-12 sm:pb-16">
       <SetBreadcrumbs
         items={[
           { label: "Мои семьи", href: "/families" },
@@ -98,14 +115,15 @@ export default async function PersonProfilePage({
           { label: personDisplayName(person) },
         ]}
       />
+      <PersonProfileHero
+        person={person}
+        personSlug={personSlug}
+        familyId={familyId}
+        familySlug={slug}
+        role={member.role}
+        avatarMedia={avatarMedia}
+      />
       <div className="flex flex-col gap-4">
-        <PersonProfileHeader
-          person={person}
-          personSlug={personSlug}
-          familyId={familyId}
-          familySlug={slug}
-          role={member.role}
-        />
         {(person.isPlaceholder || person.privacyLevel === "private") && (
           <div className="flex flex-wrap gap-2">
             {person.isPlaceholder && (
@@ -154,7 +172,7 @@ export default async function PersonProfilePage({
         personId={personId}
         canEdit={canEdit}
         canContribute={canContribute}
-        member={viewer}
+        photos={photos}
       />
       <PersonTimeline
         familyId={familyId}

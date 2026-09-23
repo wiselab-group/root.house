@@ -29,6 +29,10 @@ export interface MediaRecord {
   height: number | null;
   title: string | null;
   description: string | null;
+  /** Average color of the photo's left edge as "#rrggbb", or null when it
+   *  couldn't be sampled (HEIC uploads in particular) or predates this
+   *  column — see db/schema/media.ts's own doc comment. */
+  dominantColor: string | null;
   privacyLevel: PrivacyLevel;
   uploadedBy: string;
   sortOrder: number | null;
@@ -68,6 +72,7 @@ function toRecord(row: typeof media.$inferSelect): MediaRecord {
     height: row.height,
     title: row.title,
     description: row.description,
+    dominantColor: row.dominantColor,
     privacyLevel: row.privacyLevel,
     uploadedBy: row.uploadedBy,
     sortOrder: row.sortOrder,
@@ -301,6 +306,7 @@ export interface CreateMediaData {
   height?: number | null;
   title?: string | null;
   description?: string | null;
+  dominantColor?: string | null;
   uploadedBy: string;
   privacyLevel?: PrivacyLevel;
   /** Person ids to link this Media to, created atomically with the row. */
@@ -325,6 +331,7 @@ export async function createMedia(
       height: data.height ?? null,
       title: data.title ?? null,
       description: data.description ?? null,
+      dominantColor: data.dominantColor ?? null,
       uploadedBy: data.uploadedBy,
       privacyLevel: data.privacyLevel ?? "family",
       // One higher than this family's current max — a fresh upload always

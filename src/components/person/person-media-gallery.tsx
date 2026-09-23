@@ -1,29 +1,28 @@
-import {
-  getPersonGallery,
-  filterVisibleGalleryPhotos,
-} from "@/domain/media/media.service";
 import { PersonPhotoUploadPanel } from "@/components/media/person-photo-upload-panel";
 import { PhotoGrid } from "@/components/media/photo-grid";
 import { ProfileSection } from "./profile-section";
-import type { ActingMember } from "@/domain/family/permissions";
+import type { GalleryPhotoView } from "@/components/media/gallery-photo";
 
 /**
- * A Person's photo gallery — server component fetching its own data (same
- * pattern as PersonFamilyPanel/PersonTimeline). Reuses PhotoGrid/PhotoLightbox
- * (the same components the family-wide gallery uses) so clicking a photo
- * here opens the same full-screen viewer — prev/next, tagged people, delete
- * — instead of just a static grid with no way to see a photo full-size.
+ * A Person's photo gallery — `photos` is fetched once in page.tsx (shared
+ * with PersonProfileHero, which needs the same list for its hero image) and
+ * passed down here rather than this component querying getPersonGallery
+ * itself, avoiding a duplicate round-trip for one page load. Reuses
+ * PhotoGrid/PhotoLightbox (the same components the family-wide gallery uses)
+ * so clicking a photo here opens the same full-screen viewer — prev/next,
+ * tagged people, delete — instead of just a static grid with no way to see a
+ * photo full-size.
  *
  * The avatar is a separate concept (see components/forms/avatar-editor.tsx)
  * and never appears here — this is purely the "photos of this person" grid.
  */
-export async function PersonMediaGallery({
+export function PersonMediaGallery({
   familyId,
   familySlug,
   personId,
   canEdit,
   canContribute = canEdit,
-  member,
+  photos,
 }: {
   familyId: string;
   familySlug: string;
@@ -33,11 +32,8 @@ export async function PersonMediaGallery({
    *  domain/family/permissions.ts::canCreate). Defaults to canEdit for any
    *  caller not yet passing this explicitly. */
   canContribute?: boolean;
-  member: ActingMember;
+  photos: GalleryPhotoView[];
 }) {
-  const allPhotos = await getPersonGallery(personId, familyId);
-  const photos = filterVisibleGalleryPhotos(allPhotos, member);
-
   return (
     <ProfileSection id="photos" title="Фотографии" count={photos.length}>
       <div className="flex flex-col gap-4">
