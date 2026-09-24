@@ -32,15 +32,19 @@ const ROW_CLASSNAME =
 export function TimelineRow({
   target,
   children,
+  className = ROW_CLASSNAME,
 }: {
   target: TimelineRowTarget;
   children: ReactNode;
+  /** Replaces the list-row styling — the Линия жизни card renders its
+   *  action as a pill with the same dialogs behind it. */
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
 
   if (target.kind === "link") {
     return (
-      <Link href={target.href} className={ROW_CLASSNAME}>
+      <Link href={target.href} className={className}>
         {children}
       </Link>
     );
@@ -49,9 +53,7 @@ export function TimelineRow({
   if (target.kind === "marriage-dialog") {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger
-          render={<button type="button" className={ROW_CLASSNAME} />}
-        >
+        <DialogTrigger render={<button type="button" className={className} />}>
           {children}
         </DialogTrigger>
         <PartnershipDateDialogContent
@@ -70,9 +72,7 @@ export function TimelineRow({
   if (target.kind === "person-date-dialog") {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger
-          render={<button type="button" className={ROW_CLASSNAME} />}
-        >
+        <DialogTrigger render={<button type="button" className={className} />}>
           {children}
         </DialogTrigger>
         <PersonDateDialogContent
@@ -90,9 +90,7 @@ export function TimelineRow({
   if (target.kind === "event-edit-dialog") {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger
-          render={<button type="button" className={ROW_CLASSNAME} />}
-        >
+        <DialogTrigger render={<button type="button" className={className} />}>
           {children}
         </DialogTrigger>
         <DialogContent className="flex max-h-[85vh] flex-col overflow-y-auto sm:max-w-lg">

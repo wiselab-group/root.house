@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -7,17 +8,9 @@ import { getPlace } from "@/domain/place/place.service";
 import { personDisplayName } from "@/domain/person/display-name";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { resolvePersonIdBySlug } from "@/lib/resolve-person-slug";
-import { Badge } from "@/components/ui/badge";
-import { ProfileSection } from "@/components/person/profile-section";
-import { PersonFamilyPanel } from "@/components/person/person-family-panel";
-import { PersonTimeline } from "@/components/person/person-timeline";
-import { PersonMediaGallery } from "@/components/person/person-media-gallery";
-import { PersonDocuments } from "@/components/person/person-documents";
-import { PersonStories } from "@/components/person/person-stories";
 import { PersonProfileHero } from "@/components/person/person-profile-hero";
-import { PersonArchiveOverview } from "@/components/person/person-archive-overview";
-import { PrivacyBadge } from "@/components/person/privacy-badge";
-import { InfoRow } from "@/components/person/person-info-row";
+import { PersonProfileSections } from "@/components/person/person-profile-sections";
+import { photoBackdropStyle } from "@/lib/photo-backdrop";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 import { getPersonArchiveSummary } from "@/domain/tree/archive-summary";
@@ -96,17 +89,13 @@ export default async function PersonProfilePage({
   const documentCount = filterVisibleMedia(allDocuments, viewer).length;
   const photos = filterVisibleGalleryPhotos(allPhotos, viewer);
 
-  const hasBasicInfo =
-    person.maidenName ||
-    person.nickname ||
-    person.religion ||
-    person.nationality ||
-    birthPlace ||
-    deathPlace ||
-    person.deathCause;
-
+  const birthPlaceName = birthPlace?.name ?? null;
+  const deathPlaceName = deathPlace?.name ?? null;
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 pb-12 sm:pb-16">
+    <main
+      className="dark photo-backdrop min-h-svh"
+      style={photoBackdropStyle(avatarMedia?.dominantColor) as CSSProperties}
+    >
       <SetBreadcrumbs
         items={[
           { label: "Мои семьи", href: "/families" },
@@ -117,84 +106,28 @@ export default async function PersonProfilePage({
       />
       <PersonProfileHero
         person={person}
-        personSlug={personSlug}
         familyId={familyId}
         familySlug={slug}
-        role={member.role}
         avatarMedia={avatarMedia}
+        birthPlaceName={birthPlaceName}
+        deathPlaceName={deathPlaceName}
+        role={member.role}
       />
-      <div className="flex flex-col gap-4">
-        {(person.isPlaceholder || person.privacyLevel === "private") && (
-          <div className="flex flex-wrap gap-2">
-            {person.isPlaceholder && (
-              <Badge variant="secondary" className="w-fit">
-                Запись-заглушка — данные неизвестны
-              </Badge>
-            )}
-            <PrivacyBadge privacyLevel={person.privacyLevel} />
-          </div>
-        )}
-        <PersonArchiveOverview
-          archive={archive}
-          documentCount={documentCount}
-        />
-      </div>
-
-      {hasBasicInfo && (
-        <ProfileSection title="Основная информация">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-            <InfoRow label="Девичья фамилия" value={person.maidenName} />
-            <InfoRow label="Прозвище" value={person.nickname} />
-            <InfoRow label="Религия" value={person.religion} />
-            <InfoRow label="Национальность" value={person.nationality} />
-            <InfoRow label="Место рождения" value={birthPlace?.name ?? null} />
-            <InfoRow label="Место смерти" value={deathPlace?.name ?? null} />
-            <InfoRow label="Причина смерти" value={person.deathCause} />
-          </div>
-        </ProfileSection>
-      )}
-
-      {person.description && (
-        <ProfileSection title="Описание">
-          <p className="text-sm whitespace-pre-wrap">{person.description}</p>
-        </ProfileSection>
-      )}
-
-      <PersonFamilyPanel
+      <PersonProfileSections
+        person={person}
         familyId={familyId}
         familySlug={slug}
-        personId={personId}
-        canEdit={canEdit}
-      />
-      <PersonMediaGallery
-        familyId={familyId}
-        familySlug={slug}
-        personId={personId}
-        canEdit={canEdit}
-        canContribute={canContribute}
+        birthPlaceName={birthPlaceName}
+        deathPlaceName={deathPlaceName}
+        counts={{
+          stories: archive.storyCount,
+          events: archive.eventCount,
+          documents: documentCount,
+        }}
         photos={photos}
-      />
-      <PersonTimeline
-        familyId={familyId}
-        familySlug={slug}
-        personId={personId}
+        viewer={viewer}
         canEdit={canEdit}
         canContribute={canContribute}
-        member={viewer}
-      />
-      <PersonDocuments
-        familyId={familyId}
-        familySlug={slug}
-        personId={personId}
-        canContribute={canContribute}
-        member={viewer}
-      />
-      <PersonStories
-        familyId={familyId}
-        personId={personId}
-        canContribute={canContribute}
-        canEdit={canEdit}
-        member={viewer}
       />
     </main>
   );

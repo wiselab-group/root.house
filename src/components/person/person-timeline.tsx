@@ -10,7 +10,10 @@ import { TimelineListItem } from "./timeline-list-item";
 import { timelineRowTargetFor } from "./timeline-target";
 import { resolveOtherPersonNames, resolveEventEditData } from "./timeline-data";
 import { ProfileSection } from "./profile-section";
+import { PersonLifeline } from "./person-lifeline";
+import { lifelineView } from "./lifeline-view";
 import type { ActingMember } from "@/domain/family/permissions";
+import type { TimelineEvent } from "@/domain/event/event.service";
 
 /**
  * A Person's chronological timeline of events — server component, fetches
@@ -38,6 +41,7 @@ export async function PersonTimeline({
   canEdit,
   canContribute = canEdit,
   member,
+  lifelinePerson,
 }: {
   familyId: string;
   familySlug: string;
@@ -47,6 +51,12 @@ export async function PersonTimeline({
    *  caller not yet passing this explicitly. */
   canContribute?: boolean;
   member: ActingMember;
+  /** Enables the «Линия жизни» scale above the list — the axis needs to
+   *  know whether it runs to today and how to phrase the age. */
+  lifelinePerson?: {
+    isLiving: boolean;
+    gender: "male" | "female" | "unknown";
+  };
 }) {
   const [allTimeline, places, partnerships] = await Promise.all([
     getPersonTimeline(personId, familyId),
@@ -72,34 +82,48 @@ export async function PersonTimeline({
     ],
   );
 
+  const targetFor = (event: TimelineEvent) =>
+    timelineRowTargetFor({
+      event,
+      familyId,
+      familySlug,
+      personId,
+      canEdit,
+      partnershipById,
+      otherPersonNameByPartnershipId,
+      eventEditDataById,
+    });
+  const lifeline = lifelinePerson
+    ? lifelineView(timeline, lifelinePerson, placeNameById, targetFor)
+    : null;
+  // With the scale drawn, only undated events still need the list — they
+  // have nowhere to sit on the axis. Without it, the list is the timeline.
+  const listed = lifeline
+    ? timeline.filter((event) => event.date?.year == null)
+    : timeline;
+
   return (
-    <ProfileSection id="timeline" title="Хронология" count={timeline.length}>
+    <ProfileSection title="Линия жизни" count={timeline.length}>
       <div className="flex flex-col gap-4">
+        {lifeline && <PersonLifeline {...lifeline} />}
         {timeline.length === 0 ? (
           <p className="text-sm text-muted-foreground">Событий пока нет.</p>
         ) : (
-          <ol className="flex flex-col">
-            {timeline.map((event, index) => (
-              <TimelineListItem
-                key={event.id}
-                event={event}
-                isLast={index === timeline.length - 1}
-                placeName={
-                  event.placeId ? placeNameById.get(event.placeId) : undefined
-                }
-                target={timelineRowTargetFor({
-                  event,
-                  familyId,
-                  familySlug,
-                  personId,
-                  canEdit,
-                  partnershipById,
-                  otherPersonNameByPartnershipId,
-                  eventEditDataById,
-                })}
-              />
-            ))}
-          </ol>
+          listed.length > 0 && (
+            <ol className={`flex flex-col ${lifeline ? "mt-6" : ""}`}>
+              {listed.map((event, index) => (
+                <TimelineListItem
+                  key={event.id}
+                  event={event}
+                  isLast={index === listed.length - 1}
+                  placeName={
+                    event.placeId ? placeNameById.get(event.placeId) : undefined
+                  }
+                  target={targetFor(event)}
+                />
+              ))}
+            </ol>
+          )
         )}
 
         {canContribute && (

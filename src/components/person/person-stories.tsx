@@ -14,12 +14,14 @@ import { canDelete, type ActingMember } from "@/domain/family/permissions";
  */
 export async function PersonStories({
   familyId,
+  familySlug,
   personId,
   canEdit,
   canContribute = canEdit,
   member,
 }: {
   familyId: string;
+  familySlug: string;
   personId: string;
   canEdit: boolean;
   /** May add Stories — owner/editor/contributor. Defaults to canEdit for
@@ -31,13 +33,14 @@ export async function PersonStories({
   const stories = filterVisibleStories(allStories, member);
 
   return (
-    <ProfileSection id="stories" title="Истории" count={stories.length}>
+    <ProfileSection title="Истории" count={stories.length}>
       <div className="flex flex-col gap-4">
         {stories.length === 0 ? (
           <p className="text-sm text-muted-foreground">Историй пока нет.</p>
         ) : (
           <PersonStoriesList
             familyId={familyId}
+            familySlug={familySlug}
             personId={personId}
             stories={stories.map((story) => ({
               ...story,
@@ -50,7 +53,10 @@ export async function PersonStories({
         )}
 
         {canContribute && (
-          <CollapsibleForm triggerLabel="Добавить историю">
+          <CollapsibleForm
+            triggerLabel="Добавить историю"
+            triggerAppearance="primary"
+          >
             <AddStoryForm familyId={familyId} personId={personId} />
           </CollapsibleForm>
         )}

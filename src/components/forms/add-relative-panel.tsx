@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PlusIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CollapsibleForm } from "./collapsible-form";
 import { AddRelativeForm } from "./add-relative-form";
@@ -44,7 +45,31 @@ export function AddRelativePanel({
   const [kind, setKind] = useState<RelativeKind>("parent");
 
   return (
-    <CollapsibleForm triggerLabel="Добавить родственника">
+    <CollapsibleForm
+      triggerLabel="Добавить родственника"
+      renderTrigger={(open) => (
+        // Same row shape as the relatives above it (RelativeListItem), so
+        // «add» reads as the next item in the family list, not a form.
+        <button
+          type="button"
+          aria-expanded={false}
+          onClick={open}
+          className="group/add flex w-full items-center gap-3.5 rounded-2xl border border-dashed border-foreground/20 p-2.5 text-left transition-colors duration-200 ease-(--ease-reveal) hover:border-primary/60 hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-glass text-foreground/60 transition-colors group-hover/add:text-primary">
+            <PlusIcon className="size-5" aria-hidden="true" />
+          </span>
+          <span className="flex min-w-0 flex-col">
+            <span className="text-[0.95rem] font-medium">
+              Добавить родственника
+            </span>
+            <span className="text-sm text-muted-foreground">
+              родителя, супруга или ребёнка
+            </span>
+          </span>
+        </button>
+      )}
+    >
       <div className="flex flex-col gap-3 rounded-md border border-border p-3">
         <Tabs
           value={kind}

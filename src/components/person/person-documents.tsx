@@ -33,7 +33,7 @@ export async function PersonDocuments({
   const documents = filterVisibleMedia(allDocuments, member);
 
   return (
-    <ProfileSection id="documents" title="Документы" count={documents.length}>
+    <ProfileSection title="Документы" count={documents.length}>
       <div className="flex flex-col gap-4">
         {documents.length === 0 ? (
           <p className="text-sm text-muted-foreground">Документов пока нет.</p>

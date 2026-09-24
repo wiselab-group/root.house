@@ -35,7 +35,7 @@ export function PersonMediaGallery({
   photos: GalleryPhotoView[];
 }) {
   return (
-    <ProfileSection id="photos" title="Фотографии" count={photos.length}>
+    <ProfileSection title="Фотографии" count={photos.length}>
       <div className="flex flex-col gap-4">
         {photos.length === 0 ? (
           <p className="text-sm text-muted-foreground">Фотографий пока нет.</p>

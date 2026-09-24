@@ -21,6 +21,7 @@ export function ProfileSection({
   tone = "default",
   count,
   id,
+  action,
   children,
   className,
 }: {
@@ -41,31 +42,39 @@ export function ProfileSection({
    *  PersonArchiveSummary's own doc comment) — a section either earns its
    *  count or shows none, never a bare zero. */
   count?: number;
-  /** Anchor target for PersonArchiveOverview's jump links — undefined for
+  /** Anchor target for in-page jump links — undefined for
    *  sections nothing links to yet. */
   id?: string;
+  /** Trailing link on the heading row («Открыть в дереве →»). */
+  action?: ReactNode;
   children: ReactNode;
   className?: string;
 }) {
+  // Inside the dark photo-backdrop pages (Person Profile, Story) the
+  // section already sits alone in its tab: no rule above it, a larger sans
+  // heading, and no count — the tab itself carries the count there.
   return (
     <section
       id={id}
-      className={`flex flex-col gap-4 border-t pt-8 ${tone === "danger" ? "border-destructive/30" : "border-border"} ${className ?? ""}`}
+      className={`flex flex-col gap-4 border-t pt-8 in-[.photo-backdrop]:gap-5 in-[.photo-backdrop]:border-t-0 in-[.photo-backdrop]:pt-0 ${tone === "danger" ? "border-destructive/30" : "border-border"} ${className ?? ""}`}
     >
-      <div className="flex flex-col gap-1">
-        <h2
-          className={`font-heading text-xl font-medium ${tone === "danger" ? "text-destructive" : ""}`}
-        >
-          {title}
-          {Boolean(count) && (
-            <span className="ml-2 text-base font-normal text-primary">
-              {count}
-            </span>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <div className="flex flex-col gap-1">
+          <h2
+            className={`font-heading text-xl font-medium in-[.photo-backdrop]:text-[1.625rem] in-[.photo-backdrop]:font-normal ${tone === "danger" ? "text-destructive" : ""}`}
+          >
+            {title}
+            {Boolean(count) && (
+              <span className="ml-2 text-base font-normal text-primary in-[.photo-backdrop]:hidden">
+                {count}
+              </span>
+            )}
+          </h2>
+          {description && (
+            <p className="text-sm text-muted-foreground">{description}</p>
           )}
-        </h2>
-        {description && (
-          <p className="text-sm text-muted-foreground">{description}</p>
-        )}
+        </div>
+        {action}
       </div>
       {children}
     </section>

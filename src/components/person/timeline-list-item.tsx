@@ -60,10 +60,15 @@ export function TimelineListItem({
   );
 
   return (
+    // Fixed 3.5rem year column, not `auto`: each <li> is its own grid, so an
+    // auto column sized itself per row — a row with no year ("—") got a
+    // narrower column than "1931" and its dot/rail slid left off the shared
+    // connector line. The year is set in Lora at text-lg as the row's scan
+    // anchor (impeccable "bolder" pass).
     <li
-      className={`grid min-w-0 grid-cols-[auto_1.5rem_1fr] ${isInteractive ? "group" : ""}`}
+      className={`grid min-w-0 grid-cols-[3.5rem_1.5rem_1fr] ${isInteractive ? "group" : ""}`}
     >
-      <span className="pt-0.5 pr-2 text-left text-sm font-medium text-foreground tabular-nums">
+      <span className="font-heading text-lg leading-tight font-medium text-foreground tabular-nums">
         {yearLabel}
       </span>
       <span className="relative">

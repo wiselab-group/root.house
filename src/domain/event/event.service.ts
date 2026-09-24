@@ -5,7 +5,10 @@ import type { PersonRecord } from "@/domain/person/person.repository";
 import { personDisplayName } from "@/domain/person/display-name";
 import { canView, type ActingMember } from "@/domain/family/permissions";
 import { logActivity } from "@/domain/activity-log/activity-log.service";
-import { getPartnershipsOf } from "@/domain/relationship/relationship.repository";
+import {
+  getChildrenOf,
+  getPartnershipsOf,
+} from "@/domain/relationship/relationship.repository";
 import type { PartnershipRecord } from "@/domain/relationship/relationship.repository";
 import { EVENT_ROLE_LABELS, EVENT_TYPE_LABELS } from "./event-roles";
 import {
@@ -23,6 +26,18 @@ import {
 } from "./event.repository";
 
 export type { EventRecord };
+
+/** A Person's timeline entry. `relatedPerson` is set only on the synthetic
+ *  «birth of a child» entries (see synthesizeChildBirths) — the child the
+ *  entry is about, so the UI can name them and link to their profile. */
+export type TimelineEvent = EventRecord & {
+  relatedPerson?: {
+    id: string;
+    slug: string;
+    firstName: string;
+    gender: PersonRecord["gender"];
+  };
+};
 
 export interface EventParticipantWithName {
   personId: string;
@@ -153,10 +168,10 @@ export async function listEventsWithPlace(
  *  visibility rule (owner sees everything; everyone else sees non-private
  *  plus their own). Filtering happens in application code, not SQL, for
  *  now — see domain/family/permissions.ts's module doc comment. */
-export function filterVisibleEvents(
-  events: EventRecord[],
+export function filterVisibleEvents<T extends EventRecord>(
+  events: T[],
   member: ActingMember,
-): EventRecord[] {
+): T[] {
   return events.filter((e) =>
     canView(member, {
       privacyLevel: e.privacyLevel,
@@ -262,25 +277,71 @@ function synthesizeDerivedEvents(
 }
 
 /**
+ * «Родилась дочь Эва» entries for each child with a known birth date — the
+ * profile mock's life line shows a person's children being born (explicit
+ * user request). Same synthetic-id scheme as synthesizeDerivedEvents; the
+ * entry inherits the CHILD's privacy level, so a private child stays hidden
+ * from whoever can't see their profile.
+ */
+function synthesizeChildBirths(children: PersonRecord[]): TimelineEvent[] {
+  return children
+    .filter((child) => child.birthDate?.year != null)
+    .map((child) => {
+      const firstName = child.firstName ?? personDisplayName(child);
+      const verb =
+        child.gender === "female"
+          ? "Родилась дочь"
+          : child.gender === "male"
+            ? "Родился сын"
+            : "Родился ребёнок";
+      return {
+        id: `${SYNTHETIC_PREFIX}child-birth:${child.id}`,
+        familyId: child.familyId,
+        type: "birth",
+        title: `${verb} ${firstName}`,
+        description: null,
+        date: child.birthDate,
+        endDate: null,
+        placeId: child.birthPlaceId,
+        privacyLevel: child.privacyLevel,
+        createdBy: child.createdBy,
+        relatedPerson: {
+          id: child.id,
+          slug: child.slug,
+          firstName,
+          gender: child.gender,
+        },
+      };
+    });
+}
+
+/**
  * A Person's full timeline: every Event they participate in, plus derived
- * birth/death/marriage pseudo-events (synthesizeDerivedEvents), sorted
- * chronologically. Events with unknown dates sort last (via
- * comparePartialDates' Infinity-for-unknown behavior) rather than being
- * dropped — an event worth recording is worth showing even if undated.
+ * birth/death/marriage pseudo-events (synthesizeDerivedEvents) and their
+ * children's births (synthesizeChildBirths), sorted chronologically. Events
+ * with unknown dates sort last (via comparePartialDates'
+ * Infinity-for-unknown behavior) rather than being dropped — an event worth
+ * recording is worth showing even if undated.
  */
 export async function getPersonTimeline(
   personId: string,
   familyId: string,
-): Promise<EventRecord[]> {
-  const [events, person, partnerships] = await Promise.all([
+): Promise<TimelineEvent[]> {
+  const [events, person, partnerships, childEdges] = await Promise.all([
     getEventsForPerson(personId, familyId),
     getPersonById(personId, familyId),
     getPartnershipsOf(personId, familyId),
+    getChildrenOf(personId, familyId),
   ]);
+  const children = (
+    await Promise.all(
+      childEdges.map((edge) => getPersonById(edge.childId, familyId)),
+    )
+  ).filter((child): child is PersonRecord => child !== null);
 
   const derived = person ? synthesizeDerivedEvents(person, partnerships) : [];
 
-  return [...events, ...derived].sort((a, b) =>
-    comparePartialDates(a.date, b.date),
+  return [...events, ...derived, ...synthesizeChildBirths(children)].sort(
+    (a, b) => comparePartialDates(a.date, b.date),
   );
 }

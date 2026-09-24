@@ -24,13 +24,23 @@ export function DeletePersonButton({
   personId,
   personName,
   className,
+  open: controlledOpen,
+  onOpenChange,
+  trigger = true,
 }: {
   familyId: string;
   personId: string;
   personName: string;
   className?: string;
+  /** Controlled mode — for opening this confirm dialog from elsewhere (the
+   *  hero's «⋮» menu), with `trigger={false}` to render no button of its own. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  trigger?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = controlledOpen ?? ownOpen;
+  const setOpen = onOpenChange ?? setOwnOpen;
   const [isPending, startTransition] = useTransition();
 
   const handleConfirm = () => {
@@ -41,13 +51,15 @@ export function DeletePersonButton({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          <Button variant="destructive" size="sm" className={className} />
-        }
-      >
-        Удалить
-      </DialogTrigger>
+      {trigger && (
+        <DialogTrigger
+          render={
+            <Button variant="destructive" size="sm" className={className} />
+          }
+        >
+          Удалить
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Удалить {personName}?</DialogTitle>

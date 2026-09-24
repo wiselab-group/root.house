@@ -12,6 +12,7 @@ import {
   media,
   mediaPerson,
   mediaAlbum,
+  mediaStory,
   persons,
   albums,
   type PrivacyLevel,
@@ -116,6 +117,29 @@ export async function getMediaForPerson(
     .where(
       and(
         eq(mediaPerson.personId, personId),
+        eq(media.familyId, familyId),
+        eq(media.kind, "photo"),
+      ),
+    )
+    .orderBy(...GALLERY_ORDER);
+
+  return rows.map((r) => toRecord(r.media));
+}
+
+/** All photo Media attached to a Story, in gallery order — the Story page's
+ *  hero carousel. Family-scoped in the same query (IDOR-safe, see
+ *  getMediaById), photos only. */
+export async function getPhotosForStory(
+  storyId: string,
+  familyId: string,
+): Promise<MediaRecord[]> {
+  const rows = await db
+    .select({ media })
+    .from(mediaStory)
+    .innerJoin(media, eq(mediaStory.mediaId, media.id))
+    .where(
+      and(
+        eq(mediaStory.storyId, storyId),
         eq(media.familyId, familyId),
         eq(media.kind, "photo"),
       ),

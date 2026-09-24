@@ -9,6 +9,7 @@ import {
   deleteMediaRow,
   getAlbumsForMedia,
   getDocumentsForPerson,
+  getPhotosForStory,
   getMediaById,
   getMediaForAlbum,
   getMediaForFamily,
@@ -289,6 +290,16 @@ export async function getPersonDocuments(
   familyId: string,
 ): Promise<MediaRecord[]> {
   return getDocumentsForPerson(personId, familyId);
+}
+
+/** Photos attached to a Story (its page's hero carousel), already filtered
+ *  to what `member` may see. */
+export async function getVisibleStoryPhotos(
+  storyId: string,
+  familyId: string,
+  member: ActingMember,
+): Promise<MediaRecord[]> {
+  return filterVisibleMedia(await getPhotosForStory(storyId, familyId), member);
 }
 
 /** The family-wide photo gallery (/families/[slug]/photos). */

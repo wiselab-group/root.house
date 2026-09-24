@@ -2,6 +2,7 @@ import { isSyntheticEventId } from "@/domain/event/event.service";
 import type {
   EventRecord,
   EventParticipantWithName,
+  TimelineEvent,
 } from "@/domain/event/event.service";
 import type { PartnershipRecord } from "@/domain/relationship/relationship.repository";
 import type { PlaceRecord } from "@/domain/place/place.service";
@@ -18,7 +19,12 @@ import type { PartialDate } from "@/domain/shared/partial-date";
  */
 export type TimelineRowTarget =
   | { kind: "none" }
-  | { kind: "link"; href: string }
+  | {
+      kind: "link";
+      href: string;
+      /** Action wording in the Линия жизни card; «Подробнее» when absent. */
+      label?: string;
+    }
   | {
       kind: "marriage-dialog";
       familyId: string;
@@ -72,7 +78,7 @@ export function timelineRowTargetFor({
   otherPersonNameByPartnershipId,
   eventEditDataById,
 }: {
-  event: EventRecord;
+  event: TimelineEvent;
   familyId: string;
   familySlug: string;
   personId: string;
@@ -101,6 +107,15 @@ export function timelineRowTargetFor({
       };
     }
     return { kind: "link", href: `/families/${familySlug}/events/${event.id}` };
+  }
+  // A child's birth is the child's own date — edited on their profile,
+  // not here, so it only ever links there (for editors and viewers alike).
+  if (event.relatedPerson) {
+    return {
+      kind: "link",
+      href: `/families/${familySlug}/people/${event.relatedPerson.slug}`,
+      label: `Профиль: ${event.relatedPerson.firstName}`,
+    };
   }
   if (!canEdit) return { kind: "none" };
 

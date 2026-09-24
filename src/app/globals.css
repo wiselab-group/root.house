@@ -43,6 +43,9 @@
   --color-branch: var(--branch);
   --color-tree-card-ring: var(--tree-card-ring);
   --color-tree-canvas: var(--tree-canvas);
+  --color-glass: var(--glass);
+  --color-glass-strong: var(--glass-strong);
+  --color-glass-edge: var(--glass-edge);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -165,6 +168,13 @@
   --sidebar-border: oklch(0.89 0.012 55);
   --sidebar-ring: oklch(0.55 0.14 45 / 50%);
 
+  /* Frosted "glass" surfaces for controls floating over photos (Person
+     Profile / Story hero pills, tabs, chips) — a translucent tint of the
+     page's own foreground, not a new hue. See .photo-backdrop below. */
+  --glass: oklch(0.28 0.02 50 / 6%);
+  --glass-strong: oklch(0.28 0.02 50 / 11%);
+  --glass-edge: oklch(0.28 0.02 50 / 12%);
+
   /* Named easing aliases (DESIGN.md § Motion Principles) — reference these
      by name in code comments, never a bare `ease`/`linear`. */
   --ease-reveal: cubic-bezier(0.16, 1, 0.3, 1);
@@ -211,6 +221,9 @@
   /* See :root's own comment on --tree-card-ring — aliased to --accent, same
      as light. */
   --tree-card-ring: var(--accent);
+  --glass: oklch(0.97 0.02 60 / 9%);
+  --glass-strong: oklch(0.97 0.02 60 / 16%);
+  --glass-edge: oklch(0.97 0.02 60 / 14%);
   /* Unused shadcn scaffolding, see :root's own comment — not the tree hue. */
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
@@ -474,4 +487,99 @@
    transition-duration for every element, this included. */
 .react-flow__edge path {
   transition: opacity 200ms var(--ease-tree-focus);
+}
+
+@layer utilities {
+  /* Portrait dissolving into the backdrop: faded on the left (where the
+     name sits) and at the bottom, so there is never a hard photo edge. On
+     phones the photo spans the full width and only fades at the bottom. */
+  .hero-photo-mask {
+    mask-image:
+      linear-gradient(0deg, transparent 0, #000 42%),
+      linear-gradient(90deg, transparent 0, #000 100%);
+    mask-composite: intersect;
+  }
+  @media (min-width: 640px) {
+    .hero-photo-mask {
+      mask-image:
+        linear-gradient(
+          90deg,
+          transparent 0,
+          #000 38%,
+          #000 88%,
+          transparent 100%
+        ),
+        linear-gradient(0deg, transparent 0, #000 34%);
+    }
+  }
+
+  /* Legibility scrim over a full-bleed story photo (the carousel's
+     landscape slides) — darkens toward the caption corner only. */
+  .hero-scrim {
+    background:
+      linear-gradient(
+        90deg,
+        oklch(0.17 var(--backdrop-chroma) var(--backdrop-hue) / 85%) 0,
+        transparent 70%
+      ),
+      linear-gradient(
+        0deg,
+        oklch(0.17 var(--backdrop-chroma) var(--backdrop-hue) / 95%) 0,
+        transparent 60%
+      );
+  }
+
+  /* Slideshow progress ring (story carousel) — stroke-dashoffset, the same
+     layout-safe exception as the tree's edge draw-in above. */
+  @keyframes carousel-ring {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  .animate-carousel-ring {
+    stroke-dasharray: 1;
+    animation: carousel-ring 6s var(--ease-transition) forwards;
+  }
+}
+
+/* Dark "sepia" page for the Person Profile and Story pages — the page
+   continues the tone of the person's portrait (reference screenshots the
+   user picked, 2026-09-24). Always paired with the `.dark` class so every
+   shadcn token inside flips to its dark value; this class then re-tints
+   --background/--card by the photo's own hue, fed in through
+   --backdrop-hue/--backdrop-chroma (src/lib/photo-backdrop.ts sets them
+   inline — lightness is pinned here, so a light photo still yields a dark
+   page). Scoped to these two pages only: the rest of the app stays light.
+   Deliberately unlayered and after `.dark`: `.dark` is itself unlayered, so
+   a rule inside @layer utilities would lose to it on the same element no
+   matter the source order. */
+.photo-backdrop {
+  --backdrop-hue: 50;
+  --backdrop-chroma: 0.02;
+  --background: oklch(0.2 var(--backdrop-chroma) var(--backdrop-hue));
+  --card: oklch(0.25 var(--backdrop-chroma) var(--backdrop-hue));
+  --popover: oklch(0.25 var(--backdrop-chroma) var(--backdrop-hue));
+  --muted: oklch(0.29 var(--backdrop-chroma) var(--backdrop-hue));
+  --secondary: oklch(0.32 var(--backdrop-chroma) var(--backdrop-hue));
+  /* The mock's sage (#A9B593): lighter and a touch greener than dark's
+     tree --tree-accent, which read muddy on this warm brown ground. */
+  --tree-accent: oklch(0.755 0.049 124);
+  color: var(--foreground);
+  background: linear-gradient(
+    180deg,
+    oklch(0.17 var(--backdrop-chroma) var(--backdrop-hue)) 0,
+    oklch(0.22 var(--backdrop-chroma) var(--backdrop-hue)) 38%,
+    oklch(0.3 calc(var(--backdrop-chroma) * 1.2) var(--backdrop-hue)) 100%
+  );
+}
+
+/* Headings on the photo-backdrop pages are set in the UI sans, light, like
+   the reference screenshots — Lora stays the serif accent everywhere else.
+   Unlayered, same reason as .photo-backdrop above. */
+.photo-backdrop .font-heading {
+  font-family: var(--font-sans);
+  letter-spacing: -0.015em;
 }
