@@ -39,6 +39,7 @@ export function PersonPhotoUpload({
   fallback,
   onFileSelect,
   onRemove,
+  removeLabel = "Удалить фото",
   disabled = false,
   isBusy = false,
   size = "default",
@@ -48,6 +49,8 @@ export function PersonPhotoUpload({
   fallback: React.ReactNode;
   onFileSelect: (file: File) => void;
   onRemove?: () => void;
+  /** Accessible name of the remove (×) button. */
+  removeLabel?: string;
   disabled?: boolean;
   isBusy?: boolean;
   size?: "default" | "compact";
@@ -146,7 +149,7 @@ export function PersonPhotoUpload({
               "absolute end-0 top-0 z-10 rounded-full bg-background",
               styles.remove,
             )}
-            aria-label="Удалить фото"
+            aria-label={removeLabel}
           >
             <X />
           </Button>

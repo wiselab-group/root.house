@@ -20,13 +20,11 @@ import {
 export function DeleteDocumentButton({
   familyId,
   familySlug,
-  personId,
   mediaId,
   onDeleted,
 }: {
   familyId: string;
   familySlug: string;
-  personId: string;
   mediaId: string;
   onDeleted: () => void;
 }) {
@@ -37,7 +35,7 @@ export function DeleteDocumentButton({
     startTransition(async () => {
       onDeleted();
       setOpen(false);
-      await deleteMediaAction(familyId, familySlug, mediaId, personId);
+      await deleteMediaAction(familyId, familySlug, mediaId);
     });
   };
 

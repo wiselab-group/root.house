@@ -71,7 +71,7 @@ export function ProfileTabs({ panels }: { panels: ProfilePanel[] }) {
                 aria-controls={panel.id}
                 tabIndex={selected ? 0 : -1}
                 onClick={() => select(panel.id)}
-                className={`inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors duration-300 ease-(--ease-reveal) focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+                className={`inline-flex h-10 cursor-pointer items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors duration-300 ease-(--ease-reveal) focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
                   selected
                     ? "bg-foreground text-background"
                     : "text-foreground/65 hover:bg-glass hover:text-foreground"

@@ -6,7 +6,7 @@ import { canCreate } from "@/domain/family/permissions";
 import {
   uploadPersonPhoto,
   uploadPersonAvatar,
-  removeMedia,
+  removeMediaIfUnlinked,
 } from "@/domain/media/media.service";
 import { getPerson, setPersonAvatar } from "@/domain/person/person.service";
 
@@ -113,12 +113,13 @@ export async function POST(request: Request): Promise<Response> {
     const avatarPersonId = personId as string;
 
     // Replacing an existing avatar: upload+assign the new one first, then
-    // remove the old Media row — never leave the person without any avatar
+    // deal with the old one — never leave the person without any avatar
     // between the two steps if something below fails.
     const previousPerson = await getPerson(avatarPersonId, familyId);
     const previousAvatarMediaId = previousPerson?.photoMediaId ?? null;
 
     const avatarMedia = await uploadPersonAvatar({
+      personId: avatarPersonId,
       familyId,
       uploadedBy: session.user.id,
       file: buffer,
@@ -127,8 +128,14 @@ export async function POST(request: Request): Promise<Response> {
     });
     await setPersonAvatar(avatarPersonId, familyId, avatarMedia.id);
 
+    // The old portrait normally stays in the gallery (portraits are
+    // gallery photos now); only a pre-gallery avatar nothing uses is removed.
     if (previousAvatarMediaId) {
-      await removeMedia(previousAvatarMediaId, familyId, session.user.id);
+      await removeMediaIfUnlinked(
+        previousAvatarMediaId,
+        familyId,
+        session.user.id,
+      );
     }
 
     return NextResponse.json({ id: avatarMedia.id }, { status: 201 });

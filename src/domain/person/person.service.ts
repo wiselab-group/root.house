@@ -295,9 +295,9 @@ export async function removePerson(
 /**
  * Sets (or clears, with mediaId=null) a Person's profile photo/avatar —
  * shown on the profile header, the /people list card, and as the tree node
- * thumbnail. The avatar is its own Media row, uploaded separately from (and
- * never shown in) the photo gallery — see media.service.ts::uploadPersonAvatar
- * and components/forms/avatar-editor.tsx. Returns false if the Person or the
+ * thumbnail. The portrait is one of the person's gallery photos (uploaded
+ * via media.service.ts::uploadPersonAvatar, or picked in the gallery with
+ * «Сделать портретом» — setPersonPortraitAction). Returns false if the Person or the
  * Media doesn't exist in this family (family-scoped check happens in the
  * repository).
  */

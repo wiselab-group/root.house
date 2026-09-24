@@ -8,14 +8,13 @@ import { removePersonAvatarAction } from "@/actions/media.actions";
 import type { PersonRecord } from "@/domain/person/person.repository";
 
 /**
- * Avatar as its own editing surface — deliberately separate from the photo
- * gallery (PersonMediaGallery): an avatar is "the one profile picture", not
- * one-of-many uploaded photos, so it gets its own upload/replace/remove
- * controls here rather than a "make avatar" button scattered across gallery
- * tiles. Upload goes through /api/media/upload with isAvatar=true (same
- * Route Handler as gallery photos — see its doc comment for why a Route
- * Handler and not a Server Action), which atomically replaces any previous
- * avatar Media row server-side.
+ * The portrait's upload/replace/remove control on the edit page. Portraits
+ * are gallery photos (explicit user request — any photo can also be made the
+ * portrait from the gallery's «Сделать портретом»): an upload here goes
+ * through /api/media/upload with isAvatar=true (see its doc comment for why
+ * a Route Handler and not a Server Action), lands in the person's gallery
+ * and becomes the portrait. Removing only unsets the portrait — the photo
+ * stays in the gallery.
  */
 export function AvatarEditor({
   familyId,
@@ -74,7 +73,7 @@ export function AvatarEditor({
       try {
         await removePersonAvatarAction(familyId, personId);
       } catch {
-        setError("Не удалось удалить аватар");
+        setError("Не удалось убрать портрет");
       }
     });
   }
@@ -86,6 +85,7 @@ export function AvatarEditor({
         fallback={<span>{personInitials(person)}</span>}
         onFileSelect={handleFileSelect}
         onRemove={handleRemove}
+        removeLabel="Убрать портрет"
         isBusy={isUploading || isRemoving}
         size="compact"
       />

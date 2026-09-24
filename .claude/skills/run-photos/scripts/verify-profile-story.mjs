@@ -123,6 +123,35 @@ async function main() {
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: /^\d{4}: Ева/ }).locator("b").click();
     await shoot(page, "profile-desktop-lifeline-child", true);
+
+    // Portraits are gallery photos: both uploaded portraits are already in
+    // their owners' galleries; tag Элеонора's onto Александр too, then make
+    // it his portrait from the gallery menu.
+    const [pp] = await sql`select a.id alex, a.photo_media_id alex_media, e.photo_media_id ele_media
+      from persons a join persons e on e.family_id=a.family_id
+      join families f on f.id=a.family_id
+      where f.slug=${familySlug} and a.slug=${alexSlug} and e.slug=${eleSlug}`;
+    const [inGallery] = await sql`select count(*)::int n from media_person where media_id=${pp.alex_media} and person_id=${pp.alex}`;
+    console.log(`  uploaded portrait in own gallery: ${inGallery.n === 1}`);
+    await sql`insert into media_person (media_id, person_id) values (${pp.ele_media}, ${pp.alex})`;
+    await page.goto(profile, { waitUntil: "networkidle" });
+    await page.getByRole("tab", { name: /Фото/ }).click();
+    const tiles = page.getByRole("button", { name: "Действия с фото", exact: true });
+    for (const i of [0, 1]) {
+      await tiles.nth(i).hover();
+      await tiles.nth(i).click();
+      await page.getByRole("menu").waitFor();
+      await shoot(page, `profile-desktop-photo-menu-${i}`);
+      if (await page.getByRole("menuitem", { name: "Сделать портретом" }).count()) break;
+      await page.keyboard.press("Escape");
+    }
+    await page.getByRole("menuitem", { name: "Сделать портретом" }).click();
+    await page.waitForTimeout(2500);
+    const [after] = await sql`select photo_media_id from persons where id=${pp.alex}`;
+    const [old] = await sql`select count(*)::int n from media where id=${pp.alex_media}`;
+    console.log(`  portrait switched: ${after.photo_media_id === pp.ele_media}, old portrait kept: ${old.n === 1}`);
+    await page.goto(profile, { waitUntil: "networkidle" });
+    await shoot(page, "profile-desktop-new-portrait");
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(profile, { waitUntil: "networkidle" });
     await shoot(page, "profile-phone-full", true);

@@ -13,8 +13,9 @@ import type { GalleryPhotoView } from "@/components/media/gallery-photo";
  * tagged people, delete — instead of just a static grid with no way to see a
  * photo full-size.
  *
- * The avatar is a separate concept (see components/forms/avatar-editor.tsx)
- * and never appears here — this is purely the "photos of this person" grid.
+ * The portrait is one of these photos: each tile's menu can make it the
+ * portrait («Сделать портретом»), and an uploaded portrait lands here too
+ * (see media.service.ts::uploadPersonAvatar).
  */
 export function PersonMediaGallery({
   familyId,
@@ -23,6 +24,7 @@ export function PersonMediaGallery({
   canEdit,
   canContribute = canEdit,
   photos,
+  portraitMediaId,
 }: {
   familyId: string;
   familySlug: string;
@@ -33,6 +35,8 @@ export function PersonMediaGallery({
    *  caller not yet passing this explicitly. */
   canContribute?: boolean;
   photos: GalleryPhotoView[];
+  /** The Person's current portrait (photoMediaId) — marked in the menu. */
+  portraitMediaId: string | null;
 }) {
   return (
     <ProfileSection title="Фотографии" count={photos.length}>
@@ -45,6 +49,7 @@ export function PersonMediaGallery({
             familyId={familyId}
             familySlug={familySlug}
             canEdit={canEdit}
+            portrait={{ personId, mediaId: portraitMediaId }}
           />
         )}
 

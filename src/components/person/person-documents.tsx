@@ -41,7 +41,6 @@ export async function PersonDocuments({
           <DocumentList
             familyId={familyId}
             familySlug={familySlug}
-            personId={personId}
             documents={documents.map((doc) => ({
               ...doc,
               canDelete: canDelete(member, {

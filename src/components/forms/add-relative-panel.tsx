@@ -49,12 +49,14 @@ export function AddRelativePanel({
       triggerLabel="Добавить родственника"
       renderTrigger={(open) => (
         // Same row shape as the relatives above it (RelativeListItem), so
-        // «add» reads as the next item in the family list, not a form.
+        // «add» reads as the next item in the family list, not a form — and
+        // the same width as one of them: half the row on sm+, minus half of
+        // RelativeGroup's gap-2, so it lines up with the left column.
         <button
           type="button"
           aria-expanded={false}
           onClick={open}
-          className="group/add flex w-full items-center gap-3.5 rounded-2xl border border-dashed border-foreground/20 p-2.5 text-left transition-colors duration-200 ease-(--ease-reveal) hover:border-primary/60 hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="group/add flex w-full cursor-pointer items-center sm:w-[calc(50%-0.25rem)] gap-3.5 rounded-2xl border border-dashed border-foreground/20 p-2.5 text-left transition-colors duration-200 ease-(--ease-reveal) hover:border-primary/60 hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-glass text-foreground/60 transition-colors group-hover/add:text-primary">
             <PlusIcon className="size-5" aria-hidden="true" />

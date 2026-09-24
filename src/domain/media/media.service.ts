@@ -15,7 +15,9 @@ import {
   getMediaForFamily,
   getMediaForPerson,
   getPeopleForMedia,
+  isMediaLinked,
   reorderMedia,
+  setMediaDominantColor,
   upsertPhotoTagPosition,
   clearPhotoTagPosition,
   removePersonFromMedia,
@@ -59,11 +61,17 @@ export async function uploadPersonPhoto(
 ): Promise<{ id: string }> {
   const key = `${input.familyId}/${crypto.randomUUID()}-${sanitizeFilename(input.originalFilename)}`;
 
-  const { storageKey } = await storage.upload({
-    key,
-    file: input.file,
-    contentType: input.contentType,
-  });
+  // Sampled for every photo, not only avatars: any gallery photo can become
+  // a portrait later («Сделать портретом»), and the profile page tints its
+  // background from it.
+  const [{ storageKey }, dominantColor] = await Promise.all([
+    storage.upload({
+      key,
+      file: input.file,
+      contentType: input.contentType,
+    }),
+    sampleLeftEdgeColor(input.file),
+  ]);
 
   try {
     const result = await createMedia({
@@ -75,6 +83,7 @@ export async function uploadPersonPhoto(
       sizeBytes: input.file.byteLength,
       width: input.width,
       height: input.height,
+      dominantColor,
       uploadedBy: input.uploadedBy,
       privacyLevel: input.privacyLevel,
       personIds: input.personIds,
@@ -187,47 +196,51 @@ export async function uploadPersonDocument(
 }
 
 /**
- * Uploads a Person's avatar as its own Media row, deliberately NOT linked
- * via media_person or media_album — an avatar is a distinct thing from the
- * photo gallery (see person.service.ts::setPersonAvatar), not "pick one of
- * your uploaded photos", so it must never appear in getMediaForPerson, the
- * family gallery, or any album.
+ * Uploads a new portrait for a Person. Since portraits and the gallery became
+ * one thing (explicit user request: any gallery photo can be made the
+ * portrait via «Сделать портретом»), an uploaded portrait is simply a gallery
+ * photo of that person — it shows up in their «Фото» tab too, and replacing
+ * it later keeps it there. The caller then points photoMediaId at it.
  */
 export async function uploadPersonAvatar(
-  input: Omit<UploadPhotoInput, "personIds" | "albumIds">,
+  input: Omit<UploadPhotoInput, "personIds" | "albumIds"> & {
+    personId: string;
+  },
 ): Promise<{ id: string }> {
-  const key = `${input.familyId}/avatar-${crypto.randomUUID()}-${sanitizeFilename(input.originalFilename)}`;
+  const { personId, ...rest } = input;
+  return uploadPersonPhoto({ ...rest, personIds: [personId], albumIds: [] });
+}
 
-  const [{ storageKey }, dominantColor] = await Promise.all([
-    storage.upload({
-      key,
-      file: input.file,
-      contentType: input.contentType,
-    }),
-    sampleLeftEdgeColor(input.file),
-  ]);
-
+/**
+ * Makes sure a photo about to become a portrait has its edge color — photos
+ * uploaded before uploadPersonPhoto sampled it have none, and the profile
+ * page's background is tinted from it. Best-effort: a failed sample just
+ * leaves the neutral fallback tone.
+ */
+export async function ensureDominantColor(record: MediaRecord): Promise<void> {
+  if (record.dominantColor || record.kind !== "photo") return;
   try {
-    return await createMedia({
-      familyId: input.familyId,
-      kind: "photo",
-      storageKey,
-      storageProvider: storage.providerName,
-      mimeType: input.contentType,
-      sizeBytes: input.file.byteLength,
-      width: input.width,
-      height: input.height,
-      dominantColor,
-      uploadedBy: input.uploadedBy,
-      personIds: [], // not linked to the gallery — see doc comment above
-      albumIds: [], // not linked to any album — see doc comment above
-    });
-  } catch (error) {
-    await storage.delete(storageKey).catch(() => {
-      // Best-effort cleanup — the DB insert error is what actually matters to the caller.
-    });
-    throw error;
+    const { stream } = await storage.getStream(record.storageKey);
+    const buffer = Buffer.from(await new Response(stream).arrayBuffer());
+    const color = await sampleLeftEdgeColor(buffer);
+    if (color) await setMediaDominantColor(record.id, record.familyId, color);
+  } catch {
+    // Portrait still works without it — see doc comment.
   }
+}
+
+/**
+ * Deletes a former portrait only if nothing else in the archive uses it —
+ * an avatar uploaded before portraits joined the gallery would otherwise be
+ * left invisible. A gallery photo just stops being the portrait.
+ */
+export async function removeMediaIfUnlinked(
+  mediaId: string,
+  familyId: string,
+  actorId: string,
+): Promise<void> {
+  if (await isMediaLinked(mediaId, familyId)) return;
+  await removeMedia(mediaId, familyId, actorId);
 }
 
 function sanitizeFilename(filename: string): string {

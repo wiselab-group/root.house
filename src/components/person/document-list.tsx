@@ -28,12 +28,10 @@ function formatFileSize(bytes: number): string {
 export function DocumentList({
   familyId,
   familySlug,
-  personId,
   documents,
 }: {
   familyId: string;
   familySlug: string;
-  personId: string;
   documents: (MediaRecord & { canDelete: boolean })[];
 }) {
   const [optimisticDocuments, removeOptimisticDocument] = useOptimistic(
@@ -68,7 +66,6 @@ export function DocumentList({
               <DeleteDocumentButton
                 familyId={familyId}
                 familySlug={familySlug}
-                personId={personId}
                 mediaId={doc.id}
                 onDeleted={() => removeOptimisticDocument(doc.id)}
               />

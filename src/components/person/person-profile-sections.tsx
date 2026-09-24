@@ -16,7 +16,7 @@ const PANEL =
 
 /**
  * Everything under the Person Profile hero, grouped into the tabs the user
- * asked for (Обзор / Истории / Фото / Линия жизни / Документы — tabs on
+ * asked for (Обзор / Истории / Линия жизни / Фото / Документы — tabs on
  * desktop, one long scroll with «Содержание» on phones, see ProfileTabs).
  * «Обзор» holds the description, the facts strip and the family list; the
  * other tabs are the existing section components unchanged.
@@ -87,21 +87,6 @@ export function PersonProfileSections({
           ),
         },
         {
-          id: "photos",
-          label: "Фото",
-          count: photos.length,
-          content: (
-            <div className={PANEL}>
-              <PersonMediaGallery
-                {...shared}
-                canEdit={canEdit}
-                canContribute={canContribute}
-                photos={photos}
-              />
-            </div>
-          ),
-        },
-        {
           id: "timeline",
           label: "Линия жизни",
           count: counts.events,
@@ -113,6 +98,22 @@ export function PersonProfileSections({
                 canEdit={canEdit}
                 canContribute={canContribute}
                 member={viewer}
+              />
+            </div>
+          ),
+        },
+        {
+          id: "photos",
+          label: "Фото",
+          count: photos.length,
+          content: (
+            <div className={PANEL}>
+              <PersonMediaGallery
+                {...shared}
+                canEdit={canEdit}
+                canContribute={canContribute}
+                photos={photos}
+                portraitMediaId={person.photoMediaId}
               />
             </div>
           ),

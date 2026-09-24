@@ -11,11 +11,14 @@ import {
   getPersonSlugById,
   setPersonAvatar,
 } from "@/domain/person/person.service";
+import { clearProfilePhotoForMedia } from "@/domain/person/person.repository";
 import {
+  ensureDominantColor,
   getAlbumsForSingleMedia,
   getMedia,
   getTaggedPeopleForMedia,
   removeMedia,
+  removeMediaIfUnlinked,
   reorderGalleryPhotos,
 } from "@/domain/media/media.service";
 
@@ -24,9 +27,8 @@ import {
  * doc comment for why (private-blob access + file body size). Deletion has
  * no such constraint, so it's a normal action like every other remove/delete.
  *
- * `personId` is an optional hint (passed when deleting from a specific
- * person's profile gallery, for the avatar defense-in-depth check below) —
- * but which profile/album pages get revalidated is NOT limited to it. A
+ * Which profile/album pages get revalidated is not limited to the page the
+ * delete was clicked on. A
  * photo deleted from the family-wide gallery (/families/[slug]/photos) may
  * be tagged to several people (media_person) and belong to several albums
  * (media_album) at once — every one of those pages shows this same photo,
@@ -38,7 +40,6 @@ export async function deleteMediaAction(
   familyId: string,
   familySlug: string,
   mediaId: string,
-  personId?: string,
 ): Promise<void> {
   const session = await auth();
   if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
@@ -71,20 +72,22 @@ export async function deleteMediaAction(
     getAlbumsForSingleMedia(mediaId, familyId),
   ]);
 
-  if (personId) {
-    // Avatars are never gallery photos (see media.service.ts::uploadPersonAvatar),
-    // so this shouldn't match in practice — kept as defense-in-depth against a
-    // dangling photoMediaId, since that column has no DB-level FK (db/schema/person.ts).
-    const person = await getPerson(personId, familyId);
-    if (person?.photoMediaId === mediaId) {
-      await setPersonAvatar(personId, familyId, null);
-    }
-  }
+  // Any gallery photo can be someone's portrait («Сделать портретом») —
+  // clear it from every person using it before the row goes, since
+  // photoMediaId has no DB-level FK (db/schema/person.ts).
+  const portraitOf = await clearProfilePhotoForMedia(mediaId, familyId);
 
   await removeMedia(mediaId, familyId, session.user.id);
 
-  for (const person of taggedPeople) {
-    revalidatePath(`/families/${familySlug}/people/${person.slug}`);
+  for (const slug of new Set([
+    ...taggedPeople.map((person) => person.slug),
+    ...portraitOf,
+  ])) {
+    revalidatePath(`/families/${familySlug}/people/${slug}`);
+  }
+  if (portraitOf.length > 0) {
+    revalidatePath(`/families/${familySlug}/people`);
+    revalidatePath(`/families/${familySlug}/tree`);
   }
   for (const album of taggedAlbums) {
     revalidatePath(`/families/${familySlug}/photos/${album.id}`);
@@ -93,9 +96,10 @@ export async function deleteMediaAction(
 }
 
 /**
- * Removes a Person's avatar — deletes the underlying Media row (the avatar
- * is its own upload, never a gallery photo, see media.service.ts::uploadPersonAvatar)
- * and clears photoMediaId. Uploading/replacing an avatar happens through
+ * Removes a Person's portrait — clears photoMediaId. The photo itself stays
+ * in the gallery (portraits are gallery photos now, see
+ * media.service.ts::uploadPersonAvatar); only an old-style avatar that the
+ * gallery never contained is deleted with it (removeMediaIfUnlinked). Uploading/replacing an avatar happens through
  * /api/media/upload (isAvatar=true), not this action — same reasoning as
  * deleteMediaAction's doc comment (file body needs a Route Handler).
  */
@@ -113,7 +117,7 @@ export async function removePersonAvatarAction(
 
   await setPersonAvatar(personId, familyId, null);
   if (avatarMediaId) {
-    await removeMedia(avatarMediaId, familyId, session.user.id);
+    await removeMediaIfUnlinked(avatarMediaId, familyId, session.user.id);
   }
 
   const familySlug = await getFamilySlugById(familyId);
@@ -153,4 +157,42 @@ export async function reorderMediaAction(
   await reorderGalleryPhotos(orderedMediaIds, familyId);
 
   revalidatePath(revalidateOnPath);
+}
+
+/**
+ * «Сделать портретом» on a gallery photo: makes that photo the Person's
+ * portrait (profile header, people list, tree card). Editor-only, same as
+ * uploading a portrait. The previous portrait is left alone unless nothing
+ * else uses it (removeMediaIfUnlinked) — normally it's a gallery photo too.
+ */
+export async function setPersonPortraitAction(
+  familyId: string,
+  familySlug: string,
+  personId: string,
+  mediaId: string,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+
+  await requireFamilyAccess(familyId, session.user.id, "editor");
+
+  const [person, record] = await Promise.all([
+    getPerson(personId, familyId),
+    getMedia(mediaId, familyId),
+  ]);
+  if (!person || !record || record.kind !== "photo") {
+    throw new Error("Фото не найдено.");
+  }
+  if (person.photoMediaId === mediaId) return;
+
+  await ensureDominantColor(record);
+  await setPersonAvatar(personId, familyId, mediaId);
+  if (person.photoMediaId) {
+    await removeMediaIfUnlinked(person.photoMediaId, familyId, session.user.id);
+  }
+
+  revalidatePath(`/families/${familySlug}/people/${person.slug}`);
+  revalidatePath(`/families/${familySlug}/people/${person.slug}/edit`);
+  revalidatePath(`/families/${familySlug}/people`);
+  revalidatePath(`/families/${familySlug}/tree`);
 }

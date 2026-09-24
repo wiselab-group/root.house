@@ -26,14 +26,11 @@ export function DeleteMediaButton({
   familyId,
   familySlug,
   mediaId,
-  personId,
   className,
 }: {
   familyId: string;
   familySlug: string;
   mediaId: string;
-  /** Pass when deleting from a specific person's profile gallery — omit on the family-wide gallery, where a photo may be untagged or tagged to several people. */
-  personId?: string;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -41,7 +38,7 @@ export function DeleteMediaButton({
 
   const handleConfirm = () => {
     startTransition(async () => {
-      await deleteMediaAction(familyId, familySlug, mediaId, personId);
+      await deleteMediaAction(familyId, familySlug, mediaId);
       setOpen(false);
     });
   };

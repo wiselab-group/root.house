@@ -308,3 +308,23 @@ export async function setProfilePhoto(
 
   return result.length > 0;
 }
+
+/**
+ * Clears the profile photo of every Person in this family whose portrait is
+ * `mediaId` — run before that Media row is deleted (photoMediaId has no FK,
+ * see db/schema/person.ts). Several people can share one portrait (a gallery
+ * group photo), hence all of them. Returns their slugs for revalidation.
+ */
+export async function clearProfilePhotoForMedia(
+  mediaId: string,
+  familyId: string,
+): Promise<string[]> {
+  const rows = await db
+    .update(persons)
+    .set({ photoMediaId: null, updatedAt: new Date() })
+    .where(
+      and(eq(persons.photoMediaId, mediaId), eq(persons.familyId, familyId)),
+    )
+    .returning({ slug: persons.slug });
+  return rows.map((row) => row.slug);
+}

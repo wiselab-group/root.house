@@ -54,6 +54,7 @@ export function PhotoGrid({
   familySlug,
   canEdit,
   albumId,
+  portrait,
 }: {
   photos: GalleryPhotoView[];
   familyId: string;
@@ -61,6 +62,9 @@ export function PhotoGrid({
   canEdit: boolean;
   /** Present only on an album's own page — enables "make cover" on each tile's menu. */
   albumId?: string | null;
+  /** Present only in a Person's profile gallery — enables «Сделать портретом»
+   *  on each tile and marks the current portrait. */
+  portrait?: { personId: string; mediaId: string | null };
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const { order, handleDragEnd } = usePhotoGridReorder(photos, familyId);
@@ -96,6 +100,8 @@ export function PhotoGrid({
                 canEdit={canEdit}
                 canReorder={canEdit}
                 albumId={albumId}
+                portraitPersonId={portrait?.personId}
+                isPortrait={portrait?.mediaId === photo.media.id}
                 onOpen={() => setOpenIndex(i)}
                 onDeleted={() => removeOptimisticPhoto(photo.media.id)}
               />

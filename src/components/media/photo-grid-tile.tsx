@@ -22,6 +22,8 @@ export function PhotoGridTile({
   canEdit,
   canReorder,
   albumId,
+  portraitPersonId,
+  isPortrait = false,
   onOpen,
   onDeleted,
 }: {
@@ -31,6 +33,9 @@ export function PhotoGridTile({
   canEdit: boolean;
   canReorder: boolean;
   albumId?: string | null;
+  /** Set in a Person's profile gallery — see PhotoTileMenu's `portrait`. */
+  portraitPersonId?: string;
+  isPortrait?: boolean;
   onOpen: () => void;
   onDeleted: () => void;
 }) {
@@ -82,6 +87,11 @@ export function PhotoGridTile({
             familySlug={familySlug}
             mediaId={photo.media.id}
             albumId={albumId}
+            portrait={
+              portraitPersonId
+                ? { personId: portraitPersonId, isCurrent: isPortrait }
+                : undefined
+            }
             onDeleted={onDeleted}
           />
         </div>

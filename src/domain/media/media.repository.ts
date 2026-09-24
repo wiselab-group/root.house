@@ -13,6 +13,8 @@ import {
   mediaPerson,
   mediaAlbum,
   mediaStory,
+  mediaEvent,
+  mediaPlace,
   persons,
   albums,
   type PrivacyLevel,
@@ -394,6 +396,47 @@ export async function deleteMediaRow(
     .where(and(eq(media.id, mediaId), eq(media.familyId, familyId)))
     .returning({ id: media.id });
   return result.length > 0;
+}
+
+/** Stores a photo's sampled edge color after the fact — for photos uploaded
+ *  before every upload sampled it, the first time one becomes a portrait. */
+export async function setMediaDominantColor(
+  mediaId: string,
+  familyId: string,
+  dominantColor: string,
+): Promise<void> {
+  await db
+    .update(media)
+    .set({ dominantColor })
+    .where(and(eq(media.id, mediaId), eq(media.familyId, familyId)));
+}
+
+/**
+ * Whether a Media row is part of the archive anywhere — tagged on a person,
+ * in an album, or attached to a story/event/place. A portrait that is NOT
+ * (an avatar uploaded before avatars joined the gallery) would be invisible
+ * once replaced, so only those are deleted along with it.
+ */
+export async function isMediaLinked(
+  mediaId: string,
+  familyId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: media.id })
+    .from(media)
+    .where(
+      and(
+        eq(media.id, mediaId),
+        eq(media.familyId, familyId),
+        sql`(exists (select 1 from ${mediaPerson} where ${mediaPerson.mediaId} = ${media.id})
+          or exists (select 1 from ${mediaAlbum} where ${mediaAlbum.mediaId} = ${media.id})
+          or exists (select 1 from ${mediaStory} where ${mediaStory.mediaId} = ${media.id})
+          or exists (select 1 from ${mediaEvent} where ${mediaEvent.mediaId} = ${media.id})
+          or exists (select 1 from ${mediaPlace} where ${mediaPlace.mediaId} = ${media.id}))`,
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
 }
 
 export interface UpsertPhotoTagPositionData {
