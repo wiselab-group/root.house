@@ -4,6 +4,8 @@
 /node_modules
 /.pnp
 .pnp.*
+# pnpm store kept in the repo so `pnpm install` works inside the agent sandbox
+/.pnpm-store/
 .yarn/*
 !.yarn/patches
 !.yarn/plugins
