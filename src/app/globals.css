@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.dark *, body:has(.photo-backdrop) .app-header *));
 
 @theme inline {
   --color-background: var(--background);
@@ -182,7 +182,8 @@
   --ease-tree-focus: cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
-.dark {
+.dark,
+body:has(.photo-backdrop) .app-header {
   --background: oklch(0.2 0.014 50);
   --foreground: oklch(0.94 0.01 60);
   --card: oklch(0.245 0.014 50);
@@ -493,10 +494,13 @@
   /* Portrait dissolving into the backdrop: faded on the left (where the
      name sits) and at the bottom, so there is never a hard photo edge. On
      phones the photo spans the full width and only fades at the bottom. */
+  /* Also fades the top edge: the dark header sits over the page, so
+     the photo's top would otherwise end in a hard line right under it. */
   .hero-photo-mask {
     mask-image:
       linear-gradient(0deg, transparent 0, #000 42%),
-      linear-gradient(90deg, transparent 0, #000 100%);
+      linear-gradient(90deg, transparent 0, #000 100%),
+      linear-gradient(180deg, transparent 0, #000 12%);
     mask-composite: intersect;
   }
   @media (min-width: 640px) {
@@ -509,7 +513,8 @@
           #000 88%,
           transparent 100%
         ),
-        linear-gradient(0deg, transparent 0, #000 34%);
+        linear-gradient(0deg, transparent 0, #000 34%),
+        linear-gradient(180deg, transparent 0, #000 12%);
     }
   }
 
@@ -574,4 +579,36 @@
     oklch(0.22 var(--backdrop-chroma) var(--backdrop-hue)) 38%,
     oklch(0.3 calc(var(--backdrop-chroma) * 1.2) var(--backdrop-hue)) 100%
   );
+}
+
+/* The app header on the dark archive pages: the same full-width single
+   row, recolored dark (user-approved, 2026-09-24 — a plain rectangle, NOT a
+   rounded capsule). It gets the .dark tokens above via the same selector
+   and a translucent blurred background, and sits over the page instead of
+   above it (negative margin + the page's matching top padding) so the
+   page's tinted background runs up behind it with no light band. Pinned
+   while scrolling. */
+body:has(.photo-backdrop) {
+  --app-header-h: 69px;
+}
+@media (min-width: 768px) {
+  body:has(.photo-backdrop) {
+    --app-header-h: 57px;
+  }
+}
+body:has(.photo-backdrop) .app-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  margin-bottom: calc(-1 * var(--app-header-h));
+  border-bottom: 1px solid var(--glass-edge);
+  background: oklch(0.17 0.02 50 / 70%);
+  backdrop-filter: blur(24px) saturate(1.5);
+  color: var(--foreground);
+}
+body:has(.photo-backdrop) .app-header-bar {
+  min-height: calc(var(--app-header-h) - 25px);
+}
+.photo-backdrop {
+  padding-top: var(--app-header-h, 0px);
 }

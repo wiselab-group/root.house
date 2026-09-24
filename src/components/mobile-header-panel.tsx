@@ -72,7 +72,7 @@ export function MobileHeaderPanel({
   return (
     <div
       id={PANEL_ID}
-      className="grid transition-[grid-template-rows] duration-300 ease-(--ease-transition) md:hidden"
+      className="app-header-panel grid transition-[grid-template-rows] duration-300 ease-(--ease-transition) md:hidden"
       style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
     >
       <div className="overflow-hidden">

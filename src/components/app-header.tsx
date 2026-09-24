@@ -18,6 +18,13 @@ import { useFamilyNav } from "@/components/family-nav-context";
  * the breadcrumb trail and account row move into MobileHeaderPanel, which
  * expands the header in place behind MobileHeaderToggle (see that file) —
  * the same principle as staging.spon.to's mobile nav.
+ *
+ * On the dark archive pages (anything rendering `.photo-backdrop`: Family
+ * Home, Person Profile, Story) globals.css recolors this same header dark
+ * and translucent, laid over the page's own background (a plain full-width
+ * bar — user rejected a rounded capsule). Pure CSS
+ * (`body:has(.photo-backdrop)`), so it's dark from the first paint, with no
+ * per-route flag.
  */
 export function AppHeader({
   userEmail,
@@ -45,8 +52,11 @@ export function AppHeader({
   }, [menuOpen]);
 
   return (
-    <header ref={headerRef} className="border-b border-border px-6 py-3">
-      <div className="flex items-center justify-between gap-4">
+    <header
+      ref={headerRef}
+      className="app-header border-b border-border px-6 py-3"
+    >
+      <div className="app-header-bar flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <Link href="/families" className="shrink-0">
             <BrandMark
