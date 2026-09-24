@@ -36,7 +36,9 @@ export function CarouselGrid({
         open ? "opacity-100" : "pointer-events-none opacity-0"
       }`}
     >
-      <h2 className="text-xl font-normal">{photoCountLabel(slides.length)}</h2>
+      <h2 className="font-heading text-xl font-normal">
+        {photoCountLabel(slides.length)}
+      </h2>
       <div className="grid w-full max-w-3xl grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-4">
         {slides.map((slide, index) => (
           <button

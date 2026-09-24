@@ -85,6 +85,11 @@ async function main() {
   const page = await browser.newPage({ viewport: { width: 1360, height: 900 } });
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  page.on("console", (m) => {
+    if (m.type() !== "error") return;
+    const key = m.args()[1] ? m.args()[1].toString() : "";
+    errors.push(`console @ ${new URL(page.url()).pathname}: ${m.text().slice(0, 60)} ${key}`);
+  });
   try {
     console.log("1/5 register + family");
     await page.goto(`${BASE_URL}/register`, { waitUntil: "networkidle" });
@@ -158,17 +163,32 @@ async function main() {
     await page.getByRole("button", { name: "Содержание" }).click();
     await shoot(page, "profile-phone-contents");
 
+    console.log("family home");
+    await page.setViewportSize({ width: 1360, height: 900 });
+    await page.goto(`${BASE_URL}/families/${familySlug}`, { waitUntil: "networkidle" });
+    await shoot(page, "family-home-desktop");
+    await shoot(page, "family-home-desktop-full", true);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${BASE_URL}/families/${familySlug}`, { waitUntil: "networkidle" });
+    await shoot(page, "family-home-phone-full", true);
+
     console.log("5/5 story");
     const story = `${BASE_URL}/families/${familySlug}/stories/${storySlug}`;
     await page.setViewportSize({ width: 1360, height: 900 });
     await page.goto(story, { waitUntil: "networkidle" });
     await shoot(page, "story-desktop");
-    await page.getByRole("button", { name: /Элеонора/ }).first().click();
-    await page.waitForTimeout(1200);
-    await shoot(page, "story-desktop-slide2");
-    await page.getByRole("button", { name: "Все фото истории" }).click();
-    await page.waitForTimeout(400);
-    await shoot(page, "story-desktop-grid");
+    // After the portrait step both people share one photo, so the story may
+    // have a single fallback slide (duplicates are dropped) — only shoot a
+    // second slide when there is one.
+    const second = page.getByRole("button", { name: /Элеонора/ });
+    if (await second.count()) {
+      await second.first().click();
+      await page.waitForTimeout(1200);
+      await shoot(page, "story-desktop-slide2");
+      await page.getByRole("button", { name: "Все фото истории" }).click();
+      await page.waitForTimeout(400);
+      await shoot(page, "story-desktop-grid");
+    }
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(story, { waitUntil: "networkidle" });
     await shoot(page, "story-phone-full", true);

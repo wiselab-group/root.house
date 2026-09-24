@@ -22,9 +22,9 @@ import { glassChip } from "@/components/hero/glass";
  * (.hero-photo-mask) into a page background tinted by the same photo
  * (.photo-backdrop, set up by page.tsx) — never a hard-edged banner.
  *
- * Shows ONLY the profile photo (person.photoMediaId, fetched separately as
- * `avatarMedia` since avatars are deliberately never tagged into the
- * gallery — see media.service.ts::uploadPersonAvatar), and deliberately no
+ * Shows ONLY the portrait (person.photoMediaId, fetched as `avatarMedia` —
+ * one of the person's gallery photos, see media.service.ts::uploadPersonAvatar
+ * and «Сделать портретом» in the gallery), and deliberately no
  * thumbnail filmstrip: that's the Story page's pattern. A filmstrip was
  * tried here and removed on explicit user request — it duplicated the
  * Фото tab.
@@ -120,7 +120,7 @@ export function PersonProfileHero({
             )}
           </div>
         )}
-        <h1 className="text-4xl leading-[1.04] font-light tracking-[-0.025em] text-balance sm:text-5xl lg:text-6xl">
+        <h1 className="font-heading text-4xl leading-[1.05] font-normal tracking-tight text-balance sm:text-5xl lg:text-6xl">
           {name}
         </h1>
         <HeroMeta items={meta} />

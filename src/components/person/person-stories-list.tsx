@@ -72,7 +72,7 @@ export function PersonStoriesList({
           <ClockIcon className="size-4" aria-hidden="true" />
           {minutes(featured)} чтения
         </span>
-        <h3 className="flex items-center gap-2 text-2xl font-normal tracking-[-0.015em] text-balance">
+        <h3 className="flex items-center gap-2 font-heading text-2xl font-normal text-balance">
           {featured.title}
           <PrivacyBadge privacyLevel={featured.privacyLevel} compact />
         </h3>

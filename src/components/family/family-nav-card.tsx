@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { ArrowRight, TreeDeciduous } from "lucide-react";
+import { glassSurface } from "@/components/hero/glass";
 
 /**
  * The dashboard's single lead action — the family tree. Visually the
@@ -13,7 +14,9 @@ import { ArrowRight, TreeDeciduous } from "lucide-react";
  * marketing banner, not a navigation card (user feedback on a live
  * screenshot — "тяжеловесная"). Card footprint (padding, type scale, icon
  * size) intentionally matches that first version — the size wasn't the
- * complaint, the fill was.
+ * complaint, the fill was. On the dark Family Home (same style as the
+ * profile) it's a glass surface; the terracotta ring and icon stay the
+ * accent.
  */
 export function FamilyTreeLaunchCard({
   href,
@@ -25,7 +28,7 @@ export function FamilyTreeLaunchCard({
   return (
     <Link
       href={href}
-      className="group flex items-center gap-4 rounded-2xl bg-primary/8 px-6 py-7 ring-1 ring-primary/30 transition-all duration-200 ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-primary/12 hover:ring-primary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className={`${glassSurface} group flex cursor-pointer items-center gap-4 rounded-3xl px-6 py-7 ring-1 ring-primary/35 transition-[background-color,transform,box-shadow] duration-200 ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong hover:ring-primary/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:px-8`}
     >
       <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
         <TreeDeciduous
@@ -35,10 +38,10 @@ export function FamilyTreeLaunchCard({
         />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <span className="font-heading text-2xl font-medium tracking-tight text-primary">
+        <span className="font-heading text-2xl font-medium tracking-tight">
           Семейное дерево
         </span>
-        <span className="max-w-md text-muted-foreground">{description}</span>
+        <span className="max-w-md text-foreground/60">{description}</span>
       </div>
       <ArrowRight
         className="size-5 shrink-0 text-primary transition-transform duration-200 ease-(--ease-tree-focus) group-hover:translate-x-1"
@@ -60,7 +63,7 @@ export function FamilyTreeLaunchCard({
  * never `bg-primary/*`) so it carries weight without competing with the
  * tree card's action color. `h-full` on the tile + `items-stretch` on the
  * grid (page.tsx) keep all four tiles the same height regardless of
- * description line count.
+ * description line count. Glass on the dark Family Home.
  */
 export function FamilyNavCard({
   href,
@@ -76,14 +79,14 @@ export function FamilyNavCard({
   return (
     <Link
       href={href}
-      className="group flex h-full items-center gap-4 rounded-xl border border-border bg-card px-5 py-4 transition-all duration-200 ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:border-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className={`${glassSurface} group flex h-full cursor-pointer items-center gap-4 rounded-2xl px-5 py-4 transition-[background-color,transform] duration-200 ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
     >
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground transition-colors group-hover:bg-primary/12 group-hover:text-primary">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-glass-strong text-foreground/80 transition-colors group-hover:text-primary">
         <Icon className="size-5" strokeWidth={1.75} aria-hidden="true" />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="font-semibold tracking-tight">{label}</span>
-        <span className="text-sm text-muted-foreground">{description}</span>
+        <span className="font-medium">{label}</span>
+        <span className="text-sm text-foreground/55">{description}</span>
       </div>
     </Link>
   );

@@ -32,7 +32,7 @@ export function LifelineEventCard({ point }: { point: LifelinePointView }) {
           className="-mt-3 flex flex-wrap items-start justify-between gap-x-6 gap-y-3"
         >
           <div className="flex min-w-0 flex-col gap-1">
-            <h3 className="text-[1.3rem] font-normal tracking-[-0.01em] text-balance">
+            <h3 className="font-heading text-[1.3rem] font-normal text-balance">
               {event.title}
             </h3>
             {event.details && (

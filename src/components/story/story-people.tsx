@@ -24,7 +24,7 @@ export function StoryPeople({
 
   return (
     <section className="flex flex-col gap-4" aria-labelledby="story-people">
-      <h2 id="story-people" className="text-xl font-normal tracking-[-0.01em]">
+      <h2 id="story-people" className="font-heading text-xl font-normal">
         Люди в этой истории
       </h2>
       <ul className="grid gap-2 sm:grid-cols-2">

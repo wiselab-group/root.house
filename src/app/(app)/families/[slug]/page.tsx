@@ -1,21 +1,13 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { FamilyTreeLaunchCard } from "@/components/family/family-nav-card";
+import { FamilySectionLinks } from "@/components/family/family-section-links";
+import { FamilyHomeHeader } from "@/components/family/family-home-header";
 import {
-  ArrowRight,
-  Users,
-  BookOpen,
-  Images,
-  MapPin,
-  Settings,
-} from "lucide-react";
-import {
-  FamilyNavCard,
-  FamilyTreeLaunchCard,
-} from "@/components/family/family-nav-card";
-import { FamilyHomeStats } from "@/components/family/family-home-stats";
+  earliestBirthYear,
+  familyHomeMeta,
+} from "@/components/family/family-home-meta";
 import { RecentMemories } from "@/components/family/recent-memories";
-import { ActivityLogSection } from "@/components/family/activity-log-section";
-import { ProfileSection } from "@/components/person/profile-section";
+import { FamilyHomeActivity } from "@/components/family/family-home-activity";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -78,120 +70,60 @@ export default async function FamilyDashboardPage({
   const hasMoreActivity = activityEntries.length > RECENT_ACTIVITY_LIMIT;
   const recentActivity = activityEntries.slice(0, RECENT_ACTIVITY_LIMIT);
 
-  const secondaryLinks = [
-    {
-      href: `/families/${slug}/people`,
-      icon: Users,
-      label: "Люди",
-      description: "Профили, поиск по имени и году",
-    },
-    {
-      href: `/families/${slug}/stories`,
-      icon: BookOpen,
-      label: "Истории",
-      description: "Семейные истории и воспоминания",
-    },
-    {
-      href: `/families/${slug}/photos`,
-      icon: Images,
-      label: "Архив",
-      description: "Фото, видео и документы семьи",
-    },
-    {
-      href: `/families/${slug}/map`,
-      icon: MapPin,
-      label: "Карта",
-      description: "Места рождения, проживания и событий",
-    },
-    {
-      href: `/families/${slug}/settings`,
-      icon: Settings,
-      label: "Настройки",
-      description: "Название, ссылка и описание архива",
-    },
-  ] as const;
-
   return (
-    <main className="mx-auto flex max-w-3xl flex-col gap-10 px-6 py-12 sm:py-16">
+    <main className="dark photo-backdrop min-h-svh">
       <SetBreadcrumbs
         items={[
           { label: "Мои семьи", href: "/families" },
           { label: family?.name ?? slug },
         ]}
       />
-      <div className="flex flex-col gap-3">
-        <h1 className="font-heading text-3xl font-medium tracking-tight text-balance sm:text-4xl">
-          {family?.name ?? slug}
-        </h1>
-        {family?.description && (
-          <p className="max-w-prose text-muted-foreground">
-            {family.description}
-          </p>
-        )}
-        <FamilyHomeStats
-          personCount={people.length}
-          placeCount={places.length}
-          photoCount={visiblePhotos.length}
+      <div className="mx-auto flex max-w-3xl flex-col gap-14 px-4 pt-14 pb-20 sm:px-8 sm:pt-20">
+        <FamilyHomeHeader
+          name={family?.name ?? slug}
+          description={family?.description ?? null}
+          meta={familyHomeMeta({
+            personCount: people.length,
+            placeCount: places.length,
+            photoCount: visiblePhotos.length,
+            earliestYear: earliestBirthYear(people),
+          })}
         />
-      </div>
-
-      <div className="animate-content-enter">
-        <FamilyTreeLaunchCard
-          href={`/families/${slug}/tree`}
-          description="Интерактивная схема родственных связей"
-        />
-      </div>
-
-      {photos.length > 0 && (
-        <div
-          className="animate-content-enter"
-          style={{ animationDelay: "80ms" }}
-        >
-          <RecentMemories
-            photos={photos}
-            familyId={familyId}
-            familySlug={slug}
-            canTag={member.role === "owner" || member.role === "editor"}
+        <div className="animate-content-enter">
+          <FamilyTreeLaunchCard
+            href={`/families/${slug}/tree`}
+            description="Интерактивная схема родственных связей"
           />
         </div>
-      )}
 
-      {member.role === "owner" && recentActivity.length > 0 && (
-        <div
-          className="animate-content-enter"
-          style={{ animationDelay: "120ms" }}
-        >
-          <ProfileSection title="Активность семьи">
-            <ActivityLogSection entries={recentActivity} />
-            {hasMoreActivity && (
-              <Link
-                href={`/families/${slug}/settings#activity`}
-                className="group flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-primary"
-              >
-                Ещё
-                <ArrowRight
-                  className="size-3.5 transition-transform group-hover:translate-x-0.5"
-                  aria-hidden="true"
-                />
-              </Link>
-            )}
-          </ProfileSection>
-        </div>
-      )}
+        {photos.length > 0 && (
+          <div
+            className="animate-content-enter"
+            style={{ animationDelay: "80ms" }}
+          >
+            <RecentMemories
+              photos={photos}
+              familyId={familyId}
+              familySlug={slug}
+              canTag={member.role === "owner" || member.role === "editor"}
+            />
+          </div>
+        )}
 
-      <div className="flex flex-col gap-3">
-        <p className="text-sm text-muted-foreground">Другие разделы архива</p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {secondaryLinks.map((link, index) => (
-            <div
-              key={link.href}
-              className="animate-content-enter h-full"
-              style={{ animationDelay: `${160 + index * 60}ms` }}
-            >
-              <FamilyNavCard {...link} />
-            </div>
-          ))}
-        </div>
+        {member.role === "owner" && recentActivity.length > 0 && (
+          <div
+            className="animate-content-enter"
+            style={{ animationDelay: "120ms" }}
+          >
+            <FamilyHomeActivity
+              familySlug={slug}
+              entries={recentActivity}
+              hasMore={hasMoreActivity}
+            />
+          </div>
+        )}
+
+        <FamilySectionLinks familySlug={slug} />
       </div>
     </main>
   );

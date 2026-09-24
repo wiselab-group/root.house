@@ -81,7 +81,7 @@ export function StoryHero({
             </span>
           )}
         </div>
-        <h1 className="text-4xl leading-[1.03] font-light tracking-[-0.025em] text-balance sm:text-5xl lg:text-[4rem]">
+        <h1 className="font-heading text-4xl leading-[1.05] font-normal tracking-tight text-balance sm:text-5xl lg:text-[4rem]">
           {title}
         </h1>
         <HeroMeta

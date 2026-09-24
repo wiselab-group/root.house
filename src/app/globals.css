@@ -575,11 +575,3 @@
     oklch(0.3 calc(var(--backdrop-chroma) * 1.2) var(--backdrop-hue)) 100%
   );
 }
-
-/* Headings on the photo-backdrop pages are set in the UI sans, light, like
-   the reference screenshots — Lora stays the serif accent everywhere else.
-   Unlayered, same reason as .photo-backdrop above. */
-.photo-backdrop .font-heading {
-  font-family: var(--font-sans);
-  letter-spacing: -0.015em;
-}
