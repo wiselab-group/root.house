@@ -1,7 +1,12 @@
 import { ArchiveImage } from "@/components/media/archive-image";
 import { mediaUrl } from "@/lib/media-url";
 import Link from "next/link";
-import { CalendarIcon, MapPinIcon, LockIcon } from "lucide-react";
+import {
+  CalendarIcon,
+  MapPinIcon,
+  LockIcon,
+  UserRoundIcon,
+} from "lucide-react";
 import {
   personDisplayName,
   personInitials,
@@ -106,19 +111,23 @@ export function PersonProfileHero({
       />
 
       <div className="absolute inset-x-4 bottom-10 z-10 flex flex-col gap-4 sm:right-auto sm:bottom-16 sm:left-11 sm:max-w-[min(560px,46%)]">
-        {(person.isPlaceholder || person.privacyLevel === "private") && (
-          <div className="flex flex-wrap gap-1.5">
-            {person.isPlaceholder && (
-              <span className={glassChip}>Запись-заглушка</span>
-            )}
-            {person.privacyLevel === "private" && (
-              <span className={glassChip}>
-                <LockIcon aria-hidden="true" />
-                Только я
-              </span>
-            )}
-          </div>
-        )}
+        {/* The page-type pill always leads, like the Story page's «История»
+            (user request) — then the status pills, only when they apply. */}
+        <div className="flex flex-wrap gap-1.5">
+          <span className={glassChip}>
+            <UserRoundIcon aria-hidden="true" />
+            Профиль
+          </span>
+          {person.isPlaceholder && (
+            <span className={glassChip}>Запись-заглушка</span>
+          )}
+          {person.privacyLevel === "private" && (
+            <span className={glassChip}>
+              <LockIcon aria-hidden="true" />
+              Только я
+            </span>
+          )}
+        </div>
         <h1 className="font-heading text-4xl leading-[1.05] font-normal tracking-tight text-balance sm:text-5xl lg:text-6xl">
           {name}
         </h1>
