@@ -184,17 +184,22 @@
 
 .dark,
 body:has(.photo-backdrop) .app-header {
-  --background: oklch(0.2 0.014 50);
+  /* The whole app is dark now (html.dark, user request 2026-09-25): the
+     surfaces use Family Home's warm archive tone — the same values
+     .photo-backdrop used to set only on the archive pages. */
+  color-scheme: dark;
+  /* = the header colour and the top of the page gradient (.dark body). */
+  --background: oklch(0.17 0.02 50);
   --foreground: oklch(0.94 0.01 60);
-  --card: oklch(0.245 0.014 50);
+  --card: oklch(0.25 0.02 50);
   --card-foreground: oklch(0.94 0.01 60);
-  --popover: oklch(0.245 0.014 50);
+  --popover: oklch(0.25 0.02 50);
   --popover-foreground: oklch(0.94 0.01 60);
   --primary: oklch(0.72 0.15 45);
   --primary-foreground: oklch(0.18 0.02 45);
-  --secondary: oklch(0.32 0.016 50);
+  --secondary: oklch(0.32 0.02 50);
   --secondary-foreground: oklch(0.94 0.01 60);
-  --muted: oklch(0.28 0.014 50);
+  --muted: oklch(0.29 0.02 50);
   --muted-foreground: oklch(0.7 0.015 55);
   --accent: oklch(0.34 0.03 48);
   --accent-foreground: oklch(0.95 0.01 60);
@@ -247,6 +252,25 @@ body:has(.photo-backdrop) .app-header {
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Every page gets Family Home's background, not just the archive pages
+     that paint it themselves (.photo-backdrop) — same stops. */
+  /* One page background everywhere (user request 2026-09-25): a single
+     gradient over the whole document, --background (the header's colour)
+     at the top, lighter at the bottom — and --background itself as the
+     fallback/overscroll colour behind it. Archive pages (.photo-backdrop)
+     no longer paint their own, so there's never a second gradient that
+     stops where a <main> ends. */
+  html.dark {
+    background-color: var(--background);
+  }
+  .dark body {
+    background-color: var(--background);
+    background-image: linear-gradient(
+      180deg,
+      var(--background) 0,
+      oklch(0.3 0.024 50) 100%
+    );
   }
   html {
     @apply font-sans;
@@ -522,16 +546,8 @@ body:has(.photo-backdrop) .app-header {
      landscape slides) — darkens toward the caption corner only. */
   .hero-scrim {
     background:
-      linear-gradient(
-        90deg,
-        oklch(0.17 var(--backdrop-chroma) var(--backdrop-hue) / 85%) 0,
-        transparent 70%
-      ),
-      linear-gradient(
-        0deg,
-        oklch(0.17 var(--backdrop-chroma) var(--backdrop-hue) / 95%) 0,
-        transparent 60%
-      );
+      linear-gradient(90deg, oklch(0.17 0.02 50 / 85%) 0, transparent 70%),
+      linear-gradient(0deg, oklch(0.17 0.02 50 / 95%) 0, transparent 60%);
   }
 
   /* Slideshow progress ring (story carousel) — stroke-dashoffset, the same
@@ -550,35 +566,20 @@ body:has(.photo-backdrop) .app-header {
   }
 }
 
-/* Dark "sepia" page for the Person Profile and Story pages — the page
-   continues the tone of the person's portrait (reference screenshots the
-   user picked, 2026-09-24). Always paired with the `.dark` class so every
-   shadcn token inside flips to its dark value; this class then re-tints
-   --background/--card by the photo's own hue, fed in through
-   --backdrop-hue/--backdrop-chroma (src/lib/photo-backdrop.ts sets them
-   inline — lightness is pinned here, so a light photo still yields a dark
-   page). Scoped to these two pages only: the rest of the app stays light.
-   Deliberately unlayered and after `.dark`: `.dark` is itself unlayered, so
-   a rule inside @layer utilities would lose to it on the same element no
-   matter the source order. */
+/* Dark "sepia" archive page — Family Home, the families list, Person
+   Profile and Story (reference screenshots the user picked, 2026-09-24).
+   One fixed warm tone on every page: it used to be re-tinted by each
+   portrait's own color, removed on user request so every archive page
+   shares Family Home's background. Always paired with the `.dark` class so
+   every shadcn token inside flips to its dark value; this class then warms
+   --background/--card. Deliberately unlayered and after `.dark`: `.dark` is
+   itself unlayered, so a rule inside @layer utilities would lose to it on
+   the same element no matter the source order. */
 .photo-backdrop {
-  --backdrop-hue: 50;
-  --backdrop-chroma: 0.02;
-  --background: oklch(0.2 var(--backdrop-chroma) var(--backdrop-hue));
-  --card: oklch(0.25 var(--backdrop-chroma) var(--backdrop-hue));
-  --popover: oklch(0.25 var(--backdrop-chroma) var(--backdrop-hue));
-  --muted: oklch(0.29 var(--backdrop-chroma) var(--backdrop-hue));
-  --secondary: oklch(0.32 var(--backdrop-chroma) var(--backdrop-hue));
   /* The mock's sage (#A9B593): lighter and a touch greener than dark's
      tree --tree-accent, which read muddy on this warm brown ground. */
   --tree-accent: oklch(0.755 0.049 124);
   color: var(--foreground);
-  background: linear-gradient(
-    180deg,
-    oklch(0.17 var(--backdrop-chroma) var(--backdrop-hue)) 0,
-    oklch(0.22 var(--backdrop-chroma) var(--backdrop-hue)) 38%,
-    oklch(0.3 calc(var(--backdrop-chroma) * 1.2) var(--backdrop-hue)) 100%
-  );
 }
 
 /* The app header on the dark archive pages: the same full-width single
@@ -602,7 +603,7 @@ body:has(.photo-backdrop) .app-header {
   z-index: 40;
   margin-bottom: calc(-1 * var(--app-header-h));
   border-bottom: 1px solid var(--glass-edge);
-  background: oklch(0.17 0.02 50 / 70%);
+  background: color-mix(in oklch, var(--background) 70%, transparent);
   backdrop-filter: blur(24px) saturate(1.5);
   color: var(--foreground);
 }
@@ -611,4 +612,20 @@ body:has(.photo-backdrop) .app-header-bar {
 }
 .photo-backdrop {
   padding-top: var(--app-header-h, 0px);
+}
+
+/* XYFlow's dark colorMode (tree-canvas.tsx) brings its own neutral grey
+   chrome; point it at the app's warm dark tokens instead, and keep the
+   canvas itself transparent so the page background shows through, as it
+   did in light mode. */
+.react-flow.dark {
+  --xy-background-color: transparent;
+  --xy-minimap-background-color: var(--card);
+  --xy-minimap-mask-background-color: oklch(0.17 0.02 50 / 60%);
+  --xy-minimap-node-background-color: var(--muted);
+  --xy-controls-button-background-color: var(--card);
+  --xy-controls-button-background-color-hover: var(--muted);
+  --xy-controls-button-color: var(--foreground);
+  --xy-controls-button-color-hover: var(--foreground);
+  --xy-controls-button-border-color: var(--border);
 }

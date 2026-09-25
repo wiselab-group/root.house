@@ -18,9 +18,10 @@ import { glassChip } from "@/components/hero/glass";
 /**
  * The Person Profile's hero, in the dark "photo dissolves into the page"
  * style the user picked from two reference screenshots (2026-09-24): the
- * portrait sits on the right and fades out on its left and bottom edges
- * (.hero-photo-mask) into a page background tinted by the same photo
- * (.photo-backdrop, set up by page.tsx) — never a hard-edged banner.
+ * portrait sits on the right and fades out on its edges (.hero-photo-mask)
+ * into the dark archive page background (.photo-backdrop, set up by
+ * page.tsx — one fixed tone, same as Family Home) — never a hard-edged
+ * banner.
  *
  * Shows ONLY the portrait (person.photoMediaId, fetched as `avatarMedia` —
  * one of the person's gallery photos, see media.service.ts::uploadPersonAvatar

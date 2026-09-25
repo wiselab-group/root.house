@@ -28,7 +28,7 @@ export function BrandMark({
       >
         <HomeIcon className={cn("size-4.5", iconClassName)} />
       </span>
-      <span className="font-heading text-xl font-medium tracking-tight text-foreground">
+      <span className="font-heading text-xl font-medium tracking-tight text-foreground whitespace-nowrap">
         Root house
       </span>
     </span>

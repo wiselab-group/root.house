@@ -654,6 +654,10 @@ export function TreeCanvas({
           )}
         >
           <ReactFlow
+            // The whole app is dark (html.dark) — XYFlow's own chrome
+            // (zoom Controls, MiniMap mask/nodes) follows its own colorMode,
+            // not the page's tokens, so it has to be told explicitly.
+            colorMode="dark"
             nodes={nodes}
             edges={edges}
             onNodesChange={onNodesChange}

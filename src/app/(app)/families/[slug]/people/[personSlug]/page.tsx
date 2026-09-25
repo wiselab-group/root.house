@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -10,7 +9,6 @@ import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { resolvePersonIdBySlug } from "@/lib/resolve-person-slug";
 import { PersonProfileHero } from "@/components/person/person-profile-hero";
 import { PersonProfileSections } from "@/components/person/person-profile-sections";
-import { photoBackdropStyle } from "@/lib/photo-backdrop";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 import { getPersonArchiveSummary } from "@/domain/tree/archive-summary";
@@ -92,10 +90,7 @@ export default async function PersonProfilePage({
   const birthPlaceName = birthPlace?.name ?? null;
   const deathPlaceName = deathPlace?.name ?? null;
   return (
-    <main
-      className="dark photo-backdrop min-h-svh"
-      style={photoBackdropStyle(avatarMedia?.dominantColor) as CSSProperties}
-    >
+    <main className="dark photo-backdrop min-h-svh">
       <SetBreadcrumbs
         items={[
           { label: "Мои семьи", href: "/families" },

@@ -398,19 +398,6 @@ export async function deleteMediaRow(
   return result.length > 0;
 }
 
-/** Stores a photo's sampled edge color after the fact — for photos uploaded
- *  before every upload sampled it, the first time one becomes a portrait. */
-export async function setMediaDominantColor(
-  mediaId: string,
-  familyId: string,
-  dominantColor: string,
-): Promise<void> {
-  await db
-    .update(media)
-    .set({ dominantColor })
-    .where(and(eq(media.id, mediaId), eq(media.familyId, familyId)));
-}
-
 /**
  * Whether a Media row is part of the archive anywhere — tagged on a person,
  * in an album, or attached to a story/event/place. A portrait that is NOT

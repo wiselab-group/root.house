@@ -1,5 +1,4 @@
 import { vercelBlobStorageService } from "./storage.vercel-blob";
-import { sampleLeftEdgeColor } from "./sample-dominant-color";
 import { canView, type ActingMember } from "@/domain/family/permissions";
 import { logActivity } from "@/domain/activity-log/activity-log.service";
 import { personDisplayName } from "@/domain/person/display-name";
@@ -17,7 +16,6 @@ import {
   getPeopleForMedia,
   isMediaLinked,
   reorderMedia,
-  setMediaDominantColor,
   upsertPhotoTagPosition,
   clearPhotoTagPosition,
   removePersonFromMedia,
@@ -61,17 +59,11 @@ export async function uploadPersonPhoto(
 ): Promise<{ id: string }> {
   const key = `${input.familyId}/${crypto.randomUUID()}-${sanitizeFilename(input.originalFilename)}`;
 
-  // Sampled for every photo, not only avatars: any gallery photo can become
-  // a portrait later («Сделать портретом»), and the profile page tints its
-  // background from it.
-  const [{ storageKey }, dominantColor] = await Promise.all([
-    storage.upload({
-      key,
-      file: input.file,
-      contentType: input.contentType,
-    }),
-    sampleLeftEdgeColor(input.file),
-  ]);
+  const { storageKey } = await storage.upload({
+    key,
+    file: input.file,
+    contentType: input.contentType,
+  });
 
   try {
     const result = await createMedia({
@@ -83,7 +75,6 @@ export async function uploadPersonPhoto(
       sizeBytes: input.file.byteLength,
       width: input.width,
       height: input.height,
-      dominantColor,
       uploadedBy: input.uploadedBy,
       privacyLevel: input.privacyLevel,
       personIds: input.personIds,
@@ -209,24 +200,6 @@ export async function uploadPersonAvatar(
 ): Promise<{ id: string }> {
   const { personId, ...rest } = input;
   return uploadPersonPhoto({ ...rest, personIds: [personId], albumIds: [] });
-}
-
-/**
- * Makes sure a photo about to become a portrait has its edge color — photos
- * uploaded before uploadPersonPhoto sampled it have none, and the profile
- * page's background is tinted from it. Best-effort: a failed sample just
- * leaves the neutral fallback tone.
- */
-export async function ensureDominantColor(record: MediaRecord): Promise<void> {
-  if (record.dominantColor || record.kind !== "photo") return;
-  try {
-    const { stream } = await storage.getStream(record.storageKey);
-    const buffer = Buffer.from(await new Response(stream).arrayBuffer());
-    const color = await sampleLeftEdgeColor(buffer);
-    if (color) await setMediaDominantColor(record.id, record.familyId, color);
-  } catch {
-    // Portrait still works without it — see doc comment.
-  }
 }
 
 /**

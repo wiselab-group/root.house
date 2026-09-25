@@ -13,7 +13,6 @@ import {
 } from "@/domain/person/person.service";
 import { clearProfilePhotoForMedia } from "@/domain/person/person.repository";
 import {
-  ensureDominantColor,
   getAlbumsForSingleMedia,
   getMedia,
   getTaggedPeopleForMedia,
@@ -185,7 +184,6 @@ export async function setPersonPortraitAction(
   }
   if (person.photoMediaId === mediaId) return;
 
-  await ensureDominantColor(record);
   await setPersonAvatar(personId, familyId, mediaId);
   if (person.photoMediaId) {
     await removeMediaIfUnlinked(person.photoMediaId, familyId, session.user.id);

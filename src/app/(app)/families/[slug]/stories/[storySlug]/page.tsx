@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -16,7 +15,6 @@ import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import type { PersonRecord } from "@/domain/person/person.repository";
 import { getVisibleStoryPhotos } from "@/domain/media/media.service";
 import { layoutStoryBody, readingMinutes } from "@/domain/story/story-layout";
-import { photoBackdropStyle } from "@/lib/photo-backdrop";
 import { StoryHero } from "@/components/story/story-hero";
 import { StoryArticle } from "@/components/story/story-article";
 import { StoryChaptersNav } from "@/components/story/story-chapters-nav";
@@ -77,12 +75,7 @@ export default async function StoryDetailPage({
   };
 
   return (
-    <main
-      className="dark photo-backdrop min-h-svh"
-      style={
-        photoBackdropStyle(slides[0]?.dominantColor ?? null) as CSSProperties
-      }
-    >
+    <main className="dark photo-backdrop min-h-svh">
       <SetBreadcrumbs
         items={[
           { label: "Мои семьи", href: "/families" },

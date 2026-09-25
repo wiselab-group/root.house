@@ -15,7 +15,7 @@ export async function buildStorySlides(
   storyPhotos: MediaRecord[],
   people: PersonRecord[],
   familyId: string,
-): Promise<(CarouselSlide & { dominantColor: string | null })[]> {
+): Promise<CarouselSlide[]> {
   const toSlide = (media: MediaRecord, caption: string | null) => ({
     id: media.id,
     src: `/api/media/${media.id}?familyId=${familyId}`,
@@ -25,7 +25,6 @@ export async function buildStorySlides(
       media.width && media.height && media.width > media.height * 1.15
         ? ("wide" as const)
         : ("tall" as const),
-    dominantColor: media.dominantColor,
   });
 
   if (storyPhotos.length > 0) {

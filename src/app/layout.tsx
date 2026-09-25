@@ -46,9 +46,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
+    // `dark` app-wide (user request 2026-09-25): every page uses the warm
+    // dark archive palette Family Home introduced — see .dark in globals.css.
     <html
       lang="ru"
-      className={`${geistSans.variable} ${geistMono.variable} ${lora.variable} h-full antialiased`}
+      className={`dark ${geistSans.variable} ${geistMono.variable} ${lora.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {children}
