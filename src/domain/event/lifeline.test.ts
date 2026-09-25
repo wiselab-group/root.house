@@ -41,11 +41,7 @@ describe("buildLifeline", () => {
     expect(lifeline.startYear).toBe(1988);
     expect(lifeline.endYear).toBe(2026);
     expect(lifeline.points.map((p) => p.side)).toEqual(["up", "down"]);
-    expect(lifeline.points[0].position).toBeCloseTo(0.7);
-    expect(lifeline.points[1].position).toBeCloseTo((31 / 38) * 100);
-    expect(lifeline.decades.map((d) => d.year)).toEqual([
-      1990, 2000, 2010, 2020,
-    ]);
+    expect(lifeline.decades).toEqual([1990, 2000, 2010, 2020]);
   });
 
   it("ends a deceased person's axis at the last event", () => {
@@ -54,7 +50,6 @@ describe("buildLifeline", () => {
       { isLiving: false, currentYear: 2026 },
     )!;
     expect(lifeline.endYear).toBe(1938);
-    expect(lifeline.points[1].position).toBeCloseTo(99.3);
   });
 
   it("merges events of the same year into one dot", () => {

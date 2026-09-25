@@ -1,5 +1,6 @@
 import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 import { ageAt, buildLifeline } from "@/domain/event/lifeline";
+import { layoutLifelineScale } from "@/domain/event/lifeline-scale";
 import { formatPartialDate } from "@/domain/shared/partial-date";
 import type { TimelineEvent } from "@/domain/event/event.service";
 import type { TimelineRowTarget } from "./timeline-target";
@@ -17,8 +18,11 @@ export interface LifelineEventView {
 export interface LifelinePointView {
   id: string;
   year: number;
+  /** Dot position on the track, in percent. */
   position: number;
   side: "up" | "down";
+  /** How the label hangs off the dot — see LifelineScaleLabel. */
+  align: "start" | "center" | "end";
   /** Short caption under the year — the event title(s). */
   caption: string;
   /** «2021 · ему 33» over the card. */
@@ -41,6 +45,9 @@ export function lifelineView(
 ): {
   points: LifelinePointView[];
   decades: { year: number; position: number }[];
+  /** The track's minimum width in px — wider than the base when dense
+   *  years had to be spread apart (see layoutLifelineScale). */
+  width: number;
 } | null {
   const lifeline = buildLifeline(timeline, {
     isLiving: person.isLiving,
@@ -51,14 +58,41 @@ export function lifelineView(
   const birthYear =
     timeline.find((event) => event.type === "birth")?.date?.year ?? null;
 
+  const labels = lifeline.points.map((point, index) => {
+    const caption = point.events.map(captionFor).join(", ");
+    return {
+      year: point.year,
+      side: point.side,
+      caption,
+      width: estimateLabelWidth(caption),
+      align:
+        index === 0
+          ? ("start" as const)
+          : point.year === lifeline.endYear
+            ? ("end" as const)
+            : ("center" as const),
+    };
+  });
+  const scale = layoutLifelineScale({
+    labels,
+    startYear: lifeline.startYear,
+    endYear: lifeline.endYear,
+    minWidth: BASE_TRACK_WIDTH,
+  });
+
   return {
-    decades: lifeline.decades,
-    points: lifeline.points.map((point) => ({
+    width: scale.width,
+    decades: lifeline.decades.map((year) => ({
+      year,
+      position: scale.positionOf(year),
+    })),
+    points: lifeline.points.map((point, index) => ({
       id: point.id,
       year: point.year,
-      position: point.position,
+      position: scale.positions[index],
       side: point.side,
-      caption: point.events.map(captionFor).join(", "),
+      align: labels[index].align,
+      caption: labels[index].caption,
       kicker: [String(point.year), ageAt(point.year, birthYear, person.gender)]
         .filter(Boolean)
         .join(" · "),
@@ -76,6 +110,21 @@ export function lifelineView(
       })),
     })),
   };
+}
+
+/** The track's width when nothing needs spreading — the phone-scroll
+ *  minimum the axis always had. */
+const BASE_TRACK_WIDTH = 660;
+
+/**
+ * A server-side guess at the label's rendered width (no DOM here, and
+ * measuring on the client would shift the dots after hydration): the
+ * caption in text-xs Geist runs ~6.6px per Cyrillic character, the 4-digit
+ * year in text-sm ~34px, plus the label's px-1.5 padding. Errs wide — a
+ * few px of extra air is invisible, an underestimate is an overlap.
+ */
+function estimateLabelWidth(caption: string): number {
+  return Math.ceil(Math.max(34, caption.length * 7) + 12);
 }
 
 /** Under the dot a child's birth is just their name («Мария, Иван» in the

@@ -9,15 +9,18 @@ import type { LifelinePointView } from "./lifeline-view";
  * the redesign board): dots on an axis from birth to death / today, labels
  * alternating above and below, and one selected event (terracotta — the
  * app's "what you're looking at" color) expanded in LifelineEventCard.
- * Positions come precomputed from buildLifeline; this only owns selection.
- * Scrolls sideways on phones rather than squeezing labels together.
+ * Positions come precomputed from lifelineView; this only owns selection.
+ * The track is as wide as the labels need (dense years spread apart, see
+ * layoutLifelineScale) and scrolls sideways rather than squeezing them.
  */
 export function PersonLifeline({
   points,
   decades,
+  width,
 }: {
   points: LifelinePointView[];
   decades: { year: number; position: number }[];
+  width: number;
 }) {
   const [selectedId, setSelectedId] = useState(points[points.length - 1].id);
   const selected = points.find((p) => p.id === selectedId) ?? points[0];
@@ -25,7 +28,7 @@ export function PersonLifeline({
   return (
     <div className="flex flex-col gap-4">
       <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:thin]">
-        <div className="relative h-[250px] min-w-[660px]">
+        <div className="relative h-[250px]" style={{ minWidth: width }}>
           <div
             aria-hidden="true"
             className="absolute inset-x-0 top-[122px] h-2.5 rounded-full bg-tree-accent/80"
@@ -69,9 +72,9 @@ function LifelineDot({
   // A label centered on a dot at the very start/end of the axis would hang
   // past the scroll box and get clipped — anchor those to the dot instead.
   const edge =
-    point.position < 8
+    point.align === "start"
       ? "-ml-1.5 self-start text-left"
-      : point.position > 92
+      : point.align === "end"
         ? "-mr-1.5 self-end text-right"
         : "text-center";
   const label = (
