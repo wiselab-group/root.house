@@ -16,10 +16,9 @@ async function main() {
   // the DB client reads DATABASE_URL on first use, so load it before any
   // module that touches the DB is imported.
   config({ path: ".env.local", quiet: true });
-  const { getPhotosWithoutVariants, setMediaVariants } =
+  const { getPhotosWithoutVariants } =
     await import("@/domain/media/media.repository");
-  const { storePhotoVariants, readStoredFile } =
-    await import("@/domain/media/media.service");
+  const { makePhotoVariants } = await import("@/domain/media/media.service");
   const { db } = await import("@/db/client");
   const { families } = await import("@/db/schema");
   const { eq } = await import("drizzle-orm");
@@ -52,19 +51,10 @@ async function main() {
   for (const [index, photo] of photos.entries()) {
     const label = `[${index + 1}/${photos.length}] ${photo.id}`;
     try {
-      const processed = await storePhotoVariants(
-        await readStoredFile(photo.storageKey),
-        photo.mimeType,
-        `${photo.familyId}/variants/${crypto.randomUUID()}`,
-      );
-      if (!processed) throw new Error("could not be processed");
-      await setMediaVariants(photo.id, photo.familyId, processed);
-      const kb = Object.values(processed.variants)
-        .map((variant) => `${Math.round(variant.sizeBytes / 1024)}KB`)
-        .join(" + ");
-      console.log(
-        `${label} ok — ${Math.round(photo.sizeBytes / 1024)}KB → ${kb}`,
-      );
+      if (!(await makePhotoVariants(photo.id, photo.familyId))) {
+        throw new Error("could not be processed");
+      }
+      console.log(`${label} ok`);
       done += 1;
     } catch (error) {
       console.error(

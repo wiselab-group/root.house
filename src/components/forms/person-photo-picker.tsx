@@ -16,9 +16,12 @@ import { PersonPhotoUpload } from "@/components/forms/person-photo-upload";
 export function PersonPhotoPicker({
   onFileChange,
   disabled,
+  progress = null,
 }: {
   onFileChange: (file: File | null) => void;
   disabled?: boolean;
+  /** Set by the parent while it uploads the picked photo — see PersonPhotoUpload. */
+  progress?: number | null;
 }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -51,6 +54,8 @@ export function PersonPhotoPicker({
       onFileSelect={handleFileSelect}
       onRemove={handleRemove}
       disabled={disabled}
+      isBusy={progress !== null}
+      progress={progress}
     />
   );
 }

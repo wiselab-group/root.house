@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { UploadCloudIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMultiImageDrop } from "@/hooks/use-multi-image-drop";
-import { PHOTO_ACCEPT } from "@/domain/media/photo-upload-rules";
+import { PHOTO_ACCEPT } from "@/domain/media/upload-rules";
 
 /**
  * Multi-file drag&drop + click-to-pick surface for PhotoUploadPanel —

@@ -31,7 +31,7 @@ export function AvatarEditor({
   >;
 }) {
   const router = useRouter();
-  const [isUploading, setIsUploading] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
   const [isRemoving, startRemoveTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -40,18 +40,24 @@ export function AvatarEditor({
     : null;
 
   async function handleFileSelect(file: File) {
-    setIsUploading(true);
+    setProgress(0);
     setError(null);
 
     try {
-      await uploadPhoto({ familyId, personId, isAvatar: true, file });
+      await uploadPhoto({
+        familyId,
+        personId,
+        isAvatar: true,
+        file,
+        onProgress: setProgress,
+      });
       router.refresh();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Не удалось загрузить фото",
       );
     } finally {
-      setIsUploading(false);
+      setProgress(null);
     }
   }
 
@@ -74,7 +80,8 @@ export function AvatarEditor({
         onFileSelect={handleFileSelect}
         onRemove={handleRemove}
         removeLabel="Убрать портрет"
-        isBusy={isUploading || isRemoving}
+        isBusy={progress !== null || isRemoving}
+        progress={progress}
         size="compact"
       />
       {error && <p className="text-sm text-destructive">{error}</p>}

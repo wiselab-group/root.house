@@ -29,6 +29,7 @@ export function useDocumentBatchUpload(familyId: string, personId: string) {
       id: `${Date.now()}-${queuedDocumentIdCounter++}`,
       file,
       status: "queued",
+      progress: 0,
     }));
     setDocuments((prev) => [...prev, ...newDocuments]);
     void uploadAll(newDocuments);
@@ -51,7 +52,12 @@ export function useDocumentBatchUpload(familyId: string, personId: string) {
       pending.map(async (doc) => {
         patchDocument(doc.id, { status: "uploading" });
         try {
-          await uploadDocument({ familyId, personId, file: doc.file });
+          await uploadDocument({
+            familyId,
+            personId,
+            file: doc.file,
+            onProgress: (progress) => patchDocument(doc.id, { progress }),
+          });
           patchDocument(doc.id, { status: "done" });
           setTimeout(() => removeDocument(doc.id), DONE_TILE_LINGER_MS);
         } catch (err) {

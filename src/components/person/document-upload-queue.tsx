@@ -1,11 +1,14 @@
 "use client";
 
-import { XIcon, LoaderCircleIcon, CheckIcon } from "lucide-react";
+import { XIcon, CheckIcon } from "lucide-react";
+import { UploadProgressBar } from "@/components/media/upload-progress-bar";
 import { documentFileType } from "./document-file-type";
 
 export type QueuedDocument = {
   id: string;
   file: File;
+  /** 0–1 while uploading — see lib/upload-document.ts. */
+  progress: number;
   status: "queued" | "uploading" | "done" | "error";
   error?: string;
 };
@@ -39,14 +42,19 @@ export function DocumentUploadQueue({
               className="size-5 shrink-0 text-muted-foreground"
               aria-hidden="true"
             />
-            <span className="min-w-0 flex-1 truncate text-sm">
-              {doc.file.name}
+            <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <span className="truncate text-sm">{doc.file.name}</span>
+              {doc.status === "uploading" && (
+                <UploadProgressBar
+                  value={doc.progress}
+                  label={`Загрузка ${doc.file.name}`}
+                />
+              )}
             </span>
             {doc.status === "uploading" && (
-              <LoaderCircleIcon
-                className="size-4 shrink-0 animate-spin text-muted-foreground"
-                aria-label="Загрузка…"
-              />
+              <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                {Math.round(doc.progress * 100)}%
+              </span>
             )}
             {doc.status === "done" && (
               <CheckIcon

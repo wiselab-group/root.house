@@ -1,10 +1,7 @@
 "use client";
 
 import { useCallback, useState, type DragEvent } from "react";
-import {
-  PHOTO_ACCEPT,
-  PHOTO_MAX_BYTES,
-} from "@/domain/media/photo-upload-rules";
+import { PHOTO_ACCEPT, PHOTO_MAX_BYTES } from "@/domain/media/upload-rules";
 
 const DEFAULT_MAX_SIZE = PHOTO_MAX_BYTES;
 const DEFAULT_ACCEPT = PHOTO_ACCEPT;

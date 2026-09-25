@@ -69,7 +69,9 @@ describe("roundedOrthogonalPath", () => {
       [{ x: 250, y: 50 }],
     );
     // Sharp at the target-side bend (250,50): straight L, no Q around it.
-    expect(path).toBe("M100,0 L100,42 Q100,50 108,50 L250,50 L250,100");
+    // The source-side bend rounds with the full 24px CORNER_RADIUS (both
+    // legs are long enough — 50 and 150).
+    expect(path).toBe("M100,0 L100,26 Q100,50 124,50 L250,50 L250,100");
     // Only one Q command left — the OTHER (source-side) bend still rounds.
     expect(path.match(/Q/g)).toHaveLength(1);
   });

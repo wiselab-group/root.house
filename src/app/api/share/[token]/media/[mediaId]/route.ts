@@ -47,11 +47,8 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const result = await getMediaStream(
-    mediaId,
-    familyId,
-    parseMediaSize(new URL(request.url).searchParams.get("size")),
-  );
+  const size = parseMediaSize(new URL(request.url).searchParams.get("size"));
+  const result = await getMediaStream(mediaId, familyId, size);
   if (!result) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -59,7 +56,7 @@ export async function GET(
   return new Response(result.stream, {
     headers: {
       "Content-Type": result.contentType,
-      "Cache-Control": mediaCacheControl(result.isVariant),
+      "Cache-Control": mediaCacheControl(size, result.isVariant),
     },
   });
 }

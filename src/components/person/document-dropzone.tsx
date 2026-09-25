@@ -4,18 +4,18 @@ import { useRef } from "react";
 import { UploadCloudIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMultiImageDrop } from "@/hooks/use-multi-image-drop";
-
-const ACCEPT = "application/pdf,image/jpeg,image/png,image/heic,image/tiff";
-const MAX_SIZE_BYTES = 25 * 1024 * 1024;
+import {
+  DOCUMENT_ACCEPT,
+  DOCUMENT_MAX_BYTES,
+} from "@/domain/media/upload-rules";
 
 /**
  * Drag&drop + click-to-pick surface for DocumentUploadPanel — same shape as
  * PhotoDropzone, reusing useMultiImageDrop (it's file-type-agnostic despite
  * the name — accept/maxSize are both parameters) instead of writing a
  * parallel drop handler. accept covers PDF plus the scanned-image formats a
- * document is realistically photographed/scanned into (see
- * api/media/upload-document/route.ts's ALLOWED_CONTENT_TYPES, which this
- * must stay in sync with).
+ * document is realistically photographed/scanned into — the same list the
+ * server enforces (domain/media/upload-rules.ts).
  */
 export function DocumentDropzone({
   disabled,
@@ -27,8 +27,8 @@ export function DocumentDropzone({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { isDragging, error, handleFiles, dragHandlers } = useMultiImageDrop({
-    accept: ACCEPT,
-    maxSize: MAX_SIZE_BYTES,
+    accept: DOCUMENT_ACCEPT,
+    maxSize: DOCUMENT_MAX_BYTES,
     disabled,
     onFiles,
   });
@@ -61,7 +61,7 @@ export function DocumentDropzone({
         <input
           ref={inputRef}
           type="file"
-          accept={ACCEPT}
+          accept={DOCUMENT_ACCEPT}
           multiple
           onChange={handleInputChange}
           disabled={disabled}

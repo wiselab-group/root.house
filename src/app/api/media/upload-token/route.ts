@@ -5,24 +5,25 @@ import { requireFamilyAccess } from "@/domain/family/access";
 import { ForbiddenError } from "@/domain/family/errors";
 import { canCreate } from "@/domain/family/permissions";
 import {
-  isPhotoUploadKey,
-  PHOTO_CONTENT_TYPES,
-  PHOTO_MAX_BYTES,
-  PhotoUploadRejectedError,
-} from "@/domain/media/photo-upload-rules";
+  isUploadKey,
+  UPLOAD_RULES,
+  UploadRejectedError,
+  type UploadKind,
+} from "@/domain/media/upload-rules";
 
 /**
- * Issues the short-lived token a browser needs to put ONE photo straight
- * into private Blob storage (see lib/upload-photo.ts) — the file itself
- * never passes through our functions, so Vercel's ~4.5MB request-body cap
- * no longer limits photo size.
+ * Issues the short-lived token a browser needs to put ONE photo or document
+ * straight into private Blob storage (see lib/direct-upload.ts) — the file
+ * itself never passes through our functions, so Vercel's ~4.5MB
+ * request-body cap no longer limits file size.
  *
- * The same access rule as the old server-side upload: a portrait
- * (isAvatar) needs editor, a gallery photo contributor-and-up. The token is
- * bound to a pathname inside the family's own uploads folder, a random
- * suffix (no overwriting anything), the allowed types and 25MB. Recording
- * the photo is a separate call to /api/media/upload, which re-checks all of
- * it — this token alone only lets bytes land in storage.
+ * The same access rule as the old server-side uploads: a portrait
+ * (isAvatar) needs editor, a gallery photo or a document contributor-and-up.
+ * The token is bound to a pathname inside the family's own uploads folder,
+ * a random suffix (no overwriting anything), and that kind's allowed types
+ * and size. Recording the file is a separate call (/api/media/upload or
+ * /api/media/upload-document), which re-checks all of it — this token alone
+ * only lets bytes land in storage.
  *
  * No onUploadCompleted: Blob's completion callback can't reach localhost,
  * and the browser's own finalize call already covers it.
@@ -38,7 +39,7 @@ export async function POST(request: Request): Promise<Response> {
         const session = await auth();
         if (!session?.user) throw new ForbiddenError("Unauthorized");
 
-        const { familyId, isAvatar } = parsePayload(clientPayload);
+        const { familyId, kind, isAvatar } = parsePayload(clientPayload);
         const member = await requireFamilyAccess(
           familyId,
           session.user.id,
@@ -47,13 +48,13 @@ export async function POST(request: Request): Promise<Response> {
         if (!isAvatar && !canCreate(member.role, "media")) {
           throw new ForbiddenError("У вас нет прав на добавление медиа.");
         }
-        if (!isPhotoUploadKey(pathname, familyId)) {
-          throw new PhotoUploadRejectedError("Недопустимый путь файла");
+        if (!isUploadKey(pathname, familyId)) {
+          throw new UploadRejectedError("Недопустимый путь файла");
         }
 
         return {
-          allowedContentTypes: PHOTO_CONTENT_TYPES,
-          maximumSizeInBytes: PHOTO_MAX_BYTES,
+          allowedContentTypes: UPLOAD_RULES[kind].contentTypes,
+          maximumSizeInBytes: UPLOAD_RULES[kind].maxBytes,
           addRandomSuffix: true,
           allowOverwrite: false,
         };
@@ -64,7 +65,7 @@ export async function POST(request: Request): Promise<Response> {
     if (error instanceof ForbiddenError) {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
-    if (error instanceof PhotoUploadRejectedError) {
+    if (error instanceof UploadRejectedError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     throw error;
@@ -73,6 +74,7 @@ export async function POST(request: Request): Promise<Response> {
 
 function parsePayload(clientPayload: string | null): {
   familyId: string;
+  kind: UploadKind;
   isAvatar: boolean;
 } {
   let parsed: unknown = null;
@@ -87,10 +89,15 @@ function parsePayload(clientPayload: string | null): {
     "familyId" in parsed &&
     typeof parsed.familyId === "string"
   ) {
+    const kind =
+      "kind" in parsed && parsed.kind === "document" ? "document" : "photo";
     return {
       familyId: parsed.familyId,
-      isAvatar: "isAvatar" in parsed && parsed.isAvatar === true,
+      kind,
+      // Only a photo can become a portrait.
+      isAvatar:
+        kind === "photo" && "isAvatar" in parsed && parsed.isAvatar === true,
     };
   }
-  throw new PhotoUploadRejectedError("Не указана семья");
+  throw new UploadRejectedError("Не указана семья");
 }

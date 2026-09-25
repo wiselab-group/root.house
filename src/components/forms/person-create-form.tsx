@@ -42,6 +42,7 @@ export function PersonCreateForm({
   const router = useRouter();
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoProgress, setPhotoProgress] = useState<number | null>(null);
   const [isNavigating, startNavigateTransition] = useTransition();
   // PersonForm renders its own pending state from useActionState/
   // useFormStatus; this ref lets the wrapper's action intercept the same
@@ -62,12 +63,14 @@ export function PersonCreateForm({
 
       if (fileToUpload) {
         setPhotoError(null);
+        setPhotoProgress(0);
         try {
           await uploadPhoto({
             familyId,
             personId,
             isAvatar: true,
             file: fileToUpload,
+            onProgress: setPhotoProgress,
           });
         } catch {
           // Person was created successfully — a failed avatar upload
@@ -77,6 +80,8 @@ export function PersonCreateForm({
           setPhotoError(
             "Человек создан, но фото загрузить не удалось — добавьте его на странице редактирования.",
           );
+        } finally {
+          setPhotoProgress(null);
         }
       }
 
@@ -102,13 +107,23 @@ export function PersonCreateForm({
 
   return (
     <div className="flex flex-col gap-6">
-      <PersonPhotoPicker onFileChange={setPhotoFile} disabled={isNavigating} />
+      <PersonPhotoPicker
+        onFileChange={setPhotoFile}
+        disabled={isNavigating}
+        progress={photoProgress}
+      />
       {photoError && <p className="text-sm text-destructive">{photoError}</p>}
       <PersonForm
         action={boundAction}
         places={places}
         submitLabel="Добавить"
-        submitPendingLabel={isNavigating ? "Сохраняем фото…" : "Добавляем…"}
+        submitPendingLabel={
+          photoProgress !== null
+            ? `Загружаем фото… ${Math.round(photoProgress * 100)}%`
+            : isNavigating
+              ? "Открываем профиль…"
+              : "Добавляем…"
+        }
         cancelHref={`/families/${familySlug}/people`}
       />
     </div>

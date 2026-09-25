@@ -343,11 +343,32 @@ export async function setMediaVariants(
   mediaId: string,
   familyId: string,
   data: { variants: MediaVariants; width: number; height: number },
-): Promise<void> {
-  await db
+): Promise<boolean> {
+  const rows = await db
     .update(media)
     .set(data)
-    .where(and(eq(media.id, mediaId), eq(media.familyId, familyId)));
+    .where(and(eq(media.id, mediaId), eq(media.familyId, familyId)))
+    .returning({ id: media.id });
+  return rows.length > 0;
+}
+
+/**
+ * Every stored file any Media row points at — originals and variants, all
+ * families. Only for the orphaned-upload cleanup (media-cleanup.ts), a
+ * maintenance job with no acting user, never a request path.
+ */
+export async function getAllReferencedStorageKeys(): Promise<Set<string>> {
+  const rows = await db
+    .select({ storageKey: media.storageKey, variants: media.variants })
+    .from(media);
+  const keys = new Set<string>();
+  for (const row of rows) {
+    keys.add(row.storageKey);
+    for (const variant of Object.values(row.variants ?? {})) {
+      keys.add(variant.storageKey);
+    }
+  }
+  return keys;
 }
 
 /** Whether a Media row in this family already points at this stored file. */

@@ -6,7 +6,9 @@ import { cn } from "@/lib/utils";
 import { useImageDrop } from "@/hooks/use-image-drop";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { PHOTO_ACCEPT } from "@/domain/media/photo-upload-rules";
+import { PHOTO_ACCEPT } from "@/domain/media/upload-rules";
+import { PhotoUploadCaption } from "./photo-upload-caption";
+import { PHOTO_UPLOAD_SIZE_STYLES as SIZE_STYLES } from "./person-photo-upload-sizes";
 
 /**
  * Shared drag&drop avatar picker UI (reui's c-file-upload-2 pattern adapted
@@ -18,23 +20,6 @@ import { PHOTO_ACCEPT } from "@/domain/media/photo-upload-rules";
  * PersonPhotoPicker (holds the File until the person is created) can share
  * this exact UI without duplicating the drop-zone markup.
  */
-const SIZE_STYLES = {
-  default: {
-    dropzone: "size-24",
-    avatar: "size-24!",
-    fallbackText: "text-lg",
-    camera: "size-6",
-    remove: "size-6 [&_svg]:size-3.5",
-  },
-  compact: {
-    dropzone: "size-20",
-    avatar: "size-20!",
-    fallbackText: "text-base",
-    camera: "size-5",
-    remove: "size-6 [&_svg]:size-3.5",
-  },
-} as const;
-
 export function PersonPhotoUpload({
   previewUrl,
   fallback,
@@ -43,6 +28,7 @@ export function PersonPhotoUpload({
   removeLabel = "Удалить фото",
   disabled = false,
   isBusy = false,
+  progress = null,
   size = "default",
   className,
 }: {
@@ -54,6 +40,8 @@ export function PersonPhotoUpload({
   removeLabel?: string;
   disabled?: boolean;
   isBusy?: boolean;
+  /** Upload progress, 0–1 — shown as a bar under the photo while set. */
+  progress?: number | null;
   size?: "default" | "compact";
   className?: string;
 }) {
@@ -110,15 +98,7 @@ export function PersonPhotoUpload({
           <Avatar size="lg" className={cn(styles.avatar, "after:border-none")}>
             {previewUrl && <AvatarImage src={previewUrl} alt="" />}
             <AvatarFallback className={styles.fallbackText}>
-              {isBusy
-                ? size === "default" && (
-                    <span className="text-xs text-muted-foreground">
-                      Загружаем…
-                    </span>
-                  )
-                : previewUrl
-                  ? null
-                  : fallback}
+              {isBusy ? null : previewUrl ? null : fallback}
             </AvatarFallback>
           </Avatar>
           {!isBusy && (
@@ -157,13 +137,11 @@ export function PersonPhotoUpload({
         )}
       </div>
 
-      {size === "default" && (
-        <p className="text-xs text-muted-foreground">
-          {previewUrl
-            ? "Нажмите или перетащите, чтобы заменить"
-            : "Нажмите или перетащите фото"}
-        </p>
-      )}
+      <PhotoUploadCaption
+        progress={progress}
+        hasPhoto={Boolean(previewUrl)}
+        showHint={size === "default"}
+      />
 
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>

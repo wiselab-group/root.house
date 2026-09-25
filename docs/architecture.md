@@ -386,25 +386,31 @@ interface StorageService {
 (дешевле для видео/большого объёма) без переписывания domain-кода —
 постепенно, старые записи держат `'vercel_blob'`, новые — `'r2'`.
 
-**Фото загружаются из браузера прямо в приватный Blob (с 2026-09-25).**
+**Фото и документы загружаются из браузера прямо в приватный Blob (с 2026-09-25).**
 Раньше загрузка шла через собственный сервер, потому что client-token flow
 `@vercel/blob` не поддерживал `access: 'private'`; в 2.x поддерживает, а
 лимит тела запроса функции на Vercel (~4,5 МБ) не пропускал фото с телефона.
 Access-режим выбирает клиент, поэтому сервер его перепроверяет:
 
 - `POST /api/media/upload-token` — `handleUpload`: `requireFamilyAccess`
-  (editor для портрета, contributor+ для галереи), путь только внутри
-  `<familyId>/uploads/`, случайный суффикс без перезаписи, разрешённые типы и
-  25 МБ (`domain/media/photo-upload-rules.ts`).
-- `POST /api/media/upload` — маленький JSON «зарегистрировать загруженное»:
-  снова `requireFamilyAccess`, затем `uploadPersonPhoto` проверяет сам файл
+  (editor для портрета, contributor+ для галереи и документов), путь только
+  внутри `<familyId>/uploads/`, случайный суффикс без перезаписи, разрешённые
+  для вида файла типы и 25 МБ (`domain/media/upload-rules.ts`).
+- `POST /api/media/upload` (фото) и `POST /api/media/upload-document` —
+  маленький JSON «зарегистрировать загруженное»: снова
+  `requireFamilyAccess`, затем `verifyUploadedFile` проверяет сам файл
   (папка своей семьи, ключ ещё не занят другой Media, blob действительно
-  private, тип, размер — иначе удаляет его) и делает уменьшенные копии.
+  private, тип, размер — иначе удаляет его). Копии фото делаются уже после
+  ответа, в `after()` (`makePhotoVariants`) — пока их нет, отдаётся оригинал
+  без кэширования под URL копии.
 - Копии — `thumb` (800px) и `display` (2048px) WebP без метаданных
   (`domain/media/image-variants.ts`, HEIC через `heic-convert`), ключи в
   `media.variants`. Оригинал не меняется и отдаётся только на скачивание.
   Старые фото дообрабатываются `pnpm media:backfill-variants`.
-- Документы пока идут старым путём через сервер (`/api/media/upload-document`).
+- Файлы, загруженные, но не зарегистрированные (закрыли вкладку), удаляет
+  ежедневный Vercel Cron `/api/cron/cleanup-uploads` (`vercel.json`, нужен
+  env `CRON_SECRET`) — только в `uploads/`/`variants/` и старше суток
+  (`domain/media/media-cleanup.ts`); вручную — `pnpm media:cleanup-orphans`.
 - `GET /api/media/[mediaId]?familyId=...&size=thumb|display` — стримит
   приватный blob обратно (копию, если есть, иначе оригинал), тоже после
   `requireFamilyAccess`; строится только через `lib/media-url.ts`. Ссылки на фото в UI всегда указывают

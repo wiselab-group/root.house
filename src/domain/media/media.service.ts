@@ -1,11 +1,11 @@
 import { vercelBlobStorageService } from "./storage.vercel-blob";
 import { processImage } from "./image-variants";
 import {
-  isPhotoUploadKey,
-  PHOTO_CONTENT_TYPES,
-  PHOTO_MAX_BYTES,
-  PhotoUploadRejectedError,
-} from "./photo-upload-rules";
+  isUploadKey,
+  UPLOAD_RULES,
+  UploadRejectedError,
+  type UploadKind,
+} from "./upload-rules";
 import { canView, type ActingMember } from "@/domain/family/permissions";
 import { logActivity } from "@/domain/activity-log/activity-log.service";
 import { personDisplayName } from "@/domain/person/display-name";
@@ -28,6 +28,7 @@ import {
   isMediaLinked,
   isStorageKeyUsed,
   reorderMedia,
+  setMediaVariants,
   upsertPhotoTagPosition,
   clearPhotoTagPosition,
   removePersonFromMedia,
@@ -41,6 +42,43 @@ import {
 export type { MediaRecord, MediaTaggedAlbum, MediaTaggedPerson };
 
 const storage = vercelBlobStorageService;
+
+/**
+ * Checks a file the browser says it just put into storage, trusting none of
+ * it: it must sit in this family's own uploads folder, not already belong
+ * to another Media row, be private (the browser picks its own access mode),
+ * and be an allowed type and size for its kind. A file that fails is
+ * deleted — except one outside the folder or already in use, which may be
+ * someone else's.
+ */
+async function verifyUploadedFile(
+  storageKey: string,
+  familyId: string,
+  kind: UploadKind,
+): Promise<{ sizeBytes: number; contentType: string }> {
+  if (
+    !isUploadKey(storageKey, familyId) ||
+    (await isStorageKeyUsed(storageKey, familyId))
+  ) {
+    throw new UploadRejectedError("Файл не найден");
+  }
+
+  const info = await storage.getInfo(storageKey);
+  if (!info) throw new UploadRejectedError("Файл не найден");
+  const rules = UPLOAD_RULES[kind];
+  const rejection = !info.isPrivate
+    ? "Файл загружен не в закрытое хранилище"
+    : !rules.contentTypes.includes(info.contentType)
+      ? "Этот формат не поддерживается"
+      : info.sizeBytes > rules.maxBytes
+        ? `Файл больше ${Math.round(rules.maxBytes / 1024 ** 2)} МБ`
+        : null;
+  if (rejection) {
+    await deleteStoredFiles([storageKey]);
+    throw new UploadRejectedError(rejection);
+  }
+  return info;
+}
 
 export interface UploadPhotoInput {
   familyId: string;
@@ -62,46 +100,21 @@ export interface UploadPhotoInput {
  * Nothing about the stored file is taken on the client's word: it must sit
  * in this family's own uploads folder, not already belong to another Media
  * row, be private, and be an allowed type and size — otherwise the blob is
- * deleted and PhotoUploadRejectedError is thrown.
+ * deleted and UploadRejectedError is thrown (see verifyUploadedFile).
  *
- * The downscaled copies (see image-variants.ts) are made and stored before
- * the row is created. If processing fails the photo is still saved, just
- * without variants — /api/media falls back to the original for it. If the
- * DB insert fails, the stored files are deleted (best-effort — there is no
- * transaction spanning storage and the DB).
+ * The row is created without the downscaled copies — the caller makes them
+ * right after responding (makePhotoVariants, via Next's after()), so the
+ * uploader isn't kept waiting ~several seconds of storage round-trips at
+ * the end of their progress bar. Until then, and forever if processing
+ * fails, /api/media serves the original. If the DB insert fails, the stored
+ * file is deleted (best-effort — there is no transaction spanning storage
+ * and the DB).
  */
 export async function uploadPersonPhoto(
   input: UploadPhotoInput,
 ): Promise<{ id: string }> {
   const { storageKey } = input;
-  if (
-    !isPhotoUploadKey(storageKey, input.familyId) ||
-    (await isStorageKeyUsed(storageKey, input.familyId))
-  ) {
-    // Never delete here — the key may be someone else's file.
-    throw new PhotoUploadRejectedError("Файл не найден");
-  }
-
-  const info = await storage.getInfo(storageKey);
-  const rejection = !info
-    ? "Файл не найден"
-    : !info.isPrivate
-      ? "Файл загружен не в закрытое хранилище"
-      : !PHOTO_CONTENT_TYPES.includes(info.contentType)
-        ? "Этот формат не поддерживается"
-        : info.sizeBytes > PHOTO_MAX_BYTES
-          ? "Файл больше 25 МБ"
-          : null;
-  if (!info || rejection) {
-    if (info) await deleteStoredFiles([storageKey]);
-    throw new PhotoUploadRejectedError(rejection ?? "Файл не найден");
-  }
-
-  const processed = await storePhotoVariants(
-    await storage.readBuffer(storageKey),
-    info.contentType,
-    `${input.familyId}/variants/${crypto.randomUUID()}`,
-  );
+  const info = await verifyUploadedFile(storageKey, input.familyId, "photo");
 
   try {
     const result = await createMedia({
@@ -111,9 +124,6 @@ export async function uploadPersonPhoto(
       storageProvider: storage.providerName,
       mimeType: info.contentType,
       sizeBytes: info.sizeBytes,
-      width: processed?.width,
-      height: processed?.height,
-      variants: processed?.variants,
       uploadedBy: input.uploadedBy,
       privacyLevel: input.privacyLevel,
       personIds: input.personIds,
@@ -135,9 +145,37 @@ export async function uploadPersonPhoto(
 
     return result;
   } catch (error) {
-    await deleteStoredFiles([storageKey, ...variantKeys(processed?.variants)]);
+    await deleteStoredFiles([storageKey]);
     throw error;
   }
+}
+
+/**
+ * Makes a stored photo's downscaled copies and records them — after an
+ * upload (in the background) and for the one-off backfill of older photos.
+ * Does nothing if the photo already has them or no longer exists; if the
+ * photo was deleted while its copies were being made, the copies are
+ * deleted again instead of left behind.
+ */
+export async function makePhotoVariants(
+  mediaId: string,
+  familyId: string,
+): Promise<boolean> {
+  const record = await getMediaById(mediaId, familyId);
+  if (!record || record.kind !== "photo" || record.variants) return false;
+
+  const processed = await storePhotoVariants(
+    await storage.readBuffer(record.storageKey),
+    record.mimeType,
+    `${familyId}/variants/${crypto.randomUUID()}`,
+  );
+  if (!processed) return false;
+
+  if (!(await setMediaVariants(mediaId, familyId, processed))) {
+    await deleteStoredFiles(variantKeys(processed.variants));
+    return false;
+  }
+  return true;
 }
 
 /**
@@ -193,11 +231,6 @@ export async function storePhotoVariants(
   };
 }
 
-/** A stored file's bytes — for the variants backfill (db/backfill-photo-variants.ts). */
-export async function readStoredFile(storageKey: string): Promise<Buffer> {
-  return storage.readBuffer(storageKey);
-}
-
 function variantKeys(variants: MediaVariants | null | undefined): string[] {
   return Object.values(variants ?? {}).map((variant) => variant.storageKey);
 }
@@ -221,32 +254,29 @@ export interface UploadDocumentInput {
   familyId: string;
   personId: string;
   uploadedBy: string;
-  file: Buffer;
-  contentType: string;
-  originalFilename: string;
+  /** Where the browser already put the file (see lib/direct-upload.ts). */
+  storageKey: string;
+  /** The file's own name — shown as the document's title. */
+  filename: string;
   privacyLevel?: PrivacyLevel;
 }
 
 /**
- * Uploads a document (scan/PDF — birth certificate, letter, ...) to storage
- * and records it as Media with kind: 'document', linked to exactly one
- * Person — same upload/compensating-delete shape as uploadPersonPhoto, but
- * always exactly one personId (no group tagging — a document belongs to the
- * one profile it was uploaded from, see DocumentUploadPanel) and no
- * width/height (meaningless for a PDF). `title` is set from the original
- * filename since documents, unlike photos, are identified by name in the
- * list UI (DocumentList), not by a thumbnail.
+ * Records a document (scan/PDF — birth certificate, letter, ...) the
+ * browser has just put into storage as Media with kind: 'document', linked
+ * to exactly one Person — same checks as uploadPersonPhoto (see
+ * verifyUploadedFile), but always exactly one personId (no group tagging —
+ * a document belongs to the one profile it was uploaded from, see
+ * DocumentUploadPanel), no variants and no width/height. `title` is the
+ * original filename since documents, unlike photos, are identified by name
+ * in the list UI (DocumentList), not by a thumbnail.
  */
 export async function uploadPersonDocument(
   input: UploadDocumentInput,
 ): Promise<{ id: string }> {
-  const key = `${input.familyId}/${crypto.randomUUID()}-${sanitizeFilename(input.originalFilename)}`;
-
-  const { storageKey } = await storage.upload({
-    key,
-    file: input.file,
-    contentType: input.contentType,
-  });
+  const { storageKey } = input;
+  const info = await verifyUploadedFile(storageKey, input.familyId, "document");
+  const title = input.filename.trim().slice(0, 200) || "Документ";
 
   try {
     const result = await createMedia({
@@ -254,9 +284,9 @@ export async function uploadPersonDocument(
       kind: "document",
       storageKey,
       storageProvider: storage.providerName,
-      mimeType: input.contentType,
-      sizeBytes: input.file.byteLength,
-      title: input.originalFilename,
+      mimeType: info.contentType,
+      sizeBytes: info.sizeBytes,
+      title,
       uploadedBy: input.uploadedBy,
       privacyLevel: input.privacyLevel,
       personIds: [input.personId],
@@ -269,14 +299,12 @@ export async function uploadPersonDocument(
       action: "create",
       entityType: "media",
       entityId: result.id,
-      entityLabel: `Документ — ${input.originalFilename}`,
+      entityLabel: `Документ — ${title}`,
     });
 
     return result;
   } catch (error) {
-    await storage.delete(storageKey).catch(() => {
-      // Best-effort cleanup — the DB insert error is what actually matters to the caller.
-    });
+    await deleteStoredFiles([storageKey]);
     throw error;
   }
 }
@@ -309,10 +337,6 @@ export async function removeMediaIfUnlinked(
 ): Promise<void> {
   if (await isMediaLinked(mediaId, familyId)) return;
   await removeMedia(mediaId, familyId, actorId);
-}
-
-function sanitizeFilename(filename: string): string {
-  return filename.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100);
 }
 
 export interface GalleryPhoto {
@@ -492,10 +516,16 @@ export function parseMediaSize(value: string | null): MediaSize {
  * that's what makes reopening a large tree instant. Still `private`: it's
  * a family's photo, never for a shared cache.
  */
-export function mediaCacheControl(isVariant: boolean): string {
-  return isVariant
-    ? "private, max-age=2592000, immutable"
-    : "private, max-age=3600";
+export function mediaCacheControl(
+  requested: MediaSize,
+  isVariant: boolean,
+): string {
+  if (isVariant) return "private, max-age=2592000, immutable";
+  // A copy was asked for but isn't made yet (it's being made right after
+  // upload) — serve the original without caching it under the copy's URL,
+  // or the browser would keep the full file there for an hour.
+  if (requested !== "original") return "private, no-cache";
+  return "private, max-age=3600";
 }
 
 /**

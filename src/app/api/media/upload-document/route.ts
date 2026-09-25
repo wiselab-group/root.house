@@ -4,24 +4,23 @@ import { requireFamilyAccess } from "@/domain/family/access";
 import { ForbiddenError } from "@/domain/family/errors";
 import { canCreate } from "@/domain/family/permissions";
 import { uploadPersonDocument } from "@/domain/media/media.service";
+import { UploadRejectedError } from "@/domain/media/upload-rules";
 
-const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25MB — generous for a multi-page scanned document, still comfortably server-proxied
-const ALLOWED_CONTENT_TYPES = [
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/heic",
-  "image/tiff",
-];
+interface FinalizeBody {
+  familyId?: unknown;
+  personId?: unknown;
+  storageKey?: unknown;
+  filename?: unknown;
+  privacyLevel?: unknown;
+}
 
 /**
- * Document upload — separate route from /api/media/upload (photos) rather
- * than a shared route branching on a `kind` field, so this route's own
- * allowlist/size ceiling (PDF, larger max) can never accidentally loosen the
- * photo route's, and vice versa. Same private-storage rationale as the photo
- * route's own doc comment (Route Handler, not Server Action, for the body-
- * size ceiling; Blob access: 'private' requires proxying through our own
- * server either way).
+ * Records a document the browser has already put into private Blob storage
+ * (lib/upload-document.ts) — a small JSON call, the file never passes
+ * through here. A separate route from /api/media/upload (photos) rather
+ * than one branching on a `kind` field, so neither can accidentally loosen
+ * the other's checks. uploadPersonDocument re-checks the stored file itself
+ * (folder, privacy, type, 25MB); this route checks who is asking.
  *
  * Always tags exactly one Person (the profile it was uploaded from) — no
  * group-tagging, no album — see uploadPersonDocument's own doc comment.
@@ -32,25 +31,23 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const formData = await request.formData();
-  const familyId = formData.get("familyId");
-  const personId = formData.get("personId");
-  const file = formData.get("file");
-  const rawPrivacyLevel = formData.get("privacyLevel");
+  const body = (await request.json().catch(() => ({}))) as FinalizeBody;
+  const { familyId, personId, storageKey, filename } = body;
   const privacyLevel =
-    rawPrivacyLevel === "private" ||
-    rawPrivacyLevel === "family" ||
-    rawPrivacyLevel === "public"
-      ? rawPrivacyLevel
+    body.privacyLevel === "private" ||
+    body.privacyLevel === "family" ||
+    body.privacyLevel === "public"
+      ? body.privacyLevel
       : undefined;
 
   if (
     typeof familyId !== "string" ||
     typeof personId !== "string" ||
-    !(file instanceof File)
+    typeof storageKey !== "string" ||
+    typeof filename !== "string"
   ) {
     return NextResponse.json(
-      { error: "Missing familyId, personId, or file" },
+      { error: "Missing familyId, personId, storageKey, or filename" },
       { status: 400 },
     );
   }
@@ -74,30 +71,20 @@ export async function POST(request: Request): Promise<Response> {
     throw error;
   }
 
-  if (!ALLOWED_CONTENT_TYPES.includes(file.type)) {
-    return NextResponse.json(
-      { error: `Unsupported file type: ${file.type}` },
-      { status: 400 },
-    );
+  try {
+    const media = await uploadPersonDocument({
+      familyId,
+      personId,
+      uploadedBy: session.user.id,
+      storageKey,
+      filename,
+      privacyLevel,
+    });
+    return NextResponse.json({ id: media.id }, { status: 201 });
+  } catch (error) {
+    if (error instanceof UploadRejectedError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    throw error;
   }
-  if (file.size > MAX_FILE_SIZE_BYTES) {
-    return NextResponse.json(
-      { error: "File too large (max 25MB)" },
-      { status: 400 },
-    );
-  }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-
-  const media = await uploadPersonDocument({
-    familyId,
-    personId,
-    uploadedBy: session.user.id,
-    file: buffer,
-    contentType: file.type,
-    originalFilename: file.name,
-    privacyLevel,
-  });
-
-  return NextResponse.json({ id: media.id }, { status: 201 });
 }

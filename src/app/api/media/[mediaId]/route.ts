@@ -72,18 +72,17 @@ export async function GET(
   }
 
   const isDownload = searchParams.get("download") === "1";
-  const result = await getMediaStream(
-    mediaId,
-    familyId,
-    isDownload ? "original" : parseMediaSize(searchParams.get("size")),
-  );
+  const size = isDownload
+    ? "original"
+    : parseMediaSize(searchParams.get("size"));
+  const result = await getMediaStream(mediaId, familyId, size);
   if (!result) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   const headers: Record<string, string> = {
     "Content-Type": result.contentType,
-    "Cache-Control": mediaCacheControl(result.isVariant),
+    "Cache-Control": mediaCacheControl(size, result.isVariant),
   };
   if (isDownload) {
     headers["Content-Disposition"] = contentDisposition(

@@ -1,35 +1,43 @@
+import { recordUpload, uploadToStorage } from "./direct-upload";
+
 /**
- * Client-side helper for POSTing a document to /api/media/upload-document —
- * same shape as lib/upload-photo.ts's uploadPhoto, kept as a separate
- * function (not a shared helper branching on an endpoint param) since the
- * two routes take different form fields (personId is required here, always
- * exactly one; photos take personIds/albumIds arrays) and have no caller
- * that needs both behind one signature.
+ * Uploads one document for a person's profile: straight into Blob storage
+ * (see lib/direct-upload.ts), then /api/media/upload-document records it.
+ * Same progress split as lib/upload-photo.ts — 0–90% is the bytes being
+ * sent, the rest is recording it.
  */
+const UPLOAD_PHASE_CEILING = 0.9;
+const GENERIC_ERROR = "Не удалось загрузить документ";
+
 export async function uploadDocument({
   familyId,
   personId,
   file,
   privacyLevel,
+  onProgress,
 }: {
   familyId: string;
   personId: string;
   file: File;
   privacyLevel?: "private" | "family" | "public";
+  onProgress?: (fraction: number) => void;
 }): Promise<{ id: string }> {
-  const formData = new FormData();
-  formData.set("familyId", familyId);
-  formData.set("personId", personId);
-  if (privacyLevel) formData.set("privacyLevel", privacyLevel);
-  formData.set("file", file);
-
-  const response = await fetch("/api/media/upload-document", {
-    method: "POST",
-    body: formData,
+  const storageKey = await uploadToStorage({
+    familyId,
+    kind: "document",
+    file,
+    onProgress: (fraction) => onProgress?.(fraction * UPLOAD_PHASE_CEILING),
+  }).catch((error: unknown) => {
+    throw error instanceof Error && error.message.startsWith("Файл")
+      ? error
+      : new Error(GENERIC_ERROR);
   });
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(body.error ?? "Не удалось загрузить документ");
-  }
-  return response.json();
+
+  const result = await recordUpload(
+    "/api/media/upload-document",
+    { familyId, personId, storageKey, filename: file.name, privacyLevel },
+    GENERIC_ERROR,
+  );
+  onProgress?.(1);
+  return result;
 }

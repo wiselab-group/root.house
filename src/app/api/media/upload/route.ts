@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { ForbiddenError } from "@/domain/family/errors";
@@ -7,12 +7,15 @@ import {
   uploadPersonPhoto,
   uploadPersonAvatar,
   removeMediaIfUnlinked,
+  makePhotoVariants,
 } from "@/domain/media/media.service";
-import { PhotoUploadRejectedError } from "@/domain/media/photo-upload-rules";
+import { UploadRejectedError } from "@/domain/media/upload-rules";
 import { getPerson, setPersonAvatar } from "@/domain/person/person.service";
 
-// Making the downscaled copies (and decoding HEIC through WASM, ~1–3s for a
-// 12MP iPhone photo) runs inside this request — see image-variants.ts.
+// The downscaled copies are made in after() — past the response, but still
+// within this function's time budget: reading the original back, decoding
+// (HEIC through WASM takes ~1–3s for a 12MP iPhone photo) and storing two
+// copies — see image-variants.ts.
 export const maxDuration = 60;
 
 interface FinalizeBody {
@@ -107,6 +110,7 @@ export async function POST(request: Request): Promise<Response> {
         storageKey,
       });
       await setPersonAvatar(avatarPersonId, familyId, avatarMedia.id);
+      after(() => makePhotoVariants(avatarMedia.id, familyId));
 
       // The old portrait normally stays in the gallery (portraits are
       // gallery photos now); only a pre-gallery avatar nothing uses is removed.
@@ -129,9 +133,10 @@ export async function POST(request: Request): Promise<Response> {
       storageKey,
       privacyLevel,
     });
+    after(() => makePhotoVariants(media.id, familyId));
     return NextResponse.json({ id: media.id }, { status: 201 });
   } catch (error) {
-    if (error instanceof PhotoUploadRejectedError) {
+    if (error instanceof UploadRejectedError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     throw error;

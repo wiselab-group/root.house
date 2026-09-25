@@ -15,7 +15,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
-    "media:backfill-variants": "tsx src/db/backfill-photo-variants.ts"
+    "media:backfill-variants": "tsx src/db/backfill-photo-variants.ts",
+    "media:cleanup-orphans": "tsx src/db/cleanup-orphaned-uploads.ts"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

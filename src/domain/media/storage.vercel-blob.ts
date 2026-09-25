@@ -1,4 +1,4 @@
-import { put, del, get, head } from "@vercel/blob";
+import { put, del, get, head, list } from "@vercel/blob";
 import type {
   StorageService,
   UploadInput,
@@ -70,6 +70,20 @@ class VercelBlobStorageService implements StorageService {
     } catch {
       return null;
     }
+  }
+
+  /** Every stored file under `prefix` (the whole store without one), page by page. */
+  async *listFiles(
+    prefix?: string,
+  ): AsyncGenerator<{ storageKey: string; uploadedAt: Date }> {
+    let cursor: string | undefined;
+    do {
+      const page = await list({ prefix, cursor, limit: 1000 });
+      for (const blob of page.blobs) {
+        yield { storageKey: blob.pathname, uploadedAt: blob.uploadedAt };
+      }
+      cursor = page.hasMore ? page.cursor : undefined;
+    } while (cursor);
   }
 
   /** The whole blob in memory — for making a photo's variants. */
