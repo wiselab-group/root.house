@@ -529,7 +529,7 @@ function ParentChildEdgeLine({
   // (TreeLayoutPositionsContext — see its own doc comment for why this
   // replaced useInternalNode's live DOM-measured internals.positionAbsolute
   // + measured.height). Both x/y AND width/height come from that same
-  // non-DOM-dependent source now — width/height are the static per-cardStyle
+  // non-DOM-dependent source now — width/height are the static card
   // dimensions (xyflow-adapter.ts's NODE_DIMENSIONS), same numbers
   // useInternalNode's own `measured` fallback (`measured?.height ?? height`)
   // resolved to before a real DOM measurement existed, and — unlike
@@ -540,15 +540,9 @@ function ParentChildEdgeLine({
   const targetTopY = targetNode.y;
   const targetCenterX = targetNode.x + targetNode.width / 2;
 
-  // Portrait's square photo already fills the card from its very top edge,
-  // so the plain midpoint bend already reads fine there and a fixed tail
-  // would look arbitrary against a square corner — only compact's round
-  // avatar (which sits well clear of the card's top edge, see
-  // CONNECTOR_CENTER_Y) needs the fixed-length tail below.
-  const isCompactChild = targetNode.cardStyle === "compact";
-  const midY = isCompactChild
-    ? Math.max(sourceBottomY, targetTopY - COMPACT_CHILD_TAIL_LENGTH)
-    : (sourceBottomY + targetTopY) / 2;
+  // A fixed-length tail above the child's card rather than a plain midpoint
+  // bend — see COMPACT_CHILD_TAIL_LENGTH.
+  const midY = Math.max(sourceBottomY, targetTopY - COMPACT_CHILD_TAIL_LENGTH);
   // (targetX, midY) is this child's own turn down into its card — for a
   // middle sibling (flanked by others on both sides, see
   // xyflow-adapter.ts's isMiddleSibling) that turn is a sideways jog that
@@ -651,37 +645,27 @@ function PartnershipEdgeLine({
   const sourceIsLeft = sourceLeft <= targetLeft;
 
   // The avatar/photo's own vertical center, not the card's overall center —
-  // compact's round avatar (and portrait's square photo) doesn't span the
-  // card's full height, so centering on the whole card would draw the line
-  // through the name/years text below the avatar instead of through it.
-  const sourceCenterY = CONNECTOR_CENTER_Y[sourceNode.cardStyle];
-  const targetCenterY = CONNECTOR_CENTER_Y[targetNode.cardStyle];
-  const y = sourceNode.y + sourceCenterY;
+  // the round avatar doesn't span the card's full height, so centering on
+  // the whole card would draw the line through the name/years text below
+  // the avatar instead of through it.
+  const y = sourceNode.y + CONNECTOR_CENTER_Y;
   // Each card's own horizontal center — not its edge — so the line visibly
   // runs "through" each card to the avatar's center (compact's round avatar
   // sits centered inside the card), instead of stopping short at the card's
   // outer border with a gap that reads as disconnected from either avatar.
   const x1Full = sourceLeft + sourceNode.width / 2;
   const x2Full = targetLeft + targetNode.width / 2;
-  const yTarget = targetNode.y + targetCenterY;
+  const yTarget = targetNode.y + CONNECTOR_CENTER_Y;
 
-  // ...but compact's round avatar has NO opaque card background around it
+  // ...but the round avatar has NO opaque card background around it
   // (see AVATAR_RADIUS's own doc comment) — a line drawn all the way to
   // that center would cross the fully transparent padding around the
   // circle with nothing left to hide it. Pull each endpoint back by the
   // avatar's own radius (toward the OTHER end, along this already-
   // horizontal line) so the line's last visible segment always lands
   // inside the opaque circle instead of the transparent card around it.
-  // Portrait's square photo spans the card's full width, so it has no
-  // such gap and keeps ending at the exact center.
-  const x1 =
-    sourceNode.cardStyle === "compact"
-      ? x1Full + Math.sign(x2Full - x1Full) * AVATAR_RADIUS
-      : x1Full;
-  const x2 =
-    targetNode.cardStyle === "compact"
-      ? x2Full + Math.sign(x1Full - x2Full) * AVATAR_RADIUS
-      : x2Full;
+  const x1 = x1Full + Math.sign(x2Full - x1Full) * AVATAR_RADIUS;
+  const x2 = x2Full + Math.sign(x1Full - x2Full) * AVATAR_RADIUS;
 
   // Same midpoint the union trunk line hangs off (see
   // union-child-edge.tsx's own sourceX/sourceY) — the collapse badge sits

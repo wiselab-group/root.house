@@ -3,14 +3,12 @@
 import { Controls, useReactFlow } from "@xyflow/react";
 import {
   ChevronUpIcon,
-  CircleIcon,
   FilterIcon,
   LockIcon,
   LockOpenIcon,
   MaximizeIcon,
   NetworkIcon,
   RouteIcon,
-  SquareIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,20 +16,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { TreeCardStyle } from "./use-tree-card-style";
 import { ToolRow } from "./tree-tool-row";
 
 /**
  * "Инструменты" — one bottom-center pill button (matching a reference
  * screenshot's "My view" pill: icon + label + chevron) that opens a popover
- * listing EVERY tree-viewing tool: Relationship Trace, Filter, card style,
- * drag-lock, fit-view. Replaces 4 previously separate floating controls
- * (TreeToolbar's own Trace/Filter round buttons, plus this file's removed
- * predecessor TreeCardStyleControl's desktop <Controls> cluster and mobile
- * settings FAB) per direct user request (2026-09-18) to collapse every
+ * listing EVERY tree-viewing tool: Relationship Trace, Filter, drag-lock,
+ * fit-view. Replaces 4 previously separate floating controls
+ * (TreeToolbar's own Trace/Filter round buttons, plus the old desktop
+ * <Controls> cluster and mobile settings FAB) per direct user request (2026-09-18) to collapse every
  * entry point into one. Named "Инструменты" rather than a literal
  * translation of "My view" — the set spans both search tools (Trace/
- * Filter) and view settings (style/lock/fit), and this word covers both.
+ * Filter) and view settings (lock/fit), and this word covers both.
  *
  * Desktop keeps XYFlow's own zoom in/out +/- buttons as a separate small
  * bottom-left cluster (native pan/zoom affordance, not an app-level tool);
@@ -44,8 +40,6 @@ import { ToolRow } from "./tree-tool-row";
  * this menu is just a new front door to them.
  */
 export function TreeToolsMenu({
-  cardStyle,
-  setCardStyle,
   draggable,
   setDraggable,
   showZoom,
@@ -54,8 +48,6 @@ export function TreeToolsMenu({
   isTraceActive,
   isFilterActive,
 }: {
-  cardStyle: TreeCardStyle;
-  setCardStyle: (style: TreeCardStyle) => void;
   /** Omit both (read-only Share Link view, dragging is force-disabled
    *  upstream) to hide the drag-lock row entirely — nothing left for it
    *  to toggle. */
@@ -120,17 +112,6 @@ export function TreeToolsMenu({
             icon={<MaximizeIcon />}
             label="Показать всё дерево"
             onClick={() => fitView({ duration: 300 })}
-          />
-          <ToolRow
-            icon={cardStyle === "compact" ? <SquareIcon /> : <CircleIcon />}
-            label={
-              cardStyle === "compact"
-                ? "Крупное фото на карточке"
-                : "Компактные карточки"
-            }
-            onClick={() =>
-              setCardStyle(cardStyle === "compact" ? "portrait" : "compact")
-            }
           />
           {setDraggable && (
             <ToolRow

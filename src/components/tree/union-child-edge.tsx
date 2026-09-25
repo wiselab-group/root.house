@@ -79,8 +79,8 @@ export function UnionChildEdge({
   // line is a diagonal, and using only parentA's Y here left the trunk's
   // start point off that diagonal entirely — this matches it at every drag
   // position, not just level ones.
-  const centerYA = parentA.y + CONNECTOR_CENTER_Y[parentA.cardStyle];
-  const centerYB = parentB.y + CONNECTOR_CENTER_Y[parentB.cardStyle];
+  const centerYA = parentA.y + CONNECTOR_CENTER_Y;
+  const centerYB = parentB.y + CONNECTOR_CENTER_Y;
   const sourceY = (centerYA + centerYB) / 2;
   // The trunk's own vertical run must clear both cards' bottom edges before
   // it's visible as a line — starting it at sourceY (center height) would
@@ -102,38 +102,27 @@ export function UnionChildEdge({
   // line (two independently stroke-capped <path>s bumping into each other,
   // see relationship-edge.tsx's PartnershipEdgeLine) at the midpoint with a
   // visibly bumped corner that no per-path rounding could smooth over.
-  // Pulled back by the avatar's own radius when that parent is compact —
-  // same reasoning as PartnershipEdgeLine's x1/x2 (see AVATAR_RADIUS's own
-  // doc comment): compact's round avatar has no opaque card background
+  // Pulled back by the avatar's own radius — same reasoning as
+  // PartnershipEdgeLine's x1/x2 (see AVATAR_RADIUS's own doc comment): the
+  // round avatar has no opaque card background
   // around it, so a traced line ending at the exact center would leak
   // across the transparent card padding on its way in.
   const tracedStart =
     data?.tracedParentId === data?.parentAId
       ? {
-          x:
-            parentA.cardStyle === "compact"
-              ? centerXA + Math.sign(sourceX - centerXA) * AVATAR_RADIUS
-              : centerXA,
+          x: centerXA + Math.sign(sourceX - centerXA) * AVATAR_RADIUS,
           y: centerYA,
         }
       : data?.tracedParentId === data?.parentBId
         ? {
-            x:
-              parentB.cardStyle === "compact"
-                ? centerXB + Math.sign(sourceX - centerXB) * AVATAR_RADIUS
-                : centerXB,
+            x: centerXB + Math.sign(sourceX - centerXB) * AVATAR_RADIUS,
             y: centerYB,
           }
         : null;
 
   // The horizontal bend sits a fixed distance above the child, not at the
-  // midpoint — matching RelationshipEdge's plain parent_child lines (see
-  // there for why: only compact's round avatar needs this fixed tail;
-  // portrait's square photo already fills the card from its top edge).
-  const isCompactChild = targetNode.cardStyle === "compact";
-  const midY = isCompactChild
-    ? Math.max(clearY, targetY - COMPACT_CHILD_TAIL_LENGTH)
-    : (clearY + targetY) / 2;
+  // midpoint — matching RelationshipEdge's plain parent_child lines.
+  const midY = Math.max(clearY, targetY - COMPACT_CHILD_TAIL_LENGTH);
   const trunkPoints = [
     { x: sourceX, y: sourceY },
     { x: sourceX, y: clearY },

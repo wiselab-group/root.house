@@ -17,12 +17,11 @@ import { PHOTO_FRAME_PADDING, PHOTO_SIZE } from "./card-dimensions";
  *  reference's frame is a THICK matte in the card's own background tone,
  *  not a thin colored ring, and its name pill overlaps UP onto the photo
  *  rather than sitting in a separate gap below it, wider than the photo
- *  itself). See portrait-card-body.tsx for the alternative full-width
- *  square-photo style. Not built on shadcn's Avatar component (avatar.tsx)
- *  — that component hardcodes rounded-full on every part (root/image/
- *  fallback), which can't express this style's rounded-square photo — so
- *  this draws the photo itself via next/image, same approach portrait-
- *  card-body.tsx already uses. */
+ *  itself). The only card style — a full-width square-photo "portrait"
+ *  alternative was removed on user request. Not built on shadcn's Avatar
+ *  component (avatar.tsx) — that component hardcodes rounded-full on every
+ *  part (root/image/fallback), which can't express this style's
+ *  rounded-square photo — so this draws the photo itself via next/image. */
 export function CompactCardBody({
   data,
   name,
@@ -38,7 +37,7 @@ export function CompactCardBody({
   initials: string;
   /** This card's own click-popover is open — terracotta frame here (NOT the usual sage identity color, see this function's own comment on that deliberate exception). */
   isOpen: boolean;
-  /** On the currently traced relationship path — terracotta, person-node.tsx's usual border-primary treatment on the portrait style, expressed here as the matte frame's own color since this style has no card border of its own. */
+  /** On the currently traced relationship path — expressed as the matte frame's own color since the card has no border of its own. */
   isTraced: boolean;
   /** Keyboard-selected — terracotta frame, same color as isTraced (see buildCardFrameClassName's own comment on that split). */
   isSelected: boolean;
@@ -56,9 +55,7 @@ export function CompactCardBody({
   // exception to the tree's usual sage/terracotta split
   // (buildCardFrameClassName's own doc comment: sage = "who you're looking
   // at right now" / isOpen, terracotta = "what you selected/traced"),
-  // scoped to ONLY this compact card style's matte frame — portrait's own
-  // card frame (person-node-parts.tsx) keeps the original sage-for-isOpen
-  // split untouched. The tree's focus person (isFocus) is deliberately NOT
+  // scoped to this matte frame. The tree's focus person (isFocus) is deliberately NOT
   // one of these states — per an earlier direct user request, the focus
   // person's card should read as a plain, unhighlighted card, not singled
   // out with a colored frame (the layout centering it is already enough of

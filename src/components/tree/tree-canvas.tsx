@@ -8,7 +8,6 @@ import {
   useNodesState,
   useEdgesState,
   useReactFlow,
-  useUpdateNodeInternals,
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -30,7 +29,6 @@ import {
 import { PersonNode } from "./person-node";
 import { RelationshipEdge } from "./relationship-edge";
 import { UnionChildEdge } from "./union-child-edge";
-import { useTreeCardStyle, type TreeCardStyle } from "./use-tree-card-style";
 import { useCoarsePointer } from "@/hooks/use-coarse-pointer";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useHasMounted } from "./use-has-mounted";
@@ -125,99 +123,12 @@ function FocusViewport({
     );
     // Re-centers whenever the focus person itself changes (URL ?focus=...
     // navigation, or TreeCanvas's own client-side setFocus) — NOT on every
-    // node reposition (card style toggle, filter/trace highlight), which
+    // node reposition (filter/trace highlight), which
     // would fight the user's own pan/zoom mid-session. focusNode's identity
     // change (a new id) is what signals "the user asked to jump to someone
     // else", not a mere prop update.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusNode?.id, setCenter]);
-
-  return null;
-}
-
-/**
- * Forces XYFlow to re-measure every node's DOM box the instant a cardStyle
- * toggle (compact/portrait, see use-tree-card-style.ts) actually changes
- * what's rendered inside each card (CompactCardBody vs PortraitCardBody —
- * person-node.tsx has no fixed card height, it's content-driven, so the two
- * styles paint at genuinely different heights).
- *
- * XYFlow's own `measured` field normally updates via a ResizeObserver, which
- * only fires *after* the browser has painted the new DOM — later than the
- * same React commit that already flipped every node's `data.cardStyle`.
- * RelationshipEdge/UnionChildEdge read `data.cardStyle` (already new) to
- * pick their Y-offset formula (CONNECTOR_CENTER_Y, COMPACT_CHILD_TAIL_LENGTH)
- * but combine it with `measured`/EdgeProps sourceY/targetY (still the old
- * style's box, until that ResizeObserver tick lands) — for however many
- * frames that gap lasts, every connector draws against mismatched geometry:
- * a visibly kinked or detached line. Reported by the user with real-data
- * screenshots — this reproduces reliably, not just as an occasional
- * single-frame flicker, because a fresh XYFlow `nodes` array (the
- * setNodes(initialNodes) effect below) doesn't retain the previous array's
- * `measured` per node the way an in-place mutation would, so the
- * stale-vs-new mismatch can persist past the next paint instead of
- * self-correcting after one frame.
- *
- * `useUpdateNodeInternals` is XYFlow's own documented escape hatch for
- * exactly this — "I changed a node's rendered size/handles myself, remeasure
- * it now" — reading the live DOM element synchronously inside its own
- * requestAnimationFrame (see @xyflow/react's implementation), instead of
- * waiting on the passive ResizeObserver path. Rendered as a child of
- * <ReactFlow> for the same provider-scoping reason as FocusViewport above.
- */
-function CardStyleInternalsSync({
-  cardStyle,
-  nodeIds,
-}: {
-  cardStyle: TreeCardStyle;
-  nodeIds: string[];
-}) {
-  const updateNodeInternals = useUpdateNodeInternals();
-
-  useEffect(() => {
-    // Deferred past the next paint (double requestAnimationFrame, beyond
-    // useUpdateNodeInternals' own internal rAF — see its @xyflow/react
-    // source) because of WHERE this component sits: it's rendered as a
-    // child of <ReactFlow>, which is itself a child of TreeCanvas — and
-    // TreeCanvas is what actually calls setNodes(initialNodes) to apply the
-    // new cardStyle to every node's data/width/height, in TreeCanvas's OWN
-    // separate useEffect. React runs child effects before parent effects on
-    // the same commit, so this component's useEffect (child) fires BEFORE
-    // TreeCanvas's setNodes effect (parent) even schedules its re-render —
-    // meaning updateNodeInternals here was capturing each nodeElement's
-    // height from the PREVIOUS cardStyle's DOM (PersonNode hadn't even
-    // re-rendered with the new data.cardStyle yet, let alone painted it),
-    // not the new one. Real bug the user caught, persisting (not just a
-    // single missed frame): the resulting connector edge stayed visibly
-    // short/detached from its source card even seconds after the toggle,
-    // because nothing ever re-triggered a correct remeasure afterward. One
-    // requestAnimationFrame only pushes past THIS effect's own frame, not
-    // past setNodes' re-render + browser paint (a state update scheduled
-    // from an effect is its own separate render pass, not synchronous
-    // within this one) — two nested rAFs is what actually lands after that
-    // re-render has committed AND painted, matching what
-    // useUpdateNodeInternals' own single rAF assumes is already true when
-    // IT calls updateNodeInternals (its own error case, this component
-    // exists to prevent).
-    let cancelled = false;
-    let innerFrame: number | undefined;
-    const outerFrame = requestAnimationFrame(() => {
-      innerFrame = requestAnimationFrame(() => {
-        if (!cancelled) updateNodeInternals(nodeIds);
-      });
-    });
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(outerFrame);
-      if (innerFrame !== undefined) cancelAnimationFrame(innerFrame);
-    };
-    // Intentionally keyed on cardStyle, not nodeIds' own identity/content —
-    // a card style toggle is the only case that needs a forced remeasure;
-    // the initial mount and ordinary node-set changes (different focus
-    // person, filter/trace highlight) already get correct `measured` values
-    // from XYFlow's normal ResizeObserver path with no gap to close.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cardStyle, updateNodeInternals]);
 
   return null;
 }
@@ -282,12 +193,11 @@ export function TreeCanvas({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [cardStyle, setCardStyle] = useTreeCardStyle();
   const isCoarsePointer = useCoarsePointer();
   // Global drag lock — starts LOCKED (false): cards are meant to stay put at
   // their computed layout position, dragging is an opt-in "let me nudge this
   // one card" mode the lock row in TreeToolsMenu toggles. Plain
-  // session state (not persisted like cardStyle) — every visit re-opens
+  // session state (not persisted) — every visit re-opens
   // locked, matching the layout the server just computed. Deliberately does
   // NOT also gate elementsSelectable: a card's click-to-open-popover
   // ("Посмотреть профиль"/"Сделать фокус-персоной", see person-node.tsx) is
@@ -466,7 +376,6 @@ export function TreeCanvas({
         prunedGraph,
         familyId,
         familySlug,
-        cardStyle,
         highlight,
         setFocus,
         readOnly,
@@ -479,7 +388,6 @@ export function TreeCanvas({
       prunedGraph,
       familyId,
       familySlug,
-      cardStyle,
       highlight,
       setFocus,
       readOnly,
@@ -584,7 +492,7 @@ export function TreeCanvas({
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   // toReactFlow's output only feeds useNodesState/useEdgesState's initial
-  // value — any prop change after mount (cardStyle, but also `highlight`
+  // value — any prop change after mount (e.g. `highlight`
   // when a filter or Relationship Trace selection changes) needs an
   // explicit sync, same reason any derived-from-props state does under
   // React's "state initializers only run once" rule. Missing this on the
@@ -617,10 +525,6 @@ export function TreeCanvas({
   const focusNode = initialNodes.find(
     (node) => node.id === effectiveGraph.focusPersonId,
   );
-  // Passed to CardStyleInternalsSync below — recomputing this plain array
-  // every render is fine, that component's own effect only keys off
-  // `cardStyle`, not this array's identity (see its doc comment).
-  const nodeIds = nodes.map((node) => node.id);
 
   return (
     // Full-bleed, near-full-height on every viewport — a bordered, inset
@@ -696,23 +600,14 @@ export function TreeCanvas({
               focusNode={focusNode}
               isInitialLoad={isInitialLoad}
             />
-            <CardStyleInternalsSync cardStyle={cardStyle} nodeIds={nodeIds} />
             {readOnly ? (
               // No drag-lock toggle to show (dragging is force-disabled
               // above), and no Trace/Filter rows either (TreeToolbar itself
               // isn't rendered on the read-only Share Link surface, so
-              // onOpenTrace/onOpenFilter are never passed down there) —
-              // card style (compact/portrait) is still a harmless viewing
-              // preference, offered without any of that.
-              <TreeToolsMenu
-                cardStyle={cardStyle}
-                setCardStyle={setCardStyle}
-                showZoom={!isCoarsePointer}
-              />
+              // onOpenTrace/onOpenFilter are never passed down there).
+              <TreeToolsMenu showZoom={!isCoarsePointer} />
             ) : (
               <TreeToolsMenu
-                cardStyle={cardStyle}
-                setCardStyle={setCardStyle}
                 draggable={nodesDraggable}
                 setDraggable={setNodesDraggable}
                 showZoom={!isCoarsePointer}

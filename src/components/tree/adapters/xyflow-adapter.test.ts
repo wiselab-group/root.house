@@ -81,7 +81,7 @@ describe("toReactFlow — isMiddleSibling", () => {
       ],
     };
 
-    const { edges } = toReactFlow(graph, "fam1", "fam-slug", "compact");
+    const { edges } = toReactFlow(graph, "fam1", "fam-slug");
     const byTarget = new Map(
       edges.filter((e) => e.type === "parentChild").map((e) => [e.target, e]),
     );
@@ -114,7 +114,7 @@ describe("toReactFlow — isMiddleSibling", () => {
       ],
     };
 
-    const { edges } = toReactFlow(graph, "fam1", "fam-slug", "compact");
+    const { edges } = toReactFlow(graph, "fam1", "fam-slug");
     for (const edge of edges.filter((e) => e.type === "parentChild")) {
       expect(edge.data?.isMiddleSibling).toBeFalsy();
     }
@@ -134,7 +134,7 @@ describe("toReactFlow — isMiddleSibling", () => {
       ],
     };
 
-    const { edges } = toReactFlow(graph, "fam1", "fam-slug", "compact");
+    const { edges } = toReactFlow(graph, "fam1", "fam-slug");
     const edge = edges.find((e) => e.type === "parentChild")!;
     expect(edge.data?.isMiddleSibling).toBeFalsy();
   });
@@ -158,7 +158,7 @@ describe("toReactFlow — isMiddleSibling", () => {
       ],
     };
 
-    const { edges } = toReactFlow(graph, "fam1", "fam-slug", "compact");
+    const { edges } = toReactFlow(graph, "fam1", "fam-slug");
     for (const edge of edges.filter((e) => e.type === "parentChild")) {
       expect(edge.data?.isMiddleSibling).toBeFalsy();
     }
@@ -220,7 +220,7 @@ describe("toReactFlow — isMiddleSibling", () => {
       ] as LayoutEdge[],
     };
 
-    const { edges } = toReactFlow(graph, "fam1", "fam-slug", "compact");
+    const { edges } = toReactFlow(graph, "fam1", "fam-slug");
     const unionEdges = edges.filter(
       (e): e is UnionChildFlowEdge => e.type === "unionChild",
     );
@@ -260,7 +260,7 @@ describe("toReactFlow — isMiddleSibling", () => {
       ] as LayoutEdge[],
     };
 
-    const { edges } = toReactFlow(graph, "fam1", "fam-slug", "compact");
+    const { edges } = toReactFlow(graph, "fam1", "fam-slug");
     const unionEdge = edges.find(
       (e): e is UnionChildFlowEdge => e.type === "unionChild",
     )!;
@@ -325,13 +325,7 @@ describe("toReactFlow — trace on a union with a non-traced sibling", () => {
       traceEdgeDirections: new Map([["pc-galina-alexander", 1 as const]]),
     };
 
-    const { edges } = toReactFlow(
-      graph,
-      "fam1",
-      "fam-slug",
-      "compact",
-      highlight,
-    );
+    const { edges } = toReactFlow(graph, "fam1", "fam-slug", highlight);
     const unionEdges = edges.filter(
       (e): e is UnionChildFlowEdge => e.type === "unionChild",
     );
@@ -386,13 +380,7 @@ describe("toReactFlow — trace on a union with a non-traced sibling", () => {
       traceEdgeDirections: new Map([["pc-elizaveta-viktor", 1 as const]]),
     };
 
-    const { edges } = toReactFlow(
-      graph,
-      "fam1",
-      "fam-slug",
-      "compact",
-      highlight,
-    );
+    const { edges } = toReactFlow(graph, "fam1", "fam-slug", highlight);
     const partnershipEdge = edges.find(
       (e): e is RelationshipFlowEdge =>
         e.type === "partnership" && e.id === "spouse-viktor-galina",
@@ -440,7 +428,6 @@ describe("toReactFlow — union collapse badge (2026-09-12 change: badge moves o
       graph,
       "fam1",
       "fam-slug",
-      "compact",
       {},
       () => {},
       false,
@@ -461,7 +448,6 @@ describe("toReactFlow — union collapse badge (2026-09-12 change: badge moves o
       graph,
       "fam1",
       "fam-slug",
-      "compact",
       {},
       () => {},
       false,
@@ -479,7 +465,6 @@ describe("toReactFlow — union collapse badge (2026-09-12 change: badge moves o
       graph,
       "fam1",
       "fam-slug",
-      "compact",
       {},
       () => {},
       true, // readOnly
@@ -507,7 +492,6 @@ describe("toReactFlow — union collapse badge (2026-09-12 change: badge moves o
       graph,
       "fam1",
       "fam-slug",
-      "compact",
       {},
       () => {},
       false,
@@ -537,7 +521,6 @@ describe("toReactFlow — union collapse badge (2026-09-12 change: badge moves o
       graph,
       "fam1",
       "fam-slug",
-      "compact",
       {},
       () => {},
       false,

@@ -10,13 +10,11 @@ import {
 import { personInitials } from "@/domain/person/display-name";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
 import { CompactCardBody } from "./compact-card-body";
-import { PortraitCardBody } from "./portrait-card-body";
 import {
   buildCardFrameClassName,
   CollapseBadge,
   InvisibleConnectorHandles,
   personLabel,
-  selectedCardBoxShadow,
   yearRange,
 } from "./person-node-parts";
 import { PersonNodePopoverActions } from "./person-node-popover-actions";
@@ -34,13 +32,9 @@ import { PersonNodePopoverActions } from "./person-node-popover-actions";
  * Structure is never destroyed by either — every node stays in the DOM, just
  * at reduced opacity (transform/opacity only, per the animation rules).
  *
- * Renders one of two bodies depending on data.cardStyle (a client-only
- * viewing preference toggled from the canvas's zoom controls, see
- * use-tree-card-style.ts) — "compact" (name+years beside a small avatar,
- * dense enough for many generations at once) or "portrait" (photo-forward,
- * name/years below, for browsing faces). Both share this same outer frame
- * (border/shadow/focus ring/entrance animation) so the two styles read as
- * one consistent tree, not two different components bolted together.
+ * The card body is CompactCardBody (a round framed avatar with the
+ * name/years pill below it) — the only card style; a photo-forward
+ * "portrait" alternative was removed on user request.
  *
  * Clicking a card no longer jumps focus straight away — it opens a small
  * popover with "Посмотреть профиль" (navigates to the Person Profile page)
@@ -80,24 +74,15 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
   const cardBody = (
     <>
       <InvisibleConnectorHandles />
-      {data.cardStyle === "portrait" ? (
-        <PortraitCardBody
-          data={data}
-          name={name}
-          years={years}
-          initials={initials}
-        />
-      ) : (
-        <CompactCardBody
-          data={data}
-          name={name}
-          years={years}
-          initials={initials}
-          isOpen={isPopoverOpen}
-          isTraced={isTraceHighlighted}
-          isSelected={selected}
-        />
-      )}
+      <CompactCardBody
+        data={data}
+        name={name}
+        years={years}
+        initials={initials}
+        isOpen={isPopoverOpen}
+        isTraced={isTraceHighlighted}
+        isSelected={selected}
+      />
       <Handle
         type="source"
         id="bottom"
@@ -108,11 +93,6 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
   );
 
   const cardFrameClassName = buildCardFrameClassName({
-    cardStyle: data.cardStyle,
-    isOpen: isPopoverOpen,
-    isFocus: data.isFocus,
-    isTraced: isTraceHighlighted,
-    isPlaceholder: data.isPlaceholder,
     isDimmed,
     readOnly: Boolean(data.readOnly),
     isCollapsing: data.isCollapsing,
@@ -125,13 +105,6 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
     // version of that spec is staggering how each node enters the new
     // layout, not sliding it from its old position.
     animationDelay: `${Math.min(Math.abs(data.generation), 4) * 60}ms`,
-    boxShadow: selectedCardBoxShadow({
-      cardStyle: data.cardStyle,
-      isSelected: Boolean(selected),
-      isFocus: data.isFocus,
-      isTraced: isTraceHighlighted,
-      isOpen: isPopoverOpen,
-    }),
   };
 
   // Collapse/expand (rewrite plan §7 Stage 5) — only rendered when this

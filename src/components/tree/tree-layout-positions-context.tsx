@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useMemo } from "react";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
-import type { TreeCardStyle } from "./use-tree-card-style";
 
 /**
  * tree-layout-positions-context.tsx — rewrite plan §7 Stage 6
@@ -25,7 +24,7 @@ import type { TreeCardStyle } from "./use-tree-card-style";
  * directly from the already-known, non-DOM-dependent values — each node's
  * `position` (x/y, exactly what toReactFlow computed from the layout
  * engine's own LaidOutPerson.x/y, scaled once) and its static `width`/
- * `height` (xyflow-adapter.ts's NODE_DIMENSIONS[cardStyle], the same
+ * `height` (xyflow-adapter.ts's NODE_DIMENSIONS, the same
  * constant XYFlow itself falls back to before a real DOM measurement
  * exists) — never a DOM measurement, so it can never go stale on
  * unmount/remount. Edges read from HERE by default; only a node the user is
@@ -40,7 +39,6 @@ export interface TreeNodeGeometry {
   y: number;
   width: number;
   height: number;
-  cardStyle: TreeCardStyle;
 }
 
 const TreeLayoutPositionsContext = createContext<Map<string, TreeNodeGeometry>>(
@@ -62,7 +60,6 @@ export function TreeLayoutPositionsProvider({
         y: node.position.y,
         width: node.width ?? 0,
         height: node.height ?? 0,
-        cardStyle: node.data.cardStyle,
       });
     }
     return map;

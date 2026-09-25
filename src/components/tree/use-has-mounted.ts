@@ -13,7 +13,7 @@ function subscribe(): () => void {
 /**
  * True once the component has hydrated on the client, false during SSR and
  * the very first client render — same "SSR snapshot fixed, real value
- * replaces it on mount" pattern as useCoarsePointer/useTreeCardStyle,
+ * replaces it on mount" pattern as useCoarsePointer,
  * preferred here over a useEffect(() => setState(true), []) specifically
  * because that pattern trips the set-state-in-effect lint rule (a
  * synchronous setState inside an effect body) even though it's the correct,

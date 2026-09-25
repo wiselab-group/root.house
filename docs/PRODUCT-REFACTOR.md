@@ -113,8 +113,8 @@ this refactor**, per brief §21/§31/§8).
 
 Visual treatment (confirmed via audit):
 
-- Two selectable card styles (compact rounded-square photo frame /
-  portrait full-bleed square photo) — already photo-forward, already
+- One card style (compact rounded-square photo frame; the portrait
+  full-bleed variant was removed 2026-09-25) — already photo-forward, already
   serif heading for names, already no dot-grid canvas background (removed
   per prior work, see git log `165dc8a style(tree): remove dot-grid
 background`).

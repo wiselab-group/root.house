@@ -4,7 +4,6 @@ import type {
   LayoutNode,
   PersonArchiveSummary,
 } from "@/domain/tree/tree-layout.builder";
-import type { TreeCardStyle } from "../use-tree-card-style";
 import { FRAME_SIZE } from "../card-dimensions";
 import {
   personIdsNeedingOwnBadge,
@@ -56,7 +55,6 @@ export interface PersonNodeData extends Record<string, unknown> {
   familySlug: string;
   isFocus: boolean;
   generation: number;
-  cardStyle: TreeCardStyle;
   /** Filter/Focus layer (tree-filter.ts) — true once a filter is active and this person matches it. Undefined when no filter is active at all. */
   isFilterMatch?: boolean;
   /** Relationship Trace (tree-trace.ts) — true while this person is on the currently traced A-to-B path. */
@@ -206,82 +204,39 @@ export interface TreeHighlightState {
   traceEdgeDirections?: Map<string, 1 | -1>;
 }
 
-// Node dimensions per card style — must match what PersonNode actually
-// renders at (see its w-*/h-* classes). "compact" is the layout engine's own
-// native coordinate space: the layout engine (src/domain/tree/layout/, via
-// tree-adapter.ts's X_SCALE/Y_SCALE) produces x/y already scaled to
-// COMPACT_X_SPACING/COMPACT_Y_SPACING — changing either constant here means
-// changing tree-adapter.ts's PROD_PARTNER_X_SPACING/PROD_GENERATION_Y_SPACING
-// to match, in lockstep, or collision-free spacing breaks for every card
-// style (portrait included, since it rescales off this same baseline). The
-// "portrait" style then rescales those coordinates proportionally below,
-// rather than asking the layout engine to lay out twice — this is purely a
-// client-side viewing preference (see use-tree-card-style.ts), not something
-// that needs its own domain-layer layout pass.
+// Node dimensions — must match what PersonNode actually renders at (see
+// compact-card-body.tsx). The layout engine (src/domain/tree/layout/, via
+// tree-adapter.ts's X_SCALE/Y_SCALE) already produces x/y in this card's
+// own coordinate space (184px column / 230px row pitch) — changing the size
+// here means changing tree-adapter.ts's PROD_PARTNER_X_SPACING/
+// PROD_GENERATION_Y_SPACING to match, in lockstep, or collision-free spacing
+// breaks.
 //
-// Both card styles are the same 160px width as of the round-avatar compact
-// redesign (previously compact was a wide 220x88 row) — COMPACT_X_SPACING/
-// PORTRAIT_X_SPACING converged to the same value as a result. compact's card
-// is considerably SHORTER than portrait's though (a small 88px avatar +
-// name/years vs. a full 160px-wide square photo + name/years) — the two
-// heights don't converge, see NODE_DIMENSIONS below.
-const COMPACT_X_SPACING = 184;
-const COMPACT_Y_SPACING = 230;
-const PORTRAIT_X_SPACING = 184;
-const PORTRAIT_Y_SPACING = 260;
-
 // XYFlow stretches every node's outer .react-flow__node div to exactly this
-// height via an inline style (confirmed via the rendered DOM: `height:
-// 200px` regardless of content) — NOT just an initial-paint estimate later
-// superseded by a ResizeObserver measurement. That means `measured.height`
-// (read by relationship-edge.tsx/union-child-edge.tsx to draw connector
-// lines through each card's live bottom edge) is ALWAYS exactly this
-// number, never the real rendered content height, for a card style whose
-// actual content is shorter than what's declared here. Keep in sync by hand
-// with compact-card-body.tsx's actual rendered height if it changes again —
-// there is no way to ask XYFlow to auto-size the node to content while
-// keeping the layout engine's own predictable row spacing
-// (COMPACT_Y_SPACING above). compact's real content (compact-card-body.tsx,
-// 2026-09-18 v2 restyle: a thick matte frame around the photo, FRAME_SIZE
-// tall, with the name/years pill sitting flush below it — no overlap, see
-// compact-card-body.tsx's own comment on why the overlap approach was
-// dropped) measures ~166px tall (Playwright getBoundingClientRect on the
-// rendered DOM) — re-measure and update if PHOTO_FRAME_PADDING or the
-// pill's own py-* value change again. Phase 1 "Tree as Map of the Family
-// Archive" archive counts (PersonArchiveSummary) deliberately do NOT show
-// on the card itself — they live in the click popover only (see
-// person-node-popover-actions.tsx / archive-summary-line.tsx) — so this
-// card-height constant is unaffected by them.
-const NODE_DIMENSIONS: Record<
-  TreeCardStyle,
-  { width: number; height: number }
-> = {
-  compact: { width: 160, height: 166 },
-  portrait: { width: 160, height: 220 },
-};
+// height via an inline style (confirmed via the rendered DOM) — NOT just an
+// initial-paint estimate later superseded by a ResizeObserver measurement.
+// That means `measured.height` (read by relationship-edge.tsx/
+// union-child-edge.tsx to draw connector lines through each card's live
+// bottom edge) is ALWAYS exactly this number, never the real rendered content
+// height. Keep in sync by hand with compact-card-body.tsx's actual rendered
+// height if it changes again: its real content (a thick matte frame around
+// the photo, FRAME_SIZE tall, with the name/years pill flush below it)
+// measures ~166px tall (Playwright getBoundingClientRect on the rendered DOM)
+// — re-measure and update if PHOTO_FRAME_PADDING or the pill's own py-*
+// value change. Archive counts (PersonArchiveSummary) deliberately do NOT
+// show on the card itself — they live in the click popover only (see
+// person-node-popover-actions.tsx) — so this constant is unaffected by them.
+const NODE_DIMENSIONS = { width: 160, height: 166 };
 
 /**
- * How far below each card's own top edge its *photo frame's* vertical
- * center sits — used by RelationshipEdge/UnionChildEdge to draw the
- * partnership line (and the trunk line hanging off it) through each card's
- * own center rather than the card's overall center. The two card styles
- * differ because neither has its photo spanning the card's full height:
- * - compact: a FRAME_SIZE-tall matte frame (card-dimensions.ts,
- *   compact-card-body.tsx) flush against the card's top edge (no top
- *   padding) → center at FRAME_SIZE/2.
- * - portrait: a full-width square photo (aspect-square, portrait-card-
- *   body.tsx) — height equals the card's own width (160px) → center at
- *   160/2 = 80.
- * Exported for the edge components (see relationship-edge.tsx,
- * union-child-edge.tsx) — compact's value is derived from card-dimensions.ts
- * (shared with compact-card-body.tsx, so the two can't drift independently);
- * portrait's 80 must still be kept in sync by hand if portrait-card-body.tsx
- * ever changes.
+ * How far below each card's own top edge its photo frame's vertical center
+ * sits — used by RelationshipEdge/UnionChildEdge to draw the partnership
+ * line (and the trunk line hanging off it) through each card's own center
+ * rather than the card's overall center. The FRAME_SIZE-tall matte frame
+ * (card-dimensions.ts, compact-card-body.tsx) sits flush against the card's
+ * top edge (no top padding) → center at FRAME_SIZE/2.
  */
-export const CONNECTOR_CENTER_Y: Record<TreeCardStyle, number> = {
-  compact: FRAME_SIZE / 2,
-  portrait: 80,
-};
+export const CONNECTOR_CENTER_Y = FRAME_SIZE / 2;
 
 /**
  * Half-width, in px, of the one opaque element a partnership line must stop
@@ -299,9 +254,7 @@ export const CONNECTOR_CENTER_Y: Record<TreeCardStyle, number> = {
  * the line's very last segment inside the frame (visually reading as the
  * line disappearing "under" the frame, per the 2026-09-18 reference
  * screenshot — the earlier v1 treatment stopped the line at the photo's own
- * edge instead, one padding-width short of this). Portrait has no
- * equivalent — its square photo already spans the card's full width, so
- * nothing transparent surrounds it.
+ * edge instead, one padding-width short of this).
  */
 export const AVATAR_RADIUS = FRAME_SIZE / 2;
 
@@ -326,7 +279,6 @@ function toFlowNode(
   node: LayoutNode,
   familyId: string,
   familySlug: string,
-  cardStyle: TreeCardStyle,
   highlight: TreeHighlightState,
   onFocusPerson: (personId: string) => void,
   readOnly: boolean,
@@ -334,15 +286,10 @@ function toFlowNode(
   personIdsNeedingBadge: ReadonlySet<string>,
   onToggleCollapse: ((collapseKey: string) => void) | undefined,
 ): PersonFlowNode {
-  const xScale =
-    cardStyle === "portrait" ? PORTRAIT_X_SPACING / COMPACT_X_SPACING : 1;
-  const yScale =
-    cardStyle === "portrait" ? PORTRAIT_Y_SPACING / COMPACT_Y_SPACING : 1;
-
   return {
     id: node.id,
     type: "person",
-    position: { x: node.x * xScale, y: node.y * yScale },
+    position: { x: node.x, y: node.y },
     data: {
       personId: node.person.id,
       slug: node.person.slug,
@@ -360,7 +307,6 @@ function toFlowNode(
       familySlug,
       isFocus: node.isFocus,
       generation: node.generation,
-      cardStyle,
       isFilterMatch: highlight.filterMatchedIds
         ? highlight.filterMatchedIds.has(node.id)
         : undefined,
@@ -386,8 +332,8 @@ function toFlowNode(
       isCollapsing: node.isCollapsing,
     },
     // XYFlow needs explicit dimensions before layout/fitView math is
-    // reliable; matches the fixed size PersonNode renders each style at.
-    ...NODE_DIMENSIONS[cardStyle],
+    // reliable; matches the fixed size PersonNode renders at.
+    ...NODE_DIMENSIONS,
     // zIndexMode 'basic' (see toReactFlow below) stacks nodes and edges in
     // one shared order — a card must NEVER be drawn under a line, traced or
     // not (a Relationship Trace line crossing behind a card it passes read
@@ -709,7 +655,6 @@ export function toReactFlow(
   graph: TreeLayoutGraph,
   familyId: string,
   familySlug: string,
-  cardStyle: TreeCardStyle,
   highlight: TreeHighlightState = {},
   onFocusPerson: (personId: string) => void = () => {},
   readOnly: boolean = false,
@@ -779,7 +724,6 @@ export function toReactFlow(
         node,
         familyId,
         familySlug,
-        cardStyle,
         highlight,
         onFocusPerson,
         readOnly,

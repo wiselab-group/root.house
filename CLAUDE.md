@@ -57,15 +57,16 @@ Visual Target: Awwwards/FWA-уровень качества, но тёплый �
   рисуется тем же двойным кольцом (3px solid + 6px translucent), что и
   `isTraced`/фокус — раньше был одинарный плоский `ring-ring`, по запросу
   пользователя приведено к общей double-ring форме (см.
-  `selectedCardBoxShadow` в `person-node-parts.tsx` для portrait-стиля,
-  `compact-card-body.tsx`'s inline `boxShadow` для compact). Focus-person —
+  `compact-card-body.tsx`'s inline `boxShadow`). Карточка в дереве одна —
+  compact; стиль «Крупное фото» (portrait) удалён по запросу пользователя
+  2026-09-25, не возвращать. Focus-person —
   единственное исключение из «terracotta = traced»: даже когда сам фокус
   оказывается одним из концов активного trace, его рамка остаётся sage
   (просто акцентирована вторым ring) — `isTraceHighlighted` в
   `person-node.tsx` явно исключает `isFocus`.
 - **Приглушённый sage/оливковый** (hue 126, `--tree-accent`) — цвет
-  ИДЕНТИЧНОСТИ внутри дерева: постоянная обводка/ring КАЖДОЙ карточки (обеих
-  cardStyle — portrait и compact), видна всегда, не только в фокусе, ОДНИМ
+  ИДЕНТИЧНОСТИ внутри дерева: постоянная обводка/ring КАЖДОЙ карточки,
+  видна всегда, не только в фокусе, ОДНИМ
   плоским оттенком — без градации по поколению (generation color-coding
   пробовали и explicitly убрали: обводка не должна становиться светлее с
   каждым поколением, все карточки — один и тот же `--tree-accent`). Оттенок
