@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useImageDrop } from "@/hooks/use-image-drop";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { PHOTO_ACCEPT } from "@/domain/media/photo-upload-rules";
 
 /**
  * Shared drag&drop avatar picker UI (reui's c-file-upload-2 pattern adapted
@@ -101,7 +102,7 @@ export function PersonPhotoUpload({
             ref={inputRef}
             id={inputId}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/heic"
+            accept={PHOTO_ACCEPT}
             onChange={handleChange}
             disabled={isDisabled}
             className="sr-only"

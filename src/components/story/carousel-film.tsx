@@ -1,9 +1,8 @@
 "use client";
 
-import Image from "next/image";
+import { ArchiveImage } from "@/components/media/archive-image";
 import { LayoutGridIcon, PauseIcon, PlayIcon } from "lucide-react";
 import { glassIconButtonLarge } from "@/components/hero/glass";
-import { BLUR_PLACEHOLDER } from "@/components/media/blur-placeholder";
 import type { CarouselSlide } from "./story-carousel";
 
 /**
@@ -52,17 +51,14 @@ export function CarouselFilm({
               aria-pressed={index === current}
               aria-label={slide.caption ?? `Фото ${index + 1}`}
               onClick={() => onSelect(index)}
-              className="h-14 shrink-0 overflow-hidden rounded-md opacity-55 transition-[opacity,transform] duration-200 ease-(--ease-reveal) hover:-translate-y-0.5 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-pressed:-translate-y-1 aria-pressed:opacity-100 aria-pressed:ring-2 aria-pressed:ring-foreground"
+              className="h-14 shrink-0 overflow-hidden rounded-md bg-muted opacity-55 transition-[opacity,transform] duration-200 ease-(--ease-reveal) hover:-translate-y-0.5 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-pressed:-translate-y-1 aria-pressed:opacity-100 aria-pressed:ring-2 aria-pressed:ring-foreground"
             >
-              <Image
-                src={slide.src}
+              <ArchiveImage
+                src={slide.thumbSrc}
                 alt=""
                 width={96}
                 height={56}
                 className="h-full w-auto max-w-24 object-cover"
-                placeholder="blur"
-                blurDataURL={BLUR_PLACEHOLDER}
-                unoptimized
               />
             </button>
           ))}

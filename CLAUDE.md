@@ -441,7 +441,13 @@ tree-v2/tree-v3/tree-v4 — удалены). `src/domain/tree/tree-layout.builde
 - Компоненты: максимум 150 строк — разбивать на под-компоненты при превышении
 - Никаких raw hex цветов — всегда `var(--color-name)`
 - Никаких inline styles, кроме динамических вычисляемых значений
-- Все изображения: next/image с blur placeholder и явными width/height
+- Все изображения: next/image с явными width/height (или `fill`). Семейные
+  фото — только через `ArchiveImage` (`components/media/archive-image.tsx`) и
+  `mediaUrl(id, familyId, size)` (`lib/media-url.ts`): `thumb` для дерева,
+  аватаров, сеток; `display` для просмотра, hero, слайдов; оригинал — только
+  для скачивания. Вместо blur placeholder — фон контейнера (`bg-muted`) и
+  проявление по opacity (решение пользователя 2026-09-25: не хранить заглушку
+  на каждое фото)
 - Только семантический HTML: `<main>`, `<section>`, `<article>`, `<nav>`, `<header>`, `<footer>`
 - Никаких `console.log` в закоммиченном коде
 - `src/domain/**` НЕ импортирует `next`/`react` — юнит-тестируется изолированно от фреймворка

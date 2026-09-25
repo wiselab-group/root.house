@@ -1,14 +1,16 @@
 "use client";
 
-import Image from "next/image";
+import { ArchiveImage } from "@/components/media/archive-image";
 import { useState } from "react";
-import { BLUR_PLACEHOLDER } from "@/components/media/blur-placeholder";
 import { CarouselFilm } from "./carousel-film";
 import { CarouselGrid } from "./carousel-grid";
 
 export interface CarouselSlide {
   id: string;
+  /** The "display" copy — the hero itself. */
   src: string;
+  /** The "thumb" copy — filmstrip and grid. */
+  thumbSrc: string;
   alt: string;
   caption: string | null;
   /** "wide" photos fill the whole hero; "tall" portraits sit on the right
@@ -59,7 +61,7 @@ export function StoryCarousel({ slides }: { slides: CarouselSlide[] }) {
                   : "hero-photo-mask absolute inset-y-0 right-0 w-full sm:right-[5%] sm:w-1/2"
               }
             >
-              <Image
+              <ArchiveImage
                 src={slide.src}
                 alt={slide.alt}
                 fill
@@ -71,10 +73,8 @@ export function StoryCarousel({ slides }: { slides: CarouselSlide[] }) {
                 className={`object-cover transition-transform duration-[8s] ease-(--ease-reveal) motion-reduce:transition-none ${
                   slide.fit === "wide" ? "object-[50%_40%]" : "object-[50%_20%]"
                 } ${on ? "scale-100" : "scale-[1.04]"}`}
-                placeholder="blur"
-                blurDataURL={BLUR_PLACEHOLDER}
-                unoptimized
                 priority={index === 0}
+                fade={false}
               />
             </div>
           </div>

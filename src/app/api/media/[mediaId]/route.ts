@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { ForbiddenError } from "@/domain/family/errors";
-import { getVisibleMedia, getMediaStream } from "@/domain/media/media.service";
+import {
+  getVisibleMedia,
+  getMediaStream,
+  mediaCacheControl,
+  parseMediaSize,
+} from "@/domain/media/media.service";
 
 /**
  * Streams a private Media file's bytes back to the browser, after checking
@@ -20,6 +25,10 @@ import { getVisibleMedia, getMediaStream } from "@/domain/media/media.service";
  * header so the browser saves the file instead of rendering it inline. No
  * separate route or extra permission tier: downloading a photo is the same
  * capability as viewing it (canView), never a distinct "may download" role.
+ * A download is always the untouched original.
+ *
+ * `?size=thumb|display` serves a downscaled WebP copy (see
+ * domain/media/image-variants.ts); omitted, it's the original.
  */
 export async function GET(
   request: Request,
@@ -31,7 +40,8 @@ export async function GET(
   }
 
   const { mediaId } = await params;
-  const familyId = new URL(request.url).searchParams.get("familyId");
+  const searchParams = new URL(request.url).searchParams;
+  const familyId = searchParams.get("familyId");
   if (!familyId) {
     return NextResponse.json(
       { error: "Missing familyId query param" },
@@ -61,19 +71,24 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const result = await getMediaStream(mediaId, familyId);
+  const isDownload = searchParams.get("download") === "1";
+  const result = await getMediaStream(
+    mediaId,
+    familyId,
+    isDownload ? "original" : parseMediaSize(searchParams.get("size")),
+  );
   if (!result) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const isDownload = new URL(request.url).searchParams.get("download") === "1";
   const headers: Record<string, string> = {
     "Content-Type": result.contentType,
-    "Cache-Control": "private, max-age=3600",
+    "Cache-Control": mediaCacheControl(result.isVariant),
   };
   if (isDownload) {
-    headers["Content-Disposition"] =
-      `attachment; filename="${downloadFilename(media.title, result.contentType)}"`;
+    headers["Content-Disposition"] = contentDisposition(
+      downloadFilename(media.title, result.contentType),
+    );
   }
 
   return new Response(result.stream, { headers });
@@ -91,4 +106,21 @@ function downloadFilename(title: string | null, contentType: string): string {
   const base = title?.trim() || "Фото";
   if (base.toLowerCase().endsWith(`.${extension.toLowerCase()}`)) return base;
   return `${base}.${extension}`;
+}
+
+/**
+ * A header value must be Latin-1 — a raw «Фото.jpeg» made the whole
+ * download fail with a 500. RFC 6266: an ASCII fallback in `filename`,
+ * the real UTF-8 name in `filename*` (which every current browser prefers).
+ */
+function contentDisposition(filename: string): string {
+  const ascii = filename.replace(/[^\x20-\x7e]/g, "_").replace(/["\\]/g, "_");
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeRfc5987(filename)}`;
+}
+
+function encodeRfc5987(value: string): string {
+  return encodeURIComponent(value).replace(
+    /['()*]/g,
+    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
 }

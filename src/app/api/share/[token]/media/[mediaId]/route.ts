@@ -3,7 +3,11 @@ import { cookies } from "next/headers";
 import { resolveShareLinkAccess } from "@/domain/share-link/share-link.service";
 import { canViewViaShareLink } from "@/domain/share-link/public-visibility";
 import { getMediaById } from "@/domain/media/media.repository";
-import { getMediaStream } from "@/domain/media/media.service";
+import {
+  getMediaStream,
+  mediaCacheControl,
+  parseMediaSize,
+} from "@/domain/media/media.service";
 
 /**
  * Anonymous-side sibling of /api/media/[mediaId]/route.ts — deliberately a
@@ -43,7 +47,11 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const result = await getMediaStream(mediaId, familyId);
+  const result = await getMediaStream(
+    mediaId,
+    familyId,
+    parseMediaSize(new URL(request.url).searchParams.get("size")),
+  );
   if (!result) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -51,7 +59,7 @@ export async function GET(
   return new Response(result.stream, {
     headers: {
       "Content-Type": result.contentType,
-      "Cache-Control": "private, max-age=3600",
+      "Cache-Control": mediaCacheControl(result.isVariant),
     },
   });
 }

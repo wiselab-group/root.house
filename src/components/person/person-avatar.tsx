@@ -1,4 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { mediaUrl } from "@/lib/media-url";
 import { personInitials } from "@/domain/person/display-name";
 import type { PersonRecord } from "@/domain/person/person.repository";
 
@@ -37,7 +38,7 @@ export function PersonAvatar({
     <Avatar size={size} className={className}>
       {person.photoMediaId && (
         <AvatarImage
-          src={`/api/media/${person.photoMediaId}?familyId=${familyId}`}
+          src={mediaUrl(person.photoMediaId, familyId, "thumb")}
           alt=""
         />
       )}

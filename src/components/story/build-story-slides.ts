@@ -1,6 +1,7 @@
 import { getMedia, type MediaRecord } from "@/domain/media/media.service";
 import { personDisplayName } from "@/domain/person/display-name";
 import type { PersonRecord } from "@/domain/person/person.repository";
+import { mediaUrl } from "@/lib/media-url";
 import type { CarouselSlide } from "./story-carousel";
 
 /**
@@ -8,7 +9,8 @@ import type { CarouselSlide } from "./story-carousel";
  * none (most stories today — e.g. the real «История любви»), the portraits
  * of the people in it, so the page still opens on faces rather than an
  * empty frame. A photo is "wide" (fills the hero) when clearly landscape;
- * avatars carry no stored dimensions and are portraits by nature. One
+ * a photo without stored dimensions (uploaded before they were recorded)
+ * counts as a portrait. One
  * portrait shared by several people (a group photo) is shown once.
  */
 export async function buildStorySlides(
@@ -18,7 +20,8 @@ export async function buildStorySlides(
 ): Promise<CarouselSlide[]> {
   const toSlide = (media: MediaRecord, caption: string | null) => ({
     id: media.id,
-    src: `/api/media/${media.id}?familyId=${familyId}`,
+    src: mediaUrl(media.id, familyId, "display"),
+    thumbSrc: mediaUrl(media.id, familyId, "thumb"),
     alt: caption ?? "",
     caption,
     fit:

@@ -1,4 +1,5 @@
-import Image from "next/image";
+import { ArchiveImage } from "@/components/media/archive-image";
+import { mediaUrl } from "@/lib/media-url";
 import Link from "next/link";
 import { CalendarIcon, MapPinIcon, LockIcon } from "lucide-react";
 import {
@@ -9,7 +10,6 @@ import { formatPartialDate } from "@/domain/shared/partial-date";
 import type { PersonRecord } from "@/domain/person/person.service";
 import type { MediaRecord } from "@/domain/media/media.service";
 import type { FamilyRole } from "@/domain/family/roles";
-import { BLUR_PLACEHOLDER } from "@/components/media/blur-placeholder";
 import { HeroMoreMenu } from "@/components/hero/hero-more-menu";
 import { HeroTopBar } from "@/components/hero/hero-top-bar";
 import { HeroMeta, type HeroMetaItem } from "@/components/hero/hero-meta";
@@ -64,16 +64,14 @@ export function PersonProfileHero({
     <header className="relative isolate h-[clamp(440px,48vw,620px)] overflow-hidden">
       {avatarMedia ? (
         <div className="hero-photo-mask absolute inset-y-0 right-0 w-full sm:right-[4%] sm:w-[54%]">
-          <Image
-            src={`/api/media/${avatarMedia.id}?familyId=${familyId}`}
+          <ArchiveImage
+            src={mediaUrl(avatarMedia.id, familyId, "display")}
             alt=""
             fill
             sizes="(min-width: 640px) 54vw, 100vw"
             className="object-cover object-[50%_20%]"
-            placeholder="blur"
-            blurDataURL={BLUR_PLACEHOLDER}
-            unoptimized
             priority
+            fade={false}
           />
         </div>
       ) : (

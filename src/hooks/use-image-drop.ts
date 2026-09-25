@@ -1,9 +1,13 @@
 "use client";
 
 import { useCallback, useState, type DragEvent } from "react";
+import {
+  PHOTO_ACCEPT,
+  PHOTO_MAX_BYTES,
+} from "@/domain/media/photo-upload-rules";
 
-const DEFAULT_MAX_SIZE = 10 * 1024 * 1024;
-const DEFAULT_ACCEPT = "image/jpeg,image/png,image/webp,image/heic";
+const DEFAULT_MAX_SIZE = PHOTO_MAX_BYTES;
+const DEFAULT_ACCEPT = PHOTO_ACCEPT;
 
 /**
  * Single-image drag&drop + click-to-pick state, shared by PersonPhotoUpload.
@@ -33,9 +37,11 @@ export function useImageDrop({
         return `Файл превышает максимальный размер ${Math.round(maxSize / (1024 * 1024))} МБ`;
       }
       const isAccepted = acceptedTypes.some((type) =>
-        type.endsWith("/*")
-          ? file.type.startsWith(type.slice(0, -1))
-          : file.type === type,
+        type.startsWith(".")
+          ? file.name.toLowerCase().endsWith(type)
+          : type.endsWith("/*")
+            ? file.type.startsWith(type.slice(0, -1))
+            : file.type === type,
       );
       if (!isAccepted) {
         return "Неподдерживаемый формат файла";

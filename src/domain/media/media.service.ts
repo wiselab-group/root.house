@@ -1,8 +1,19 @@
 import { vercelBlobStorageService } from "./storage.vercel-blob";
+import { processImage } from "./image-variants";
+import {
+  isPhotoUploadKey,
+  PHOTO_CONTENT_TYPES,
+  PHOTO_MAX_BYTES,
+  PhotoUploadRejectedError,
+} from "./photo-upload-rules";
 import { canView, type ActingMember } from "@/domain/family/permissions";
 import { logActivity } from "@/domain/activity-log/activity-log.service";
 import { personDisplayName } from "@/domain/person/display-name";
-import type { PrivacyLevel } from "@/db/schema";
+import type {
+  MediaVariantName,
+  MediaVariants,
+  PrivacyLevel,
+} from "@/db/schema";
 import {
   createMedia,
   deleteMediaRow,
@@ -15,6 +26,7 @@ import {
   getMediaForPerson,
   getPeopleForMedia,
   isMediaLinked,
+  isStorageKeyUsed,
   reorderMedia,
   upsertPhotoTagPosition,
   clearPhotoTagPosition,
@@ -37,33 +49,59 @@ export interface UploadPhotoInput {
   /** Albums to add this photo to — may be empty (unalbumed) or several. */
   albumIds: string[];
   uploadedBy: string;
-  file: Buffer;
-  contentType: string;
-  originalFilename: string;
-  width?: number;
-  height?: number;
+  /** Where the browser already put the file (see lib/upload-photo.ts). */
+  storageKey: string;
   privacyLevel?: PrivacyLevel;
 }
 
 /**
- * Uploads a photo to storage and records it as Media linked to `personIds`
- * (0, 1, or several people — a group photo can tag everyone in it at once),
- * in that order — if the DB insert fails after a successful upload, the
- * orphaned blob is deleted so storage doesn't silently accumulate unlinked
- * files (there is no multi-statement DB transaction spanning an external
- * HTTP call to storage, so this is a best-effort compensating action, not a
- * true atomic guarantee).
+ * Records a photo the browser has just uploaded straight into Blob storage
+ * as Media linked to `personIds` (0, 1, or several people — a group photo
+ * can tag everyone in it at once).
+ *
+ * Nothing about the stored file is taken on the client's word: it must sit
+ * in this family's own uploads folder, not already belong to another Media
+ * row, be private, and be an allowed type and size — otherwise the blob is
+ * deleted and PhotoUploadRejectedError is thrown.
+ *
+ * The downscaled copies (see image-variants.ts) are made and stored before
+ * the row is created. If processing fails the photo is still saved, just
+ * without variants — /api/media falls back to the original for it. If the
+ * DB insert fails, the stored files are deleted (best-effort — there is no
+ * transaction spanning storage and the DB).
  */
 export async function uploadPersonPhoto(
   input: UploadPhotoInput,
 ): Promise<{ id: string }> {
-  const key = `${input.familyId}/${crypto.randomUUID()}-${sanitizeFilename(input.originalFilename)}`;
+  const { storageKey } = input;
+  if (
+    !isPhotoUploadKey(storageKey, input.familyId) ||
+    (await isStorageKeyUsed(storageKey, input.familyId))
+  ) {
+    // Never delete here — the key may be someone else's file.
+    throw new PhotoUploadRejectedError("Файл не найден");
+  }
 
-  const { storageKey } = await storage.upload({
-    key,
-    file: input.file,
-    contentType: input.contentType,
-  });
+  const info = await storage.getInfo(storageKey);
+  const rejection = !info
+    ? "Файл не найден"
+    : !info.isPrivate
+      ? "Файл загружен не в закрытое хранилище"
+      : !PHOTO_CONTENT_TYPES.includes(info.contentType)
+        ? "Этот формат не поддерживается"
+        : info.sizeBytes > PHOTO_MAX_BYTES
+          ? "Файл больше 25 МБ"
+          : null;
+  if (!info || rejection) {
+    if (info) await deleteStoredFiles([storageKey]);
+    throw new PhotoUploadRejectedError(rejection ?? "Файл не найден");
+  }
+
+  const processed = await storePhotoVariants(
+    await storage.readBuffer(storageKey),
+    info.contentType,
+    `${input.familyId}/variants/${crypto.randomUUID()}`,
+  );
 
   try {
     const result = await createMedia({
@@ -71,47 +109,104 @@ export async function uploadPersonPhoto(
       kind: "photo",
       storageKey,
       storageProvider: storage.providerName,
-      mimeType: input.contentType,
-      sizeBytes: input.file.byteLength,
-      width: input.width,
-      height: input.height,
+      mimeType: info.contentType,
+      sizeBytes: info.sizeBytes,
+      width: processed?.width,
+      height: processed?.height,
+      variants: processed?.variants,
       uploadedBy: input.uploadedBy,
       privacyLevel: input.privacyLevel,
       personIds: input.personIds,
       albumIds: input.albumIds,
     });
 
-    if (input.personIds.length > 0) {
-      const taggedPeople = await getTaggedPeopleForMedia(
-        result.id,
-        input.familyId,
-      );
-      await logActivity({
-        familyId: input.familyId,
-        actorId: input.uploadedBy,
-        action: "create",
-        entityType: "media",
-        entityId: result.id,
-        entityLabel: mediaLabel(taggedPeople),
-      });
-    } else {
-      await logActivity({
-        familyId: input.familyId,
-        actorId: input.uploadedBy,
-        action: "create",
-        entityType: "media",
-        entityId: result.id,
-        entityLabel: "Фото",
-      });
-    }
+    const taggedPeople =
+      input.personIds.length > 0
+        ? await getTaggedPeopleForMedia(result.id, input.familyId)
+        : [];
+    await logActivity({
+      familyId: input.familyId,
+      actorId: input.uploadedBy,
+      action: "create",
+      entityType: "media",
+      entityId: result.id,
+      entityLabel: mediaLabel(taggedPeople),
+    });
 
     return result;
   } catch (error) {
-    await storage.delete(storageKey).catch(() => {
-      // Best-effort cleanup — the DB insert error is what actually matters to the caller.
-    });
+    await deleteStoredFiles([storageKey, ...variantKeys(processed?.variants)]);
     throw error;
   }
+}
+
+/**
+ * Makes and uploads a photo's variants under `keyPrefix` (`-thumb.webp`,
+ * `-display.webp`). Returns null — never throws — when the image can't be
+ * processed (a corrupt file, an unsupported codec): losing the fast
+ * copies must not lose the upload itself.
+ */
+export async function storePhotoVariants(
+  file: Buffer,
+  contentType: string,
+  keyPrefix: string,
+): Promise<{ width: number; height: number; variants: MediaVariants } | null> {
+  let processed;
+  try {
+    processed = await processImage(file, contentType);
+  } catch (error) {
+    console.error("Failed to process photo variants:", error);
+    return null;
+  }
+
+  const uploaded = await Promise.allSettled(
+    processed.variants.map(async (variant) => {
+      const { storageKey } = await storage.upload({
+        key: `${keyPrefix}-${variant.name}.webp`,
+        file: variant.buffer,
+        contentType: "image/webp",
+      });
+      return [
+        variant.name,
+        {
+          storageKey,
+          width: variant.width,
+          height: variant.height,
+          sizeBytes: variant.buffer.byteLength,
+        },
+      ] as const;
+    }),
+  );
+  const stored = uploaded.flatMap((result) =>
+    result.status === "fulfilled" ? [result.value] : [],
+  );
+  if (stored.length < uploaded.length) {
+    await deleteStoredFiles(stored.map(([, variant]) => variant.storageKey));
+    console.error("Failed to upload photo variants");
+    return null;
+  }
+
+  return {
+    width: processed.width,
+    height: processed.height,
+    variants: Object.fromEntries(stored),
+  };
+}
+
+/** A stored file's bytes — for the variants backfill (db/backfill-photo-variants.ts). */
+export async function readStoredFile(storageKey: string): Promise<Buffer> {
+  return storage.readBuffer(storageKey);
+}
+
+function variantKeys(variants: MediaVariants | null | undefined): string[] {
+  return Object.values(variants ?? {}).map((variant) => variant.storageKey);
+}
+
+/** Best-effort — a leftover blob is cheaper than failing the caller's own error path. */
+async function deleteStoredFiles(storageKeys: string[]): Promise<void> {
+  await Promise.all(
+    storageKeys.map((key) => storage.delete(key).catch(() => {})),
+  );
 }
 
 /** "Фото" alone, or "Фото — Имя" when tagged with at least one person — media
@@ -383,11 +478,48 @@ export async function getAlbumsForSingleMedia(
   return albumsByMedia.get(mediaId) ?? [];
 }
 
-export async function getMediaStream(mediaId: string, familyId: string) {
+/** Which copy of a photo to serve — see image-variants.ts. */
+export type MediaSize = MediaVariantName | "original";
+
+/** `?size=` from a media URL — anything unknown means the original. */
+export function parseMediaSize(value: string | null): MediaSize {
+  return value === "thumb" || value === "display" ? value : "original";
+}
+
+/**
+ * Cache-Control for a served copy. Variants are immutable per media id, so
+ * the browser may keep them for a month instead of re-asking every hour —
+ * that's what makes reopening a large tree instant. Still `private`: it's
+ * a family's photo, never for a shared cache.
+ */
+export function mediaCacheControl(isVariant: boolean): string {
+  return isVariant
+    ? "private, max-age=2592000, immutable"
+    : "private, max-age=3600";
+}
+
+/**
+ * Streams the requested copy — falling back to the original when that
+ * variant doesn't exist (documents, photos uploaded before variants, failed
+ * processing). `isVariant` tells the route it may cache hard: a variant's
+ * bytes never change for a given media id.
+ */
+export async function getMediaStream(
+  mediaId: string,
+  familyId: string,
+  size: MediaSize = "original",
+) {
   const record = await getMediaById(mediaId, familyId);
   if (!record) return null;
-  const { stream, contentType } = await storage.getStream(record.storageKey);
-  return { stream, contentType: contentType ?? record.mimeType };
+  const variant = size === "original" ? undefined : record.variants?.[size];
+  const { stream, contentType } = await storage.getStream(
+    variant?.storageKey ?? record.storageKey,
+  );
+  return {
+    stream,
+    contentType: variant ? "image/webp" : (contentType ?? record.mimeType),
+    isVariant: Boolean(variant),
+  };
 }
 
 export async function removeMedia(
@@ -401,6 +533,7 @@ export async function removeMedia(
   const taggedPeople = await getTaggedPeopleForMedia(mediaId, familyId);
 
   await storage.delete(record.storageKey);
+  await deleteStoredFiles(variantKeys(record.variants));
   const deleted = await deleteMediaRow(mediaId, familyId);
 
   if (deleted) {

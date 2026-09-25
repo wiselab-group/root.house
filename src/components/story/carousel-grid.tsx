@@ -1,9 +1,8 @@
 "use client";
 
-import Image from "next/image";
+import { ArchiveImage } from "@/components/media/archive-image";
 import { XIcon } from "lucide-react";
 import { glassPill } from "@/components/hero/glass";
-import { BLUR_PLACEHOLDER } from "@/components/media/blur-placeholder";
 import { photoCountLabel } from "@/domain/shared/pluralize-ru";
 import type { CarouselSlide } from "./story-carousel";
 
@@ -47,17 +46,14 @@ export function CarouselGrid({
             tabIndex={open ? 0 : -1}
             aria-label={slide.caption ?? `Фото ${index + 1}`}
             onClick={() => onSelect(index)}
-            className="aspect-4/3 overflow-hidden rounded-xl transition-transform duration-300 ease-(--ease-reveal) hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="aspect-4/3 overflow-hidden rounded-xl bg-muted transition-transform duration-300 ease-(--ease-reveal) hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            <Image
-              src={slide.src}
+            <ArchiveImage
+              src={slide.thumbSrc}
               alt=""
               width={320}
               height={240}
               className="size-full object-cover object-[50%_25%]"
-              placeholder="blur"
-              blurDataURL={BLUR_PLACEHOLDER}
-              unoptimized
             />
           </button>
         ))}

@@ -21,6 +21,17 @@ import { persons } from "./person";
 import { albums } from "./album";
 import { privacyLevelEnum } from "./privacy";
 
+export type MediaVariantName = "thumb" | "display";
+
+export interface MediaVariant {
+  storageKey: string;
+  width: number;
+  height: number;
+  sizeBytes: number;
+}
+
+export type MediaVariants = Partial<Record<MediaVariantName, MediaVariant>>;
+
 export const mediaKindEnum = pgEnum("media_kind", [
   "photo",
   "video",
@@ -53,17 +64,15 @@ export const media = pgTable(
     width: integer("width"),
     height: integer("height"),
     /**
-     * Average color of the photo's left edge, as a "#rrggbb" hex string —
-     * computed server-side at upload time (see media.service.ts's color
-     * sampling) so PersonProfileHero's banner can fade into a color that
-     * actually matches the avatar instead of a fixed brand tone. Null
-     * whenever sampling wasn't possible (HEIC uploads in particular — sharp
-     * generally can't decode HEIC without a libheif-enabled build, see that
-     * module's own doc comment) or for any photo uploaded before this
-     * column existed; callers must treat null as "no computed color" and
-     * fall back to a fixed tone, never assume it's always populated.
+     * Downscaled WebP copies of a photo made at upload time (see
+     * domain/media/image-variants.ts) — `thumb` for trees, avatars and
+     * grids, `display` for the lightbox, profile hero and story slides. The
+     * original at `storageKey` is never altered and is what downloads
+     * return. Null for documents, for photos uploaded before variants
+     * existed, and whenever processing failed — /api/media then serves the
+     * original instead.
      */
-    dominantColor: text("dominant_color"),
+    variants: jsonb("variants").$type<MediaVariants | null>(),
     durationSeconds: integer("duration_seconds"),
     title: text("title"),
     description: text("description"),

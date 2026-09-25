@@ -6,13 +6,15 @@ import { PersonPhotoUpload } from "@/components/forms/person-photo-upload";
 import { personInitials } from "@/domain/person/display-name";
 import { removePersonAvatarAction } from "@/actions/media.actions";
 import type { PersonRecord } from "@/domain/person/person.repository";
+import { mediaUrl } from "@/lib/media-url";
+import { uploadPhoto } from "@/lib/upload-photo";
 
 /**
  * The portrait's upload/replace/remove control on the edit page. Portraits
  * are gallery photos (explicit user request — any photo can also be made the
  * portrait from the gallery's «Сделать портретом»): an upload here goes
- * through /api/media/upload with isAvatar=true (see its doc comment for why
- * a Route Handler and not a Server Action), lands in the person's gallery
+ * through lib/upload-photo.ts with isAvatar (straight to Blob, then
+ * /api/media/upload records it), lands in the person's gallery
  * and becomes the portrait. Removing only unsets the portrait — the photo
  * stays in the gallery.
  */
@@ -34,7 +36,7 @@ export function AvatarEditor({
   const [error, setError] = useState<string | null>(null);
 
   const previewUrl = person.photoMediaId
-    ? `/api/media/${person.photoMediaId}?familyId=${familyId}`
+    ? mediaUrl(person.photoMediaId, familyId, "thumb")
     : null;
 
   async function handleFileSelect(file: File) {
@@ -42,21 +44,7 @@ export function AvatarEditor({
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.set("familyId", familyId);
-      formData.set("personId", personId);
-      formData.set("file", file);
-      formData.set("isAvatar", "true");
-
-      const response = await fetch("/api/media/upload", {
-        method: "POST",
-        body: formData,
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.error ?? "Не удалось загрузить фото");
-      }
-
+      await uploadPhoto({ familyId, personId, isAvatar: true, file });
       router.refresh();
     } catch (err) {
       setError(

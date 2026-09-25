@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { ArchiveImage } from "@/components/media/archive-image";
 import { cn } from "@/lib/utils";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
 import { PHOTO_FRAME_PADDING, PHOTO_SIZE } from "./card-dimensions";
@@ -110,13 +110,12 @@ export function CompactCardBody({
           )}
         >
           {data.photoUrl ? (
-            <Image
+            <ArchiveImage
               src={data.photoUrl}
               alt=""
               fill
               sizes={`${PHOTO_SIZE}px`}
               className="object-cover"
-              unoptimized
               loading={Math.abs(data.generation) <= 1 ? "eager" : "lazy"}
             />
           ) : (

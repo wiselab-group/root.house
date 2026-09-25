@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { ArchiveImage } from "@/components/media/archive-image";
+import { mediaUrl } from "@/lib/media-url";
 import { ArrowRight } from "lucide-react";
-import { BLUR_PLACEHOLDER } from "@/components/media/blur-placeholder";
 import { PhotoLightbox } from "@/components/media/photo-lightbox";
 import type { GalleryPhoto } from "@/domain/media/media.service";
 
@@ -53,17 +53,14 @@ export function RecentMemories({
             key={photo.media.id}
             type="button"
             onClick={() => setOpenIndex(i)}
-            className="relative aspect-square cursor-pointer overflow-hidden rounded-md border border-border transition-opacity hover:opacity-90"
+            className="relative aspect-square cursor-pointer overflow-hidden rounded-md border border-border bg-muted transition-opacity hover:opacity-90"
           >
-            <Image
-              src={`/api/media/${photo.media.id}?familyId=${familyId}`}
+            <ArchiveImage
+              src={mediaUrl(photo.media.id, familyId, "thumb")}
               alt={photo.media.title ?? "Семейное фото"}
               fill
               sizes="(max-width: 640px) 33vw, 16vw"
               className="object-cover"
-              placeholder="blur"
-              blurDataURL={BLUR_PLACEHOLDER}
-              unoptimized
             />
           </button>
         ))}

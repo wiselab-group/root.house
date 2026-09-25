@@ -1,7 +1,7 @@
-import Image from "next/image";
+import { ArchiveImage } from "@/components/media/archive-image";
+import { mediaUrl } from "@/lib/media-url";
 import { personInitials } from "@/domain/person/display-name";
 import type { PersonRecord } from "@/domain/person/person.repository";
-import { BLUR_PLACEHOLDER } from "@/components/media/blur-placeholder";
 
 /**
  * A person's photo as a rounded square with the tree's sage identity ring —
@@ -23,15 +23,12 @@ export function PersonThumb({
   return (
     <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-[14px] bg-glass-strong text-sm font-medium text-foreground/60 ring-[1.5px] ring-tree-accent">
       {person.photoMediaId ? (
-        <Image
-          src={`/api/media/${person.photoMediaId}?familyId=${familyId}`}
+        <ArchiveImage
+          src={mediaUrl(person.photoMediaId, familyId, "thumb")}
           alt=""
           fill
           sizes="48px"
           className="object-cover object-[50%_25%]"
-          placeholder="blur"
-          blurDataURL={BLUR_PLACEHOLDER}
-          unoptimized
         />
       ) : (
         personInitials(person)

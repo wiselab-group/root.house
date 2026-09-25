@@ -386,21 +386,28 @@ interface StorageService {
 (дешевле для видео/большого объёма) без переписывания domain-кода —
 постепенно, старые записи держат `'vercel_blob'`, новые — `'r2'`.
 
-**Загрузка идёт через собственный сервер, не через прямой browser→Blob
-client-token upload**, вопреки первоначальному предположению плана — важная
-находка при реализации: Vercel Blob SDK's client-token flow
-(`generateClientTokenFromReadWriteToken`/`handleUpload`) не поддерживает
-`access: 'private'` — `GenerateClientTokenOptions` не имеет поля `access`,
-т.е. любой файл, загруженный этим путём, становится публичным. Это
-конфликтует с жёстким требованием "private/family по умолчанию, никогда
-public без явного действия" — особенно для фото. Поэтому:
+**Фото загружаются из браузера прямо в приватный Blob (с 2026-09-25).**
+Раньше загрузка шла через собственный сервер, потому что client-token flow
+`@vercel/blob` не поддерживал `access: 'private'`; в 2.x поддерживает, а
+лимит тела запроса функции на Vercel (~4,5 МБ) не пропускал фото с телефона.
+Access-режим выбирает клиент, поэтому сервер его перепроверяет:
 
-- `POST /api/media/upload` (Route Handler, не Server Action — у Server
-  Actions маленький дефолтный лимит тела запроса, непригодный для файлов) —
-  принимает multipart FormData, проверяет `requireFamilyAccess`, вызывает
-  `storage.upload(..., access: 'private')`.
-- `GET /api/media/[mediaId]?familyId=...` — стримит приватный blob обратно,
-  тоже после `requireFamilyAccess`. Ссылки на фото в UI всегда указывают
+- `POST /api/media/upload-token` — `handleUpload`: `requireFamilyAccess`
+  (editor для портрета, contributor+ для галереи), путь только внутри
+  `<familyId>/uploads/`, случайный суффикс без перезаписи, разрешённые типы и
+  25 МБ (`domain/media/photo-upload-rules.ts`).
+- `POST /api/media/upload` — маленький JSON «зарегистрировать загруженное»:
+  снова `requireFamilyAccess`, затем `uploadPersonPhoto` проверяет сам файл
+  (папка своей семьи, ключ ещё не занят другой Media, blob действительно
+  private, тип, размер — иначе удаляет его) и делает уменьшенные копии.
+- Копии — `thumb` (800px) и `display` (2048px) WebP без метаданных
+  (`domain/media/image-variants.ts`, HEIC через `heic-convert`), ключи в
+  `media.variants`. Оригинал не меняется и отдаётся только на скачивание.
+  Старые фото дообрабатываются `pnpm media:backfill-variants`.
+- Документы пока идут старым путём через сервер (`/api/media/upload-document`).
+- `GET /api/media/[mediaId]?familyId=...&size=thumb|display` — стримит
+  приватный blob обратно (копию, если есть, иначе оригинал), тоже после
+  `requireFamilyAccess`; строится только через `lib/media-url.ts`. Ссылки на фото в UI всегда указывают
   сюда, никогда на прямой Blob URL — угадываемого публичного URL на фото не
   существует в принципе.
 - `StorageService.getSignedUrl()` у Vercel Blob implementation намеренно не

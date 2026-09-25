@@ -5,6 +5,7 @@ import { DeleteDocumentButton } from "./delete-document-button";
 import { PrivacyBadge } from "./privacy-badge";
 import { documentFileType } from "./document-file-type";
 import type { MediaRecord } from "@/domain/media/media.service";
+import { mediaDownloadUrl } from "@/lib/media-url";
 
 /** "1.2 МБ" / "480 КБ" — documents run much larger than the KB-scale
  *  thumbnails elsewhere in the app, so this is its own small helper rather
@@ -51,7 +52,7 @@ export function DocumentList({
               aria-hidden="true"
             />
             <a
-              href={`/api/media/${doc.id}?familyId=${familyId}&download=1`}
+              href={mediaDownloadUrl(doc.id, familyId)}
               className="flex min-w-0 flex-1 flex-col hover:underline"
             >
               <span className="flex items-center gap-1.5 truncate text-sm font-medium">

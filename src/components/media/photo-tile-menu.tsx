@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DeletePhotoDialog } from "./delete-photo-dialog";
+import { mediaDownloadUrl } from "@/lib/media-url";
 
 /**
  * Hover-revealed overlay control on a gallery photo tile (PhotoGrid) —
@@ -48,7 +49,7 @@ export function PhotoTileMenu({
   /** Called inside the same transition as the delete action, before it resolves — lets PhotoGrid remove the tile from its optimistic list immediately instead of waiting for deleteMediaAction's revalidatePath. */
   onDeleted: () => void;
 }) {
-  const downloadHref = `/api/media/${mediaId}?familyId=${familyId}&download=1`;
+  const downloadHref = mediaDownloadUrl(mediaId, familyId);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isPending, startTransition] = useTransition();

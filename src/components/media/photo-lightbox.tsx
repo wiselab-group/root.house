@@ -19,6 +19,7 @@ import {
   type LightboxCarouselTrackHandle,
 } from "./lightbox-carousel-track";
 import type { GalleryPhotoView } from "./gallery-photo";
+import { mediaDownloadUrl } from "@/lib/media-url";
 
 /**
  * Full-screen photo viewer for the family gallery — built directly on
@@ -101,10 +102,7 @@ export function PhotoLightbox({
               aria-label="Скачать фото"
               nativeButton={false}
               render={
-                <a
-                  href={`/api/media/${photo.media.id}?familyId=${familyId}&download=1`}
-                  download
-                />
+                <a href={mediaDownloadUrl(photo.media.id, familyId)} download />
               }
             >
               <DownloadIcon />

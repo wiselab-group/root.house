@@ -22,8 +22,9 @@ import {
 } from "@/domain/media/media.service";
 
 /**
- * Photo upload itself is NOT a Server Action — see app/api/media/upload/route.ts's
- * doc comment for why (private-blob access + file body size). Deletion has
+ * Photo upload itself is NOT a Server Action — the browser puts the file
+ * straight into Blob storage and app/api/media/upload/route.ts records it
+ * (see lib/upload-photo.ts). Deletion has
  * no such constraint, so it's a normal action like every other remove/delete.
  *
  * Which profile/album pages get revalidated is not limited to the page the

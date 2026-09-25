@@ -4,6 +4,7 @@ import type {
   LayoutNode,
   PersonArchiveSummary,
 } from "@/domain/tree/tree-layout.builder";
+import { mediaUrl, shareMediaUrl } from "@/lib/media-url";
 import { FRAME_SIZE } from "../card-dimensions";
 import {
   personIdsNeedingOwnBadge,
@@ -271,8 +272,8 @@ function buildPhotoUrl(
 ): string | null {
   if (!photoMediaId) return null;
   return shareToken
-    ? `/api/share/${shareToken}/media/${photoMediaId}`
-    : `/api/media/${photoMediaId}?familyId=${familyId}`;
+    ? shareMediaUrl(shareToken, photoMediaId, "thumb")
+    : mediaUrl(photoMediaId, familyId, "thumb");
 }
 
 function toFlowNode(

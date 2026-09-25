@@ -2,8 +2,8 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import Image from "next/image";
-import { BLUR_PLACEHOLDER } from "./blur-placeholder";
+import { ArchiveImage } from "@/components/media/archive-image";
+import { mediaUrl } from "@/lib/media-url";
 import { PhotoTileMenu } from "./photo-tile-menu";
 import type { GalleryPhotoView } from "./gallery-photo";
 
@@ -57,7 +57,7 @@ export function PhotoGridTile({
       }}
       {...attributes}
       {...(canReorder ? listeners : {})}
-      className="group relative aspect-square touch-none overflow-hidden rounded-md border border-border"
+      className="group relative aspect-square touch-none overflow-hidden rounded-md border border-border bg-muted"
       data-dragging={isDragging || undefined}
     >
       <button
@@ -65,15 +65,12 @@ export function PhotoGridTile({
         onClick={onOpen}
         className="absolute inset-0 text-left"
       >
-        <Image
-          src={`/api/media/${photo.media.id}?familyId=${familyId}`}
+        <ArchiveImage
+          src={mediaUrl(photo.media.id, familyId, "thumb")}
           alt={photo.media.title ?? "Семейное фото"}
           fill
           sizes="(max-width: 640px) 50vw, 33vw"
           className="object-cover transition-transform duration-200 group-hover:scale-105"
-          placeholder="blur"
-          blurDataURL={BLUR_PLACEHOLDER}
-          unoptimized
         />
       </button>
 

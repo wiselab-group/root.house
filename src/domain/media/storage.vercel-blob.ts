@@ -1,4 +1,4 @@
-import { put, del, get } from "@vercel/blob";
+import { put, del, get, head } from "@vercel/blob";
 import type {
   StorageService,
   UploadInput,
@@ -47,6 +47,35 @@ class VercelBlobStorageService implements StorageService {
     throw new Error(
       "VercelBlobStorageService does not issue direct signed URLs — fetch media through /api/media/[id] instead.",
     );
+  }
+
+  /**
+   * Size/type of a stored blob, and whether it really is private — a
+   * browser upload picks its own access mode, so the finalize step checks
+   * it instead of trusting the client (a private blob's URL is on the
+   * store's `.private.` host).
+   */
+  async getInfo(storageKey: string): Promise<{
+    sizeBytes: number;
+    contentType: string;
+    isPrivate: boolean;
+  } | null> {
+    try {
+      const info = await head(storageKey);
+      return {
+        sizeBytes: info.size,
+        contentType: info.contentType,
+        isPrivate: new URL(info.url).hostname.includes(".private."),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /** The whole blob in memory — for making a photo's variants. */
+  async readBuffer(storageKey: string): Promise<Buffer> {
+    const { stream } = await this.getStream(storageKey);
+    return Buffer.from(await new Response(stream).arrayBuffer());
   }
 
   /** Used by the media route handler to stream a private blob's bytes back to an authorized request. */

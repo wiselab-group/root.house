@@ -4,6 +4,7 @@ import {
   eq,
   inArray,
   isNotNull,
+  isNull,
   notInArray,
   sql,
 } from "drizzle-orm";
@@ -17,6 +18,7 @@ import {
   mediaPlace,
   persons,
   albums,
+  type MediaVariants,
   type PrivacyLevel,
 } from "@/db/schema";
 
@@ -32,10 +34,8 @@ export interface MediaRecord {
   height: number | null;
   title: string | null;
   description: string | null;
-  /** Average color of the photo's left edge as "#rrggbb", or null when it
-   *  couldn't be sampled (HEIC uploads in particular) or predates this
-   *  column — see db/schema/media.ts's own doc comment. */
-  dominantColor: string | null;
+  /** Downscaled copies of a photo — see db/schema/media.ts's own doc comment. */
+  variants: MediaVariants | null;
   privacyLevel: PrivacyLevel;
   uploadedBy: string;
   sortOrder: number | null;
@@ -75,7 +75,7 @@ function toRecord(row: typeof media.$inferSelect): MediaRecord {
     height: row.height,
     title: row.title,
     description: row.description,
-    dominantColor: row.dominantColor,
+    variants: row.variants,
     privacyLevel: row.privacyLevel,
     uploadedBy: row.uploadedBy,
     sortOrder: row.sortOrder,
@@ -321,6 +321,48 @@ export async function getAlbumsForMedia(
   return result;
 }
 
+/** Photos still without downscaled copies — for the one-off backfill (db/backfill-photo-variants.ts). */
+export async function getPhotosWithoutVariants(
+  familyId?: string,
+): Promise<MediaRecord[]> {
+  const rows = await db
+    .select()
+    .from(media)
+    .where(
+      and(
+        eq(media.kind, "photo"),
+        isNull(media.variants),
+        familyId ? eq(media.familyId, familyId) : undefined,
+      ),
+    )
+    .orderBy(media.createdAt);
+  return rows.map(toRecord);
+}
+
+export async function setMediaVariants(
+  mediaId: string,
+  familyId: string,
+  data: { variants: MediaVariants; width: number; height: number },
+): Promise<void> {
+  await db
+    .update(media)
+    .set(data)
+    .where(and(eq(media.id, mediaId), eq(media.familyId, familyId)));
+}
+
+/** Whether a Media row in this family already points at this stored file. */
+export async function isStorageKeyUsed(
+  storageKey: string,
+  familyId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ id: media.id })
+    .from(media)
+    .where(and(eq(media.storageKey, storageKey), eq(media.familyId, familyId)))
+    .limit(1);
+  return Boolean(row);
+}
+
 export interface CreateMediaData {
   familyId: string;
   kind: MediaRecord["kind"];
@@ -332,7 +374,7 @@ export interface CreateMediaData {
   height?: number | null;
   title?: string | null;
   description?: string | null;
-  dominantColor?: string | null;
+  variants?: MediaVariants | null;
   uploadedBy: string;
   privacyLevel?: PrivacyLevel;
   /** Person ids to link this Media to, created atomically with the row. */
@@ -357,7 +399,7 @@ export async function createMedia(
       height: data.height ?? null,
       title: data.title ?? null,
       description: data.description ?? null,
-      dominantColor: data.dominantColor ?? null,
+      variants: data.variants ?? null,
       uploadedBy: data.uploadedBy,
       privacyLevel: data.privacyLevel ?? "family",
       // One higher than this family's current max — a fresh upload always

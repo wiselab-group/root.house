@@ -1,91 +1,86 @@
+import { upload } from "@vercel/blob/client";
+import {
+  PHOTO_MAX_BYTES,
+  photoUploadPathname,
+} from "@/domain/media/photo-upload-rules";
+
 /**
- * Shared client-side helper for POSTing a photo to /api/media/upload (a
- * Route Handler, not a Server Action — see that route's doc comment for
- * why: private-blob storage + multipart body size). Used by usePhotoBatchUpload
- * for both the person-profile gallery (always tags the one person, never
- * passes albumIds) and the family-wide gallery (may tag zero, one, or
- * several albums, never tags people at upload time).
+ * Uploads one photo in two steps, used by every photo picker (the gallery
+ * batch upload, AvatarEditor, the new-person form):
  *
- * Uses XMLHttpRequest instead of fetch() only when `onProgress` is given —
- * fetch() has no upload-progress event, and AvatarEditor (the only other
- * caller of /api/media/upload) doesn't need a percentage, so it keeps the
- * simpler fetch() path directly instead of going through this helper.
+ * 1. the file goes from the browser straight into private Blob storage,
+ *    with a token from /api/media/upload-token — never through our own
+ *    functions, whose request body Vercel caps at ~4.5MB;
+ * 2. /api/media/upload records it (tags, albums, portrait) and makes its
+ *    downscaled copies.
  *
- * The browser's upload-progress event only covers sending request bytes,
- * not the server-side work after (storing the blob, writing the DB row) —
- * on a fast connection/small file that send finishes in a fraction of a
- * second, so an unscaled progress bar jumps straight to 100% and then
- * stalls there while the server is still working. Scaling the real
- * upload.onprogress fraction into the 0-90% range and reserving the last
- * 10% for the actual server response keeps the bar's motion truthful: it's
- * always reporting a real, currently-in-flight phase, never a fake timer.
+ * Progress: the real upload fraction is scaled into 0–90%, the last 10% is
+ * step 2 (making the copies takes a moment) — so the bar never sits at a
+ * fake 100% while the server is still working.
  */
 const UPLOAD_PHASE_CEILING = 0.9;
+/** Above this, Blob splits the upload into parallel, retried parts. */
+const MULTIPART_THRESHOLD = 8 * 1024 * 1024;
+const GENERIC_ERROR = "Не удалось загрузить фото";
+
 export async function uploadPhoto({
   familyId,
-  personIds,
+  personIds = [],
   albumIds = [],
+  personId,
+  isAvatar = false,
   file,
   privacyLevel,
   onProgress,
 }: {
   familyId: string;
-  personIds: string[];
+  personIds?: string[];
   albumIds?: string[];
+  /** The person whose portrait this becomes — required with isAvatar. */
+  personId?: string;
+  isAvatar?: boolean;
   file: File;
   privacyLevel?: "private" | "family" | "public";
   onProgress?: (fraction: number) => void;
 }): Promise<{ id: string }> {
-  const formData = new FormData();
-  formData.set("familyId", familyId);
-  for (const personId of personIds) {
-    formData.append("personIds", personId);
-  }
-  for (const albumId of albumIds) {
-    formData.append("albumIds", albumId);
-  }
-  if (privacyLevel) formData.set("privacyLevel", privacyLevel);
-  formData.set("file", file);
+  if (file.size > PHOTO_MAX_BYTES) throw new Error("Файл больше 25 МБ");
 
-  if (!onProgress) {
-    const response = await fetch("/api/media/upload", {
-      method: "POST",
-      body: formData,
+  let storageKey: string;
+  try {
+    const blob = await upload(photoUploadPathname(familyId, file.name), file, {
+      access: "private",
+      handleUploadUrl: "/api/media/upload-token",
+      clientPayload: JSON.stringify({ familyId, isAvatar }),
+      // Empty for HEIC outside Safari — Blob then infers it from the extension.
+      contentType: file.type || undefined,
+      multipart: file.size > MULTIPART_THRESHOLD,
+      onUploadProgress: ({ loaded, total }) => {
+        if (total > 0) onProgress?.((loaded / total) * UPLOAD_PHASE_CEILING);
+      },
     });
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      throw new Error(body.error ?? "Не удалось загрузить фото");
-    }
-    return response.json();
+    storageKey = blob.pathname;
+  } catch {
+    throw new Error(GENERIC_ERROR);
   }
 
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/media/upload");
-
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) {
-        onProgress((event.loaded / event.total) * UPLOAD_PHASE_CEILING);
-      }
-    };
-
-    xhr.onload = () => {
-      let body: { id?: string; error?: string } = {};
-      try {
-        body = JSON.parse(xhr.responseText);
-      } catch {
-        // Non-JSON response falls through to the generic error below.
-      }
-      if (xhr.status >= 200 && xhr.status < 300 && body.id) {
-        onProgress(1);
-        resolve({ id: body.id });
-      } else {
-        reject(new Error(body.error ?? "Не удалось загрузить фото"));
-      }
-    };
-
-    xhr.onerror = () => reject(new Error("Не удалось загрузить фото"));
-
-    xhr.send(formData);
+  const response = await fetch("/api/media/upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      familyId,
+      storageKey,
+      personIds,
+      albumIds,
+      personId,
+      isAvatar,
+      privacyLevel,
+    }),
   });
+  const body: { id?: string; error?: string } = await response
+    .json()
+    .catch(() => ({}));
+  if (!response.ok || !body.id) throw new Error(body.error ?? GENERIC_ERROR);
+
+  onProgress?.(1);
+  return { id: body.id };
 }

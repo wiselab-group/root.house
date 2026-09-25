@@ -8,24 +8,32 @@ import {
   uploadPersonAvatar,
   removeMediaIfUnlinked,
 } from "@/domain/media/media.service";
+import { PhotoUploadRejectedError } from "@/domain/media/photo-upload-rules";
 import { getPerson, setPersonAvatar } from "@/domain/person/person.service";
 
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB — generous for a phone photo, small enough to pass through our server comfortably
-const ALLOWED_CONTENT_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/heic",
-];
+// Making the downscaled copies (and decoding HEIC through WASM, ~1–3s for a
+// 12MP iPhone photo) runs inside this request — see image-variants.ts.
+export const maxDuration = 60;
+
+interface FinalizeBody {
+  familyId?: unknown;
+  storageKey?: unknown;
+  personId?: unknown;
+  personIds?: unknown;
+  albumIds?: unknown;
+  isAvatar?: unknown;
+  privacyLevel?: unknown;
+}
 
 /**
- * Photo upload goes through our own server (not a direct browser->Blob
- * upload via Vercel's client-token flow) specifically so we can store it
- * with access: 'private' — Vercel Blob's client-token uploads only support
- * public blobs (no `access` option in GenerateClientTokenOptions), which
- * would conflict with the "private/family by default, never public" rule.
- * A Route Handler (not a Server Action) is used because Server Actions have
- * a small default body-size ceiling not meant for file uploads.
+ * Records a photo the browser has already put into private Blob storage
+ * (lib/upload-photo.ts, with a token from /api/media/upload-token) — a small
+ * JSON call, the file itself never passes through here. uploadPersonPhoto
+ * re-checks everything about the stored file itself (folder, privacy, type,
+ * size); this route checks who is asking.
+ *
+ * A Route Handler rather than a Server Action because the browser calls it
+ * right after its own direct upload, alongside the token route.
  */
 export async function POST(request: Request): Promise<Response> {
   const session = await auth();
@@ -33,34 +41,23 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const formData = await request.formData();
-  const familyId = formData.get("familyId");
-  // Avatar upload is always exactly one person and never touches albums
-  // (see isAvatar branch below); a regular gallery photo may tag zero, one,
-  // or several people, and belong to zero, one, or several albums —
-  // formData.getAll returns [] when a field is absent entirely, so an
-  // untagged/unalbumed upload from the family-wide gallery works without a
-  // fallback.
-  const personId = formData.get("personId");
-  const personIds = formData
-    .getAll("personIds")
-    .filter((value): value is string => typeof value === "string");
-  const albumIds = formData
-    .getAll("albumIds")
-    .filter((value): value is string => typeof value === "string");
-  const file = formData.get("file");
-  const isAvatar = formData.get("isAvatar") === "true";
-  const rawPrivacyLevel = formData.get("privacyLevel");
+  const body = (await request.json().catch(() => ({}))) as FinalizeBody;
+  const { familyId, storageKey, personId } = body;
+  // A gallery photo may tag zero, one, or several people and belong to
+  // zero, one, or several albums; a portrait is always exactly one person.
+  const personIds = stringList(body.personIds);
+  const albumIds = stringList(body.albumIds);
+  const isAvatar = body.isAvatar === true;
   const privacyLevel =
-    rawPrivacyLevel === "private" ||
-    rawPrivacyLevel === "family" ||
-    rawPrivacyLevel === "public"
-      ? rawPrivacyLevel
+    body.privacyLevel === "private" ||
+    body.privacyLevel === "family" ||
+    body.privacyLevel === "public"
+      ? body.privacyLevel
       : undefined;
 
-  if (typeof familyId !== "string" || !(file instanceof File)) {
+  if (typeof familyId !== "string" || typeof storageKey !== "string") {
     return NextResponse.json(
-      { error: "Missing familyId or file" },
+      { error: "Missing familyId or storageKey" },
       { status: 400 },
     );
   }
@@ -93,64 +90,56 @@ export async function POST(request: Request): Promise<Response> {
     throw error;
   }
 
-  if (!ALLOWED_CONTENT_TYPES.includes(file.type)) {
-    return NextResponse.json(
-      { error: `Unsupported file type: ${file.type}` },
-      { status: 400 },
-    );
-  }
-  if (file.size > MAX_FILE_SIZE_BYTES) {
-    return NextResponse.json(
-      { error: "File too large (max 10MB)" },
-      { status: 400 },
-    );
-  }
+  try {
+    if (isAvatar) {
+      const avatarPersonId = personId as string;
 
-  const buffer = Buffer.from(await file.arrayBuffer());
+      // Replacing an existing avatar: record+assign the new one first, then
+      // deal with the old one — never leave the person without any avatar
+      // between the two steps if something below fails.
+      const previousPerson = await getPerson(avatarPersonId, familyId);
+      const previousAvatarMediaId = previousPerson?.photoMediaId ?? null;
 
-  if (isAvatar) {
-    // personId is guaranteed a string here by the isAvatar check above.
-    const avatarPersonId = personId as string;
-
-    // Replacing an existing avatar: upload+assign the new one first, then
-    // deal with the old one — never leave the person without any avatar
-    // between the two steps if something below fails.
-    const previousPerson = await getPerson(avatarPersonId, familyId);
-    const previousAvatarMediaId = previousPerson?.photoMediaId ?? null;
-
-    const avatarMedia = await uploadPersonAvatar({
-      personId: avatarPersonId,
-      familyId,
-      uploadedBy: session.user.id,
-      file: buffer,
-      contentType: file.type,
-      originalFilename: file.name,
-    });
-    await setPersonAvatar(avatarPersonId, familyId, avatarMedia.id);
-
-    // The old portrait normally stays in the gallery (portraits are
-    // gallery photos now); only a pre-gallery avatar nothing uses is removed.
-    if (previousAvatarMediaId) {
-      await removeMediaIfUnlinked(
-        previousAvatarMediaId,
+      const avatarMedia = await uploadPersonAvatar({
+        personId: avatarPersonId,
         familyId,
-        session.user.id,
-      );
+        uploadedBy: session.user.id,
+        storageKey,
+      });
+      await setPersonAvatar(avatarPersonId, familyId, avatarMedia.id);
+
+      // The old portrait normally stays in the gallery (portraits are
+      // gallery photos now); only a pre-gallery avatar nothing uses is removed.
+      if (previousAvatarMediaId) {
+        await removeMediaIfUnlinked(
+          previousAvatarMediaId,
+          familyId,
+          session.user.id,
+        );
+      }
+
+      return NextResponse.json({ id: avatarMedia.id }, { status: 201 });
     }
 
-    return NextResponse.json({ id: avatarMedia.id }, { status: 201 });
+    const media = await uploadPersonPhoto({
+      familyId,
+      personIds,
+      albumIds,
+      uploadedBy: session.user.id,
+      storageKey,
+      privacyLevel,
+    });
+    return NextResponse.json({ id: media.id }, { status: 201 });
+  } catch (error) {
+    if (error instanceof PhotoUploadRejectedError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    throw error;
   }
+}
 
-  const media = await uploadPersonPhoto({
-    familyId,
-    personIds,
-    albumIds,
-    uploadedBy: session.user.id,
-    file: buffer,
-    contentType: file.type,
-    originalFilename: file.name,
-    privacyLevel,
-  });
-
-  return NextResponse.json({ id: media.id }, { status: 201 });
+function stringList(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
 }

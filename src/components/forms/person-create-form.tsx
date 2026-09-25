@@ -6,6 +6,7 @@ import { PersonForm } from "./person-form";
 import { PersonPhotoPicker } from "./person-photo-picker";
 import { createPersonAction } from "@/actions/person.actions";
 import type { PlaceRecord } from "@/domain/place/place.service";
+import { uploadPhoto } from "@/lib/upload-photo";
 
 /**
  * Wraps PersonForm for the "add person" flow only — adds an optional photo
@@ -14,8 +15,8 @@ import type { PlaceRecord } from "@/domain/place/place.service";
  *
  *   1. Run createPersonAction (no redirect() inside it anymore — see its own
  *      doc comment) and read back the new person's id.
- *   2. If a photo was picked, upload it now via the same /api/media/upload
- *      route AvatarEditor uses (isAvatar=true) — this is the earliest point
+ *   2. If a photo was picked, upload it now via the same uploadPhoto
+ *      helper AvatarEditor uses (isAvatar) — this is the earliest point
  *      a personId exists to upload against.
  *   3. Only then navigate to the new profile page (router.push, replacing
  *      the redirect() the action used to do itself) — so the avatar is
@@ -62,25 +63,17 @@ export function PersonCreateForm({
       if (fileToUpload) {
         setPhotoError(null);
         try {
-          const uploadData = new FormData();
-          uploadData.set("familyId", familyId);
-          uploadData.set("personId", personId);
-          uploadData.set("file", fileToUpload);
-          uploadData.set("isAvatar", "true");
-          const response = await fetch("/api/media/upload", {
-            method: "POST",
-            body: uploadData,
+          await uploadPhoto({
+            familyId,
+            personId,
+            isAvatar: true,
+            file: fileToUpload,
           });
-          if (!response.ok) {
-            // Person was created successfully — a failed avatar upload
-            // shouldn't block navigation or look like the whole submit
-            // failed, just surface it and let the profile page's own
-            // AvatarEditor be the fallback path to try again.
-            setPhotoError(
-              "Человек создан, но фото загрузить не удалось — добавьте его на странице редактирования.",
-            );
-          }
         } catch {
+          // Person was created successfully — a failed avatar upload
+          // shouldn't block navigation or look like the whole submit
+          // failed, just surface it and let the profile page's own
+          // AvatarEditor be the fallback path to try again.
           setPhotoError(
             "Человек создан, но фото загрузить не удалось — добавьте его на странице редактирования.",
           );

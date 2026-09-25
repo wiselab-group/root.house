@@ -1,6 +1,7 @@
 "use client";
 
-import Image from "next/image";
+import { ArchiveImage } from "@/components/media/archive-image";
+import { mediaUrl } from "@/lib/media-url";
 import {
   useEffect,
   useImperativeHandle,
@@ -10,7 +11,6 @@ import {
 } from "react";
 import { cn } from "@/lib/utils";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
-import { BLUR_PLACEHOLDER } from "./blur-placeholder";
 import { PhotoTagLayer } from "./photo-tag-layer";
 import { useSwipeNavigation, SWIPE_SETTLE_MS } from "./use-swipe-navigation";
 import type { GalleryPhotoView } from "./gallery-photo";
@@ -294,15 +294,12 @@ function LightboxSlide({
 
   return (
     <div ref={containerRef} className="relative size-full">
-      <Image
-        src={`/api/media/${photo.media.id}?familyId=${familyId}`}
+      <ArchiveImage
+        src={mediaUrl(photo.media.id, familyId, "display")}
         alt={photo.media.title ?? "Семейное фото"}
         fill
         sizes="100vw"
         className="object-contain"
-        placeholder="blur"
-        blurDataURL={BLUR_PLACEHOLDER}
-        unoptimized
         onLoad={(e) => {
           const img = e.currentTarget;
           if (taggingMode) {

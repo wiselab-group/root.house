@@ -1,7 +1,7 @@
 import Link from "next/link";
-import Image from "next/image";
+import { ArchiveImage } from "@/components/media/archive-image";
+import { mediaUrl } from "@/lib/media-url";
 import { ImagesIcon } from "lucide-react";
-import { BLUR_PLACEHOLDER } from "./blur-placeholder";
 import { photoCountLabel } from "@/domain/shared/pluralize-ru";
 import type { AlbumWithCoverRecord } from "@/domain/album/album.service";
 
@@ -27,15 +27,12 @@ export function FeaturedAlbumCard({
       className="group relative flex aspect-video flex-col overflow-hidden rounded-xl border border-border bg-muted sm:aspect-21/9"
     >
       {album.coverMediaId ? (
-        <Image
-          src={`/api/media/${album.coverMediaId}?familyId=${familyId}`}
+        <ArchiveImage
+          src={mediaUrl(album.coverMediaId, familyId, "display")}
           alt=""
           fill
           sizes="(max-width: 640px) 100vw, 672px"
           className="object-cover transition-transform duration-300 ease-(--ease-reveal) group-hover:scale-[1.03]"
-          placeholder="blur"
-          blurDataURL={BLUR_PLACEHOLDER}
-          unoptimized
           priority
         />
       ) : (
