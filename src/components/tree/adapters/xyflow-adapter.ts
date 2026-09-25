@@ -247,8 +247,8 @@ export const CONNECTOR_CENTER_Y = FRAME_SIZE / 2;
  * (buildCardFrameClassName) has NO background of its own — so the
  * parent_child connector visibly touches the matte frame — but the matte
  * frame itself is opaque (card-dimensions.ts's FRAME_SIZE padding around the
- * photo, colored per compact-card-body.tsx's frameColor, even at rest when
- * that color equals --background) all the way to its own outer edge. A line
+ * photo, colored per compact-card-body.tsx's frameColor — --branch at
+ * rest) all the way to its own outer edge. A line
  * drawn all the way to the card's horizontal center would cross past that
  * edge into the fully transparent card padding beyond it with nothing
  * opaque left to paint over it. Clamping each endpoint to this radius keeps

@@ -35,44 +35,39 @@ export function CompactCardBody({
   name: string;
   years: string | null;
   initials: string;
-  /** This card's own click-popover is open — terracotta frame here (NOT the usual sage identity color, see this function's own comment on that deliberate exception). */
+  /** This card's own click-popover is open — terracotta frame (see the frame colors below). */
   isOpen: boolean;
-  /** On the currently traced relationship path — expressed as the matte frame's own color since the card has no border of its own. */
+  /** On the currently traced relationship path — terracotta frame, like the traced line itself. */
   isTraced: boolean;
   /** Keyboard-selected — terracotta frame, same color as isTraced (see buildCardFrameClassName's own comment on that split). */
   isSelected: boolean;
 }) {
-  // At rest the matte frame is just the card's own background tone (reads
-  // as "cut out of the page", per the reference) — it only becomes a
-  // visible color once this card is in one of these three "look at me"
-  // states. All three (isOpen, isTraced, isSelected) use the SAME --branch
-  // tone here — the tree's own connector-line/frame-border color — rather
-  // than a distinct accent (2026-09-19, per direct user request: a lighter
-  // terracotta fill, --tree-card-ring, read as too different from the
-  // frame's own border color; --branch keeps the whole frame reading as one
-  // consistent tone when "lit up", not a colored fill inside a
-  // differently-colored outline). This is still a deliberate, explicit
-  // exception to the tree's usual sage/terracotta split
-  // (buildCardFrameClassName's own doc comment: sage = "who you're looking
-  // at right now" / isOpen, terracotta = "what you selected/traced"),
-  // scoped to this matte frame. The tree's focus person (isFocus) is deliberately NOT
-  // one of these states — per an earlier direct user request, the focus
-  // person's card should read as a plain, unhighlighted card, not singled
-  // out with a colored frame (the layout centering it is already enough of
-  // a "this is the center" signal). --tree-card-ring (globals.css) is kept
-  // defined but currently unused here — this token's own value has already
-  // flip-flopped several times (see its own history in globals.css), don't
-  // delete it on the assumption this is final.
-  const frameColor =
-    isOpen || isTraced || isSelected ? "var(--branch)" : "var(--background)";
-  // The frame's border is ALWAYS --branch too — same tone as the fill above
-  // when lit up, and the tree's own connector lines
-  // (relationship-edge.tsx/union-child-edge.tsx) — regardless of
-  // frameColor/state, per direct user request: the border must stay visible
-  // as a distinct outline even when the fill switches color, not disappear
-  // into the fill the way it briefly did when the border color used to
-  // track frameColor 1:1.
-  const frameBorderColor = "var(--branch)";
+  // At rest the whole frame — the matte around the photo AND its outline —
+  // is --branch, the exact tone of the tree's connector lines
+  // (relationship-edge.tsx/union-child-edge.tsx), so card and lines read as
+  // one drawing (per direct user request, 2026-09-25: the dark
+  // --background matte between outline and photo read as a separate black
+  // ring; it used to be "cut out of the canvas" per the 2026-09-18
+  // reference).
+  //
+  // Once the card is "the one you're looking at" — its popover is open
+  // (isOpen), it's on the traced relationship path (isTraced), or it's
+  // keyboard-selected (isSelected) — the WHOLE frame, fill and outline,
+  // turns terracotta (--primary): the project's single "what you're looking
+  // at / what you picked" color (CLAUDE.md § Design tokens), the same one
+  // the traced line itself is drawn in. 2026-09-25, per user request
+  // ("активное состояние — или зелёным, или терракотовым"): the active
+  // state used to be --branch too, i.e. the same color as a card at rest,
+  // and barely readable. One tone for fill and outline, not two — an
+  // earlier lighter-terracotta fill inside a differently colored outline was
+  // rejected (2026-09-19). The focus person (isFocus) is deliberately NOT an
+  // active state — per an earlier direct user request its card stays plain
+  // (the layout centering it is signal enough). --tree-card-ring
+  // (globals.css) is kept defined but unused here — its value has
+  // flip-flopped several times, don't delete it assuming this is final.
+  const isActive = isOpen || isTraced || isSelected;
+  const frameColor = isActive ? "var(--primary)" : "var(--branch)";
+  const frameBorderColor = isActive ? "var(--primary)" : "var(--branch)";
 
   return (
     <div className="flex flex-col items-center px-3 pb-3 text-center">
@@ -82,12 +77,11 @@ export function CompactCardBody({
           // the photo it holds (PHOTO_FRAME_PADDING on every side), colored
           // per frameColor above. shrink-0 so a long truncated name in the
           // pill below never squeezes this. A real `border` (not just a
-          // background fill) — at rest, frameColor equals --background, so
-          // a plain bg-only frame was visually indistinguishable from the
-          // canvas behind it (real bug the user caught: the frame around a
-          // non-focus/non-traced/non-selected card was completely invisible,
-          // not just subtle). The border keeps the frame's own SHAPE always
-          // visible, whatever color it's currently filled with. Width is set
+          // background fill) — the frame was once filled with --background
+          // at rest, and a bg-only frame was then invisible against the
+          // canvas (real bug the user caught). The fill is --branch now, but
+          // the border stays so the frame's SHAPE is drawn the same way in
+          // every state. Width is set
           // inline (borderWidth, not a Tailwind border-* class) to match the
           // connector lines' own 1.5px strokeWidth exactly (relationship-
           // edge.tsx/union-child-edge.tsx) — no built-in Tailwind utility
