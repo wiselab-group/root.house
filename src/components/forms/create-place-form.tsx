@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import {
   createPlaceAction,
@@ -10,8 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { PlaceGeocodeCombobox } from "./place-geocode-combobox";
-import type { GeocodeResult } from "@/lib/maptiler-geocode";
+import { PlaceLocationField } from "./place-location-field";
 import { useCollapsibleFormClose } from "./collapsible-form";
 
 const initialState: PlaceFormState = {};
@@ -29,9 +28,6 @@ export function CreatePlaceForm({ familyId }: { familyId: string }) {
   const close = useCollapsibleFormClose();
   const boundAction = createPlaceAction.bind(null, familyId);
   const [state, formAction] = useActionState(boundAction, initialState);
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
-    null,
-  );
   // Closes the form back to its trigger on success — same fix as
   // AddEventForm/AddRelativeForm: createPlaceAction only revalidatePath()s
   // on success (no redirect), so without this the form stayed open with
@@ -84,28 +80,7 @@ export function CreatePlaceForm({ familyId }: { familyId: string }) {
         <Textarea id="description" name="description" rows={2} />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <Label className="text-xs text-muted-foreground">
-          Точка на карте (необязательно)
-        </Label>
-        <PlaceGeocodeCombobox
-          onSelect={(result: GeocodeResult) =>
-            setCoords({ lat: result.latitude, lng: result.longitude })
-          }
-        />
-        {coords && (
-          <p className="text-xs text-muted-foreground">
-            {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
-          </p>
-        )}
-        <input type="hidden" name="latitude" value={coords?.lat ?? ""} />
-        <input type="hidden" name="longitude" value={coords?.lng ?? ""} />
-        {state.fieldErrors?.latitude && (
-          <p className="text-sm text-destructive">
-            {state.fieldErrors.latitude}
-          </p>
-        )}
-      </div>
+      <PlaceLocationField error={state.fieldErrors?.latitude} />
 
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 

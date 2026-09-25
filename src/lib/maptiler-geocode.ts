@@ -1,8 +1,8 @@
 /**
  * Thin client for MapTiler's Geocoding API (https://api.maptiler.com/geocoding)
- * — forward geocoding only (address/place name → coordinates), used by
- * PlaceGeocodeCombobox to resolve a Place's latitude/longitude from a
- * free-text search. Runs client-side (the "use client" combobox calls this
+ * — forward (address/place name → coordinates, PlaceGeocodeCombobox's
+ * search) and reverse (a pin dropped on the map → its address, shown back
+ * in the search box — see PlaceLocationField). Runs client-side (the "use client" combobox calls this
  * directly) since NEXT_PUBLIC_MAPTILER_API_KEY is already public — see
  * .env.local's own comment on why this key is safe to expose.
  */
@@ -54,4 +54,27 @@ export async function geocodePlace(
     longitude: feature.center[0],
     latitude: feature.center[1],
   }));
+}
+
+/** The nearest named place for a point — null when there's none (open sea) or the lookup fails. */
+export async function reverseGeocode(
+  latitude: number,
+  longitude: number,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  const apiKey = process.env.NEXT_PUBLIC_MAPTILER_API_KEY;
+  if (!apiKey) return null;
+
+  const url = new URL(
+    `https://api.maptiler.com/geocoding/${longitude},${latitude}.json`,
+  );
+  url.searchParams.set("key", apiKey);
+  url.searchParams.set("language", "ru");
+  url.searchParams.set("limit", "1");
+
+  const response = await fetch(url.toString(), { signal }).catch(() => null);
+  if (!response?.ok) return null;
+  const data = (await response.json()) as MapTilerGeocodeResponse;
+  const feature = data.features?.[0];
+  return feature ? (feature.place_name_ru ?? feature.place_name ?? null) : null;
 }

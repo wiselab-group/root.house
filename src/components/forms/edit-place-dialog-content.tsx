@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import {
   updatePlaceAction,
@@ -16,8 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { PlaceGeocodeCombobox } from "./place-geocode-combobox";
-import type { GeocodeResult } from "@/lib/maptiler-geocode";
+import { PlaceLocationField } from "./place-location-field";
 import type { PlaceRecord } from "@/domain/place/place.service";
 
 const initialState: PlaceFormState = {};
@@ -50,11 +49,6 @@ export function EditPlaceDialogContent({
   const boundAction = updatePlaceAction.bind(null, familyId, place.id);
   const [state, formAction] = useActionState(boundAction, initialState);
   const submittedRef = useRef(false);
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
-    place.latitude != null && place.longitude != null
-      ? { lat: place.latitude, lng: place.longitude }
-      : null,
-  );
 
   useEffect(() => {
     if (!submittedRef.current) return;
@@ -121,31 +115,14 @@ export function EditPlaceDialogContent({
           />
         </div>
 
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">
-            Точка на карте (необязательно)
-          </Label>
-          <PlaceGeocodeCombobox
-            defaultLabel={
-              coords ? `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}` : ""
-            }
-            onSelect={(result: GeocodeResult) =>
-              setCoords({ lat: result.latitude, lng: result.longitude })
-            }
-          />
-          {coords && (
-            <p className="text-xs text-muted-foreground">
-              {coords.lat.toFixed(4)}, {coords.lng.toFixed(4)}
-            </p>
-          )}
-          <input type="hidden" name="latitude" value={coords?.lat ?? ""} />
-          <input type="hidden" name="longitude" value={coords?.lng ?? ""} />
-          {state.fieldErrors?.latitude && (
-            <p className="text-sm text-destructive">
-              {state.fieldErrors.latitude}
-            </p>
-          )}
-        </div>
+        <PlaceLocationField
+          defaultPoint={
+            place.latitude != null && place.longitude != null
+              ? { latitude: place.latitude, longitude: place.longitude }
+              : null
+          }
+          error={state.fieldErrors?.latitude}
+        />
 
         {state.error && (
           <p className="text-sm text-destructive">{state.error}</p>

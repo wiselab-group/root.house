@@ -44,9 +44,21 @@ export const MapView = forwardRef<
     initialZoom: number;
     children?: React.ReactNode;
     className?: string;
+    /** A click on the map itself (not on a marker) — e.g. the location picker dropping a pin. */
+    onMapClick?: (point: { latitude: number; longitude: number }) => void;
+    /** CSS cursor over the map canvas — "crosshair" when clicks place a pin. */
+    cursor?: string;
   }
 >(function MapView(
-  { initialLongitude, initialLatitude, initialZoom, children, className },
+  {
+    initialLongitude,
+    initialLatitude,
+    initialZoom,
+    children,
+    className,
+    onMapClick,
+    cursor,
+  },
   ref,
 ) {
   const hasKey = Boolean(process.env.NEXT_PUBLIC_MAPTILER_API_KEY);
@@ -100,6 +112,13 @@ export const MapView = forwardRef<
           zoom: initialZoom,
         }}
         style={{ width: "100%", height: "100%" }}
+        cursor={cursor}
+        onClick={
+          onMapClick
+            ? (e) =>
+                onMapClick({ latitude: e.lngLat.lat, longitude: e.lngLat.lng })
+            : undefined
+        }
       >
         <NavigationControl position="bottom-right" showCompass={false} />
         {children}
