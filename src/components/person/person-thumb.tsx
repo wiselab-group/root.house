@@ -5,9 +5,9 @@ import type { PersonRecord } from "@/domain/person/person.repository";
 
 /**
  * A person's photo as a rounded square with the tree's sage identity ring —
- * the list-row avatar of the dark Person Profile / Story pages (family list,
- * «Люди в этой истории»), matching the redesign mock. The round PersonAvatar
- * stays everywhere else. Same /api/media route (family-membership checked)
+ * the one list-row avatar of the app (the profile's family list, «Люди в
+ * этой истории», the /people list), matching the redesign mock; the round
+ * PersonAvatar it replaced is gone. Same /api/media route (family-membership checked)
  * as every other photo; initials when there's no photo yet.
  */
 export function PersonThumb({

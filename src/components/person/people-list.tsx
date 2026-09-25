@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { PersonAvatar } from "@/components/person/person-avatar";
+import { PersonThumb } from "@/components/person/person-thumb";
 import { personDisplayName } from "@/domain/person/display-name";
 import { formatPartialDate } from "@/domain/shared/partial-date";
 import { personCountLabel } from "@/domain/shared/pluralize-ru";
@@ -40,7 +40,9 @@ function personMatches(person: PersonRecord, query: string): boolean {
  *
  * Rendered as one divide-y list (not a Card per row) — same "archive list,
  * not a stack of boxes" treatment as /families' own list, see that page's
- * doc history. A dense phone-book style row: avatar, name, dates, arrow.
+ * doc history. A dense phone-book style row: avatar, name, dates, arrow —
+ * the avatar is PersonThumb, the same rounded-square sage-ringed portrait
+ * as the profile's family list and a story's people.
  */
 export function PeopleList({
   familyId,
@@ -92,12 +94,7 @@ export function PeopleList({
                 className="group/row flex items-center justify-between gap-4 py-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 <div className="flex min-w-0 items-center gap-4">
-                  <PersonAvatar
-                    person={person}
-                    familyId={familyId}
-                    size="lg"
-                    className="size-12! shrink-0 text-base"
-                  />
+                  <PersonThumb person={person} familyId={familyId} />
                   <div className="flex min-w-0 flex-col">
                     <span className="truncate font-heading text-lg font-medium transition-colors group-hover/row:text-primary">
                       {personDisplayName(person)}
