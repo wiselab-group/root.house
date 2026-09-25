@@ -45,8 +45,8 @@ export function lifelineView(
 ): {
   points: LifelinePointView[];
   decades: { year: number; position: number }[];
-  /** The track's minimum width in px — wider than the base when dense
-   *  years had to be spread apart (see layoutLifelineScale). */
+  /** The track's minimum width in px — wider than the base when the scale
+   *  had to zoom in for dense years' labels (see layoutLifelineScale). */
   width: number;
 } | null {
   const lifeline = buildLifeline(timeline, {
@@ -112,7 +112,7 @@ export function lifelineView(
   };
 }
 
-/** The track's width when nothing needs spreading — the phone-scroll
+/** The track's width when nothing needs zooming — the phone-scroll
  *  minimum the axis always had. */
 const BASE_TRACK_WIDTH = 660;
 

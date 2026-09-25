@@ -10,8 +10,9 @@ import type { LifelinePointView } from "./lifeline-view";
  * alternating above and below, and one selected event (terracotta — the
  * app's "what you're looking at" color) expanded in LifelineEventCard.
  * Positions come precomputed from lifelineView; this only owns selection.
- * The track is as wide as the labels need (dense years spread apart, see
- * layoutLifelineScale) and scrolls sideways rather than squeezing them.
+ * The track is as wide as the labels need (one scale for the whole axis,
+ * zoomed until dense years' labels part — see layoutLifelineScale) and
+ * scrolls sideways rather than squeezing them.
  */
 export function PersonLifeline({
   points,

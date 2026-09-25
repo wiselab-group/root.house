@@ -11,6 +11,8 @@ export interface LifelineScaleLabel {
 export interface LifelineScale {
   /** The axis length in px the labels need — the track's minimum width. */
   width: number;
+  /** Px per year — one scale for the whole axis. */
+  pxPerYear: number;
   /** Each label's dot, in percent of `width`, in input order. */
   positions: number[];
   /** Any year inside the span, in percent — for the decade ticks. */
@@ -25,20 +27,15 @@ const DOT_GAP = 22;
 /** Air between two labels on the same side of the axis. */
 const LABEL_GAP = 10;
 
-/** Empty years may shrink to this share of the base scale to make room
- *  for a dense stretch before the whole axis has to grow wider. */
-const MIN_SCALE_SHARE = 0.5;
-
 /**
- * Places the «Линия жизни» dots so no two labels on the same side overlap.
- * Years map linearly at the base scale (`minWidth` px over the whole span);
- * where events are denser than their labels allow — nine daughters born
- * three years apart on a 95-year life — that stretch is widened just
- * enough, and every later year shifts right by the same amount. To pay for
- * it, the empty years around shrink first (down to MIN_SCALE_SHARE of the
- * base), so the whole life usually still fits in `minWidth` — birth and
- * death both on screen, busy decades zoomed in. Only when that isn't
- * enough does the axis grow past `minWidth`, and the track scrolls then.
+ * Picks the «Линия жизни» scale: one px-per-year for the whole axis, so a
+ * decade is the same length everywhere (explicit user request — an earlier
+ * version stretched only the busy years and squeezed the empty ones, which
+ * made the decade ticks uneven). The scale is the base one (`minWidth` px
+ * over the whole span) unless some pair of labels on the same side would
+ * touch — nine daughters born three years apart on a 95-year life — then
+ * it's the smallest scale that parts every such pair, and the track grows
+ * wider than `minWidth` and scrolls sideways.
  */
 export function layoutLifelineScale({
   labels,
@@ -51,105 +48,47 @@ export function layoutLifelineScale({
   endYear: number;
   minWidth: number;
 }): LifelineScale {
+  const span = Math.max(endYear - startYear, 1);
   // The end dots sit LABEL_INSET in from the track edges — the label box
   // anchored to them reaches exactly to the edge.
-  const basePxPerYear =
-    (minWidth - 2 * LABEL_INSET) / Math.max(endYear - startYear, 1);
-  const place = (pxPerYear: number) =>
-    placeDots(labels, startYear, endYear, pxPerYear);
+  let pxPerYear = (minWidth - 2 * LABEL_INSET) / span;
 
-  let placed = place(basePxPerYear);
-  if (placed.naturalWidth > minWidth) {
-    // Largest scale for the empty years that still fits — naturalWidth
-    // only grows with the scale, so bisect between the floor and the base.
-    let low = basePxPerYear * MIN_SCALE_SHARE;
-    let high = basePxPerYear;
-    placed = place(low);
-    for (let i = 0; i < 24 && placed.naturalWidth <= minWidth; i++) {
-      const mid = (low + high) / 2;
-      const candidate = place(mid);
-      if (candidate.naturalWidth <= minWidth) {
-        low = mid;
-        placed = candidate;
-      } else {
-        high = mid;
-      }
+  labels.forEach((label, index) => {
+    const [left] = extent(label);
+    // A centered label near the axis start must not hang past the track.
+    const fromStart = label.year - startYear;
+    if (fromStart > 0) {
+      pxPerYear = Math.max(pxPerYear, (-left - LABEL_INSET) / fromStart);
     }
-  }
-  const { xs, endX, naturalWidth } = placed;
+    if (index > 0) {
+      const years = label.year - labels[index - 1].year;
+      if (years > 0) pxPerYear = Math.max(pxPerYear, DOT_GAP / years);
+    }
+    const previous = lastIndexOnSide(labels, index);
+    if (previous !== -1) {
+      const years = label.year - labels[previous].year;
+      const needed = extent(labels[previous])[1] + LABEL_GAP - left;
+      if (years > 0) pxPerYear = Math.max(pxPerYear, needed / years);
+    }
+  });
 
+  const xOf = (year: number) => LABEL_INSET + (year - startYear) * pxPerYear;
+  const endX = xOf(endYear);
+  const last = labels[labels.length - 1];
+  const lastLabelRight = last ? xOf(last.year) + extent(last)[1] : 0;
   // Rounded to whole px (the track's CSS min-width); positions below are
   // percentages of this same rounded width. The epsilon keeps float noise
   // (660.0000001) from adding a phantom pixel.
-  const width = Math.ceil(Math.max(minWidth, naturalWidth) - 1e-6);
-
-  // Year → x through the placed dots (piecewise linear), so the decade
-  // ticks follow the same stretched scale as the dots around them.
-  const anchors: [number, number][] = labels.map((label, i) => [
-    label.year,
-    xs[i],
-  ]);
-  if (anchors.length === 0 || anchors[anchors.length - 1][0] < endYear) {
-    anchors.push([endYear, endX]);
-  }
-  const positionOf = (year: number) => {
-    let x = anchors[0][1];
-    for (let i = 1; i < anchors.length; i++) {
-      const [y0, x0] = anchors[i - 1];
-      const [y1, x1] = anchors[i];
-      if (year <= y1) {
-        x = y1 === y0 ? x1 : x0 + ((year - y0) / (y1 - y0)) * (x1 - x0);
-        break;
-      }
-      x = x1;
-    }
-    return (x / width) * 100;
-  };
+  const width = Math.ceil(
+    Math.max(minWidth, endX + LABEL_INSET, lastLabelRight) - 1e-6,
+  );
+  const positionOf = (year: number) => (xOf(year) / width) * 100;
 
   return {
     width,
-    positions: xs.map((x) => (x / width) * 100),
+    pxPerYear,
+    positions: labels.map((label) => positionOf(label.year)),
     positionOf,
-  };
-}
-
-/**
- * One pass left to right at a given scale for the empty years: each dot at
- * its linear x plus whatever earlier dense stretches already pushed, or
- * further right if its label would touch the previous one on its side.
- */
-function placeDots(
-  labels: LifelineScaleLabel[],
-  startYear: number,
-  endYear: number,
-  pxPerYear: number,
-): { xs: number[]; endX: number; naturalWidth: number } {
-  const linear = (year: number) => LABEL_INSET + (year - startYear) * pxPerYear;
-
-  const xs: number[] = [];
-  let shift = 0;
-  labels.forEach((label, index) => {
-    const [left] = extent(label);
-    let x = Math.max(linear(label.year) + shift, -left);
-    if (index > 0) x = Math.max(x, xs[index - 1] + DOT_GAP);
-    const previous = lastIndexOnSide(labels, index);
-    if (previous !== -1) {
-      const [, previousRight] = extent(labels[previous]);
-      x = Math.max(x, xs[previous] + previousRight + LABEL_GAP - left);
-    }
-    xs.push(x);
-    shift = x - linear(label.year);
-  });
-
-  const endX = Math.max(linear(endYear) + shift, xs[xs.length - 1] ?? 0);
-  const lastLabelRight =
-    xs.length > 0
-      ? xs[xs.length - 1] + extent(labels[labels.length - 1])[1]
-      : 0;
-  return {
-    xs,
-    endX,
-    naturalWidth: Math.max(endX + LABEL_INSET, lastLabelRight),
   };
 }
 
