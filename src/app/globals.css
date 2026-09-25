@@ -40,6 +40,7 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-tree-accent: var(--tree-accent);
+  --color-upload-progress: var(--upload-progress);
   --color-branch: var(--branch);
   --color-tree-card-ring: var(--tree-card-ring);
   --color-tree-canvas: var(--tree-canvas);
@@ -107,6 +108,11 @@
      so the three read as bark/leaves/warm-light rather than clashing. bg vs
      branch contrast ≈ 8.2:1. */
   --tree-accent: oklch(0.58 0.05 126);
+  /* Upload progress fill — the sage of the profile's lifeline, but as its
+     own token: upload panels often open in a dialog portaled outside
+     .photo-backdrop, where --tree-accent falls back to the tree's muddier
+     shade (user: "почему-то он не зеленый"). */
+  --upload-progress: oklch(0.58 0.05 126);
   /* The tree canvas's OWN background — distinct from the app-wide
      --background, per an exact hex the user handed over 2026-09-18
      (Canvas #F7EEE9 — refined once from an earlier #F9F3E9 pass, converted
@@ -211,6 +217,8 @@ body:has(.photo-backdrop) .app-header {
      background — see :root's own comment for why these stay separate from
      --primary and where the hue/chroma came from. */
   --tree-accent: oklch(0.72 0.04 126);
+  /* = .photo-backdrop's lifeline sage, everywhere — see :root. */
+  --upload-progress: oklch(0.755 0.049 124);
   /* Relit for dark's darker background — see :root's own comment on
      --tree-canvas for the exact reference hex (#F7EEE9) this is calibrated
      from; a warm dark surface distinct from --background, matching the

@@ -1,6 +1,7 @@
 "use client";
 
 import { DocumentDropzone } from "./document-dropzone";
+import { BatchUploadSummary } from "@/components/media/batch-upload-summary";
 import { DocumentUploadQueue } from "./document-upload-queue";
 import { useDocumentBatchUpload } from "./use-document-batch-upload";
 
@@ -24,6 +25,14 @@ export function DocumentUploadPanel({
     <div className="flex flex-col gap-3">
       <DocumentDropzone disabled={isUploading} onFiles={addFiles} />
       <DocumentUploadQueue documents={documents} onRemove={removeDocument} />
+      <BatchUploadSummary
+        items={documents.map((doc) => ({
+          sizeBytes: doc.file.size,
+          progress: doc.progress,
+          status: doc.status,
+        }))}
+        forms={["документ", "документа", "документов"]}
+      />
     </div>
   );
 }

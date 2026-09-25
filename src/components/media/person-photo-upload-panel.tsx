@@ -1,7 +1,8 @@
 "use client";
 
 import { PhotoDropzone } from "./photo-dropzone";
-import { PhotoUploadGrid } from "./photo-upload-grid";
+import { BatchUploadSummary } from "./batch-upload-summary";
+import { PhotoUploadGrid, toBatchItems } from "./photo-upload-grid";
 import { usePhotoBatchUpload } from "./use-photo-batch-upload";
 
 /**
@@ -34,6 +35,10 @@ export function PersonPhotoUploadPanel({
       <PhotoDropzone disabled={isUploading} onFiles={addFiles} />
 
       <PhotoUploadGrid photos={photos} onRemove={removePhoto} />
+      <BatchUploadSummary
+        items={toBatchItems(photos)}
+        forms={["фото", "фото", "фото"]}
+      />
     </div>
   );
 }

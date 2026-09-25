@@ -2,7 +2,9 @@
 
 import { CheckIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { QueuedPhotoPreview } from "./queued-photo-preview";
 import { UploadProgressBar } from "./upload-progress-bar";
+import type { BatchItem } from "./batch-upload-progress";
 
 export type QueuedPhoto = {
   id: string;
@@ -12,6 +14,15 @@ export type QueuedPhoto = {
   status: "queued" | "uploading" | "done" | "error";
   error?: string;
 };
+
+/** A queue in BatchUploadSummary's terms. */
+export function toBatchItems(photos: QueuedPhoto[]): BatchItem[] {
+  return photos.map((photo) => ({
+    sizeBytes: photo.file.size,
+    progress: photo.progress,
+    status: photo.status,
+  }));
+}
 
 /**
  * Grid of picked-but-not-fully-uploaded photos for PhotoUploadPanel's
@@ -36,11 +47,9 @@ export function PhotoUploadGrid({
           key={photo.id}
           className="group/tile relative aspect-square overflow-hidden rounded-md border border-border bg-muted"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element -- local blob: preview of a not-yet-uploaded File */}
-          <img
-            src={photo.previewUrl}
-            alt=""
-            className="size-full object-cover"
+          <QueuedPhotoPreview
+            previewUrl={photo.previewUrl}
+            fileName={photo.file.name}
           />
 
           {photo.status !== "done" && photo.status !== "error" && (

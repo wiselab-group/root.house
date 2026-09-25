@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AlbumMultiCombobox } from "./album-multi-combobox";
 import { PhotoDropzone } from "./photo-dropzone";
-import { PhotoUploadGrid } from "./photo-upload-grid";
+import { BatchUploadSummary } from "./batch-upload-summary";
+import { PhotoUploadGrid, toBatchItems } from "./photo-upload-grid";
 import { usePhotoBatchUpload } from "./use-photo-batch-upload";
 
 /**
@@ -24,6 +25,8 @@ import { usePhotoBatchUpload } from "./use-photo-batch-upload";
  * checkmarks) until the panel is closed, so a person can see everything
  * that made it in before dismissing.
  */
+const PHOTO_FORMS: [string, string, string] = ["фото", "фото", "фото"];
+
 export function PhotoUploadPanel({
   familyId,
   albums,
@@ -74,19 +77,16 @@ export function PhotoUploadPanel({
         </p>
       )}
 
-      <div className="flex items-center gap-2">
-        {photos.length > 0 && (
-          <span className="mr-auto text-sm text-muted-foreground">
-            {doneCount} из {photos.length} загружено
-          </span>
-        )}
+      <BatchUploadSummary items={toBatchItems(photos)} forms={PHOTO_FORMS} />
+
+      <div className="flex items-center justify-end gap-2">
         <Button
           type="button"
           variant="ghost"
           onClick={onCancel}
           disabled={isUploading}
         >
-          {doneCount > 0 && !hasPending ? "Готово" : "Отмена"}
+          {doneCount > 0 && !hasPending && !isUploading ? "Готово" : "Отмена"}
         </Button>
         {hasPending && (
           <Button
