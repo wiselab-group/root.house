@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useState } from "react";
-import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -14,6 +13,10 @@ import { Button } from "@/components/ui/button";
  * isn't needed since the no-op is harmless either way).
  */
 const CollapsibleFormContext = createContext<() => void>(() => {});
+
+/** Provides the close handler to a form rendered outside CollapsibleForm
+ *  whose trigger lives elsewhere (ProfileSectionWithAdd's heading button). */
+export const CollapsibleFormCloseProvider = CollapsibleFormContext.Provider;
 
 /** Reads the close handler for the CollapsibleForm this component is rendered inside, if any. */
 export function useCollapsibleFormClose() {
@@ -34,7 +37,6 @@ export function useCollapsibleFormClose() {
 export function CollapsibleForm({
   triggerLabel,
   renderTrigger,
-  triggerAppearance = "outline",
   children,
 }: {
   triggerLabel: string;
@@ -42,29 +44,12 @@ export function CollapsibleForm({
    *  Profile's full-width «Добавить родственника» tile. Receives the open
    *  handler; must render a real button (aria-expanded is on the caller). */
   renderTrigger?: (open: () => void) => React.ReactNode;
-  /** "primary" — a terracotta pill (the page's main add-action, e.g. the
-   *  Person Profile's «Добавить историю»). A plain string rather than a
-   *  renderTrigger so Server Components can pick it too. */
-  triggerAppearance?: "outline" | "primary";
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
 
   if (!open) {
     if (renderTrigger) return renderTrigger(() => setOpen(true));
-    if (triggerAppearance === "primary") {
-      return (
-        <button
-          type="button"
-          aria-expanded={false}
-          onClick={() => setOpen(true)}
-          className="inline-flex h-10 w-fit items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition-[background-color,transform] duration-200 ease-(--ease-reveal) hover:bg-primary/85 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.97]"
-        >
-          <PlusIcon className="size-4" aria-hidden="true" />
-          {triggerLabel}
-        </button>
-      );
-    }
     return (
       <Button
         type="button"

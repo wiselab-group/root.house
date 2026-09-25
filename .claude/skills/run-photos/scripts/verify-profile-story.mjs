@@ -118,6 +118,10 @@ async function main() {
     await shoot(page, "profile-desktop-full", true);
     await page.getByRole("tab", { name: /Истории/ }).click();
     await shoot(page, "profile-desktop-stories-tab", true);
+    await page.getByRole("button", { name: "Добавить историю" }).click();
+    await shoot(page, "profile-desktop-add-story-open", true);
+    await page.getByRole("button", { name: "Отмена" }).first().click();
+    await page.getByRole("button", { name: "Добавить историю" }).waitFor();
     await page.getByRole("tab", { name: /Линия жизни/ }).click();
     await shoot(page, "profile-desktop-lifeline-tab", true);
     await page.getByRole("button", { name: /^\d{4}: Рождение/ }).locator("b").click();
@@ -141,6 +145,12 @@ async function main() {
     await sql`insert into media_person (media_id, person_id) values (${pp.ele_media}, ${pp.alex})`;
     await page.goto(profile, { waitUntil: "networkidle" });
     await page.getByRole("tab", { name: /Фото/ }).click();
+    const dropzoneInput = page.locator("#photos input[type=file]");
+    console.log(`  dropzone hidden by default: ${!(await dropzoneInput.isVisible().catch(() => false)) && (await page.getByText("Перетащите").count()) === 0}`);
+    await shoot(page, "profile-desktop-photos-default", true);
+    await page.getByRole("button", { name: "Добавить фото" }).click();
+    await shoot(page, "profile-desktop-photos-add-open", true);
+    await page.getByRole("button", { name: "Закрыть" }).click();
     const tiles = page.getByRole("button", { name: "Действия с фото", exact: true });
     for (const i of [0, 1]) {
       await tiles.nth(i).hover();

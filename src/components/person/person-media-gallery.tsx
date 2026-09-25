@@ -1,6 +1,6 @@
 import { PersonPhotoUploadPanel } from "@/components/media/person-photo-upload-panel";
 import { PhotoGrid } from "@/components/media/photo-grid";
-import { ProfileSection } from "./profile-section";
+import { ProfileSectionWithAdd } from "./profile-section-with-add";
 import type { GalleryPhotoView } from "@/components/media/gallery-photo";
 
 /**
@@ -39,7 +39,17 @@ export function PersonMediaGallery({
   portraitMediaId: string | null;
 }) {
   return (
-    <ProfileSection title="Фотографии" count={photos.length}>
+    <ProfileSectionWithAdd
+      title="Фотографии"
+      count={photos.length}
+      addLabel="Добавить фото"
+      closeLabel="Закрыть"
+      form={
+        canContribute && (
+          <PersonPhotoUploadPanel familyId={familyId} personId={personId} />
+        )
+      }
+    >
       <div className="flex flex-col gap-4">
         {photos.length === 0 ? (
           <p className="text-sm text-muted-foreground">Фотографий пока нет.</p>
@@ -52,11 +62,7 @@ export function PersonMediaGallery({
             portrait={{ personId, mediaId: portraitMediaId }}
           />
         )}
-
-        {canContribute && (
-          <PersonPhotoUploadPanel familyId={familyId} personId={personId} />
-        )}
       </div>
-    </ProfileSection>
+    </ProfileSectionWithAdd>
   );
 }

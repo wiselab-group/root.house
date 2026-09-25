@@ -5,7 +5,7 @@ import {
 import { canDelete, type ActingMember } from "@/domain/family/permissions";
 import { DocumentList } from "./document-list";
 import { DocumentUploadPanel } from "./document-upload-panel";
-import { ProfileSection } from "./profile-section";
+import { ProfileSectionWithAdd } from "./profile-section-with-add";
 
 /**
  * A Person's documents (scans/PDFs — certificates, letters, ...) — server
@@ -33,7 +33,17 @@ export async function PersonDocuments({
   const documents = filterVisibleMedia(allDocuments, member);
 
   return (
-    <ProfileSection title="Документы" count={documents.length}>
+    <ProfileSectionWithAdd
+      title="Документы"
+      count={documents.length}
+      addLabel="Добавить документ"
+      closeLabel="Закрыть"
+      form={
+        canContribute && (
+          <DocumentUploadPanel familyId={familyId} personId={personId} />
+        )
+      }
+    >
       <div className="flex flex-col gap-4">
         {documents.length === 0 ? (
           <p className="text-sm text-muted-foreground">Документов пока нет.</p>
@@ -50,11 +60,7 @@ export async function PersonDocuments({
             }))}
           />
         )}
-
-        {canContribute && (
-          <DocumentUploadPanel familyId={familyId} personId={personId} />
-        )}
       </div>
-    </ProfileSection>
+    </ProfileSectionWithAdd>
   );
 }

@@ -5,11 +5,10 @@ import {
 import { listPlaces } from "@/domain/place/place.service";
 import { getPartnershipsOf } from "@/domain/relationship/relationship.repository";
 import { AddEventForm } from "@/components/forms/add-event-form";
-import { CollapsibleForm } from "@/components/forms/collapsible-form";
 import { TimelineListItem } from "./timeline-list-item";
 import { timelineRowTargetFor } from "./timeline-target";
 import { resolveOtherPersonNames, resolveEventEditData } from "./timeline-data";
-import { ProfileSection } from "./profile-section";
+import { ProfileSectionWithAdd } from "./profile-section-with-add";
 import { PersonLifeline } from "./person-lifeline";
 import { lifelineView } from "./lifeline-view";
 import type { ActingMember } from "@/domain/family/permissions";
@@ -103,7 +102,20 @@ export async function PersonTimeline({
     : timeline;
 
   return (
-    <ProfileSection title="Линия жизни" count={timeline.length}>
+    <ProfileSectionWithAdd
+      title="Линия жизни"
+      count={timeline.length}
+      addLabel="Добавить событие"
+      form={
+        canContribute && (
+          <AddEventForm
+            familyId={familyId}
+            personId={personId}
+            places={places}
+          />
+        )
+      }
+    >
       <div className="flex flex-col gap-4">
         {lifeline && <PersonLifeline {...lifeline} />}
         {timeline.length === 0 ? (
@@ -125,17 +137,7 @@ export async function PersonTimeline({
             </ol>
           )
         )}
-
-        {canContribute && (
-          <CollapsibleForm triggerLabel="Добавить событие">
-            <AddEventForm
-              familyId={familyId}
-              personId={personId}
-              places={places}
-            />
-          </CollapsibleForm>
-        )}
       </div>
-    </ProfileSection>
+    </ProfileSectionWithAdd>
   );
 }

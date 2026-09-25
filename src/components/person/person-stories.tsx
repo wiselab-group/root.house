@@ -3,9 +3,8 @@ import {
   filterVisibleStories,
 } from "@/domain/story/story.service";
 import { AddStoryForm } from "@/components/forms/add-story-form";
-import { CollapsibleForm } from "@/components/forms/collapsible-form";
 import { PersonStoriesList } from "./person-stories-list";
-import { ProfileSection } from "./profile-section";
+import { ProfileSectionWithAdd } from "./profile-section-with-add";
 import { canDelete, type ActingMember } from "@/domain/family/permissions";
 
 /**
@@ -33,7 +32,16 @@ export async function PersonStories({
   const stories = filterVisibleStories(allStories, member);
 
   return (
-    <ProfileSection title="Истории" count={stories.length}>
+    <ProfileSectionWithAdd
+      title="Истории"
+      count={stories.length}
+      addLabel="Добавить историю"
+      form={
+        canContribute && (
+          <AddStoryForm familyId={familyId} personId={personId} />
+        )
+      }
+    >
       <div className="flex flex-col gap-4">
         {stories.length === 0 ? (
           <p className="text-sm text-muted-foreground">Историй пока нет.</p>
@@ -51,16 +59,7 @@ export async function PersonStories({
             }))}
           />
         )}
-
-        {canContribute && (
-          <CollapsibleForm
-            triggerLabel="Добавить историю"
-            triggerAppearance="primary"
-          >
-            <AddStoryForm familyId={familyId} personId={personId} />
-          </CollapsibleForm>
-        )}
       </div>
-    </ProfileSection>
+    </ProfileSectionWithAdd>
   );
 }
