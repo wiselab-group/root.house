@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { ArrowRight, TreeDeciduous } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { LinkButton } from "@/components/ui/link-button";
+import { glassSurface } from "@/components/hero/glass";
 import { listFamiliesForUser } from "@/domain/family/family.service";
 import { personCountLabel } from "@/domain/shared/pluralize-ru";
 
@@ -17,66 +18,73 @@ export default async function FamiliesPage() {
     : [];
 
   return (
-    <main className="mx-auto flex max-w-3xl flex-col gap-12 px-6 py-12 sm:py-16">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-2">
-          <h1 className="font-heading text-3xl font-medium tracking-tight text-balance sm:text-4xl">
-            Ваши семьи
-          </h1>
-          <p className="max-w-prose text-muted-foreground">
-            Каждый архив хранит свою родословную, людей и историю отдельно.
-          </p>
+    // Same dark archive style as Family Home (user request) — see
+    // families/[slug]/page.tsx and .photo-backdrop in globals.css.
+    <main className="dark photo-backdrop min-h-svh">
+      <div className="mx-auto flex max-w-3xl flex-col gap-12 px-4 pt-14 pb-20 sm:px-8 sm:pt-20">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-4">
+            <h1 className="font-heading text-5xl leading-[1.05] font-medium tracking-tight text-balance sm:text-6xl">
+              Ваши семьи
+            </h1>
+            <p className="max-w-prose text-lg text-foreground/70">
+              Каждый архив хранит свою родословную, людей и историю отдельно.
+            </p>
+          </div>
+          <LinkButton
+            href="/families/new"
+            className="w-full shrink-0 sm:w-auto"
+          >
+            Создать семью
+          </LinkButton>
         </div>
-        <LinkButton href="/families/new" className="w-full shrink-0 sm:w-auto">
-          Создать семью
-        </LinkButton>
-      </div>
 
-      {families.length === 0 ? (
-        <EmptyFamiliesState />
-      ) : (
-        <ul className="flex flex-col divide-y divide-border border-y border-border">
-          {families.map((family, index) => (
-            <li
-              key={family.id}
-              className="animate-content-enter"
-              style={{ animationDelay: `${Math.min(index, 6) * 60}ms` }}
-            >
-              <Link
-                href={`/families/${family.slug}`}
-                className="group/row flex items-center justify-between gap-6 py-6 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        {families.length === 0 ? (
+          <EmptyFamiliesState />
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {families.map((family, index) => (
+              <li
+                key={family.id}
+                className="animate-content-enter"
+                style={{ animationDelay: `${Math.min(index, 6) * 60}ms` }}
               >
-                <div className="flex min-w-0 flex-col gap-1">
-                  <span className="truncate font-heading text-xl font-medium transition-colors group-hover/row:text-primary">
-                    {family.name}
-                  </span>
-                  {family.description ? (
-                    <span className="truncate text-sm text-muted-foreground">
-                      {family.description}
+                <Link
+                  href={`/families/${family.slug}`}
+                  className={`${glassSurface} group/row flex cursor-pointer items-center justify-between gap-6 rounded-2xl px-6 py-5 transition-[background-color,transform] duration-200 ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
+                >
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <span className="truncate font-heading text-xl font-medium transition-colors group-hover/row:text-primary">
+                      {family.name}
                     </span>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">
-                      {personCountLabel(family.personCount)} в архиве
-                    </span>
-                  )}
-                </div>
-                <div className="flex shrink-0 items-center gap-4">
-                  {family.description && (
-                    <span className="hidden text-sm text-muted-foreground sm:inline">
-                      {personCountLabel(family.personCount)}
-                    </span>
-                  )}
-                  <ArrowRight
-                    className="size-5 text-muted-foreground/60 transition-all duration-200 ease-(--ease-tree-focus) group-hover/row:translate-x-1 group-hover/row:text-primary"
-                    strokeWidth={1.75}
-                    aria-hidden="true"
-                  />
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+                    {family.description ? (
+                      <span className="truncate text-sm text-muted-foreground">
+                        {family.description}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        {personCountLabel(family.personCount)} в архиве
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-4">
+                    {family.description && (
+                      <span className="hidden text-sm text-muted-foreground sm:inline">
+                        {personCountLabel(family.personCount)}
+                      </span>
+                    )}
+                    <ArrowRight
+                      className="size-5 text-muted-foreground/60 transition-all duration-200 ease-(--ease-tree-focus) group-hover/row:translate-x-1 group-hover/row:text-primary"
+                      strokeWidth={1.75}
+                      aria-hidden="true"
+                    />
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </main>
   );
 }

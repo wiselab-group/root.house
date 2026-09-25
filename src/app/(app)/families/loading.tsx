@@ -1,36 +1,29 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/** Matches families/page.tsx's container + heading + family-row list shape.
- *  Row dividers use divide-muted/border-muted (not the usual border-border)
- *  to match the Skeleton blocks' own bg-muted color (2026-09-19, per direct
- *  user request) — while loading, every placeholder shape (blocks and the
- *  lines between them) should read as one consistent tone, not two
- *  different grays. */
+/** Matches families/page.tsx's dark container + heading + family-card list
+ *  shape, on the same dark background so loading doesn't flash light. Every
+ *  placeholder is one Skeleton tone (no separate divider lines — 2026-09-19
+ *  user request: one consistent tone while loading). */
 export default function FamiliesLoading() {
   return (
-    <main className="mx-auto flex max-w-3xl flex-col gap-12 px-6 py-12 sm:py-16">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-9 w-36" />
-          <Skeleton className="h-5 w-64" />
+    <main className="dark photo-backdrop min-h-svh">
+      <div className="mx-auto flex max-w-3xl flex-col gap-12 px-4 pt-14 pb-20 sm:px-8 sm:pt-20">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-4">
+            <Skeleton className="h-14 w-72" />
+            <Skeleton className="h-6 w-80 max-w-full" />
+          </div>
+          <Skeleton className="h-10 w-full sm:w-40" />
         </div>
-        <Skeleton className="h-10 w-full sm:w-40" />
-      </div>
 
-      <ul className="flex flex-col divide-y divide-muted border-y border-muted">
-        {Array.from({ length: 3 }).map((_, index) => (
-          <li
-            key={index}
-            className="flex items-center justify-between gap-6 py-6"
-          >
-            <div className="flex min-w-0 flex-col gap-2">
-              <Skeleton className="h-6 w-40" />
-              <Skeleton className="h-4 w-28" />
-            </div>
-            <Skeleton className="size-5 shrink-0 rounded-full" />
-          </li>
-        ))}
-      </ul>
+        <ul className="flex flex-col gap-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <li key={index}>
+              <Skeleton className="h-[86px] w-full rounded-2xl" />
+            </li>
+          ))}
+        </ul>
+      </div>
     </main>
   );
 }

@@ -171,6 +171,11 @@ async function main() {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`${BASE_URL}/families/${familySlug}`, { waitUntil: "networkidle" });
     await shoot(page, "family-home-phone-full", true);
+    await page.goto(`${BASE_URL}/families`, { waitUntil: "networkidle" });
+    await shoot(page, "families-phone-full", true);
+    await page.setViewportSize({ width: 1360, height: 900 });
+    await page.goto(`${BASE_URL}/families`, { waitUntil: "networkidle" });
+    await shoot(page, "families-desktop");
 
     console.log("5/5 story");
     const story = `${BASE_URL}/families/${familySlug}/stories/${storySlug}`;
