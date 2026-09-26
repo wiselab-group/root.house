@@ -137,7 +137,7 @@ export function PhotoLightbox({
             </DialogPrimitive.Close>
           </div>
 
-          <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 pt-1 pb-4">
+          <div className="relative flex flex-1 items-center justify-center overflow-hidden pt-1 pb-4">
             <LightboxCarouselTrack
               ref={trackRef}
               photos={photos}

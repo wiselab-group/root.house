@@ -26,7 +26,7 @@ export type LightboxCarouselTrackHandle = {
  * piece owns the whole drag/slide/settle lifecycle.
  *
  * The prev/next chevron buttons live in PhotoLightbox, not here — they must
- * be positioned against the full-screen lightbox, not this track's own
+ * be positioned against the full-screen lightbox, not inside a slide's own
  * `max-w-4xl` box (real bug: chevrons rendered inside the track drifted off
  * the screen edge on narrower photos), and they must sit outside the
  * `pointerHandlers`-bearing div below (real bug: a button nested inside it
@@ -109,7 +109,7 @@ export function LightboxCarouselTrack({
 
   if (reducedMotion) {
     return (
-      <div className="relative h-full w-full max-w-4xl">
+      <div className="relative h-full w-full max-w-4xl px-4">
         <LightboxSlide
           photo={current}
           familyId={familyId}
@@ -126,14 +126,13 @@ export function LightboxCarouselTrack({
   const canDrag = hasPrev || hasNext;
 
   return (
-    // overflow-x-clip: the neighbors sit just past this box's edges, and on
-    // a wide screen they showed beside the current photo at rest (user
-    // request: show only the photo being viewed). Clipped here, a swipe
-    // still slides the neighbor in from the box edge. `clip`, not
-    // `hidden`, so the box doesn't become a scroll container that would
-    // also cut tag chips off vertically.
+    // Full-width track, each slide the whole screen wide with the photo
+    // itself capped at max-w-4xl inside it (see TrackSlot): at rest the
+    // neighbors lie entirely past the screen edges — nothing shows beside
+    // the current photo — and a swipe carries the photo all the way off the
+    // screen instead of cutting it at a box edge (user request, both).
     <div
-      className="relative h-full w-full max-w-4xl touch-pan-y overflow-x-clip select-none"
+      className="relative h-full w-full touch-pan-y select-none"
       style={{
         cursor: !canDrag ? undefined : isDragging ? "grabbing" : "grab",
       }}
@@ -196,17 +195,21 @@ function TrackSlot({
   highlightedPersonId?: string | null;
 }) {
   return (
-    <div className="relative h-full w-full shrink-0">
-      {photo && (
-        <LightboxSlide
-          photo={photo}
-          familyId={familyId}
-          familySlug={familySlug}
-          taggingMode={taggingMode}
-          canTag={canTag}
-          highlightedPersonId={highlightedPersonId}
-        />
-      )}
+    // The side padding lives in each slide, not on the lightbox around the
+    // track — there it left a 16px strip where the neighbor's edge peeked in.
+    <div className="flex h-full w-full shrink-0 justify-center px-4">
+      <div className="relative h-full w-full max-w-4xl">
+        {photo && (
+          <LightboxSlide
+            photo={photo}
+            familyId={familyId}
+            familySlug={familySlug}
+            taggingMode={taggingMode}
+            canTag={canTag}
+            highlightedPersonId={highlightedPersonId}
+          />
+        )}
+      </div>
     </div>
   );
 }
