@@ -31,3 +31,17 @@ export type CreatePlaceInput = z.infer<typeof createPlaceSchema>;
 
 export const updatePlaceSchema = createPlaceSchema;
 export type UpdatePlaceInput = z.infer<typeof updatePlaceSchema>;
+
+/**
+ * A not-yet-saved Place from a form's place field (PlaceField), posted as
+ * JSON in a hidden `<field>Draft` input — see domain/place/place-draft.ts.
+ */
+export const placeDraftSchema = z
+  .object({
+    name: z.string().trim().min(1).max(200),
+    region: z.string().trim().max(120).nullable(),
+    country: z.string().trim().max(120).nullable(),
+    latitude: z.number().min(-90).max(90).nullable(),
+    longitude: z.number().min(-180).max(180).nullable(),
+  })
+  .refine((draft) => (draft.latitude === null) === (draft.longitude === null));

@@ -21,7 +21,15 @@ import {
   removePerson,
 } from "@/domain/person/person.service";
 import { partialDateFromFormData } from "@/domain/shared/partial-date";
+import { resolvePlaceFields, revalidatePlacePages } from "@/lib/place-choice";
 import type { PartialDate } from "@/domain/shared/partial-date";
+
+/** PersonForm's PlaceFields — each may carry a new place to create on save. */
+const PLACE_FIELDS = [
+  "birthPlaceId",
+  "deathPlaceId",
+  "residencePlaceId",
+] as const;
 
 export interface PersonFormState {
   error?: string;
@@ -61,9 +69,6 @@ export async function createPersonAction(
     description: formData.get("description"),
     religion: formData.get("religion"),
     nationality: formData.get("nationality"),
-    birthPlaceId: formData.get("birthPlaceId"),
-    deathPlaceId: formData.get("deathPlaceId"),
-    residencePlaceId: formData.get("residencePlaceId"),
     deathCause: formData.get("deathCause"),
     privacyLevel: formData.get("privacyLevel") || undefined,
   });
@@ -76,6 +81,7 @@ export async function createPersonAction(
     return { fieldErrors };
   }
 
+  const places = await resolvePlaceFields(familyId, formData, PLACE_FIELDS);
   const person = await addPerson(familyId, session.user.id, {
     firstName: parsed.data.firstName || undefined,
     lastName: parsed.data.lastName || undefined,
@@ -88,15 +94,16 @@ export async function createPersonAction(
     nationality: parsed.data.nationality || undefined,
     birthDate: partialDateFromFormData(formData, "birth"),
     deathDate: partialDateFromFormData(formData, "death"),
-    birthPlaceId: parsed.data.birthPlaceId || undefined,
-    deathPlaceId: parsed.data.deathPlaceId || undefined,
-    residencePlaceId: parsed.data.residencePlaceId || undefined,
+    birthPlaceId: places.ids.birthPlaceId ?? undefined,
+    deathPlaceId: places.ids.deathPlaceId ?? undefined,
+    residencePlaceId: places.ids.residencePlaceId ?? undefined,
     deathCause: parsed.data.deathCause || undefined,
     privacyLevel: parsed.data.privacyLevel,
   });
 
   const familySlug = await getFamilySlugById(familyId);
   revalidatePath(`/families/${familySlug}/people`);
+  if (places.createdAny) revalidatePlacePages(familySlug);
   return {
     created: {
       personId: person.id,
@@ -207,9 +214,6 @@ export async function updatePersonAction(
     description: formData.get("description"),
     religion: formData.get("religion"),
     nationality: formData.get("nationality"),
-    birthPlaceId: formData.get("birthPlaceId"),
-    deathPlaceId: formData.get("deathPlaceId"),
-    residencePlaceId: formData.get("residencePlaceId"),
     deathCause: formData.get("deathCause"),
     privacyLevel: formData.get("privacyLevel") || undefined,
   });
@@ -222,6 +226,7 @@ export async function updatePersonAction(
     return { fieldErrors };
   }
 
+  const places = await resolvePlaceFields(familyId, formData, PLACE_FIELDS);
   const updated = await editPerson(personId, familyId, session.user.id, {
     firstName: parsed.data.firstName || null,
     lastName: parsed.data.lastName || null,
@@ -234,9 +239,9 @@ export async function updatePersonAction(
     nationality: parsed.data.nationality || null,
     birthDate: partialDateFromFormData(formData, "birth") ?? null,
     deathDate: partialDateFromFormData(formData, "death") ?? null,
-    birthPlaceId: parsed.data.birthPlaceId || null,
-    deathPlaceId: parsed.data.deathPlaceId || null,
-    residencePlaceId: parsed.data.residencePlaceId || null,
+    birthPlaceId: places.ids.birthPlaceId,
+    deathPlaceId: places.ids.deathPlaceId,
+    residencePlaceId: places.ids.residencePlaceId,
     deathCause: parsed.data.deathCause || null,
     privacyLevel: parsed.data.privacyLevel,
   });
@@ -248,6 +253,7 @@ export async function updatePersonAction(
   const familySlug = await getFamilySlugById(familyId);
   const personSlug = await getPersonSlugById(personId, familyId);
   revalidatePath(`/families/${familySlug}/people/${personSlug}`);
+  if (places.createdAny) revalidatePlacePages(familySlug);
   redirect(`/families/${familySlug}/people/${personSlug}`);
 }
 

@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { PersonDateFields } from "./person-date-fields";
-import { PlaceSelect } from "./place-select";
+import { PlaceField } from "./place-field";
 import { PrivacyLevelSelect } from "./privacy-level-select";
 import { MANUAL_EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 import type { PlaceRecord } from "@/domain/place/place.service";
@@ -100,7 +100,7 @@ export function AddEventForm({
         <PersonDateFields prefix="endDate" legend="Дата окончания" />
       )}
 
-      <PlaceSelect id="placeId" name="placeId" label="Место" places={places} />
+      <PlaceField name="placeId" label="Место" places={places} />
       <PrivacyLevelSelect />
 
       <div className="flex flex-col gap-1">

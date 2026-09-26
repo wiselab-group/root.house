@@ -25,7 +25,8 @@ export const createEventSchema = z.object({
   type: eventTypeSchema,
   title: z.string().trim().min(1, "Введите название события").max(200),
   description: z.string().trim().max(5000).optional().or(z.literal("")),
-  placeId: z.string().uuid().optional().or(z.literal("")),
+  // placeId is not here: PlaceField may post a new place instead of an id —
+  // see lib/place-choice.ts::resolvePlaceFields.
   privacyLevel: privacyLevelSchema.default("family"),
 });
 

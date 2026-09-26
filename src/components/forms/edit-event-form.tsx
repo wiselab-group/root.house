@@ -12,7 +12,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { Textarea } from "@/components/ui/textarea";
 import { EventTypeTitleFields } from "./event-type-title-fields";
 import { EventDateRangeFields } from "./event-date-range-fields";
-import { PlaceSelect } from "./place-select";
+import { PlaceField } from "./place-field";
 import { PrivacyLevelSelect } from "./privacy-level-select";
 import {
   EventParticipantsField,
@@ -96,8 +96,7 @@ export function EditEventForm({
         onShowRangeChange={setShowRange}
       />
 
-      <PlaceSelect
-        id="placeId"
+      <PlaceField
         name="placeId"
         label="Место"
         places={places}

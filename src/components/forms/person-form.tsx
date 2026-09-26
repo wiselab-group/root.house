@@ -10,7 +10,7 @@ import { PersonNameFields } from "./person-name-fields";
 import { PersonDateFields } from "./person-date-fields";
 import { PersonGenderLivingFields } from "./person-gender-living-fields";
 import { PersonMiscFields } from "./person-misc-fields";
-import { PlaceSelect } from "./place-select";
+import { PlaceField } from "./place-field";
 import { PrivacyLevelSelect } from "./privacy-level-select";
 import type { PersonFormState } from "@/actions/person.actions";
 import type { PersonRecord } from "@/domain/person/person.service";
@@ -76,8 +76,7 @@ export function PersonForm({
         legend="Дата рождения"
         date={person?.birthDate}
       />
-      <PlaceSelect
-        id="birthPlaceId"
+      <PlaceField
         name="birthPlaceId"
         label="Место рождения"
         places={places}
@@ -86,8 +85,7 @@ export function PersonForm({
       {/* Unmounted for the deceased, mirroring the death fields below:
           submitting without it clears a stale residence on save. */}
       {isLiving && (
-        <PlaceSelect
-          id="residencePlaceId"
+        <PlaceField
           name="residencePlaceId"
           label="Где живёт сейчас"
           places={places}
@@ -105,8 +103,7 @@ export function PersonForm({
             legend="Дата смерти"
             date={person?.deathDate}
           />
-          <PlaceSelect
-            id="deathPlaceId"
+          <PlaceField
             name="deathPlaceId"
             label="Место смерти"
             places={places}

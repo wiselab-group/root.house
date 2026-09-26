@@ -16,6 +16,7 @@ import {
   removeEvent,
 } from "@/domain/event/event.service";
 import { partialDateFromFormData } from "@/domain/shared/partial-date";
+import { resolvePlaceFields, revalidatePlacePages } from "@/lib/place-choice";
 
 export interface EventFormState {
   error?: string;
@@ -50,7 +51,6 @@ export async function createEventAction(
     type: formData.get("type"),
     title: formData.get("title"),
     description: formData.get("description"),
-    placeId: formData.get("placeId"),
     privacyLevel: formData.get("privacyLevel") || undefined,
   });
 
@@ -62,6 +62,7 @@ export async function createEventAction(
     return { fieldErrors };
   }
 
+  const places = await resolvePlaceFields(familyId, formData, ["placeId"]);
   await addEvent({
     familyId,
     createdBy: session.user.id,
@@ -70,7 +71,7 @@ export async function createEventAction(
     description: parsed.data.description || undefined,
     date: partialDateFromFormData(formData, "date"),
     endDate: partialDateFromFormData(formData, "endDate"),
-    placeId: parsed.data.placeId || undefined,
+    placeId: places.ids.placeId ?? undefined,
     privacyLevel: parsed.data.privacyLevel,
     participants: [{ personId, role: "subject" }],
   });
@@ -78,6 +79,7 @@ export async function createEventAction(
   const familySlug = await getFamilySlugById(familyId);
   const personSlug = await getPersonSlugById(personId, familyId);
   revalidatePath(`/families/${familySlug}/people/${personSlug}`);
+  if (places.createdAny) revalidatePlacePages(familySlug);
   return {};
 }
 
@@ -163,7 +165,6 @@ export async function updateEventAction(
     type: formData.get("type"),
     title: formData.get("title"),
     description: formData.get("description"),
-    placeId: formData.get("placeId"),
     privacyLevel: formData.get("privacyLevel") || undefined,
   });
 
@@ -182,13 +183,14 @@ export async function updateEventAction(
     role: String(participantRoles[i] ?? "participant"),
   }));
 
+  const places = await resolvePlaceFields(familyId, formData, ["placeId"]);
   const updated = await editEvent(eventId, familyId, session.user.id, {
     type: parsed.data.type,
     title: parsed.data.title,
     description: parsed.data.description || null,
     date: partialDateFromFormData(formData, "date") ?? null,
     endDate: partialDateFromFormData(formData, "endDate") ?? null,
-    placeId: parsed.data.placeId || null,
+    placeId: places.ids.placeId,
     privacyLevel: parsed.data.privacyLevel,
     participants,
   });
@@ -196,6 +198,7 @@ export async function updateEventAction(
   if (!updated) return { error: "Событие не найдено." };
 
   const familySlug = await getFamilySlugById(familyId);
+  if (places.createdAny) revalidatePlacePages(familySlug);
   if (redirectTo === null) {
     // subject is this event's own primary participant — the Person
     // profile page a Хронология dialog was opened from.

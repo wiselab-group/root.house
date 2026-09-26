@@ -68,13 +68,12 @@ export const createPersonSchema = z.object({
   nationality: z.string().trim().max(120).optional().or(z.literal("")),
   birthDate: partialDateInputSchema,
   deathDate: partialDateInputSchema,
+  // Place fields are not here: PlaceField may post a new place instead of
+  // an id — see lib/place-choice.ts::resolvePlaceFields.
   // .nullable() alongside .optional(): formData.get() returns null (not
   // undefined) for a field that isn't in the FormData at all — the case
   // whenever isLiving is checked and PersonForm doesn't render the death
-  // fields, so deathPlaceId/deathCause is simply absent from what's submitted.
-  birthPlaceId: z.string().uuid().optional().nullable().or(z.literal("")),
-  deathPlaceId: z.string().uuid().optional().nullable().or(z.literal("")),
-  residencePlaceId: z.string().uuid().optional().nullable().or(z.literal("")),
+  // fields, so deathCause is simply absent from what's submitted.
   deathCause: z
     .string()
     .trim()

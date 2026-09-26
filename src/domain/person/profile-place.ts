@@ -40,7 +40,8 @@ export function profilePlace({
       ? { kind: "home", label: residencePlaceName }
       : { kind: "journey", from: birthPlaceName, to: residencePlaceName };
   }
-  if (residencePlaceName) return { kind: "residence", label: residencePlaceName };
+  if (residencePlaceName)
+    return { kind: "residence", label: residencePlaceName };
   if (birthPlaceName) return { kind: "birth", label: birthPlaceName };
   return null;
 }
