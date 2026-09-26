@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRightIcon } from "lucide-react";
 import { getFamilyOf } from "@/domain/relationship/relationship.service";
 import { listPeople } from "@/domain/person/person.service";
 import {
@@ -97,11 +98,18 @@ export async function PersonFamilyPanel({
       title="Семья"
       className="min-w-0 scroll-mt-24"
       action={
+        // A «go somewhere» link, styled exactly like Family Home's «Весь
+        // архив» / «Ещё» (user request 2026-09-26) — terracotta stays for
+        // «create something» actions like «＋ Добавить».
         <Link
           href={`/families/${familySlug}/tree?focus=${personId}`}
-          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="group flex shrink-0 items-center gap-1 rounded-sm text-sm text-foreground/60 transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
-          Открыть в дереве →
+          Открыть в дереве
+          <ArrowRightIcon
+            className="size-3.5 transition-transform group-hover:translate-x-0.5"
+            aria-hidden="true"
+          />
         </Link>
       }
     >
