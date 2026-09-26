@@ -534,31 +534,127 @@ body:has(.photo-backdrop) .app-header {
 }
 
 @layer utilities {
-  /* Portrait dissolving into the backdrop: faded on the left (where the
-     name sits) and at the bottom, so there is never a hard photo edge. On
-     phones the photo spans the full width and only fades at the bottom. */
-  /* Also fades the top edge: the dark header sits over the page, so
-     the photo's top would otherwise end in a hard line right under it. */
+  /* The portrait dissolving into the page — only toward the name (left)
+     and the content below (bottom); on phones, only the bottom. The photo
+     runs flush to the right edge and up to the header with no fade there
+     (user decision 2026-09-26): fading all four sides turned a bright photo
+     into a glowing rectangle, however soft the edges. The fades are eased
+     (many stops — a two-stop ramp shows a band where it meets full
+     opacity), and the luminance fades with them: ::before multiplies the
+     highlights down into the page's warm print tone (a white wall becomes
+     sepia, not screen white), and ::after darkens the same two edges
+     toward --background a little ahead of the alpha, so a bright photo has
+     already become the page by the time it disappears instead of leaving
+     grey haze. Both sit inside the mask. */
   .hero-photo-mask {
-    mask-image:
-      linear-gradient(0deg, transparent 0, #000 42%),
-      linear-gradient(90deg, transparent 0, #000 100%),
-      linear-gradient(180deg, transparent 0, #000 12%);
-    mask-composite: intersect;
+    isolation: isolate;
+    mask-image: linear-gradient(
+      0deg,
+      transparent 0%,
+      rgb(0 0 0 / 0.04) 5.4%,
+      rgb(0 0 0 / 0.14) 11.2%,
+      rgb(0 0 0 / 0.3) 17.1%,
+      rgb(0 0 0 / 0.5) 22.5%,
+      rgb(0 0 0 / 0.7) 27.9%,
+      rgb(0 0 0 / 0.86) 33.8%,
+      rgb(0 0 0 / 0.96) 39.6%,
+      #000 45%
+    );
+  }
+  .hero-photo-mask::before,
+  .hero-photo-mask::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .hero-photo-mask::before {
+    background: oklch(0.8 0.045 62);
+    mix-blend-mode: multiply;
+  }
+  .hero-photo-mask::after {
+    background: linear-gradient(
+      0deg,
+      color-mix(in oklch, var(--background) 90%, transparent) 0%,
+      color-mix(in oklch, var(--background) 86%, transparent) 6%,
+      color-mix(in oklch, var(--background) 77%, transparent) 12.5%,
+      color-mix(in oklch, var(--background) 63%, transparent) 19%,
+      color-mix(in oklch, var(--background) 45%, transparent) 25%,
+      color-mix(in oklch, var(--background) 27%, transparent) 31%,
+      color-mix(in oklch, var(--background) 13%, transparent) 37.5%,
+      color-mix(in oklch, var(--background) 4%, transparent) 44%,
+      transparent 50%
+    );
   }
   @media (min-width: 640px) {
     .hero-photo-mask {
       mask-image:
         linear-gradient(
           90deg,
-          transparent 0,
-          #000 38%,
-          #000 88%,
-          transparent 100%
+          transparent 0%,
+          rgb(0 0 0 / 0.04) 5.4%,
+          rgb(0 0 0 / 0.14) 11.2%,
+          rgb(0 0 0 / 0.3) 17.1%,
+          rgb(0 0 0 / 0.5) 22.5%,
+          rgb(0 0 0 / 0.7) 27.9%,
+          rgb(0 0 0 / 0.86) 33.8%,
+          rgb(0 0 0 / 0.96) 39.6%,
+          #000 45%
         ),
-        linear-gradient(0deg, transparent 0, #000 34%),
-        linear-gradient(180deg, transparent 0, #000 12%);
+        linear-gradient(
+          0deg,
+          transparent 0%,
+          rgb(0 0 0 / 0.04) 4.1%,
+          rgb(0 0 0 / 0.14) 8.5%,
+          rgb(0 0 0 / 0.3) 12.9%,
+          rgb(0 0 0 / 0.5) 17%,
+          rgb(0 0 0 / 0.7) 21.1%,
+          rgb(0 0 0 / 0.86) 25.5%,
+          rgb(0 0 0 / 0.96) 29.9%,
+          #000 34%
+        );
+      mask-composite: intersect;
     }
+    .hero-photo-mask::after {
+      background:
+        linear-gradient(
+          90deg,
+          color-mix(in oklch, var(--background) 90%, transparent) 0%,
+          color-mix(in oklch, var(--background) 86%, transparent) 6.2%,
+          color-mix(in oklch, var(--background) 77%, transparent) 13%,
+          color-mix(in oklch, var(--background) 63%, transparent) 19.8%,
+          color-mix(in oklch, var(--background) 45%, transparent) 26%,
+          color-mix(in oklch, var(--background) 27%, transparent) 32.2%,
+          color-mix(in oklch, var(--background) 13%, transparent) 39%,
+          color-mix(in oklch, var(--background) 4%, transparent) 45.8%,
+          transparent 52%
+        ),
+        linear-gradient(
+          0deg,
+          color-mix(in oklch, var(--background) 90%, transparent) 0%,
+          color-mix(in oklch, var(--background) 86%, transparent) 4.8%,
+          color-mix(in oklch, var(--background) 77%, transparent) 10%,
+          color-mix(in oklch, var(--background) 63%, transparent) 15.2%,
+          color-mix(in oklch, var(--background) 45%, transparent) 20%,
+          color-mix(in oklch, var(--background) 27%, transparent) 24.8%,
+          color-mix(in oklch, var(--background) 13%, transparent) 30%,
+          color-mix(in oklch, var(--background) 4%, transparent) 35.2%,
+          transparent 40%
+        );
+    }
+  }
+
+  /* Warm ambient light behind the portrait (from the profile mock the user
+     pointed to): the photo's fading edges land on a faintly lit warm ground
+     instead of flat near-black, so even a bright photo's edges have
+     something close in tone to dissolve into. */
+  .hero-glow {
+    background: radial-gradient(
+      60% 70% at 72% 32%,
+      oklch(0.62 0.07 60 / 22%),
+      transparent 70%
+    );
   }
 
   /* Legibility scrim over a full-bleed story photo (the carousel's

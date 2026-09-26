@@ -58,7 +58,7 @@ export function StoryCarousel({ slides }: { slides: CarouselSlide[] }) {
               className={
                 slide.fit === "wide"
                   ? "absolute inset-0"
-                  : "hero-photo-mask absolute inset-y-0 right-0 w-full sm:right-[5%] sm:w-1/2"
+                  : "hero-photo-mask absolute inset-y-0 right-0 w-full sm:w-[55%]"
               }
             >
               <ArchiveImage
@@ -68,7 +68,7 @@ export function StoryCarousel({ slides }: { slides: CarouselSlide[] }) {
                 sizes={
                   slide.fit === "wide"
                     ? "100vw"
-                    : "(min-width: 640px) 50vw, 100vw"
+                    : "(min-width: 640px) 55vw, 100vw"
                 }
                 className={`object-cover transition-transform duration-[8s] ease-(--ease-reveal) motion-reduce:transition-none ${
                   slide.fit === "wide" ? "object-[50%_40%]" : "object-[50%_20%]"

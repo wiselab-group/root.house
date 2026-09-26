@@ -19,8 +19,10 @@ import { personHeroMeta } from "./person-hero-meta";
 /**
  * The Person Profile's hero, in the dark "photo dissolves into the page"
  * style the user picked from two reference screenshots (2026-09-24): the
- * portrait sits on the right and fades out on its edges (.hero-photo-mask)
- * into the dark archive page background (.photo-backdrop, set up by
+ * portrait sits flush right and fades out only toward the name and the
+ * content below (.hero-photo-mask — no top/right fade, user decision
+ * 2026-09-26), over a faint warm glow (.hero-glow), into the dark archive
+ * page background (.photo-backdrop, set up by
  * page.tsx — one fixed tone, same as Family Home) — never a hard-edged
  * banner.
  *
@@ -57,13 +59,17 @@ export function PersonProfileHero({
 
   return (
     <header className="relative isolate h-[clamp(440px,48vw,620px)] overflow-hidden">
+      <div
+        aria-hidden="true"
+        className="hero-glow pointer-events-none absolute inset-0"
+      />
       {avatarMedia ? (
-        <div className="hero-photo-mask absolute inset-y-0 right-0 w-full sm:right-[4%] sm:w-[54%]">
+        <div className="hero-photo-mask absolute inset-y-0 right-0 w-full sm:w-[58%]">
           <ArchiveImage
             src={mediaUrl(avatarMedia.id, familyId, "display")}
             alt=""
             fill
-            sizes="(min-width: 640px) 54vw, 100vw"
+            sizes="(min-width: 640px) 58vw, 100vw"
             className="object-cover object-[50%_20%]"
             priority
             fade={false}
