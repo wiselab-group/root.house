@@ -9,56 +9,65 @@ export interface LifelineScaleLabel {
 }
 
 export interface LifelineScale {
-  /** The axis length in px the labels need — the track's minimum width. */
-  width: number;
-  /** Px per year — one scale for the whole axis. */
-  pxPerYear: number;
-  /** Each label's dot, in percent of `width`, in input order. */
-  positions: number[];
-  /** Any year inside the span, in percent — for the decade ticks. */
-  positionOf: (year: number) => number;
+  /** The narrowest track (px) on which no two labels touch. Any wider
+   *  track works too — the scale only gets roomier — so the track fills
+   *  its container and scrolls sideways only below this width. */
+  minWidth: number;
+  /** Each label's dot as a fraction (0–1) of the axis span, in input order. */
+  fractions: number[];
+  /** Any year inside the span, as a fraction — for the decade ticks. */
+  fractionOf: (year: number) => number;
 }
 
 /** How far the label box reaches past its dot for start/end-aligned labels
- *  (its own px-1.5 padding, pulled back by -ml-1.5/-mr-1.5). */
-const LABEL_INSET = 6;
-/** Two neighbouring dots (opposite sides) stay at least a tap apart. */
-const DOT_GAP = 22;
+ *  (its own px-1.5 padding, pulled back by -ml-1.5/-mr-1.5) — and so how
+ *  far the end dots sit in from the track edges. */
+export const LIFELINE_INSET = 6;
+/** Two neighbouring dots (opposite sides) never touch — an 11px dot plus
+ *  air. Their labels sit on opposite sides of the axis, and the label is
+ *  the tap target, so the dots themselves can sit close. */
+const DOT_GAP = 14;
 /** Air between two labels on the same side of the axis. */
 const LABEL_GAP = 10;
+/** The decade ticks («1950 1960») stay readable apart — ~28px of text. */
+const MIN_PX_PER_DECADE = 40;
 
 /**
  * Picks the «Линия жизни» scale: one px-per-year for the whole axis, so a
  * decade is the same length everywhere (explicit user request — an earlier
  * version stretched only the busy years and squeezed the empty ones, which
- * made the decade ticks uneven). The scale is the base one (`minWidth` px
- * over the whole span) unless some pair of labels on the same side would
- * touch — nine daughters born three years apart on a 95-year life — then
- * it's the smallest scale that parts every such pair, and the track grows
- * wider than `minWidth` and scrolls sideways.
+ * made the decade ticks uneven).
+ *
+ * Returns the smallest scale at which no two same-side labels touch, no
+ * dots overlap and no label hangs past the track — as a minimum width —
+ * and every position as a fraction of the span. The track then simply
+ * fills its container (user request: a short life with few events fits
+ * without scrolling) and only scrolls sideways when the container is
+ * narrower than that minimum — nine daughters born three years apart on a
+ * 95-year life.
  */
 export function layoutLifelineScale({
   labels,
   startYear,
   endYear,
-  minWidth,
 }: {
   labels: LifelineScaleLabel[];
   startYear: number;
   endYear: number;
-  minWidth: number;
 }): LifelineScale {
   const span = Math.max(endYear - startYear, 1);
-  // The end dots sit LABEL_INSET in from the track edges — the label box
-  // anchored to them reaches exactly to the edge.
-  let pxPerYear = (minWidth - 2 * LABEL_INSET) / span;
+  let pxPerYear = MIN_PX_PER_DECADE / 10;
 
   labels.forEach((label, index) => {
-    const [left] = extent(label);
-    // A centered label near the axis start must not hang past the track.
+    const [left, right] = extent(label);
+    // A centered label near either end must not hang past the track.
     const fromStart = label.year - startYear;
     if (fromStart > 0) {
-      pxPerYear = Math.max(pxPerYear, (-left - LABEL_INSET) / fromStart);
+      pxPerYear = Math.max(pxPerYear, (-left - LIFELINE_INSET) / fromStart);
+    }
+    const fromEnd = endYear - label.year;
+    if (fromEnd > 0) {
+      pxPerYear = Math.max(pxPerYear, (right - LIFELINE_INSET) / fromEnd);
     }
     if (index > 0) {
       const years = label.year - labels[index - 1].year;
@@ -72,30 +81,22 @@ export function layoutLifelineScale({
     }
   });
 
-  const xOf = (year: number) => LABEL_INSET + (year - startYear) * pxPerYear;
-  const endX = xOf(endYear);
-  const last = labels[labels.length - 1];
-  const lastLabelRight = last ? xOf(last.year) + extent(last)[1] : 0;
-  // Rounded to whole px (the track's CSS min-width); positions below are
-  // percentages of this same rounded width. The epsilon keeps float noise
-  // (660.0000001) from adding a phantom pixel.
-  const width = Math.ceil(
-    Math.max(minWidth, endX + LABEL_INSET, lastLabelRight) - 1e-6,
-  );
-  const positionOf = (year: number) => (xOf(year) / width) * 100;
-
+  const fractionOf = (year: number) => (year - startYear) / span;
   return {
-    width,
-    pxPerYear,
-    positions: labels.map((label) => positionOf(label.year)),
-    positionOf,
+    minWidth: Math.ceil(span * pxPerYear + 2 * LIFELINE_INSET - 1e-6),
+    fractions: labels.map((label) => fractionOf(label.year)),
+    fractionOf,
   };
 }
 
 /** The label's horizontal reach relative to its dot, [left, right] in px. */
 function extent(label: LifelineScaleLabel): [number, number] {
-  if (label.align === "start") return [-LABEL_INSET, label.width - LABEL_INSET];
-  if (label.align === "end") return [-(label.width - LABEL_INSET), LABEL_INSET];
+  if (label.align === "start") {
+    return [-LIFELINE_INSET, label.width - LIFELINE_INSET];
+  }
+  if (label.align === "end") {
+    return [-(label.width - LIFELINE_INSET), LIFELINE_INSET];
+  }
   return [-label.width / 2, label.width / 2];
 }
 

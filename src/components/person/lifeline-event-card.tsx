@@ -13,9 +13,9 @@ const ACTION =
  * The selected dot's card under the «Линия жизни» scale. Not in the mock,
  * but the list it replaced was also where dates got edited (explicit user
  * request to keep that), so every event in the card carries the same
- * action its list row had: the date dialog for Рождение/Смерть/Свадьба,
- * the edit form for a real event, or its details page when the viewer may
- * only look.
+ * action its list row had: where Рождение/Смерть/Свадьба are edited
+ * (the profile form / «Семья»), the edit form for a real event, or its
+ * details page when the viewer may only look.
  */
 export function LifelineEventCard({ point }: { point: LifelinePointView }) {
   return (
@@ -40,6 +40,13 @@ export function LifelineEventCard({ point }: { point: LifelinePointView }) {
                 {event.details}
               </span>
             )}
+            {event.facts.length > 0 && (
+              <ul className="mt-1 flex flex-col gap-0.5 text-sm text-foreground/70">
+                {event.facts.map((fact) => (
+                  <li key={fact}>{fact}</li>
+                ))}
+              </ul>
+            )}
             {event.text && (
               <p className="mt-1 max-w-[54ch] text-foreground/65">
                 {event.text}
@@ -55,15 +62,12 @@ export function LifelineEventCard({ point }: { point: LifelinePointView }) {
 
 function EventAction({ target }: { target: TimelineRowTarget }) {
   if (target.kind === "none") return null;
+  const isEdit = target.kind !== "link" || target.intent === "edit";
   const label =
-    target.kind === "link"
-      ? (target.label ?? "Подробнее")
-      : target.kind === "event-edit-dialog"
-        ? "Редактировать"
-        : "Изменить дату";
+    target.kind === "link" ? (target.label ?? "Подробнее") : "Редактировать";
   return (
     <TimelineRow target={target} className={ACTION}>
-      {target.kind === "link" ? (
+      {!isEdit ? (
         <>
           {label}
           <ArrowRightIcon aria-hidden="true" />

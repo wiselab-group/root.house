@@ -1,6 +1,12 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { glassSurface } from "@/components/hero/glass";
 import { ContentsMenu } from "@/components/hero/contents-menu";
 
@@ -31,6 +37,25 @@ export function ProfileTabs({ panels }: { panels: ProfilePanel[] }) {
   const active =
     picked ?? (panels.some((p) => p.id === hash) ? hash : panels[0]?.id);
   const tabRefs = useRef(new Map<string, HTMLButtonElement>());
+
+  // An in-page link to an anchor inside a panel («#family» from a Линия
+  // жизни card) must open that panel even after a tab was clicked — the
+  // browser can't scroll to an element inside a hidden panel on its own,
+  // so switch first, then scroll once it's visible.
+  useEffect(() => {
+    const onHashChange = () => {
+      const id = readHash();
+      const target = id ? document.getElementById(id) : null;
+      const panel = target?.closest<HTMLElement>('[role="tabpanel"]');
+      if (!target || !panel) return;
+      setPicked(panel.id);
+      if (panel !== target) {
+        requestAnimationFrame(() => target.scrollIntoView({ block: "start" }));
+      }
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   const select = (id: string) => {
     setPicked(id);

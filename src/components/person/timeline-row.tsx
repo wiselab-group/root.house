@@ -9,8 +9,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { PartnershipDateDialogContent } from "@/components/forms/partnership-date-dialog-content";
-import { PersonDateDialogContent } from "@/components/forms/person-date-dialog-content";
 import { EditEventForm } from "@/components/forms/edit-event-form";
 import type { TimelineRowTarget } from "./timeline-target";
 
@@ -19,12 +17,10 @@ const ROW_CLASSNAME =
 
 /**
  * Renders one timeline row's clickable surface — a Dialog trigger opening
- * the same in-place edit form for a real Event or the narrow date-only
- * dialog for a synthetic Рождение/Смерть/Свадьба row (see
- * PersonTimeline's timelineRowTargetFor), a plain Link when this member
- * can view but not edit a real event (falls back to the read-only details
- * page), or plain unwrapped content when there's nothing to do at all (no
- * edit rights on a synthetic row, or an unresolvable partnership).
+ * the in-place edit form for a real Event, a Link (the event's details
+ * page, or where a synthetic Рождение/Смерть/Свадьба row's record is
+ * edited — see timelineRowTargetFor), or plain unwrapped content when
+ * there's nothing to do at all (no edit rights on a synthetic row).
  * `isInteractive` (person-timeline.tsx/timeline-list-item.tsx) tells the
  * parent <li> whether to arm the group-hover terracotta ring on the
  * timeline dot — a non-interactive row must never look hoverable.
@@ -43,47 +39,16 @@ export function TimelineRow({
   const [open, setOpen] = useState(false);
 
   if (target.kind === "link") {
-    return (
+    // A same-page anchor («#family») stays a plain <a>: the browser's own
+    // hashchange is what switches ProfileTabs to the panel holding it.
+    return target.href.startsWith("#") ? (
+      <a href={target.href} className={className}>
+        {children}
+      </a>
+    ) : (
       <Link href={target.href} className={className}>
         {children}
       </Link>
-    );
-  }
-
-  if (target.kind === "marriage-dialog") {
-    return (
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger render={<button type="button" className={className} />}>
-          {children}
-        </DialogTrigger>
-        <PartnershipDateDialogContent
-          familyId={target.familyId}
-          personId={target.personId}
-          otherPersonId={target.otherPersonId}
-          relationshipId={target.relationshipId}
-          startDate={target.startDate}
-          label={`Дата свадьбы с ${target.otherPersonName}`}
-          onOpenChange={setOpen}
-        />
-      </Dialog>
-    );
-  }
-
-  if (target.kind === "person-date-dialog") {
-    return (
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger render={<button type="button" className={className} />}>
-          {children}
-        </DialogTrigger>
-        <PersonDateDialogContent
-          familyId={target.familyId}
-          personId={target.personId}
-          field={target.field}
-          date={target.date}
-          label={target.label}
-          onOpenChange={setOpen}
-        />
-      </Dialog>
     );
   }
 

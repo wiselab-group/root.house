@@ -4,60 +4,21 @@ import {
   type EventRecord,
   type EventParticipantWithName,
 } from "@/domain/event/event.service";
-import { getPersonById } from "@/domain/person/person.repository";
-import { personDisplayName } from "@/domain/person/display-name";
 import {
   canEdit as canEditObject,
   type ActingMember,
 } from "@/domain/family/permissions";
 import type { PartnershipRecord } from "@/domain/relationship/relationship.repository";
 import type { PlaceRecord } from "@/domain/place/place.service";
+import type { TimelineEvent } from "@/domain/event/event.service";
+import { resolveTimelineFacts } from "./timeline-facts";
 
 /**
  * Data-loading helpers for PersonTimeline — split out to keep the
- * component itself under the project's 150-line guideline. Both resolve
- * only what's actually needed for the given timeline (no marriage event →
- * no spouse-name queries; no real event this member can edit → no
- * participants queries), not the full partnerships/events list
- * unconditionally.
+ * component itself under the project's 150-line guideline. Each resolves
+ * only what's actually needed for the given timeline (no real event this
+ * member can edit → no participants queries).
  */
-
-/** One query per partnership (not per event) — skipped entirely when the
- *  timeline has no synthetic marriage row or the caller can't edit it. */
-export async function resolveOtherPersonNames({
-  timeline,
-  partnerships,
-  personId,
-  familyId,
-  canEdit,
-}: {
-  timeline: EventRecord[];
-  partnerships: PartnershipRecord[];
-  personId: string;
-  familyId: string;
-  canEdit: boolean;
-}): Promise<Map<string, string>> {
-  const otherPersonNameByPartnershipId = new Map<string, string>();
-  const hasMarriageEvent = timeline.some((event) => event.type === "marriage");
-  if (!canEdit || !hasMarriageEvent) return otherPersonNameByPartnershipId;
-
-  await Promise.all(
-    partnerships.map(async (partnership) => {
-      const otherPersonId =
-        partnership.person1Id === personId
-          ? partnership.person2Id
-          : partnership.person1Id;
-      const otherPerson = await getPersonById(otherPersonId, familyId);
-      if (otherPerson) {
-        otherPersonNameByPartnershipId.set(
-          partnership.id,
-          personDisplayName(otherPerson),
-        );
-      }
-    }),
-  );
-  return otherPersonNameByPartnershipId;
-}
 
 export interface EventEditData {
   participants: EventParticipantWithName[];
@@ -96,4 +57,38 @@ export async function resolveEventEditData({
       }),
   );
   return eventEditDataById;
+}
+
+/** Everything PersonTimeline resolves beyond the timeline itself, in one
+ *  parallel round — the Линия жизни card's facts only when it's drawn. */
+export async function resolveTimelineExtras({
+  timeline,
+  partnerships,
+  places,
+  personId,
+  familyId,
+  member,
+  withFacts,
+}: {
+  timeline: TimelineEvent[];
+  partnerships: PartnershipRecord[];
+  places: PlaceRecord[];
+  personId: string;
+  familyId: string;
+  member: ActingMember;
+  withFacts: boolean;
+}) {
+  const [eventEditDataById, factsById] = await Promise.all([
+    resolveEventEditData({ timeline, member, familyId, places }),
+    withFacts
+      ? resolveTimelineFacts({
+          timeline,
+          personId,
+          familyId,
+          partnerships,
+          member,
+        })
+      : new Map<string, string[]>(),
+  ]);
+  return { eventEditDataById, factsById };
 }

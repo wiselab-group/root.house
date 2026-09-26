@@ -27,13 +27,20 @@ export function PersonDateFields({
   prefix,
   legend,
   date,
+  anchorId,
 }: {
   prefix: string;
   legend: string;
   date?: PartialDate | null;
+  /** In-page jump target — the Линия жизни «Редактировать» links land on
+   *  the profile form's #birth/#death block. */
+  anchorId?: string;
 }) {
   return (
-    <fieldset className="@container flex flex-col gap-2">
+    <fieldset
+      id={anchorId}
+      className="@container flex scroll-mt-24 flex-col gap-2"
+    >
       <legend className="text-sm font-medium mb-1">{legend}</legend>
       <div className="grid grid-cols-1 items-end gap-2 @3xs:grid-cols-[minmax(3.5rem,1fr)_minmax(3.5rem,1fr)_minmax(5rem,1.5fr)] @md:grid-cols-[minmax(3.5rem,1fr)_minmax(3.5rem,1fr)_minmax(5rem,1.5fr)_auto]">
         <div className="flex flex-col gap-1">

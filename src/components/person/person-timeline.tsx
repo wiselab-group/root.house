@@ -7,7 +7,7 @@ import { getPartnershipsOf } from "@/domain/relationship/relationship.repository
 import { AddEventForm } from "@/components/forms/add-event-form";
 import { TimelineListItem } from "./timeline-list-item";
 import { timelineRowTargetFor } from "./timeline-target";
-import { resolveOtherPersonNames, resolveEventEditData } from "./timeline-data";
+import { resolveTimelineExtras } from "./timeline-data";
 import { ProfileSectionWithAdd } from "./profile-section-with-add";
 import { PersonLifeline } from "./person-lifeline";
 import { lifelineView } from "./lifeline-view";
@@ -37,6 +37,7 @@ export async function PersonTimeline({
   familyId,
   familySlug,
   personId,
+  personSlug,
   canEdit,
   canContribute = canEdit,
   member,
@@ -45,6 +46,8 @@ export async function PersonTimeline({
   familyId: string;
   familySlug: string;
   personId: string;
+  /** For the edit-form links on the Рождение/Смерть cards. */
+  personSlug: string;
   canEdit: boolean;
   /** May add Events — owner/editor/contributor. Defaults to canEdit for any
    *  caller not yet passing this explicitly. */
@@ -64,36 +67,34 @@ export async function PersonTimeline({
   ]);
   const timeline = filterVisibleEvents(allTimeline, member);
   const placeNameById = new Map(places.map((place) => [place.id, place.name]));
-  const partnershipById = new Map(
-    partnerships.map((partnership) => [partnership.id, partnership]),
-  );
 
-  const [otherPersonNameByPartnershipId, eventEditDataById] = await Promise.all(
-    [
-      resolveOtherPersonNames({
-        timeline,
-        partnerships,
-        personId,
-        familyId,
-        canEdit,
-      }),
-      resolveEventEditData({ timeline, member, familyId, places }),
-    ],
-  );
+  const { eventEditDataById, factsById } = await resolveTimelineExtras({
+    timeline,
+    partnerships,
+    places,
+    personId,
+    familyId,
+    member,
+    withFacts: Boolean(lifelinePerson),
+  });
 
   const targetFor = (event: TimelineEvent) =>
     timelineRowTargetFor({
       event,
       familyId,
       familySlug,
-      personId,
+      personSlug,
       canEdit,
-      partnershipById,
-      otherPersonNameByPartnershipId,
       eventEditDataById,
     });
   const lifeline = lifelinePerson
-    ? lifelineView(timeline, lifelinePerson, placeNameById, targetFor)
+    ? lifelineView(
+        timeline,
+        lifelinePerson,
+        placeNameById,
+        targetFor,
+        factsById,
+      )
     : null;
   // With the scale drawn, only undated events still need the list — they
   // have nowhere to sit on the axis. Without it, the list is the timeline.

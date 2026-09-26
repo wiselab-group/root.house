@@ -8,8 +8,11 @@ import type { TimelineRowTarget } from "./timeline-target";
 export interface LifelineEventView {
   id: string;
   title: string;
-  /** «9 февраля 1988 г. · Пружаны» — full date and place under the title. */
+  /** «Профессия · 1960 г. — 1975 г. · Пружаны» — type (when the title is
+   *  free text), full date or period, and place under the title. */
   details: string;
+  /** Every other known fact, one line each («Причина: …», «Участники: …»). */
+  facts: string[];
   text: string | null;
   /** Same edit/open target the old list row had (see timelineRowTargetFor). */
   target: TimelineRowTarget;
@@ -18,7 +21,7 @@ export interface LifelineEventView {
 export interface LifelinePointView {
   id: string;
   year: number;
-  /** Dot position on the track, in percent. */
+  /** Dot position as a fraction (0–1) of the axis span. */
   position: number;
   side: "up" | "down";
   /** How the label hangs off the dot — see LifelineScaleLabel. */
@@ -42,12 +45,14 @@ export function lifelineView(
   person: { isLiving: boolean; gender: "male" | "female" | "unknown" },
   placeNameById: Map<string, string>,
   targetFor: (event: TimelineEvent) => TimelineRowTarget,
+  /** Facts that needed other people's names — see resolveTimelineFacts. */
+  factsById: Map<string, string[]> = new Map(),
 ): {
   points: LifelinePointView[];
   decades: { year: number; position: number }[];
-  /** The track's minimum width in px — wider than the base when the scale
-   *  had to zoom in for dense years' labels (see layoutLifelineScale). */
-  width: number;
+  /** The narrowest track (px) on which no labels touch — the track fills
+   *  its container and scrolls only below this (see layoutLifelineScale). */
+  minWidth: number;
 } | null {
   const lifeline = buildLifeline(timeline, {
     isLiving: person.isLiving,
@@ -55,8 +60,11 @@ export function lifelineView(
   });
   if (!lifeline) return null;
 
-  const birthYear =
-    timeline.find((event) => event.type === "birth")?.date?.year ?? null;
+  // The person's own birth — not a child's «Родилась дочь …» entry, which
+  // shares the type and would otherwise stand in when the own date is unknown.
+  const birthDate =
+    timeline.find((event) => event.type === "birth" && !event.relatedPerson)
+      ?.date ?? null;
 
   const labels = lifeline.points.map((point, index) => {
     const caption = point.events.map(captionFor).join(", ");
@@ -77,34 +85,41 @@ export function lifelineView(
     labels,
     startYear: lifeline.startYear,
     endYear: lifeline.endYear,
-    minWidth: BASE_TRACK_WIDTH,
   });
 
   return {
-    width: scale.width,
+    minWidth: scale.minWidth,
     decades: lifeline.decades.map((year) => ({
       year,
-      position: scale.positionOf(year),
+      position: scale.fractionOf(year),
     })),
     points: lifeline.points.map((point, index) => ({
       id: point.id,
       year: point.year,
-      position: scale.positions[index],
+      position: scale.fractions[index],
       side: point.side,
       align: labels[index].align,
       caption: labels[index].caption,
-      kicker: [String(point.year), ageAt(point.year, birthYear, person.gender)]
+      kicker: [
+        String(point.year),
+        ageAt(point.events[0].date, birthDate, person.gender),
+      ]
         .filter(Boolean)
         .join(" · "),
       events: point.events.map((event) => ({
         id: event.id,
         title: eventTitle(event),
         details: [
-          formatPartialDate(event.date),
+          eventTitle(event) !== EVENT_TYPE_LABELS[event.type] &&
+          !event.relatedPerson
+            ? EVENT_TYPE_LABELS[event.type]
+            : null,
+          periodLabel(event),
           event.placeId ? placeNameById.get(event.placeId) : null,
         ]
           .filter(Boolean)
           .join(" · "),
+        facts: [...(event.facts ?? []), ...(factsById.get(event.id) ?? [])],
         text: event.description,
         target: targetFor(event),
       })),
@@ -112,9 +127,13 @@ export function lifelineView(
   };
 }
 
-/** The track's width when nothing needs zooming — the phone-scroll
- *  minimum the axis always had. */
-const BASE_TRACK_WIDTH = 660;
+/** «12 марта 1960 г.», or «1960 г. — 1975 г.» for an event that lasted. */
+function periodLabel(event: TimelineEvent): string {
+  const start = formatPartialDate(event.date);
+  return event.endDate?.year != null
+    ? `${start} — ${formatPartialDate(event.endDate)}`
+    : start;
+}
 
 /**
  * A server-side guess at the label's rendered width (no DOM here, and

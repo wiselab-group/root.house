@@ -92,8 +92,9 @@ export async function PersonFamilyPanel({
 
   return (
     <ProfileSection
+      id="family"
       title="Семья"
-      className="min-w-0"
+      className="min-w-0 scroll-mt-24"
       action={
         <Link
           href={`/families/${familySlug}/tree?focus=${personId}`}

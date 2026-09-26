@@ -1,4 +1,5 @@
 import type { EventRecord } from "./event.repository";
+import type { PartialDate } from "@/domain/shared/partial-date";
 
 export interface LifelinePoint<T extends EventRecord = EventRecord> {
   /** First event's id — stable React key and selection id. */
@@ -62,17 +63,39 @@ export function buildLifeline<T extends EventRecord>(
   };
 }
 
-/** «ему 26» / «ей 26» / «26 лет» — the person's age in the event card. */
+/**
+ * «ему 26» / «ей 26» / «26 лет» — the person's age in the event card.
+ *
+ * Exact when both dates are complete enough to tell whether the birthday
+ * had already come that year (month, and day when the months match) —
+ * otherwise, or when either date is approximate, the plain year difference,
+ * which can run a year high.
+ */
 export function ageAt(
-  year: number,
-  birthYear: number | null,
+  at: PartialDate | null,
+  birth: PartialDate | null,
   gender: "male" | "female" | "unknown",
 ): string | null {
-  if (birthYear == null || year <= birthYear) return null;
-  const age = year - birthYear;
+  const age = yearsBetween(birth, at);
+  if (age === null || age <= 0) return null;
   if (gender === "male") return `ему ${age}`;
   if (gender === "female") return `ей ${age}`;
   return `${age} ${yearsWord(age)}`;
+}
+
+function yearsBetween(
+  birth: PartialDate | null,
+  at: PartialDate | null,
+): number | null {
+  if (birth?.year == null || at?.year == null) return null;
+  const years = at.year - birth.year;
+  if (birth.isApproximate || at.isApproximate) return years;
+  if (birth.month == null || at.month == null) return years;
+  if (at.month !== birth.month) {
+    return at.month < birth.month ? years - 1 : years;
+  }
+  if (birth.day == null || at.day == null) return years;
+  return at.day < birth.day ? years - 1 : years;
 }
 
 function yearsWord(n: number): string {

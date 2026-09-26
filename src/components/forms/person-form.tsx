@@ -15,6 +15,7 @@ import { PrivacyLevelSelect } from "./privacy-level-select";
 import type { PersonFormState } from "@/actions/person.actions";
 import type { PersonRecord } from "@/domain/person/person.service";
 import type { PlaceRecord } from "@/domain/place/place.service";
+import { useScrollToHash } from "@/lib/use-scroll-to-hash";
 
 function SubmitButton({
   label,
@@ -52,6 +53,7 @@ export function PersonForm({
   cancelHref?: string;
 }) {
   const [state, formAction] = useActionState(action, {} as PersonFormState);
+  useScrollToHash(); // «Редактировать» on a Линия жизни card → #birth/#death
 
   // Controlled (not defaultChecked) because it gates whether the death-date
   // fields render at all below — "жив(а)" + a death date is a contradiction
@@ -74,6 +76,7 @@ export function PersonForm({
       <PersonDateFields
         prefix="birth"
         legend="Дата рождения"
+        anchorId="birth"
         date={person?.birthDate}
       />
       <PlaceField
@@ -101,6 +104,7 @@ export function PersonForm({
           <PersonDateFields
             prefix="death"
             legend="Дата смерти"
+            anchorId="death"
             date={person?.deathDate}
           />
           <PlaceField

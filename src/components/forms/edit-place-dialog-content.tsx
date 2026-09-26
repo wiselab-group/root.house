@@ -32,7 +32,8 @@ function SubmitButton() {
 
 /**
  * In-place edit dialog for a PlacesList row — same Dialog-per-row pattern as
- * TimelineRow's date dialogs (person-date-dialog-content.tsx), chosen over a
+ * TimelineRow's event edit dialog and the spouse pill's date dialog
+ * (partnership-date-dialog-content.tsx), chosen over a
  * standalone /places/[id]/edit route because PlacesList's own doc comment
  * establishes Place as deliberately having "no detail page of its own to
  * navigate to."

@@ -96,6 +96,7 @@ export function PersonProfileSections({
             <div className={PANEL}>
               <PersonTimeline
                 {...shared}
+                personSlug={person.slug}
                 lifelinePerson={person}
                 canEdit={canEdit}
                 canContribute={canContribute}

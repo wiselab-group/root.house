@@ -4,43 +4,27 @@ import type {
   EventParticipantWithName,
   TimelineEvent,
 } from "@/domain/event/event.service";
-import type { PartnershipRecord } from "@/domain/relationship/relationship.repository";
 import type { PlaceRecord } from "@/domain/place/place.service";
-import type { PartialDate } from "@/domain/shared/partial-date";
 
 /**
  * Where a timeline row's interaction goes — resolved server-side (see
  * timelineRowTargetFor below), then rendered by the client TimelineRow
- * component since two of the three kinds need client interactivity
- * (Dialog state) that a Server Component can't own itself. Lives in this
- * plain-TS module (no "use client") rather than timeline-row.tsx so
- * timeline-list-item.tsx — a Server Component — can call
- * isTimelineRowInteractive without pulling in client-only code.
+ * component since the edit dialog needs client state a Server Component
+ * can't own itself. Lives in this plain-TS module (no "use client") rather
+ * than timeline-row.tsx so timeline-list-item.tsx — a Server Component —
+ * can call isTimelineRowInteractive without pulling in client-only code.
  */
 export type TimelineRowTarget =
   | { kind: "none" }
   | {
       kind: "link";
+      /** A path, or a same-page «#anchor» (the profile's «Семья»). */
       href: string;
       /** Action wording in the Линия жизни card; «Подробнее» when absent. */
       label?: string;
-    }
-  | {
-      kind: "marriage-dialog";
-      familyId: string;
-      personId: string;
-      otherPersonId: string;
-      relationshipId: string;
-      startDate: PartialDate | null;
-      otherPersonName: string;
-    }
-  | {
-      kind: "person-date-dialog";
-      familyId: string;
-      personId: string;
-      field: "birthDate" | "deathDate";
-      date: PartialDate | null;
-      label: string;
+      /** «edit» — the link leads to where this entry is edited (pencil
+       *  icon), not to read more about it (arrow). */
+      intent?: "edit";
     }
   | {
       kind: "event-edit-dialog";
@@ -57,39 +41,33 @@ export function isTimelineRowInteractive(target: TimelineRowTarget): boolean {
 /**
  * Resolves what a timeline row should do on click/tap — split out of
  * PersonTimeline to keep it under the project's 150-line component
- * guideline. Pure data-in/data-out (no fetching): PersonTimeline resolves
- * the other spouse's display name up front (one query per partnership,
- * not per event) and hands in ready-to-use maps.
+ * guideline. Pure data-in/data-out (no fetching).
  *
- * Synthetic birth/death/marriage rows (see synthesizeDerivedEvents) have
- * no `events` row of their own to link to — birth/death open a date-only
- * edit dialog on the Person itself (the field that actually produced the
- * row), marriage opens the same date-edit dialog as the spouse pill in
- * PersonFamilyPanel (see PartnershipDateEditButton). Both require canEdit,
- * same as those existing affordances.
+ * Synthetic rows have no `events` row of their own, so they lead to where
+ * the record they're derived from is edited — and where every fact the card
+ * shows (place, cause, parents) can be fixed, not just the date:
+ * birth/death to the profile form, scrolled to that block; a marriage to
+ * the profile's own «Семья» list (spouse pills, where partnership dates
+ * and status live). A narrow date-only dialog used to sit here and was
+ * removed on user request 2026-09-26: the card now shows more than a date,
+ * and a button that could only fix the date misled.
  */
 export function timelineRowTargetFor({
   event,
   familyId,
   familySlug,
-  personId,
+  personSlug,
   canEdit,
-  partnershipById,
-  otherPersonNameByPartnershipId,
   eventEditDataById,
 }: {
   event: TimelineEvent;
   familyId: string;
   familySlug: string;
-  personId: string;
+  personSlug: string;
   canEdit: boolean;
-  partnershipById: Map<string, PartnershipRecord>;
-  otherPersonNameByPartnershipId: Map<string, string>;
   /** Only populated for real events this member may edit (see
-   *  PersonTimeline — one canEdit(member, event) + participants query per
-   *  editable event). A real event this member can only view (owner/editor-
-   *  only content, viewer role, or another member's own contribution) has
-   *  no entry here and falls back to `link` (the read-only details page). */
+   *  resolveEventEditData). A real event this member can only view has no
+   *  entry here and falls back to `link` (the read-only details page). */
   eventEditDataById: Map<
     string,
     { participants: EventParticipantWithName[]; places: PlaceRecord[] }
@@ -108,7 +86,7 @@ export function timelineRowTargetFor({
     }
     return { kind: "link", href: `/families/${familySlug}/events/${event.id}` };
   }
-  // A child's birth is the child's own date — edited on their profile,
+  // A child's birth is the child's own record — edited on their profile,
   // not here, so it only ever links there (for editors and viewers alike).
   if (event.relatedPerson) {
     return {
@@ -121,36 +99,19 @@ export function timelineRowTargetFor({
 
   if (event.type === "birth" || event.type === "death") {
     return {
-      kind: "person-date-dialog",
-      familyId,
-      personId,
-      field: event.type === "birth" ? "birthDate" : "deathDate",
-      date: event.date,
-      label: event.type === "birth" ? "Дата рождения" : "Дата смерти",
+      kind: "link",
+      href: `/families/${familySlug}/people/${personSlug}/edit#${event.type}`,
+      label: "Редактировать",
+      intent: "edit",
     };
   }
-
   if (event.type === "marriage") {
-    // id shape: `synthetic:marriage:${partnership.id}` — see
-    // synthesizeDerivedEvents in event.service.ts.
-    const partnershipId = event.id.split(":")[2];
-    const partnership = partnershipById.get(partnershipId);
-    const otherPersonName = otherPersonNameByPartnershipId.get(partnershipId);
-    if (!partnership || !otherPersonName) return { kind: "none" };
-    const otherPersonId =
-      partnership.person1Id === personId
-        ? partnership.person2Id
-        : partnership.person1Id;
     return {
-      kind: "marriage-dialog",
-      familyId,
-      personId,
-      otherPersonId,
-      relationshipId: partnership.id,
-      startDate: partnership.startDate,
-      otherPersonName,
+      kind: "link",
+      href: "#family",
+      label: "Редактировать",
+      intent: "edit",
     };
   }
-
   return { kind: "none" };
 }

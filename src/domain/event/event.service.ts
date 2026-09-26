@@ -29,8 +29,11 @@ export type { EventRecord };
 
 /** A Person's timeline entry. `relatedPerson` is set only on the synthetic
  *  «birth of a child» entries (see synthesizeChildBirths) — the child the
- *  entry is about, so the UI can name them and link to their profile. */
+ *  entry is about, so the UI can name them and link to their profile.
+ *  `facts` are extra «what's known» lines a synthetic entry carries from
+ *  the record it's derived from (the cause on a death). */
 export type TimelineEvent = EventRecord & {
+  facts?: string[];
   relatedPerson?: {
     id: string;
     slug: string;
@@ -224,8 +227,8 @@ export function isSyntheticEventId(id: string): boolean {
 function synthesizeDerivedEvents(
   person: PersonRecord,
   partnerships: PartnershipRecord[],
-): EventRecord[] {
-  const derived: EventRecord[] = [];
+): TimelineEvent[] {
+  const derived: TimelineEvent[] = [];
 
   if (person.birthDate) {
     derived.push({
@@ -254,6 +257,9 @@ function synthesizeDerivedEvents(
       placeId: person.deathPlaceId,
       privacyLevel: person.privacyLevel,
       createdBy: person.createdBy,
+      facts: person.deathCause?.trim()
+        ? [`Причина: ${person.deathCause.trim()}`]
+        : undefined,
     });
   }
 
