@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, useTransition, type RefObject } from "react";
+import {
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+  type RefObject,
+} from "react";
 import { ExternalLinkIcon, MoveIcon, XIcon } from "lucide-react";
 import {
   setPhotoTagPositionAction,
@@ -109,6 +115,17 @@ function useTagDrag(
   const [draggingPersonId, setDraggingPersonId] = useState<string | null>(null);
   const [dragPoint, setDragPoint] = useState<Point | null>(null);
   const [, startTransition] = useTransition();
+  // Where a marker was just dropped, held until the save's revalidation
+  // brings the new position back as props — without it the marker snapped
+  // back to its old spot for a second or two after release, which read as
+  // «the point can't be moved».
+  const [droppedPoints, setDroppedPoint] = useOptimistic(
+    {} as Record<string, Point>,
+    (state, drop: { personId: string; point: Point }) => ({
+      ...state,
+      [drop.personId]: drop.point,
+    }),
+  );
 
   function onDragStart(
     event: React.PointerEvent<HTMLButtonElement>,
@@ -134,6 +151,7 @@ function useTagDrag(
     setDraggingPersonId(null);
     setDragPoint(null);
     startTransition(async () => {
+      setDroppedPoint({ personId, point });
       await setPhotoTagPositionAction(
         familyId,
         familySlug,
@@ -160,6 +178,7 @@ function useTagDrag(
   return {
     draggingPersonId,
     dragPoint,
+    droppedPoints,
     onDragStart,
     onDragMove,
     onDragEnd,
@@ -275,7 +294,7 @@ export function PhotoTagLayer({
           point={
             drag.draggingPersonId === person.id && drag.dragPoint
               ? drag.dragPoint
-              : person
+              : (drag.droppedPoints[person.id] ?? person)
           }
           isHighlighted={taggingMode || highlightedPersonId === person.id}
           taggingMode={taggingMode}
@@ -360,10 +379,16 @@ function PhotoTagMarker({
       type="button"
       aria-label={name}
       style={{ left: `${point.xPercent}%`, top: `${point.yPercent}%` }}
-      className="group absolute flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      // touch-none while tagging: without it a finger drag was taken over
+      // by the browser as a scroll after the first few px (pointercancel),
+      // so on phones a marker couldn't be moved at all.
+      className={`group absolute flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+        canTag && taggingMode ? "touch-none" : ""
+      }`}
       onPointerDown={onDragStart}
       onPointerMove={onDragMove}
       onPointerUp={onDragEnd}
+      onPointerCancel={onDragEnd}
     >
       <TagReticle shown={isHighlighted} />
       <span className="sr-only">{name}</span>

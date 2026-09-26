@@ -23,9 +23,9 @@ import { usePhotoArrange } from "./photo-arrange-context";
  * album and profile holding the photo). Drags rearrange a local draft;
  * «Готово» persists it in one reorderMediaAction, «Отмена» or Esc drops it.
  *
- * `order` mirrors the `photos` prop but only re-syncs from it when the
- * actual id sequence differs (a new upload, a delete's revalidatePath) — a
- * plain useState(photos) would go stale after such a server round-trip.
+ * `order` mirrors the `photos` prop, re-synced on every new prop (a new
+ * upload, a delete, a tag change's revalidatePath) — a plain
+ * useState(photos) would go stale after such a server round-trip.
  * Re-syncing during render rather than in an effect follows React's "you
  * might not need an effect" guidance for adjusting state on a prop change.
  */
@@ -54,11 +54,12 @@ export function usePhotoGridReorder(
   );
 
   if (photos !== lastPhotos) {
-    const sameIds =
-      order.length === photos.length &&
-      order.every((p, i) => p.media.id === photos[i]?.media.id);
     setLastPhotos(photos);
-    if (!sameIds) setOrder(photos);
+    // Always the fresh objects, even when the id sequence is unchanged: a
+    // tag placed or dragged on a photo changes that photo's data, not the
+    // order — keeping the old objects then left the lightbox on stale tags
+    // (a new tag didn't appear, a dragged one snapped back to where it was).
+    setOrder(photos);
     // The mode's own menu can delete a photo (or a new upload lands)
     // mid-draft: keep the user's arrangement, drop what's gone, append
     // what's new, and take the fresh objects (portrait/album changes).
