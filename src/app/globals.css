@@ -651,7 +651,7 @@ body:has(.photo-backdrop) .app-header {
      something close in tone to dissolve into. */
   .hero-glow {
     background: radial-gradient(
-      60% 100% at 72% 32%,
+      60% 70% at 72% 32%,
       oklch(0.62 0.07 60 / 22%),
       transparent 70%
     );

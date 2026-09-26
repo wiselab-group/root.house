@@ -64,7 +64,7 @@ export function PersonProfileHero({
         className="hero-glow pointer-events-none absolute inset-0"
       />
       {avatarMedia ? (
-        <div className="hero-photo-mask absolute inset-y-0 right-0 w-full sm:w-[50%]">
+        <div className="hero-photo-mask absolute inset-y-0 right-0 w-full sm:w-[58%]">
           <ArchiveImage
             src={mediaUrl(avatarMedia.id, familyId, "display")}
             alt=""
