@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ListIcon } from "lucide-react";
 import { glassPill, glassSurface } from "./glass";
 
@@ -30,9 +30,22 @@ export function ContentsMenu({
   buttonLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // A tap or click anywhere outside the pill and its menu closes it, like
+  // any popover — only Escape and picking an item used to.
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
 
   return (
     <div
+      ref={rootRef}
       className="relative"
       onKeyDown={(event) => {
         if (event.key === "Escape") setOpen(false);
