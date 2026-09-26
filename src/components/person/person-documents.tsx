@@ -36,7 +36,7 @@ export async function PersonDocuments({
     <ProfileSectionWithAdd
       title="Документы"
       count={documents.length}
-      addLabel="Добавить документ"
+      addLabel="Добавить"
       closeLabel="Закрыть"
       form={
         canContribute && (

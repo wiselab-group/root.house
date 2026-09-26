@@ -5,8 +5,13 @@ import { PlusIcon, XIcon } from "lucide-react";
 import { CollapsibleFormCloseProvider } from "@/components/forms/collapsible-form";
 import { ProfileSection } from "./profile-section";
 
+// Icon only on phones (the label stays for screen readers): next to the
+// section title and count, «Добавить» + «Упорядочить» crowded a 390px row.
+// The icon-only button grows to a 36px tap target there.
 const ACTION =
-  "group flex shrink-0 cursor-pointer items-center gap-1 rounded-sm text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
+  "group flex shrink-0 cursor-pointer items-center gap-1 rounded-sm text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none max-sm:size-9 max-sm:justify-center max-sm:rounded-full";
+const ICON = "size-3.5 max-sm:size-4.5";
+const LABEL = "max-sm:sr-only";
 
 /**
  * A ProfileSection whose «Добавить …» action sits on the heading row, right
@@ -59,10 +64,10 @@ export function ProfileSectionWithAdd({
       className={`${ACTION} text-primary hover:text-primary/80`}
     >
       <PlusIcon
-        className="size-3.5 transition-transform group-hover:rotate-90"
+        className={`${ICON} transition-transform group-hover:rotate-90`}
         aria-hidden="true"
       />
-      {addLabel}
+      <span className={LABEL}>{addLabel}</span>
     </button>
   ) : (
     closeLabel && (
@@ -72,8 +77,8 @@ export function ProfileSectionWithAdd({
         onClick={() => setOpen(false)}
         className={`${ACTION} text-foreground/60 hover:text-foreground`}
       >
-        <XIcon className="size-3.5" aria-hidden="true" />
-        {closeLabel}
+        <XIcon className={ICON} aria-hidden="true" />
+        <span className={LABEL}>{closeLabel}</span>
       </button>
     )
   );
@@ -84,7 +89,7 @@ export function ProfileSectionWithAdd({
       count={count}
       action={
         extraAction ? (
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-5 max-sm:gap-1">
             {extraAction}
             {action}
           </div>

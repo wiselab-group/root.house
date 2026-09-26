@@ -70,10 +70,14 @@ export function PhotoArrangeHeaderButton({
     <button
       type="button"
       onClick={() => setArranging(true)}
-      className={`flex shrink-0 cursor-pointer items-center gap-1 rounded-sm text-sm text-foreground/60 transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${hidden}`}
+      className={`flex shrink-0 cursor-pointer items-center gap-1 rounded-sm text-sm text-foreground/60 transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none max-sm:size-9 max-sm:justify-center max-sm:rounded-full ${hidden}`}
     >
-      <ArrowDownUpIcon className="size-3.5" aria-hidden="true" />
-      Упорядочить
+      {/* Icon only on phones, like ProfileSectionWithAdd's own actions. */}
+      <ArrowDownUpIcon
+        className="size-3.5 max-sm:size-4.5"
+        aria-hidden="true"
+      />
+      <span className="max-sm:sr-only">Упорядочить</span>
     </button>
   );
 }
