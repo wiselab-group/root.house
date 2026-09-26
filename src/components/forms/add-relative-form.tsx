@@ -7,19 +7,30 @@ import {
   type RelationshipFormState,
 } from "@/actions/relationship.actions";
 import { Button } from "@/components/ui/button";
-import { NativeSelect } from "@/components/ui/native-select";
+import { PersonCombobox } from "@/components/tree/person-combobox";
 import type { PersonRecord } from "@/domain/person/person.service";
-import { personDisplayName } from "@/domain/person/display-name";
 import { useCollapsibleFormClose } from "./collapsible-form";
 import { PersonDateFields } from "./person-date-fields";
 import { NewRelativeFields } from "./new-relative-fields";
+import { RelativeModeFields, type RelativeMode } from "./relative-mode-fields";
 
 const initialState: RelationshipFormState = {};
 
-function SubmitButton({ label }: { label: string }) {
+function SubmitButton({
+  label,
+  disabled = false,
+}: {
+  label: string;
+  disabled?: boolean;
+}) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" size="sm" disabled={pending} aria-busy={pending}>
+    <Button
+      type="submit"
+      size="sm"
+      disabled={pending || disabled}
+      aria-busy={pending}
+    >
       {pending ? "Добавляем…" : label}
     </Button>
   );
@@ -27,7 +38,10 @@ function SubmitButton({ label }: { label: string }) {
 
 /**
  * Inline form for adding a parent/child/spouse to a Person — either by
- * picking an existing family member from a dropdown, or by typing a new
+ * finding an existing family member with search-as-you-type (the same
+ * PersonCombobox as the tree's «Родство»: matches maiden names and typos,
+ * shows life years — a plain <select> of everyone became unusable once a
+ * family grew past a few dozen people), or by typing a new
  * name (optionally marking it a placeholder for "we don't know who this
  * is", e.g. an unnamed child or unknown parent).
  *
@@ -50,12 +64,15 @@ export function AddRelativeForm({
   submitLabel: string;
 }) {
   const close = useCollapsibleFormClose();
-  const [mode, setMode] = useState<"existing" | "new">(
+  const [mode, setMode] = useState<RelativeMode>(
     candidates.length > 0 ? "existing" : "new",
   );
   const boundAction = (state: RelationshipFormState, formData: FormData) =>
     addRelativeAction(familyId, personId, kind, state, formData);
   const [state, formAction] = useActionState(boundAction, initialState);
+  const [picked, setPicked] = useState<{ id: string; name: string } | null>(
+    null,
+  );
   // Closes the form back to its trigger on success — same reasoning as
   // AddEventForm's identical fix: addRelativeAction only revalidatePath()s
   // on success (no redirect), so without this the form stayed open with
@@ -74,40 +91,27 @@ export function AddRelativeForm({
       }}
       className="flex flex-col gap-3"
     >
-      <div className="flex gap-3 text-sm">
-        <label className="flex items-center gap-1.5">
-          <input
-            type="radio"
-            name="mode"
-            checked={mode === "existing"}
-            onChange={() => setMode("existing")}
-            disabled={candidates.length === 0}
-          />
-          Уже есть в семье
-        </label>
-        <label className="flex items-center gap-1.5">
-          <input
-            type="radio"
-            name="mode"
-            checked={mode === "new"}
-            onChange={() => setMode("new")}
-          />
-          Новый человек
-        </label>
-      </div>
+      <RelativeModeFields
+        mode={mode}
+        onModeChange={setMode}
+        canPickExisting={candidates.length > 0}
+      />
 
       {mode === "existing" ? (
-        <NativeSelect name="existingPersonId" required>
-          <option value="">Выберите человека…</option>
-          {candidates.map((candidate) => (
-            <option key={candidate.id} value={candidate.id}>
-              {personDisplayName(candidate)}
-              {candidate.birthDate?.year
-                ? ` (${candidate.birthDate.year})`
-                : ""}
-            </option>
-          ))}
-        </NativeSelect>
+        <>
+          <PersonCombobox
+            familyId={familyId}
+            label="Кто это"
+            value={picked}
+            onChange={setPicked}
+            excludeId={personId}
+          />
+          <input
+            type="hidden"
+            name="existingPersonId"
+            value={picked?.id ?? ""}
+          />
+        </>
       ) : (
         <NewRelativeFields kind={kind} />
       )}
@@ -122,7 +126,10 @@ export function AddRelativeForm({
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 
       <div className="flex gap-2">
-        <SubmitButton label={submitLabel} />
+        <SubmitButton
+          label={submitLabel}
+          disabled={mode === "existing" && !picked}
+        />
         <Button type="button" variant="ghost" size="sm" onClick={close}>
           Отмена
         </Button>

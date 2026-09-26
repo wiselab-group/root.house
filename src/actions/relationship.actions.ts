@@ -43,6 +43,12 @@ async function resolveOtherPersonId(
   if (typeof existingPersonId === "string" && existingPersonId.length > 0) {
     return existingPersonId;
   }
+  // «Уже есть в семье» with nobody picked must not fall through to creating
+  // a brand-new nameless Person below — the picker is a search box now, not
+  // a `required` <select>, so an empty submit can actually reach here.
+  if (formData.get("mode") === "existing") {
+    throw new RelationshipValidationError("Выберите человека из семьи.");
+  }
 
   const isPlaceholder = formData.get("isPlaceholder") === "on";
   const firstName =
