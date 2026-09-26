@@ -38,7 +38,7 @@ export function StoryChaptersNav({
   const current = chapters.find((c) => c.id === currentId);
 
   return (
-    <div className="sticky top-3 z-30 flex justify-center px-4 pt-6">
+    <div className="sticky top-[calc(var(--app-header-h,0px)-0.75rem)] z-30 flex justify-center px-4 pt-6">
       <ContentsMenu
         menuId="story-chapters"
         menuLabel="Главы истории"

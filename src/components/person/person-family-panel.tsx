@@ -96,7 +96,7 @@ export async function PersonFamilyPanel({
     <ProfileSection
       id="family"
       title="Семья"
-      className="min-w-0 scroll-mt-24"
+      className="min-w-0 scroll-mt-[calc(var(--app-header-h,0px)+4.5rem)]"
       action={
         // A «go somewhere» link, styled exactly like Family Home's «Весь
         // архив» / «Ещё» (user request 2026-09-26) — terracotta stays for

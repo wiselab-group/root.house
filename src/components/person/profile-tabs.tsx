@@ -74,7 +74,7 @@ export function ProfileTabs({ panels }: { panels: ProfilePanel[] }) {
 
   return (
     <>
-      <div className="sticky top-3 z-30 flex justify-center px-4 pt-6 md:pt-8">
+      <div className="sticky top-[calc(var(--app-header-h,0px)-0.75rem)] z-30 flex justify-center px-4 pt-6 md:pt-8">
         <div
           role="tablist"
           aria-label="Разделы профиля"
@@ -136,7 +136,7 @@ export function ProfileTabs({ panels }: { panels: ProfilePanel[] }) {
           id={panel.id}
           role="tabpanel"
           aria-labelledby={`tab-${panel.id}`}
-          className={`scroll-mt-20 ${panel.id === active ? "" : "md:hidden"}`}
+          className={`scroll-mt-[calc(var(--app-header-h,0px)+4.5rem)] ${panel.id === active ? "" : "md:hidden"}`}
         >
           {panel.content}
         </div>
