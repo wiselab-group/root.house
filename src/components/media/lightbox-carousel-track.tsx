@@ -126,8 +126,14 @@ export function LightboxCarouselTrack({
   const canDrag = hasPrev || hasNext;
 
   return (
+    // overflow-x-clip: the neighbors sit just past this box's edges, and on
+    // a wide screen they showed beside the current photo at rest (user
+    // request: show only the photo being viewed). Clipped here, a swipe
+    // still slides the neighbor in from the box edge. `clip`, not
+    // `hidden`, so the box doesn't become a scroll container that would
+    // also cut tag chips off vertically.
     <div
-      className="relative h-full w-full max-w-4xl touch-pan-y select-none"
+      className="relative h-full w-full max-w-4xl touch-pan-y overflow-x-clip select-none"
       style={{
         cursor: !canDrag ? undefined : isDragging ? "grabbing" : "grab",
       }}
