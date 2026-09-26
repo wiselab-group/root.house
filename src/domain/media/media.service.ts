@@ -31,6 +31,7 @@ import {
   setMediaVariants,
   upsertPhotoTagPosition,
   clearPhotoTagPosition,
+  setPhotoTagRadius,
   removePersonFromMedia,
   type CreateMediaData,
   type MediaRecord,
@@ -595,4 +596,9 @@ export async function reorderGalleryPhotos(
 }
 
 export type { CreateMediaData, UpsertPhotoTagPositionData };
-export { upsertPhotoTagPosition, clearPhotoTagPosition, removePersonFromMedia };
+export {
+  upsertPhotoTagPosition,
+  clearPhotoTagPosition,
+  setPhotoTagRadius,
+  removePersonFromMedia,
+};

@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   media,
@@ -45,6 +45,9 @@ export interface MediaTaggedPerson {
   /** Tap-to-tag point, 0–100, or null for an untagged/positionless mediaPerson row. */
   xPercent: number | null;
   yPercent: number | null;
+  /** Hand-set spotlight radius (% of the photo's shorter side), or null for
+   *  the automatic size — see db/schema/media.ts. */
+  radiusPercent: number | null;
 }
 
 /** Lean projection of an Album a photo belongs to — enough for a chip/link, no need for the full AlbumRecord. */
@@ -233,6 +236,7 @@ export async function getPeopleForMedia(
       person: persons,
       xPercent: mediaPerson.xPercent,
       yPercent: mediaPerson.yPercent,
+      radiusPercent: mediaPerson.radiusPercent,
     })
     .from(mediaPerson)
     .innerJoin(persons, eq(mediaPerson.personId, persons.id))
@@ -254,6 +258,8 @@ export async function getPeopleForMedia(
       photoMediaId: row.person.photoMediaId,
       xPercent: row.xPercent === null ? null : Number(row.xPercent),
       yPercent: row.yPercent === null ? null : Number(row.yPercent),
+      radiusPercent:
+        row.radiusPercent === null ? null : Number(row.radiusPercent),
     };
     const existing = result.get(row.mediaId);
     if (existing) existing.push(tagged);
@@ -467,6 +473,9 @@ export interface UpsertPhotoTagPositionData {
   familyId: string;
   xPercent: number;
   yPercent: number;
+  /** Set on a fresh placement; omitted when a marker is only dragged to a
+   *  new spot, so a hand-set radius survives the move. */
+  radiusPercent?: number;
 }
 
 /**
@@ -500,10 +509,18 @@ export async function upsertPhotoTagPosition(
       personId: data.personId,
       xPercent: String(data.xPercent),
       yPercent: String(data.yPercent),
+      radiusPercent:
+        data.radiusPercent === undefined ? null : String(data.radiusPercent),
     })
     .onConflictDoUpdate({
       target: [mediaPerson.mediaId, mediaPerson.personId],
-      set: { xPercent: String(data.xPercent), yPercent: String(data.yPercent) },
+      set: {
+        xPercent: String(data.xPercent),
+        yPercent: String(data.yPercent),
+        ...(data.radiusPercent !== undefined && {
+          radiusPercent: String(data.radiusPercent),
+        }),
+      },
     });
   return true;
 }
@@ -521,11 +538,43 @@ export async function clearPhotoTagPosition(
 ): Promise<boolean> {
   const result = await db
     .update(mediaPerson)
-    .set({ xPercent: null, yPercent: null })
+    .set({ xPercent: null, yPercent: null, radiusPercent: null })
     .where(
       and(
         eq(mediaPerson.mediaId, mediaId),
         eq(mediaPerson.personId, personId),
+        inArray(
+          mediaPerson.personId,
+          db
+            .select({ id: persons.id })
+            .from(persons)
+            .where(eq(persons.familyId, familyId)),
+        ),
+      ),
+    )
+    .returning({ id: mediaPerson.id });
+  return result.length > 0;
+}
+
+/**
+ * Sets the hand-picked spotlight radius on an already-placed point-tag.
+ * Only touches a row that has a point (a positionless tag has nothing to
+ * light) and whose person is in `familyId`, in the same statement.
+ */
+export async function setPhotoTagRadius(
+  mediaId: string,
+  personId: string,
+  familyId: string,
+  radiusPercent: number,
+): Promise<boolean> {
+  const result = await db
+    .update(mediaPerson)
+    .set({ radiusPercent: String(radiusPercent) })
+    .where(
+      and(
+        eq(mediaPerson.mediaId, mediaId),
+        eq(mediaPerson.personId, personId),
+        isNotNull(mediaPerson.xPercent),
         inArray(
           mediaPerson.personId,
           db

@@ -8,9 +8,13 @@ import { getMedia } from "@/domain/media/media.service";
 import {
   upsertPhotoTagPosition,
   clearPhotoTagPosition,
+  setPhotoTagRadius,
   removePersonFromMedia,
 } from "@/domain/media/media.service";
-import { validatePhotoTagPoint } from "@/domain/media/photo-tag";
+import {
+  validatePhotoTagPoint,
+  validatePhotoTagRadius,
+} from "@/domain/media/photo-tag";
 
 /**
  * Places (or moves, via the same upsert) a tap-to-tag point for `personId`
@@ -18,6 +22,10 @@ import { validatePhotoTagPoint } from "@/domain/media/photo-tag";
  * deleteMediaAction, this doesn't require owning/editing the photo itself,
  * since tagging who's in a family photo is a collaborative act, not a
  * mutation of the photo's own lifecycle.
+ *
+ * `radiusPercent` is passed on a fresh placement (the spotlight editor's
+ * starting size) and omitted on a drag-to-move, so a hand-set radius
+ * survives moving the point.
  */
 export async function setPhotoTagPositionAction(
   familyId: string,
@@ -26,6 +34,7 @@ export async function setPhotoTagPositionAction(
   personId: string,
   xPercent: number,
   yPercent: number,
+  radiusPercent?: number,
 ): Promise<void> {
   const session = await auth();
   if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
@@ -38,7 +47,42 @@ export async function setPhotoTagPositionAction(
   if (!person) throw new Error("Человек не найден.");
 
   const point = validatePhotoTagPoint({ xPercent, yPercent });
-  await upsertPhotoTagPosition({ mediaId, personId, familyId, ...point });
+  await upsertPhotoTagPosition({
+    mediaId,
+    personId,
+    familyId,
+    ...point,
+    ...(radiusPercent !== undefined && {
+      radiusPercent: validatePhotoTagRadius(radiusPercent),
+    }),
+  });
+
+  revalidatePath(`/families/${familySlug}/photos`);
+  revalidatePath(`/families/${familySlug}/people/${person.slug}`);
+}
+
+/**
+ * Sets the spotlight radius the tagger picked for `personId`'s point on
+ * `mediaId` (the lightbox's «Изменить область» editor). Same access rule as
+ * placing the point: contributor+.
+ */
+export async function setPhotoTagRadiusAction(
+  familyId: string,
+  familySlug: string,
+  mediaId: string,
+  personId: string,
+  radiusPercent: number,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  await requireFamilyAccess(familyId, session.user.id, "contributor");
+
+  const person = await getPerson(personId, familyId);
+  if (!person) throw new Error("Человек не найден.");
+
+  const radius = validatePhotoTagRadius(radiusPercent);
+  const updated = await setPhotoTagRadius(mediaId, personId, familyId, radius);
+  if (!updated) throw new Error("Отметка не найдена.");
 
   revalidatePath(`/families/${familySlug}/photos`);
   revalidatePath(`/families/${familySlug}/people/${person.slug}`);

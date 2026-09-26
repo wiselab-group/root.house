@@ -33,3 +33,32 @@ export function validatePhotoTagPoint(input: {
     yPercent: Math.round(input.yPercent * 100) / 100,
   };
 }
+
+/** The spotlight radius bounds, as a percentage of the photo's shorter
+ *  side: 3% is still a visible light on a face in a big group shot, 60%
+ *  already lights most of a portrait. */
+export const PHOTO_TAG_RADIUS_MIN = 3;
+export const PHOTO_TAG_RADIUS_MAX = 60;
+/** What a freshly placed tag starts at before it's adjusted — close to the
+ *  old automatic size for a lone face (a quarter of the shorter side). */
+export const PHOTO_TAG_RADIUS_DEFAULT = 13;
+
+export class InvalidPhotoTagRadiusError extends Error {}
+
+/**
+ * Same contract as validatePhotoTagPoint: rounds to the numeric(5,2) column
+ * and rejects anything out of range instead of clamping — the editor
+ * clamps on the client, so an out-of-range value here is a bug.
+ */
+export function validatePhotoTagRadius(radiusPercent: number): number {
+  if (
+    !Number.isFinite(radiusPercent) ||
+    radiusPercent < PHOTO_TAG_RADIUS_MIN ||
+    radiusPercent > PHOTO_TAG_RADIUS_MAX
+  ) {
+    throw new InvalidPhotoTagRadiusError(
+      `radiusPercent должен быть числом от ${PHOTO_TAG_RADIUS_MIN} до ${PHOTO_TAG_RADIUS_MAX}, получено: ${radiusPercent}`,
+    );
+  }
+  return Math.round(radiusPercent * 100) / 100;
+}

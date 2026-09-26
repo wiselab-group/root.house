@@ -1,0 +1,1 @@
+ALTER TABLE "media_person" ADD COLUMN "radius_percent" numeric(5, 2);

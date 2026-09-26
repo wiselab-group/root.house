@@ -5,6 +5,8 @@ import { useState } from "react";
 interface Point {
   xPercent: number;
   yPercent: number;
+  /** Hand-set radius, % of the photo's shorter side — null for automatic. */
+  radiusPercent?: number | null;
 }
 
 /**
@@ -23,6 +25,10 @@ interface Point {
  * neighbours; a lone tag keeps the full size. The distance is worked out
  * in CSS — hypot() over cq units of the photo frame — so it's right at any
  * window shape, and min() over every other tag picks the nearest.
+ *
+ * A tag with a hand-set radius (radiusPercent, picked in
+ * PhotoTagRadiusEditor) skips all of the above: its circle is exactly that
+ * many % of the photo's shorter side (cqmin), whatever the neighbours.
  *
  * Stays mounted with the last point while fading out, so the light doesn't
  * snap to the corner on its way out.
@@ -57,6 +63,7 @@ export function PhotoTagSpotlight({
           ? ({
               "--spot-x": `${shown.xPercent}%`,
               "--spot-y": `${shown.yPercent}%`,
+              ...spotManual(shown.radiusPercent),
               ...(neighbours.length > 0 && {
                 "--spot-cap": spotCap(shown, neighbours),
               }),
@@ -77,4 +84,16 @@ function spotCap(point: Point, neighbours: Point[]): string {
       `hypot(${other.xPercent - point.xPercent} * 1cqw, ${other.yPercent - point.yPercent} * 1cqh)`,
   );
   return `max(3cqmin, min(${distances.join(", ")}) * 0.45)`;
+}
+
+/** The inline vars for a hand-set radius — shared with the editor's live
+ *  preview so what's drawn there is exactly what the viewer later sees. */
+export function spotManual(
+  radiusPercent: number | null | undefined,
+): Record<string, string> {
+  if (radiusPercent == null) return {};
+  return {
+    "--spot-manual": `calc(${radiusPercent} * 1cqmin)`,
+    "--spot-feather": "1.35",
+  };
 }

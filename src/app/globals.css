@@ -768,12 +768,16 @@ body:has(.photo-backdrop) .app-header-bar {
   inherits: false;
   initial-value: 9999px;
 }
+/* A hand-set radius (--spot-manual, from media_person.radius_percent — see
+   PhotoTagSpotlight / PhotoTagRadiusEditor) wins over the automatic size,
+   with a tighter feather (--spot-feather 1.35) so what's lit is what the
+   tagger drew, not a circle twice as big. */
 .photo-tag-spotlight {
-  --spot-r: min(13cqw, 21cqh, var(--spot-cap));
+  --spot-r: var(--spot-manual, min(13cqw, 21cqh, var(--spot-cap)));
   mask-image: radial-gradient(
     circle at var(--spot-x) var(--spot-y),
     transparent 0,
     transparent var(--spot-r),
-    black calc(var(--spot-r) * 2)
+    black calc(var(--spot-r) * var(--spot-feather, 2))
   );
 }

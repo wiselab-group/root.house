@@ -119,6 +119,14 @@ export const mediaPerson = pgTable(
      */
     xPercent: numeric("x_percent", { precision: 5, scale: 2 }),
     yPercent: numeric("y_percent", { precision: 5, scale: 2 }),
+    /**
+     * The lightbox spotlight's radius around the point, set by hand when
+     * tagging — a percentage of the photo's shorter side (3–60, see
+     * domain/media/photo-tag.ts). Null (every tag placed before it existed,
+     * or a positionless tag) means the spotlight falls back to its automatic
+     * size (PhotoTagSpotlight).
+     */
+    radiusPercent: numeric("radius_percent", { precision: 5, scale: 2 }),
   },
   (table) => [
     uniqueIndex("media_person_unique").on(table.mediaId, table.personId),

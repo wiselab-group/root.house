@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { InvalidPhotoTagPointError, validatePhotoTagPoint } from "./photo-tag";
+import {
+  InvalidPhotoTagPointError,
+  InvalidPhotoTagRadiusError,
+  PHOTO_TAG_RADIUS_MAX,
+  PHOTO_TAG_RADIUS_MIN,
+  validatePhotoTagPoint,
+  validatePhotoTagRadius,
+} from "./photo-tag";
 
 describe("validatePhotoTagPoint", () => {
   it("accepts a point in range", () => {
@@ -54,5 +61,31 @@ describe("validatePhotoTagPoint", () => {
         yPercent: Number.POSITIVE_INFINITY,
       }),
     ).toThrow(InvalidPhotoTagPointError);
+  });
+});
+
+describe("validatePhotoTagRadius", () => {
+  it("accepts the bounds", () => {
+    expect(validatePhotoTagRadius(PHOTO_TAG_RADIUS_MIN)).toBe(3);
+    expect(validatePhotoTagRadius(PHOTO_TAG_RADIUS_MAX)).toBe(60);
+  });
+
+  it("rounds to 2 decimals", () => {
+    expect(validatePhotoTagRadius(12.34567)).toBe(12.35);
+  });
+
+  it("rejects out of range instead of clamping", () => {
+    expect(() => validatePhotoTagRadius(2.99)).toThrow(
+      InvalidPhotoTagRadiusError,
+    );
+    expect(() => validatePhotoTagRadius(60.01)).toThrow(
+      InvalidPhotoTagRadiusError,
+    );
+  });
+
+  it("rejects NaN", () => {
+    expect(() => validatePhotoTagRadius(Number.NaN)).toThrow(
+      InvalidPhotoTagRadiusError,
+    );
   });
 });

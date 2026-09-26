@@ -8,9 +8,15 @@ import {
   useTransition,
   type RefObject,
 } from "react";
-import { ExternalLinkIcon, MoveIcon, XIcon } from "lucide-react";
+import {
+  CircleDashedIcon,
+  ExternalLinkIcon,
+  MoveIcon,
+  XIcon,
+} from "lucide-react";
 import {
   setPhotoTagPositionAction,
+  setPhotoTagRadiusAction,
   untagPhotoPointAction,
   removePhotoTagAction,
 } from "@/actions/photo-tag.actions";
@@ -23,12 +29,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { PhotoTagSpotlight } from "./photo-tag-spotlight";
+import {
+  PhotoTagCircle,
+  PhotoTagRadiusEditor,
+  startingRadius,
+} from "./photo-tag-radius-editor";
 import { TagReticle } from "./photo-tag-reticle";
 import { TagPersonCombobox } from "./tag-person-combobox";
 
@@ -217,7 +223,13 @@ export function PhotoTagLayer({
   highlightedPersonId?: string | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [pendingPoint, setPendingPoint] = useState<Point | null>(null);
+  // A freshly tapped point: its spotlight circle is already out to size,
+  // with the person search under it — both picked in one step.
+  const [pending, setPending] = useState<{
+    point: Point;
+    radius: number;
+  } | null>(null);
+  if (!taggingMode && pending) setPending(null);
   const [, startTransition] = useTransition();
   const coarsePointer = useCoarsePointer();
   const drag = useTagDrag(containerRef, canTag, taggingMode, {
@@ -225,8 +237,30 @@ export function PhotoTagLayer({
     familySlug,
     mediaId,
   });
+  // An existing tag whose spotlight size is being changed
+  // (PhotoTagRadiusEditor, from the marker's «Изменить область»).
+  const [editing, setEditing] = useState<{
+    personId: string;
+    radius: number;
+    point: Point;
+    name: string;
+  } | null>(null);
+  if (!taggingMode && editing) setEditing(null);
+  // A just-picked size, held until revalidation brings it back as props
+  // (same reason as useTagDrag's droppedPoints).
+  const [savedRadii, setSavedRadius] = useOptimistic(
+    {} as Record<string, number>,
+    (state, saved: { personId: string; radius: number }) => ({
+      ...state,
+      [saved.personId]: saved.radius,
+    }),
+  );
   const showCursorMarker =
-    taggingMode && !coarsePointer && !drag.draggingPersonId;
+    taggingMode &&
+    !coarsePointer &&
+    !drag.draggingPersonId &&
+    !editing &&
+    !pending;
   const cursorMarker = useTagCursorMarker(containerRef, showCursorMarker);
 
   const positioned = people.filter(
@@ -235,9 +269,21 @@ export function PhotoTagLayer({
   );
   // Only while browsing — in taggingMode every marker is out and the photo
   // must stay fully visible to place new ones.
-  const spotlit = taggingMode
+  const pointOf = (person: MediaTaggedPerson & Point): Point =>
+    drag.draggingPersonId === person.id && drag.dragPoint
+      ? drag.dragPoint
+      : (drag.droppedPoints[person.id] ?? person);
+  const radiusOf = (person: MediaTaggedPerson) =>
+    savedRadii[person.id] ?? person.radiusPercent;
+  const highlighted = taggingMode
     ? null
     : (positioned.find((person) => person.id === highlightedPersonId) ?? null);
+  const spotlit = highlighted && {
+    ...pointOf(highlighted),
+    radiusPercent: radiusOf(highlighted),
+  };
+  const editedPerson =
+    editing && positioned.find((person) => person.id === editing.personId);
 
   function handleTapToPlace(event: React.MouseEvent) {
     // Popover/DropdownMenu content is rendered via a portal, but React's
@@ -251,14 +297,43 @@ export function PhotoTagLayer({
     // on this div (never bubbled from a portaled descendant) should count.
     if (event.target !== event.currentTarget) return;
     if (!taggingMode || drag.draggingPersonId) return;
-    setPendingPoint(pointFromEvent(event, containerRef.current!));
+    // A tap on the photo while resizing an existing tag keeps the size.
+    if (editing) {
+      commitRadius();
+      return;
+    }
+    const point = pointFromEvent(event, containerRef.current!);
+    // A tap elsewhere while a new point is out just moves it, size kept.
+    setPending((current) => ({
+      point,
+      radius:
+        current?.radius ??
+        startingRadius(point, positioned, containerRef.current!),
+    }));
+  }
+
+  function commitRadius() {
+    if (!editing) return;
+    const { personId, radius } = editing;
+    setEditing(null);
+    startTransition(async () => {
+      setSavedRadius({ personId, radius });
+      await setPhotoTagRadiusAction(
+        familyId,
+        familySlug,
+        mediaId,
+        personId,
+        radius,
+      );
+    });
   }
 
   function handleAssign(person: { id: string; name: string }) {
-    if (!pendingPoint) return;
-    const point = pendingPoint;
-    setPendingPoint(null);
+    if (!pending) return;
+    const { point, radius } = pending;
+    setPending(null);
     startTransition(async () => {
+      setSavedRadius({ personId: person.id, radius });
       await setPhotoTagPositionAction(
         familyId,
         familySlug,
@@ -266,6 +341,7 @@ export function PhotoTagLayer({
         person.id,
         point.xPercent,
         point.yPercent,
+        radius,
       );
     });
   }
@@ -291,11 +367,7 @@ export function PhotoTagLayer({
         <PhotoTagMarker
           key={person.id}
           person={person}
-          point={
-            drag.draggingPersonId === person.id && drag.dragPoint
-              ? drag.dragPoint
-              : (drag.droppedPoints[person.id] ?? person)
-          }
+          point={pointOf(person)}
           isHighlighted={taggingMode || highlightedPersonId === person.id}
           taggingMode={taggingMode}
           canTag={canTag}
@@ -303,35 +375,54 @@ export function PhotoTagLayer({
           onDragStart={(e) => drag.onDragStart(e, person.id)}
           onDragMove={drag.onDragMove}
           onDragEnd={drag.onDragEnd}
+          onEditRadius={() =>
+            setEditing({
+              personId: person.id,
+              point: pointOf(person),
+              name: personDisplayName(person),
+              radius:
+                radiusOf(person) ??
+                startingRadius(
+                  person,
+                  positioned.filter((other) => other.id !== person.id),
+                  containerRef.current!,
+                ),
+            })
+          }
           onUntag={() => drag.onUntag(person.id)}
           onRemove={() => drag.onRemove(person.id)}
         />
       ))}
 
-      {pendingPoint && (
-        <Popover
-          defaultOpen
-          onOpenChange={(open) => {
-            if (!open) setPendingPoint(null);
-          }}
+      {editing && (
+        <PhotoTagRadiusEditor
+          containerRef={containerRef}
+          point={editedPerson ? pointOf(editedPerson) : editing.point}
+          radius={editing.radius}
+          onRadiusChange={(radius) => setEditing({ ...editing, radius })}
+          name={editing.name}
+          onCommit={commitRadius}
+          onCancel={() => setEditing(null)}
+        />
+      )}
+
+      {pending && (
+        <PhotoTagCircle
+          containerRef={containerRef}
+          point={pending.point}
+          radius={pending.radius}
+          onRadiusChange={(radius) => setPending({ ...pending, radius })}
+          label="Размер области вокруг лица"
+          onEscape={() => setPending(null)}
         >
-          <PopoverTrigger
-            className="absolute size-px -translate-x-1/2 -translate-y-1/2"
-            style={{
-              left: `${pendingPoint.xPercent}%`,
-              top: `${pendingPoint.yPercent}%`,
-            }}
-            aria-hidden
-            tabIndex={-1}
-          />
-          <PopoverContent className="w-64 p-2" align="center" sideOffset={12}>
+          <div className="w-64 rounded-xl bg-popover p-2 whitespace-normal text-popover-foreground shadow-lg ring-1 ring-foreground/10">
             <TagPersonCombobox
               familyId={familyId}
               onSelect={handleAssign}
               autoFocus
             />
-          </PopoverContent>
-        </Popover>
+          </div>
+        </PhotoTagCircle>
       )}
     </div>
   );
@@ -357,6 +448,7 @@ function PhotoTagMarker({
   onDragStart,
   onDragMove,
   onDragEnd,
+  onEditRadius,
   onUntag,
   onRemove,
 }: {
@@ -369,6 +461,7 @@ function PhotoTagMarker({
   onDragStart: (event: React.PointerEvent<HTMLButtonElement>) => void;
   onDragMove: (event: React.PointerEvent<HTMLButtonElement>) => void;
   onDragEnd: (event: React.PointerEvent<HTMLButtonElement>) => void;
+  onEditRadius: () => void;
   onUntag: () => void;
   onRemove: () => void;
 }) {
@@ -418,6 +511,10 @@ function PhotoTagMarker({
         <DropdownMenuItem disabled className="text-muted-foreground">
           <MoveIcon />
           Перетащите метку, чтобы переместить
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onEditRadius}>
+          <CircleDashedIcon />
+          Изменить область
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onUntag}>
           <XIcon />
