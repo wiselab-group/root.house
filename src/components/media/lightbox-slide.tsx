@@ -65,7 +65,8 @@ export function LightboxSlide({
           alt={photo.media.title ?? "Семейное фото"}
           fill
           sizes="100vw"
-          className="object-contain"
+          // Same corner as the app's photo cards (user request 2026-09-26).
+          className="rounded-xl object-contain"
           onLoad={(e) => {
             const { naturalWidth, naturalHeight } = e.currentTarget;
             if (!stored && naturalWidth && naturalHeight) {
@@ -85,7 +86,7 @@ export function LightboxSlide({
             // OUTSIDE the photo, over the black backdrop — inset, it vanished
             // along a photo's bright edges and covered them, like a
             // viewfinder frame instead of a sticker on the print.
-            className="pointer-events-none absolute -inset-1 rounded-[3px] border-2 border-white/85"
+            className="pointer-events-none absolute -inset-1 rounded-[calc(var(--radius-xl)+0.25rem)] border-2 border-white/85"
           />
         )}
         <PhotoTagLayer
