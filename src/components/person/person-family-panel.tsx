@@ -17,7 +17,8 @@ import type { RelativeItem } from "./relative-item";
  * earlier per-kind groups (Родители / Супруги / Дети / Братья и сёстры) and
  * a mini family-tree diagram tried in the redesign mocks: the user asked for
  * a simple list here, the tree itself is one click away. Ordered parents →
- * spouses → children → siblings, so the list still reads generationally.
+ * spouses → children → siblings, each kind on its own rows with a hairline
+ * between (see RelativeGroup), so the list still reads generationally.
  *
  * Server component: fetches everything it needs itself so the Person
  * Profile page doesn't have to orchestrate it.
