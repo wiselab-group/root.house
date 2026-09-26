@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import {
+  ArrowUpRightIcon,
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -12,6 +13,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCoarsePointer } from "@/hooks/use-coarse-pointer";
 import { Button } from "@/components/ui/button";
 import { personDisplayName } from "@/domain/person/display-name";
 import {
@@ -187,27 +189,63 @@ function TaggedPeopleStrip({
   highlightedPersonId: string | null;
   onHighlight: (personId: string | null) => void;
 }) {
+  // Phones have no hover, so a tap on a name used to go straight to the
+  // profile and the spotlight was never seen. There the name is a toggle
+  // instead — tap to light the person up, tap again to clear — and the
+  // profile is one more deliberate tap on the ↗ that appears inside the lit
+  // chip (user request 2026-09-26). Desktop keeps hover-to-light,
+  // click-to-open.
+  const coarsePointer = useCoarsePointer();
   if (people.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-2 border-t border-white/10 p-3">
-      {people.map((person) => (
-        <Link
-          key={person.id}
-          href={`/families/${familySlug}/people/${person.slug}`}
-          onMouseEnter={() => onHighlight(person.id)}
-          onMouseLeave={() => onHighlight(null)}
-          onFocus={() => onHighlight(person.id)}
-          onBlur={() => onHighlight(null)}
-          className={cn(
-            "rounded-full px-3 py-1 text-sm text-white transition-colors",
-            highlightedPersonId === person.id
-              ? "bg-white/25"
-              : "bg-white/10 hover:bg-white/20",
-          )}
-        >
-          {personDisplayName(person)}
-        </Link>
-      ))}
+      {people.map((person) => {
+        const highlighted = highlightedPersonId === person.id;
+        const className = cn(
+          "rounded-full px-3 py-1 text-sm text-white transition-colors",
+          highlighted ? "bg-white/25" : "bg-white/10 hover:bg-white/20",
+        );
+        if (coarsePointer) {
+          const name = personDisplayName(person);
+          return (
+            <span
+              key={person.id}
+              className={cn(className, "flex items-center p-0")}
+            >
+              <button
+                type="button"
+                aria-pressed={highlighted}
+                onClick={() => onHighlight(highlighted ? null : person.id)}
+                className={cn("py-1 pl-3", highlighted ? "pr-1" : "pr-3")}
+              >
+                {name}
+              </button>
+              {highlighted && (
+                <Link
+                  href={`/families/${familySlug}/people/${person.slug}`}
+                  aria-label={`Открыть профиль: ${name}`}
+                  className="mr-0.5 flex size-7 items-center justify-center rounded-full bg-white/15 transition-colors active:bg-white/30"
+                >
+                  <ArrowUpRightIcon className="size-4" />
+                </Link>
+              )}
+            </span>
+          );
+        }
+        return (
+          <Link
+            key={person.id}
+            href={`/families/${familySlug}/people/${person.slug}`}
+            onMouseEnter={() => onHighlight(person.id)}
+            onMouseLeave={() => onHighlight(null)}
+            onFocus={() => onHighlight(person.id)}
+            onBlur={() => onHighlight(null)}
+            className={className}
+          >
+            {personDisplayName(person)}
+          </Link>
+        );
+      })}
     </div>
   );
 }

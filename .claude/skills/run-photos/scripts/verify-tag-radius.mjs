@@ -184,6 +184,30 @@ async function main() {
     console.log("spotlight style after reload:", vars);
     await shot("05-hover-after-reload");
 
+    // Phone: a tap on the name lights the person up and shows ↗ to the
+    // profile, but doesn't navigate by itself.
+    const phone = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      isMobile: true,
+      hasTouch: true,
+      storageState: await page.context().storageState(),
+    });
+    const mobile = await phone.newPage();
+    await mobile.goto(page.url(), { waitUntil: "networkidle" });
+    await mobile.locator("img[alt]").first().tap();
+    const name = `${PERSON_FIRST_NAME} ${PERSON_LAST_NAME}`;
+    const urlBefore = mobile.url();
+    await mobile.locator("button[aria-pressed]", { hasText: name }).tap();
+    await mobile.waitForTimeout(700);
+    console.log("mobile: stayed on page after name tap:", mobile.url() === urlBefore);
+    const profileLink = mobile.getByRole("link", { name: `Открыть профиль: ${name}` });
+    console.log("mobile: profile arrow shown:", await profileLink.isVisible());
+    await mobile.screenshot({ path: path.join(SCREENSHOT_DIR, "radius-06-mobile-chip.png") });
+    await profileLink.tap();
+    await mobile.waitForURL(/\/people\//, { timeout: 20000 });
+    console.log("mobile: arrow opens profile:", mobile.url());
+    await phone.close();
+
     console.log("errors:", consoleErrors.length ? consoleErrors : "none");
   } catch (err) {
     console.error("FAILED:", err);
