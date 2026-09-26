@@ -729,6 +729,27 @@ body:has(.photo-backdrop) .app-header-bar {
   padding-top: var(--app-header-h, 0px);
 }
 
+/* CollapseToggleButton's hit area (person-node-parts.tsx): an invisible
+   ::before around the 20px badge, sized in flow px so it's --hit-screen px
+   on screen at the live --tree-zoom (tree-canvas.tsx), never smaller than
+   the badge and never over 64 flow px. */
+.collapse-hit {
+  --hit-screen: 32px;
+}
+@media (pointer: coarse) {
+  .collapse-hit {
+    --hit-screen: 44px;
+  }
+}
+.collapse-hit::before {
+  content: "";
+  position: absolute;
+  inset: calc(
+    -1 * clamp(0px, (var(--hit-screen) / var(--tree-zoom, 1) - 20px) / 2, 22px)
+  );
+  border-radius: 9999px;
+}
+
 /* XYFlow's dark colorMode (tree-canvas.tsx) brings its own neutral grey
    chrome; point it at the app's warm dark tokens instead, and keep the
    canvas itself transparent so the page background shows through, as it

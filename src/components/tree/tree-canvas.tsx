@@ -469,6 +469,10 @@ export function TreeCanvas({
     [effectiveGraph, lastExpandedKey],
   );
 
+  // The live zoom, as --tree-zoom on the canvas wrapper — written straight
+  // to the DOM on every viewport move (no React render per frame), read by
+  // CollapseToggleButton's hit area to stay finger-sized at any zoom.
+  const canvasRef = useRef<HTMLDivElement>(null);
   const prevCommittedEdgesRef = useRef<{
     effectiveGraph: TreeLayoutGraph;
     edgeIds: ReadonlySet<string>;
@@ -552,6 +556,7 @@ export function TreeCanvas({
     <TreeLayoutPositionsProvider nodes={nodes}>
       <TreeJustExpandedEdgesProvider value={justExpandedEdgeIds}>
         <div
+          ref={canvasRef}
           className={cn(
             "w-full overflow-hidden bg-tree-canvas",
             readOnly ? "fixed inset-0" : "h-[calc(100svh-4.5rem)]",
@@ -595,6 +600,12 @@ export function TreeCanvas({
             // committed layout positions/dimensions, never a DOM measurement, so
             // there's no stale-`measured` window to hit on remount anymore.
             onlyRenderVisibleElements
+            onMove={(_, viewport) =>
+              canvasRef.current?.style.setProperty(
+                "--tree-zoom",
+                String(viewport.zoom),
+              )
+            }
           >
             <FocusViewport
               focusNode={focusNode}

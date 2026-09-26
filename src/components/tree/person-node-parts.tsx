@@ -76,6 +76,15 @@ export function InvisibleConnectorHandles() {
  * canvas drag or panning the viewport; stopPropagation keeps it from also
  * bubbling into whatever's underneath (a card's click-to-open-popover, or —
  * for the union badge — nothing, but kept for the same defensive reason).
+ *
+ * The visible button stays 20px (relationship-edge.tsx's divorce `//`
+ * strokes are spaced to hug exactly that), but it's hit through a larger
+ * invisible ::before (user request 2026-09-26: easy to hit on desktop and
+ * phone). The tree zooms, so a fixed hit area shrank to a few screen px
+ * zoomed out; the ::before is sized against --tree-zoom (tree-canvas.tsx
+ * writes it live) to about 32px ON SCREEN with a mouse and 44px with a
+ * finger — Apple's touch-target minimum — and capped at 64 flow px so a
+ * far zoom-out doesn't grow it over the neighbouring cards.
  */
 export function CollapseToggleButton({
   collapsedDescendantCount,
@@ -91,7 +100,8 @@ export function CollapseToggleButton({
     <button
       type="button"
       className={cn(
-        "nodrag nopan z-10 flex h-5 min-w-5 cursor-pointer items-center justify-center gap-0.5 rounded-full border bg-card px-1.5 text-[0.65rem] font-medium shadow-sm transition-colors",
+        "nodrag nopan relative z-10 flex h-5 min-w-5 cursor-pointer items-center justify-center gap-0.5 rounded-full border bg-card px-1.5 text-[0.65rem] font-medium shadow-sm transition-[color,border-color,scale] duration-200 ease-(--ease-reveal) outline-none active:scale-90 focus-visible:ring-2 focus-visible:ring-ring",
+        "collapse-hit",
         // Sage (--tree-accent), not terracotta — "collapsed" is a standing
         // property of this branch (identity/state), not something the user
         // is doing right now, so it follows the identity color, not the
@@ -99,7 +109,7 @@ export function CollapseToggleButton({
         // split).
         isCollapsed
           ? "border-tree-accent text-tree-accent"
-          : "border-border text-muted-foreground hover:text-foreground",
+          : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground",
         className,
       )}
       onClick={(e) => {
