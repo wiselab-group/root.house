@@ -74,7 +74,9 @@ export function ProfileTabs({ panels }: { panels: ProfilePanel[] }) {
 
   return (
     <>
-      <div className="sticky top-[calc(var(--app-header-h,0px)-0.75rem)] z-30 flex justify-center px-4 pt-6 md:pt-8">
+      {/* -mt-9: tabs and content ride ~36px up over the hero's faded
+          bottom (user request 2026-09-26). */}
+      <div className="sticky top-[calc(var(--app-header-h,0px)-0.75rem)] z-30 -mt-9 flex justify-center px-4 pt-6 md:pt-8">
         <div
           role="tablist"
           aria-label="Разделы профиля"

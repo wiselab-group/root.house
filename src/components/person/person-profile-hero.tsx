@@ -58,7 +58,7 @@ export function PersonProfileHero({
   const meta = personHeroMeta(person, place);
 
   return (
-    <header className="relative isolate h-[clamp(440px,48vw,620px)] overflow-hidden">
+    <header className="relative isolate h-[clamp(440px,50vw,620px)] overflow-hidden">
       <div
         aria-hidden="true"
         className="hero-glow pointer-events-none absolute inset-0"
