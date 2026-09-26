@@ -79,7 +79,13 @@ export function LightboxSlide({
         {taggingMode && (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-0 ring-3 ring-primary ring-inset"
+            // White, not terracotta or green: it marks the photo being
+            // worked on, it isn't an action, and it mustn't compete with the
+            // green «Готово» that ends the mode (user-approved). Drawn just
+            // OUTSIDE the photo, over the black backdrop — inset, it vanished
+            // along a photo's bright edges and covered them, like a
+            // viewfinder frame instead of a sticker on the print.
+            className="pointer-events-none absolute -inset-1 rounded-[3px] border-2 border-white/85"
           />
         )}
         <PhotoTagLayer

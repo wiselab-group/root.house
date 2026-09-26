@@ -20,6 +20,7 @@ import {
 } from "./lightbox-carousel-track";
 import type { GalleryPhotoView } from "./gallery-photo";
 import { mediaDownloadUrl } from "@/lib/media-url";
+import { arrowStep } from "./lightbox-keys";
 
 /**
  * Full-screen photo viewer for the family gallery — built directly on
@@ -76,7 +77,16 @@ export function PhotoLightbox({
     >
       <DialogPrimitive.Portal>
         <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/90 duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
-        <DialogPrimitive.Popup className="fixed inset-0 z-50 flex flex-col outline-none duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0">
+        <DialogPrimitive.Popup
+          className="fixed inset-0 z-50 flex flex-col outline-none duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+          onKeyDown={(event) => {
+            const step = arrowStep(event);
+            if (!step) return;
+            if (step === "prev" ? !hasPrev : !hasNext) return;
+            event.preventDefault();
+            trackRef.current?.triggerStep(step);
+          }}
+        >
           <DialogPrimitive.Title className="sr-only">
             {photo.media.title ?? "Семейное фото"}
           </DialogPrimitive.Title>
@@ -87,7 +97,13 @@ export function PhotoLightbox({
                 type="button"
                 variant={taggingMode ? "default" : "secondary"}
                 size="sm"
-                className="rounded-full shadow-sm"
+                // «Готово» ends the mode — the green confirm, same as
+                // PhotoArrangeBar's (see CLAUDE.md DESIGN TOKENS).
+                className={cn(
+                  "rounded-full shadow-sm",
+                  taggingMode &&
+                    "bg-confirm text-confirm-foreground hover:bg-confirm/85 focus-visible:border-confirm focus-visible:ring-confirm/50",
+                )}
                 aria-pressed={taggingMode}
                 onClick={() => setTaggingMode((v) => !v)}
               >
@@ -121,7 +137,7 @@ export function PhotoLightbox({
             </DialogPrimitive.Close>
           </div>
 
-          <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 pb-4">
+          <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4 pt-1 pb-4">
             <LightboxCarouselTrack
               ref={trackRef}
               photos={photos}
