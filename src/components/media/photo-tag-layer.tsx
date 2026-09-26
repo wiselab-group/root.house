@@ -11,7 +11,6 @@ import {
 import { personDisplayName } from "@/domain/person/display-name";
 import type { MediaTaggedPerson } from "@/domain/media/media.service";
 import { useCoarsePointer } from "@/hooks/use-coarse-pointer";
-import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +22,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { PhotoTagSpotlight } from "./photo-tag-spotlight";
+import { TagReticle } from "./photo-tag-reticle";
 import { TagPersonCombobox } from "./tag-person-combobox";
 
 type Point = { xPercent: number; yPercent: number };
@@ -79,7 +80,7 @@ function useTagCursorMarker(
         hidden
         className="pointer-events-none absolute flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
       >
-        <span className="size-3.5 rounded-full border-2 border-background bg-primary shadow-md" />
+        <TagReticle shown />
       </div>
     ),
   };
@@ -168,13 +169,13 @@ function useTagDrag(
 }
 
 /**
- * Overlay layer inside PhotoLightbox's image container — renders existing
+ * Overlay layer inside LightboxSlide's photo frame — renders existing
  * tap-to-tag markers and, when `taggingMode` is on, catches taps to place
- * new ones. Coordinates are computed from the overlay div's own
- * getBoundingClientRect(), which occupies exactly the same box as the
- * object-contain <Image> next to it (both are absolutely positioned at
- * inset-0 within the same parent) — no dependency on media.width/height,
- * which nothing in this codebase populates yet.
+ * new ones. Coordinates are percentages of the overlay div's own
+ * getBoundingClientRect(), and that div fills the frame LightboxSlide sizes
+ * to the photo's visible rectangle — so a point means the same spot on the
+ * photo at any window shape (see LightboxSlide for the letterbox bug this
+ * replaced).
  */
 export function PhotoTagLayer({
   mediaId,
@@ -213,6 +214,11 @@ export function PhotoTagLayer({
     (person): person is MediaTaggedPerson & Point =>
       person.xPercent != null && person.yPercent != null,
   );
+  // Only while browsing — in taggingMode every marker is out and the photo
+  // must stay fully visible to place new ones.
+  const spotlit = taggingMode
+    ? null
+    : (positioned.find((person) => person.id === highlightedPersonId) ?? null);
 
   function handleTapToPlace(event: React.MouseEvent) {
     // Popover/DropdownMenu content is rendered via a portal, but React's
@@ -252,8 +258,14 @@ export function PhotoTagLayer({
       onClick={handleTapToPlace}
       onMouseMove={cursorMarker.onMouseMove}
       onMouseLeave={cursorMarker.onMouseLeave}
-      style={{ cursor: showCursorMarker ? "none" : undefined }}
+      // containerType: the spotlight's radius is sized in cq units of
+      // this box (see .photo-tag-spotlight in globals.css).
+      style={{
+        cursor: showCursorMarker ? "none" : undefined,
+        containerType: "size",
+      }}
     >
+      <PhotoTagSpotlight point={spotlit} others={positioned} />
       {cursorMarker.element}
 
       {positioned.map((person) => (
@@ -307,7 +319,7 @@ export function PhotoTagLayer({
 }
 
 /**
- * One already-placed tag: a draggable dot plus (canTag only) its dropdown
+ * One already-placed tag: a draggable point (TagReticle) plus (canTag only) its dropdown
  * menu. Outside tagging mode the dot itself is invisible by default —
  * `isHighlighted` (set by the caller from `taggingMode` or a hover/focus on
  * the person's chip in TaggedPeopleStrip) reveals it, matching Instagram/
@@ -353,15 +365,7 @@ function PhotoTagMarker({
       onPointerMove={onDragMove}
       onPointerUp={onDragEnd}
     >
-      <span
-        aria-hidden
-        className={cn(
-          "size-3.5 rounded-full border-2 border-background bg-primary shadow-md transition-[transform,opacity] duration-150 motion-reduce:transition-none",
-          isHighlighted
-            ? "scale-100 opacity-100 group-hover:scale-125 group-focus-visible:scale-125"
-            : "scale-75 opacity-0",
-        )}
-      />
+      <TagReticle shown={isHighlighted} />
       <span className="sr-only">{name}</span>
     </button>
   );

@@ -1,17 +1,9 @@
 "use client";
 
-import { ArchiveImage } from "@/components/media/archive-image";
-import { mediaUrl } from "@/lib/media-url";
-import {
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-  type Ref,
-} from "react";
+import { useEffect, useImperativeHandle, type Ref } from "react";
 import { cn } from "@/lib/utils";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
-import { PhotoTagLayer } from "./photo-tag-layer";
+import { LightboxSlide } from "./lightbox-slide";
 import { useSwipeNavigation, SWIPE_SETTLE_MS } from "./use-swipe-navigation";
 import type { GalleryPhotoView } from "./gallery-photo";
 
@@ -209,125 +201,6 @@ function TrackSlot({
           highlightedPersonId={highlightedPersonId}
         />
       )}
-    </div>
-  );
-}
-
-function LightboxSlide({
-  photo,
-  familyId,
-  familySlug,
-  taggingMode,
-  canTag,
-  highlightedPersonId,
-}: {
-  photo: GalleryPhotoView;
-  familyId: string;
-  familySlug: string;
-  taggingMode: boolean;
-  canTag: boolean;
-  highlightedPersonId: string | null;
-}) {
-  // No media.width/height in the data (see PhotoTagLayer's own doc comment)
-  // — the actual object-contain rectangle (which can letterbox top/bottom
-  // or left/right depending on aspect ratio) is only knowable once the
-  // image has actually decoded. Only measured while taggingMode is on: the
-  // frame it drives is purely a tagging-mode affordance, so plain viewing
-  // does the usual zero-JS fill+object-contain with no ResizeObserver cost.
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [containRect, setContainRect] = useState<{
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-  } | null>(null);
-  // "Adjust state during rendering" (not in an effect) to drop a stale
-  // rect the instant `photo` changes — an effect-only reset would still
-  // paint one frame with the previous photo's frame before it ran.
-  const [measuredForId, setMeasuredForId] = useState(photo.media.id);
-  if (measuredForId !== photo.media.id) {
-    setMeasuredForId(photo.media.id);
-    if (containRect) setContainRect(null);
-  }
-
-  function recomputeContainRect(naturalWidth: number, naturalHeight: number) {
-    const container = containerRef.current;
-    if (!container || !naturalWidth || !naturalHeight) return;
-    const { width: cw, height: ch } = container.getBoundingClientRect();
-    const scale = Math.min(cw / naturalWidth, ch / naturalHeight);
-    const width = naturalWidth * scale;
-    const height = naturalHeight * scale;
-    setContainRect({
-      left: (cw - width) / 2,
-      top: (ch - height) / 2,
-      width,
-      height,
-    });
-  }
-
-  useEffect(() => {
-    if (!taggingMode) return;
-    const img = containerRef.current?.querySelector("img");
-    // next/image reuses the same <img> DOM node across a src change (the
-    // slide component doesn't remount on next/prev) — right after `src`
-    // changes, `img.complete`/`naturalWidth` can still briefly reflect the
-    // *previous* photo until the browser actually starts loading the new
-    // one. Requiring currentSrc to already match the new photo's URL is
-    // what rules that stale read out; the real bug this guards (caught on
-    // a real screenshot) was the frame settling on the wrong aspect ratio
-    // after clicking next/prev in tagging mode.
-    if (
-      img?.complete &&
-      img.naturalWidth &&
-      img.currentSrc.includes(photo.media.id)
-    ) {
-      recomputeContainRect(img.naturalWidth, img.naturalHeight);
-    }
-    function onResize() {
-      if (img?.naturalWidth) {
-        recomputeContainRect(img.naturalWidth, img.naturalHeight);
-      }
-    }
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [taggingMode, photo.media.id]);
-
-  return (
-    <div ref={containerRef} className="relative size-full">
-      <ArchiveImage
-        src={mediaUrl(photo.media.id, familyId, "display")}
-        alt={photo.media.title ?? "Семейное фото"}
-        fill
-        sizes="100vw"
-        className="object-contain"
-        onLoad={(e) => {
-          const img = e.currentTarget;
-          if (taggingMode) {
-            recomputeContainRect(img.naturalWidth, img.naturalHeight);
-          }
-        }}
-      />
-      {taggingMode && containRect && (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute ring-3 ring-inset ring-primary"
-          style={{
-            left: containRect.left,
-            top: containRect.top,
-            width: containRect.width,
-            height: containRect.height,
-          }}
-        />
-      )}
-      <PhotoTagLayer
-        mediaId={photo.media.id}
-        people={photo.people}
-        taggingMode={taggingMode}
-        canTag={canTag}
-        familyId={familyId}
-        familySlug={familySlug}
-        highlightedPersonId={highlightedPersonId}
-      />
     </div>
   );
 }

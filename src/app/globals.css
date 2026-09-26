@@ -648,3 +648,36 @@ body:has(.photo-backdrop) .app-header-bar {
   --xy-controls-button-color-hover: var(--foreground);
   --xy-controls-button-border-color: var(--border);
 }
+
+/* Lightbox tag spotlight (PhotoTagSpotlight): the dim layer is masked out in
+   a soft circle around the hovered person's tag. --spot-x/--spot-y are
+   registered so a transition can glide the light between two people rather
+   than jump. The radius is in container query units of PhotoTagLayer's box
+   (container-type: size) — a face-sized circle at any lightbox size: about
+   a quarter of the photo's shorter side, feathered to twice that. */
+@property --spot-x {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 50%;
+}
+@property --spot-y {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 50%;
+}
+/* Size cap from the nearest other tag (see PhotoTagSpotlight) — unset (the
+   huge initial value) means no neighbours, so the default size wins. */
+@property --spot-cap {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 9999px;
+}
+.photo-tag-spotlight {
+  --spot-r: min(13cqw, 21cqh, var(--spot-cap));
+  mask-image: radial-gradient(
+    circle at var(--spot-x) var(--spot-y),
+    transparent 0,
+    transparent var(--spot-r),
+    black calc(var(--spot-r) * 2)
+  );
+}
