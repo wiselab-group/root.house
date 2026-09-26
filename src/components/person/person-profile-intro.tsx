@@ -38,10 +38,14 @@ export function PersonProfileIntro({
         <dl
           className={`${glassSurface} grid grid-cols-2 overflow-hidden rounded-2xl sm:grid-cols-3`}
         >
-          {filledFacts.map((fact) => (
+          {filledFacts.map((fact, index) => (
             <div
               key={fact.label}
-              className="-mt-px -ml-px flex min-w-0 flex-col gap-0.5 border-t border-l border-glass-edge px-4 py-3.5"
+              className={`-mt-px -ml-px flex min-w-0 flex-col gap-0.5 border-t border-l border-glass-edge px-4 py-3.5 ${
+                index === filledFacts.length - 1
+                  ? lastCellSpan(filledFacts.length)
+                  : ""
+              }`}
             >
               <dt className="text-xs text-muted-foreground">{fact.label}</dt>
               <dd className="text-[0.95rem] wrap-break-word text-foreground">
@@ -53,4 +57,17 @@ export function PersonProfileIntro({
       )}
     </section>
   );
+}
+
+/**
+ * Every cell draws only its own top/left hairline, so a short last row
+ * (4 facts on 3 columns) left the lines stopping mid-card — a stair-step.
+ * The last cell stretches over the row's empty columns instead, so every
+ * line runs the full width. Literal class names, for Tailwind's scanner.
+ */
+function lastCellSpan(count: number): string {
+  const phone = count % 2 === 1 ? "col-span-2" : "";
+  const emptyWide = (3 - (count % 3)) % 3;
+  const wide = ["sm:col-span-1", "sm:col-span-2", "sm:col-span-3"][emptyWide];
+  return `${phone} ${wide}`;
 }
