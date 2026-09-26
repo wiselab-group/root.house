@@ -5,13 +5,14 @@ import { PlusIcon, XIcon } from "lucide-react";
 import { CollapsibleFormCloseProvider } from "@/components/forms/collapsible-form";
 import { ProfileSection } from "./profile-section";
 
-// Icon only on phones (the label stays for screen readers): next to the
-// section title and count, «Добавить» + «Упорядочить» crowded a 390px row.
-// The icon-only button grows to a 36px tap target there.
+// On phones the label shortens to a bare «Добавить» (the section title
+// already says what's added) rather than disappearing: an icon-only «＋»
+// next to a large heading read as decoration, not an action (user request
+// 2026-09-26, reversing the earlier icon-only phone version). The row also
+// grows to a 36px tap target there.
 const ACTION =
-  "group flex shrink-0 cursor-pointer items-center gap-1 rounded-sm text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none max-sm:size-9 max-sm:justify-center max-sm:rounded-full";
-const ICON = "size-3.5 max-sm:size-4.5";
-const LABEL = "max-sm:sr-only";
+  "group flex shrink-0 cursor-pointer items-center gap-1 rounded-sm text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none max-sm:min-h-9";
+const ICON = "size-3.5";
 
 /**
  * A ProfileSection whose «Добавить …» action sits on the heading row, right
@@ -67,7 +68,8 @@ export function ProfileSectionWithAdd({
         className={`${ICON} transition-transform group-hover:rotate-90`}
         aria-hidden="true"
       />
-      <span className={LABEL}>{addLabel}</span>
+      <span className="sm:hidden">Добавить</span>
+      <span className="max-sm:hidden">{addLabel}</span>
     </button>
   ) : (
     closeLabel && (
@@ -78,7 +80,7 @@ export function ProfileSectionWithAdd({
         className={`${ACTION} text-foreground/60 hover:text-foreground`}
       >
         <XIcon className={ICON} aria-hidden="true" />
-        <span className={LABEL}>{closeLabel}</span>
+        {closeLabel}
       </button>
     )
   );
@@ -89,7 +91,7 @@ export function ProfileSectionWithAdd({
       count={count}
       action={
         extraAction ? (
-          <div className="flex items-center gap-5 max-sm:gap-1">
+          <div className="flex items-center gap-5 max-sm:gap-3">
             {extraAction}
             {action}
           </div>
