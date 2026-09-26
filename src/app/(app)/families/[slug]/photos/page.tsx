@@ -12,7 +12,7 @@ import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { PhotosPageLayout } from "@/components/media/photos-page-layout";
 
 export const metadata: Metadata = {
-  title: "Фото",
+  title: "Архив",
 };
 
 export default async function PhotosPage({

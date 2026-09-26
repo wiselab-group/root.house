@@ -1,13 +1,4 @@
-import {
-  and,
-  desc,
-  eq,
-  inArray,
-  isNotNull,
-  isNull,
-  notInArray,
-  sql,
-} from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   media,
@@ -183,35 +174,22 @@ export async function getDocumentsForPerson(
  * directly rather than joining through media_person like getMediaForPerson
  * does, because this must also include photos not (yet) tagged to anyone.
  *
- * Excludes any Media currently set as someone's avatar (persons.photoMediaId)
- * — an avatar is deliberately never linked via media_person (see
- * media.service.ts::uploadPersonAvatar) precisely so it doesn't appear
- * alongside gallery photos; without this filter it would still surface here
- * untagged, and deleting it from this page would silently break that
- * person's profile picture (photoMediaId has no DB-level FK to enforce it).
+ * Portraits are included: a portrait is an ordinary gallery photo of its
+ * person (media.service.ts::uploadPersonAvatar, «Сделать портретом»), and
+ * deleting one here is safe — deleteMediaAction clears photoMediaId first
+ * (clearProfilePhotoForMedia). An earlier version hid every current
+ * portrait from this page and albums, left over from when avatars were
+ * kept out of the gallery; a family with ten portraits saw ten photos
+ * missing from «Архив» that their profiles still showed.
  */
 export async function getMediaForFamily(
   familyId: string,
 ): Promise<MediaRecord[]> {
   const rows = await db.query.media.findMany({
-    where: and(
-      eq(media.familyId, familyId),
-      eq(media.kind, "photo"),
-      notInArray(media.id, avatarMediaIdsSubquery(familyId)),
-    ),
+    where: and(eq(media.familyId, familyId), eq(media.kind, "photo")),
     orderBy: () => GALLERY_ORDER,
   });
   return rows.map(toRecord);
-}
-
-/** Every Media currently set as someone's avatar in this family — see getMediaForFamily's doc comment for why this must be excluded from gallery/album queries. */
-function avatarMediaIdsSubquery(familyId: string) {
-  return db
-    .select({ id: persons.photoMediaId })
-    .from(persons)
-    .where(
-      and(eq(persons.familyId, familyId), isNotNull(persons.photoMediaId)),
-    );
 }
 
 /**
@@ -229,13 +207,7 @@ export async function getMediaForAlbum(
     .select({ media })
     .from(mediaAlbum)
     .innerJoin(media, eq(mediaAlbum.mediaId, media.id))
-    .where(
-      and(
-        eq(mediaAlbum.albumId, albumId),
-        eq(media.familyId, familyId),
-        notInArray(media.id, avatarMediaIdsSubquery(familyId)),
-      ),
-    )
+    .where(and(eq(mediaAlbum.albumId, albumId), eq(media.familyId, familyId)))
     .orderBy(...GALLERY_ORDER);
 
   return rows.map((r) => toRecord(r.media));

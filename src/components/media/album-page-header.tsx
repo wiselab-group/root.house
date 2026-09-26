@@ -9,7 +9,8 @@ import { photoCountLabel } from "@/domain/shared/pluralize-ru";
 
 /**
  * Title row for /families/[slug]/photos and .../photos/[albumId] — plain
- * "Фото" + intro copy for the family-wide feed, or the album's own name +
+ * «Архив» (the section's name in every nav — the URL stays /photos, see
+ * docs/PRODUCT-REFACTOR.md) + intro copy for the family-wide feed, or the album's own name +
  * description with rename/delete actions when one album is open. Renaming
  * opens AlbumTitleEditor as a Dialog over the page rather than swapping the
  * h1 for an inline form — an earlier version did the latter (see
@@ -80,7 +81,7 @@ export function AlbumPageHeader({
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-4">
           <h1 className="font-heading text-4xl font-medium tracking-tight text-balance sm:text-5xl">
-            Фото
+            Архив
           </h1>
           {headerActions}
         </div>

@@ -2,6 +2,10 @@ import { AlbumGrid } from "./album-grid";
 import { AlbumPageHeader } from "./album-page-header";
 import { UploadPhotoDialog } from "./upload-photo-dialog";
 import { PhotosFeedSection } from "./photos-feed-section";
+import {
+  PhotoArrangeHeaderButton,
+  PhotoArrangeProvider,
+} from "./photo-arrange-context";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import type { GalleryPhotoView } from "./gallery-photo";
 import type { AlbumWithCoverRecord } from "@/domain/album/album.service";
@@ -55,7 +59,7 @@ export function PhotosPageLayout({
   activeAlbumDescription: string | null;
   photos: GalleryPhotoView[];
 }) {
-  // Uploading from an album's own page ("Добавить фото" on
+  // Uploading from an album's own page («Добавить» on
   // /photos/[albumId]) should default to tagging the new photo into THIS
   // album — without this, a photo uploaded here silently ends up in no
   // album at all unless the user separately re-picks it in the combobox,
@@ -65,61 +69,73 @@ export function PhotosPageLayout({
       ? [{ id: activeAlbumId, name: activeAlbumName }]
       : [];
 
+  // With albums present the feed gets its own «Без альбома» heading, and
+  // «Упорядочить» sits on that heading's row instead (PhotosFeedSection).
+  const scoped = !activeAlbumId && albums.length > 0;
+  const canArrange = canEdit && photos.length > 0 && !scoped;
+
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12 sm:py-16">
-      <SetBreadcrumbs
-        items={
-          activeAlbumName
-            ? [
-                { label: "Мои семьи", href: "/families" },
-                { label: familyName, href: `/families/${familySlug}` },
-                { label: "Фото", href: `/families/${familySlug}/photos` },
-                { label: activeAlbumName },
-              ]
-            : [
-                { label: "Мои семьи", href: "/families" },
-                { label: familyName, href: `/families/${familySlug}` },
-                { label: "Фото" },
-              ]
-        }
-      />
-      <AlbumPageHeader
-        familyId={familyId}
-        familySlug={familySlug}
-        canEdit={canEdit}
-        activeAlbumId={activeAlbumId}
-        activeAlbumName={activeAlbumName}
-        activeAlbumDescription={activeAlbumDescription}
-        activeAlbumPhotoCount={photos.length}
-        headerActions={
-          canUpload && (
-            <UploadPhotoDialog
-              familyId={familyId}
-              albums={albums}
-              defaultAlbums={defaultAlbums}
-            />
-          )
-        }
-      />
-
-      {!activeAlbumId && (
-        <AlbumGrid
-          familySlug={familySlug}
-          albums={albums}
-          familyId={familyId}
-          canEdit={canEdit}
+    <PhotoArrangeProvider>
+      <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12 sm:py-16">
+        <SetBreadcrumbs
+          items={
+            activeAlbumName
+              ? [
+                  { label: "Мои семьи", href: "/families" },
+                  { label: familyName, href: `/families/${familySlug}` },
+                  { label: "Архив", href: `/families/${familySlug}/photos` },
+                  { label: activeAlbumName },
+                ]
+              : [
+                  { label: "Мои семьи", href: "/families" },
+                  { label: familyName, href: `/families/${familySlug}` },
+                  { label: "Архив" },
+                ]
+          }
         />
-      )}
+        <AlbumPageHeader
+          familyId={familyId}
+          familySlug={familySlug}
+          canEdit={canEdit}
+          activeAlbumId={activeAlbumId}
+          activeAlbumName={activeAlbumName}
+          activeAlbumDescription={activeAlbumDescription}
+          activeAlbumPhotoCount={photos.length}
+          headerActions={
+            (canArrange || canUpload) && (
+              <div className="flex shrink-0 items-center gap-2">
+                {canArrange && <PhotoArrangeHeaderButton look="button" />}
+                {canUpload && (
+                  <UploadPhotoDialog
+                    familyId={familyId}
+                    albums={albums}
+                    defaultAlbums={defaultAlbums}
+                  />
+                )}
+              </div>
+            )
+          }
+        />
 
-      <PhotosFeedSection
-        photos={photos}
-        familyId={familyId}
-        familySlug={familySlug}
-        canEdit={canEdit}
-        canUpload={canUpload}
-        scoped={!activeAlbumId && albums.length > 0}
-        activeAlbumId={activeAlbumId}
-      />
-    </main>
+        {!activeAlbumId && (
+          <AlbumGrid
+            familySlug={familySlug}
+            albums={albums}
+            familyId={familyId}
+            canEdit={canEdit}
+          />
+        )}
+
+        <PhotosFeedSection
+          photos={photos}
+          familyId={familyId}
+          familySlug={familySlug}
+          canEdit={canEdit}
+          canUpload={canUpload}
+          scoped={scoped}
+          activeAlbumId={activeAlbumId}
+        />
+      </main>
+    </PhotoArrangeProvider>
   );
 }

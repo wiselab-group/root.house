@@ -41,6 +41,8 @@
   --color-card: var(--card);
   --color-tree-accent: var(--tree-accent);
   --color-upload-progress: var(--upload-progress);
+  --color-confirm: var(--confirm);
+  --color-confirm-foreground: var(--confirm-foreground);
   --color-branch: var(--branch);
   --color-tree-card-ring: var(--tree-card-ring);
   --color-tree-canvas: var(--tree-canvas);
@@ -113,6 +115,12 @@
      .photo-backdrop, where --tree-accent falls back to the tree's muddier
      shade (user: "почему-то он не зеленый"). */
   --upload-progress: oklch(0.58 0.05 126);
+  /* «Готово» that commits a mode's edits (PhotoArrangeBar) — the lifeline
+     sage again, by user request ("логичнее всего сделать зеленой"): done =
+     settled, not a new action, so not terracotta. A step darker than
+     --upload-progress so white label text clears 4.5:1. */
+  --confirm: oklch(0.52 0.06 126);
+  --confirm-foreground: oklch(0.99 0.005 60);
   /* The tree canvas's OWN background — distinct from the app-wide
      --background, per an exact hex the user handed over 2026-09-18
      (Canvas #F7EEE9 — refined once from an earlier #F9F3E9 pass, converted
@@ -219,6 +227,9 @@ body:has(.photo-backdrop) .app-header {
   --tree-accent: oklch(0.72 0.04 126);
   /* = .photo-backdrop's lifeline sage, everywhere — see :root. */
   --upload-progress: oklch(0.755 0.049 124);
+  /* Light sage with dark text on dark pages — see :root. */
+  --confirm: oklch(0.755 0.049 124);
+  --confirm-foreground: oklch(0.18 0.02 45);
   /* Relit for dark's darker background — see :root's own comment on
      --tree-canvas for the exact reference hex (#F7EEE9) this is calibrated
      from; a warm dark surface distinct from --background, matching the

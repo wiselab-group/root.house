@@ -54,7 +54,9 @@ export function ProfileTabs({ panels }: { panels: ProfilePanel[] }) {
           role="tablist"
           aria-label="Разделы профиля"
           onKeyDown={onKeyDown}
-          className={`${glassSurface} hidden gap-0.5 rounded-full p-1 md:flex`}
+          // Air between the pills (user: tabs touching read unprofessional —
+          // a hovered tab's fill butted right against the active one).
+          className={`${glassSurface} hidden gap-1.5 rounded-full p-1.5 md:flex`}
         >
           {panels.map((panel) => {
             const selected = panel.id === active;
@@ -74,7 +76,7 @@ export function ProfileTabs({ panels }: { panels: ProfilePanel[] }) {
                 className={`inline-flex h-10 cursor-pointer items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors duration-300 ease-(--ease-reveal) focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
                   selected
                     ? "bg-foreground text-background"
-                    : "text-foreground/65 hover:bg-glass hover:text-foreground"
+                    : "text-foreground/65 hover:bg-foreground/8 hover:text-foreground"
                 }`}
               >
                 {panel.label}

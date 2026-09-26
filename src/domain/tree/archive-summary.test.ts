@@ -29,14 +29,15 @@ const VIEWER = {
 };
 
 describe("buildPersonPhotoCountQuery", () => {
-  it("scopes to the family, kind='photo', excludes avatars, and groups by person", () => {
+  it("scopes to the family, kind='photo', counts portraits, and groups by person", () => {
     const { sql } = buildPersonPhotoCountQuery(FAMILY_ID, OWNER).toSQL();
     expect(sql).toContain('"media"."family_id"');
     expect(sql).toContain('"media"."kind"');
     expect(sql).toContain("group by");
     expect(sql).toContain('"media_person"."person_id"');
-    // Avatar exclusion — the not-in subquery selects persons.photo_media_id.
-    expect(sql).toContain('"persons"."photo_media_id"');
+    // A portrait is an ordinary gallery photo of its person — counted like
+    // any other, same as the profile gallery shows it.
+    expect(sql).not.toContain('"persons"."photo_media_id"');
   });
 
   it("owner viewer gets an unconditional `true` privacy predicate (sees private content too)", () => {
@@ -91,7 +92,7 @@ describe("buildPersonEventCountQuery", () => {
 });
 
 describe("buildPersonPhotoCountForPersonQuery", () => {
-  it("scopes to one person (no groupBy — a single count), family, kind='photo', excludes avatars", () => {
+  it("scopes to one person (no groupBy — a single count), family, kind='photo', counts portraits", () => {
     const { sql, params } = buildPersonPhotoCountForPersonQuery(
       PERSON_ID,
       FAMILY_ID,

@@ -1,17 +1,12 @@
 "use client";
 
 import { useOptimistic, useState } from "react";
-import {
-  DndContext,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
+import { DndContext, closestCenter } from "@dnd-kit/core";
 import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
 import { PhotoLightbox } from "./photo-lightbox";
 import { PhotoGridTile } from "./photo-grid-tile";
 import { usePhotoGridReorder } from "./use-photo-grid-reorder";
+import { PhotoArrangeBar } from "./photo-arrange-controls";
 import type { GalleryPhotoView } from "./gallery-photo";
 
 export type { GalleryPhotoView };
@@ -19,11 +14,10 @@ export type { GalleryPhotoView };
 /**
  * The family-wide gallery grid (/families/[slug]/photos) — same visual
  * chrome as PersonMediaGallery's grid (aspect-square, object-cover, same
- * blur placeholder). Clicking the photo itself opens PhotoLightbox; delete
- * lives on the thumbnail (top-right, hover-revealed) rather than inside the
- * lightbox, so it's reachable without an extra step through the full-screen
- * viewer. The delete button is a sibling of the photo's own <button>, not
- * nested inside it — a <button> inside a <button> is invalid HTML and would
+ * placeholder). Clicking the photo itself opens PhotoLightbox; delete
+ * lives in the thumbnail's «⋯» menu (top-right, «Упорядочить» mode only)
+ * rather than inside the lightbox. The menu is a sibling of the photo's
+ * own <button>, not nested inside it — a <button> inside a <button> is invalid HTML and would
  * make a delete click also fire the lightbox-opening click.
  *
  * Deletion is optimistic: PhotoTileMenu calls onDelete inside its own
@@ -34,11 +28,14 @@ export type { GalleryPhotoView };
  * reappears — no separate error-recovery path needed.
  *
  * Reordering (canEdit only — same floor as this page's other edit actions,
- * see photos/page.tsx) is drag-and-drop via dnd-kit — state/persistence
- * logic lives in usePhotoGridReorder (split out for CLAUDE.md's 150-line
- * ceiling). sortOrder is a single global value on Media itself (see
- * db/schema/media.ts), so a reorder here is visible in every other gallery
- * containing the same photos too.
+ * see photos/page.tsx) is drag-and-drop via dnd-kit, but only inside the
+ * explicit «Упорядочить» mode (button in the section heading — see
+ * PhotoArrangeProvider, which callers wrap the section in), which also reveals
+ * each tile's «⋯» menu (portrait, album cover, delete) — outside it a tile
+ * is just a photo: tap opens it, a swipe scrolls the page. Mode, draft and persistence live in usePhotoGridReorder (split out
+ * for CLAUDE.md's 150-line ceiling). sortOrder is a single global value on
+ * Media itself (see db/schema/media.ts), so a reorder here is visible in
+ * every other gallery containing the same photos too.
  *
  * DndContext's `id` prop is set explicitly (not left to dnd-kit's default
  * auto-increment) — without it, the instance id baked into each tile's
@@ -67,24 +64,23 @@ export function PhotoGrid({
   portrait?: { personId: string; mediaId: string | null };
 }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
-  const { order, handleDragEnd } = usePhotoGridReorder(photos, familyId);
+  const reorder = usePhotoGridReorder(photos, familyId);
+  const { order, isArranging } = reorder;
   const [optimisticPhotos, removeOptimisticPhoto] = useOptimistic(
     order,
     (state, deletedMediaId: string) =>
       state.filter((photo) => photo.media.id !== deletedMediaId),
   );
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-  );
-
   return (
     <>
       <DndContext
         id="photo-grid-dnd"
-        sensors={sensors}
+        sensors={reorder.sensors}
         collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
+        onDragStart={reorder.handleDragStart}
+        onDragCancel={reorder.handleDragCancel}
+        onDragEnd={reorder.handleDragEnd}
       >
         <SortableContext
           items={optimisticPhotos.map((p) => p.media.id)}
@@ -98,7 +94,7 @@ export function PhotoGrid({
                 familyId={familyId}
                 familySlug={familySlug}
                 canEdit={canEdit}
-                canReorder={canEdit}
+                isArranging={isArranging}
                 albumId={albumId}
                 portraitPersonId={portrait?.personId}
                 isPortrait={portrait?.mediaId === photo.media.id}
@@ -109,6 +105,10 @@ export function PhotoGrid({
           </div>
         </SortableContext>
       </DndContext>
+
+      {isArranging && (
+        <PhotoArrangeBar onCancel={reorder.cancel} onSave={reorder.save} />
+      )}
 
       {openIndex !== null && (
         <PhotoLightbox

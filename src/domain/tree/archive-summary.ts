@@ -1,10 +1,9 @@
-import { and, eq, isNotNull, notInArray, or, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { db } from "@/db/client";
 import {
   mediaPerson,
   media,
-  persons,
   storyPerson,
   stories,
   eventParticipants,
@@ -12,19 +11,6 @@ import {
 } from "@/db/schema";
 import type { ActingMember } from "@/domain/family/permissions";
 import type { PersonArchiveSummary } from "./tree-layout.builder";
-
-/** Every Media currently set as someone's avatar in this family — same
- *  exclusion media.repository.ts's getMediaForFamily/getMediaForAlbum apply,
- *  so a person's tree "photo count" matches what their own Profile's photo
- *  gallery would show, not "gallery photos plus everyone's avatar". */
-function avatarMediaIdsSubquery(familyId: string) {
-  return db
-    .select({ id: persons.photoMediaId })
-    .from(persons)
-    .where(
-      and(eq(persons.familyId, familyId), isNotNull(persons.photoMediaId)),
-    );
-}
 
 /**
  * The same PRIVATE-visibility rule as domain/family/permissions.ts's
@@ -67,7 +53,6 @@ export function buildPersonPhotoCountQuery(
       and(
         eq(media.familyId, familyId),
         eq(media.kind, "photo"),
-        notInArray(media.id, avatarMediaIdsSubquery(familyId)),
         visibleToViewerPredicate(viewer, media.privacyLevel, media.uploadedBy),
       ),
     )
@@ -180,7 +165,6 @@ export function buildPersonPhotoCountForPersonQuery(
         eq(mediaPerson.personId, personId),
         eq(media.familyId, familyId),
         eq(media.kind, "photo"),
-        notInArray(media.id, avatarMediaIdsSubquery(familyId)),
         visibleToViewerPredicate(viewer, media.privacyLevel, media.uploadedBy),
       ),
     );

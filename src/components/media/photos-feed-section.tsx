@@ -1,5 +1,6 @@
 import { PhotoGrid } from "./photo-grid";
 import { EmptyPhotosState } from "./empty-photos-state";
+import { PhotoArrangeHeaderButton } from "./photo-arrange-context";
 import type { GalleryPhotoView } from "./gallery-photo";
 
 /**
@@ -59,6 +60,10 @@ export function PhotosFeedSection({
           Без альбома
         </h2>
         <div aria-hidden="true" className="h-px flex-1 bg-border" />
+        {/* The page heading's «Упорядочить» moves here when this heading
+            exists (user request): it arranges exactly these photos, and
+            sits at the far end of the same rule. */}
+        {canEdit && <PhotoArrangeHeaderButton look="link" />}
       </div>
       <PhotoGrid
         photos={photos}

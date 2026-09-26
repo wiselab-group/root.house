@@ -13,7 +13,7 @@ import {
 import { PhotoUploadPanel } from "./photo-upload-panel";
 
 /**
- * "Добавить фото" primary action for the /photos page header — a filled
+ * «Добавить» (photos) primary action for the /photos page header — a filled
  * button (not the old page-bottom outline trigger) since uploading is the
  * action this whole page exists for, and it stays reachable without
  * scrolling past a long album/photo grid first (Google/Apple Photos both
@@ -40,7 +40,7 @@ export function UploadPhotoDialog({
         render={
           <Button type="button" className="shrink-0">
             <PlusIcon data-icon="inline-start" />
-            Добавить фото
+            Добавить
           </Button>
         }
       />

@@ -30,6 +30,7 @@ export function ProfileSectionWithAdd({
   addLabel,
   closeLabel,
   form,
+  extraAction,
   children,
 }: {
   title: string;
@@ -37,6 +38,8 @@ export function ProfileSectionWithAdd({
   addLabel: string;
   closeLabel?: string;
   form?: ReactNode;
+  /** Another heading action, before «Добавить» (the photos' «Упорядочить»). */
+  extraAction?: ReactNode;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -76,7 +79,20 @@ export function ProfileSectionWithAdd({
   );
 
   return (
-    <ProfileSection title={title} count={count} action={action}>
+    <ProfileSection
+      title={title}
+      count={count}
+      action={
+        extraAction ? (
+          <div className="flex items-center gap-5">
+            {extraAction}
+            {action}
+          </div>
+        ) : (
+          action
+        )
+      }
+    >
       {(open || (keepMounted && everOpened)) && (
         <div hidden={!open}>
           <CollapsibleFormCloseProvider value={() => setOpen(false)}>

@@ -1,5 +1,9 @@
 import { PersonPhotoUploadPanel } from "@/components/media/person-photo-upload-panel";
 import { PhotoGrid } from "@/components/media/photo-grid";
+import {
+  PhotoArrangeHeaderButton,
+  PhotoArrangeProvider,
+} from "@/components/media/photo-arrange-context";
 import { ProfileSectionWithAdd } from "./profile-section-with-add";
 import type { GalleryPhotoView } from "@/components/media/gallery-photo";
 
@@ -39,30 +43,38 @@ export function PersonMediaGallery({
   portraitMediaId: string | null;
 }) {
   return (
-    <ProfileSectionWithAdd
-      title="Фотографии"
-      count={photos.length}
-      addLabel="Добавить фото"
-      closeLabel="Закрыть"
-      form={
-        canContribute && (
-          <PersonPhotoUploadPanel familyId={familyId} personId={personId} />
-        )
-      }
-    >
-      <div className="flex flex-col gap-4">
-        {photos.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Фотографий пока нет.</p>
-        ) : (
-          <PhotoGrid
-            photos={photos}
-            familyId={familyId}
-            familySlug={familySlug}
-            canEdit={canEdit}
-            portrait={{ personId, mediaId: portraitMediaId }}
-          />
-        )}
-      </div>
-    </ProfileSectionWithAdd>
+    <PhotoArrangeProvider>
+      <ProfileSectionWithAdd
+        title="Фотографии"
+        count={photos.length}
+        addLabel="Добавить"
+        extraAction={
+          canEdit &&
+          photos.length > 0 && <PhotoArrangeHeaderButton look="link" />
+        }
+        closeLabel="Закрыть"
+        form={
+          canContribute && (
+            <PersonPhotoUploadPanel familyId={familyId} personId={personId} />
+          )
+        }
+      >
+        <div className="flex flex-col gap-4">
+          {photos.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Фотографий пока нет.
+            </p>
+          ) : (
+            <PhotoGrid
+              photos={photos}
+              familyId={familyId}
+              familySlug={familySlug}
+              canEdit={canEdit}
+              portrait={{ personId, mediaId: portraitMediaId }}
+            />
+          )}
+        </div>
+      </ProfileSectionWithAdd>
+    </PhotoArrangeProvider>
   );
 }
