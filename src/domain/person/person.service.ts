@@ -50,6 +50,7 @@ export interface CreatePersonInput {
   deathDate?: PartialDate;
   birthPlaceId?: string;
   deathPlaceId?: string;
+  residencePlaceId?: string;
   deathCause?: string;
   privacyLevel?: PrivacyLevel;
 }

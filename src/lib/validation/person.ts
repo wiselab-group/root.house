@@ -61,7 +61,6 @@ export const createPersonSchema = z.object({
   lastName: z.string().trim().max(120).optional().or(z.literal("")),
   middleName: z.string().trim().max(120).optional().or(z.literal("")),
   maidenName: z.string().trim().max(120).optional().or(z.literal("")),
-  nickname: z.string().trim().max(120).optional().or(z.literal("")),
   gender: genderSchema.default("unknown"),
   isLiving: z.coerce.boolean().default(true),
   description: z.string().trim().max(5000).optional().or(z.literal("")),
@@ -75,6 +74,7 @@ export const createPersonSchema = z.object({
   // fields, so deathPlaceId/deathCause is simply absent from what's submitted.
   birthPlaceId: z.string().uuid().optional().nullable().or(z.literal("")),
   deathPlaceId: z.string().uuid().optional().nullable().or(z.literal("")),
+  residencePlaceId: z.string().uuid().optional().nullable().or(z.literal("")),
   deathCause: z
     .string()
     .trim()

@@ -5,6 +5,7 @@ import { requireFamilyAccess } from "@/domain/family/access";
 import { getVisiblePerson } from "@/domain/person/person.service";
 import { getPlace } from "@/domain/place/place.service";
 import { personDisplayName } from "@/domain/person/display-name";
+import { profilePlace } from "@/domain/person/profile-place";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { resolvePersonIdBySlug } from "@/lib/resolve-person-slug";
 import { PersonProfileHero } from "@/components/person/person-profile-hero";
@@ -66,6 +67,7 @@ export default async function PersonProfilePage({
   const [
     birthPlace,
     deathPlace,
+    residencePlace,
     family,
     archive,
     allDocuments,
@@ -74,6 +76,9 @@ export default async function PersonProfilePage({
   ] = await Promise.all([
     person.birthPlaceId ? getPlace(person.birthPlaceId, familyId) : null,
     person.deathPlaceId ? getPlace(person.deathPlaceId, familyId) : null,
+    person.residencePlaceId
+      ? getPlace(person.residencePlaceId, familyId)
+      : null,
     getFamilySummary(familyId),
     getPersonArchiveSummary(personId, familyId, viewer),
     getPersonDocuments(personId, familyId),
@@ -89,6 +94,11 @@ export default async function PersonProfilePage({
 
   const birthPlaceName = birthPlace?.name ?? null;
   const deathPlaceName = deathPlace?.name ?? null;
+  // A residence left over from before the person was marked deceased isn't
+  // "where they live" any more — dropped everywhere, not just in the hero.
+  const residencePlaceName = person.isLiving
+    ? (residencePlace?.name ?? null)
+    : null;
   return (
     <main className="dark photo-backdrop min-h-svh">
       <SetBreadcrumbs
@@ -104,8 +114,12 @@ export default async function PersonProfilePage({
         familyId={familyId}
         familySlug={slug}
         avatarMedia={avatarMedia}
-        birthPlaceName={birthPlaceName}
-        deathPlaceName={deathPlaceName}
+        place={profilePlace({
+          isLiving: person.isLiving,
+          birthPlaceName,
+          deathPlaceName,
+          residencePlaceName,
+        })}
         role={member.role}
       />
       <PersonProfileSections
@@ -114,6 +128,7 @@ export default async function PersonProfilePage({
         familySlug={slug}
         birthPlaceName={birthPlaceName}
         deathPlaceName={deathPlaceName}
+        residencePlaceName={residencePlaceName}
         counts={{
           stories: archive.storyCount,
           events: archive.eventCount,

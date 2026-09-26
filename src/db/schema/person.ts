@@ -78,6 +78,12 @@ export const persons = pgTable(
     deathPlaceId: uuid("death_place_id").references(() => places.id, {
       onDelete: "set null",
     }),
+    // Where a living person lives now — shown in the profile hero instead of
+    // the bare birthplace («Живёт в … · родом из …»). Only meaningful while
+    // isLiving; never shipped to the share-link page or the tree payload.
+    residencePlaceId: uuid("residence_place_id").references(() => places.id, {
+      onDelete: "set null",
+    }),
 
     deathCause: text("death_cause"),
 

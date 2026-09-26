@@ -38,6 +38,7 @@ function person(
     deathDate: null,
     birthPlaceId: null,
     deathPlaceId: null,
+    residencePlaceId: null,
     deathCause: null,
     description: null,
     religion: null,

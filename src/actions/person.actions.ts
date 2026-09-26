@@ -56,7 +56,6 @@ export async function createPersonAction(
     lastName: formData.get("lastName"),
     middleName: formData.get("middleName"),
     maidenName: formData.get("maidenName"),
-    nickname: formData.get("nickname"),
     gender: formData.get("gender") || undefined,
     isLiving: formData.get("isLiving") === "on",
     description: formData.get("description"),
@@ -64,6 +63,7 @@ export async function createPersonAction(
     nationality: formData.get("nationality"),
     birthPlaceId: formData.get("birthPlaceId"),
     deathPlaceId: formData.get("deathPlaceId"),
+    residencePlaceId: formData.get("residencePlaceId"),
     deathCause: formData.get("deathCause"),
     privacyLevel: formData.get("privacyLevel") || undefined,
   });
@@ -81,7 +81,6 @@ export async function createPersonAction(
     lastName: parsed.data.lastName || undefined,
     middleName: parsed.data.middleName || undefined,
     maidenName: parsed.data.maidenName || undefined,
-    nickname: parsed.data.nickname || undefined,
     gender: parsed.data.gender,
     isLiving: parsed.data.isLiving,
     description: parsed.data.description || undefined,
@@ -91,6 +90,7 @@ export async function createPersonAction(
     deathDate: partialDateFromFormData(formData, "death"),
     birthPlaceId: parsed.data.birthPlaceId || undefined,
     deathPlaceId: parsed.data.deathPlaceId || undefined,
+    residencePlaceId: parsed.data.residencePlaceId || undefined,
     deathCause: parsed.data.deathCause || undefined,
     privacyLevel: parsed.data.privacyLevel,
   });
@@ -202,7 +202,6 @@ export async function updatePersonAction(
     lastName: formData.get("lastName"),
     middleName: formData.get("middleName"),
     maidenName: formData.get("maidenName"),
-    nickname: formData.get("nickname"),
     gender: formData.get("gender") || undefined,
     isLiving: formData.get("isLiving") === "on",
     description: formData.get("description"),
@@ -210,6 +209,7 @@ export async function updatePersonAction(
     nationality: formData.get("nationality"),
     birthPlaceId: formData.get("birthPlaceId"),
     deathPlaceId: formData.get("deathPlaceId"),
+    residencePlaceId: formData.get("residencePlaceId"),
     deathCause: formData.get("deathCause"),
     privacyLevel: formData.get("privacyLevel") || undefined,
   });
@@ -227,7 +227,6 @@ export async function updatePersonAction(
     lastName: parsed.data.lastName || null,
     middleName: parsed.data.middleName || null,
     maidenName: parsed.data.maidenName || null,
-    nickname: parsed.data.nickname || null,
     gender: parsed.data.gender,
     isLiving: parsed.data.isLiving,
     description: parsed.data.description || null,
@@ -237,6 +236,7 @@ export async function updatePersonAction(
     deathDate: partialDateFromFormData(formData, "death") ?? null,
     birthPlaceId: parsed.data.birthPlaceId || null,
     deathPlaceId: parsed.data.deathPlaceId || null,
+    residencePlaceId: parsed.data.residencePlaceId || null,
     deathCause: parsed.data.deathCause || null,
     privacyLevel: parsed.data.privacyLevel,
   });

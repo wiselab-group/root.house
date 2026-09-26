@@ -2,8 +2,23 @@
 
 import Link from "next/link";
 import { Popup } from "react-map-gl/maplibre";
-import { CalendarIcon, SkullIcon, BabyIcon } from "lucide-react";
-import type { PlaceMarker } from "@/domain/place/place-marker.service";
+import {
+  CalendarIcon,
+  SkullIcon,
+  BabyIcon,
+  HouseIcon,
+  type LucideIcon,
+} from "lucide-react";
+import type {
+  PersonPlaceRelation,
+  PlaceMarker,
+} from "@/domain/place/place-marker.service";
+
+const RELATION_ICONS: Record<PersonPlaceRelation, LucideIcon> = {
+  birth: BabyIcon,
+  death: SkullIcon,
+  residence: HouseIcon,
+};
 
 /**
  * Click-content for a MapMarker — plain DOM rendered by react-map-gl's own
@@ -50,11 +65,7 @@ export function MapPopup({
                   href={`/families/${familySlug}/people/${person.slug}`}
                   className="flex items-center gap-2 text-sm hover:text-primary hover:underline"
                 >
-                  {person.relation === "birth" ? (
-                    <BabyIcon className="size-3.5 shrink-0 text-muted-foreground" />
-                  ) : (
-                    <SkullIcon className="size-3.5 shrink-0 text-muted-foreground" />
-                  )}
+                  <RelationIcon relation={person.relation} />
                   {person.name}
                 </Link>
               </li>
@@ -87,4 +98,9 @@ export function MapPopup({
       </div>
     </Popup>
   );
+}
+
+function RelationIcon({ relation }: { relation: PersonPlaceRelation }) {
+  const Icon = RELATION_ICONS[relation];
+  return <Icon className="size-3.5 shrink-0 text-muted-foreground" />;
 }

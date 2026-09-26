@@ -83,6 +83,17 @@ export function PersonForm({
         places={places}
         defaultValue={person?.birthPlaceId}
       />
+      {/* Unmounted for the deceased, mirroring the death fields below:
+          submitting without it clears a stale residence on save. */}
+      {isLiving && (
+        <PlaceSelect
+          id="residencePlaceId"
+          name="residencePlaceId"
+          label="Где живёт сейчас"
+          places={places}
+          defaultValue={person?.residencePlaceId}
+        />
+      )}
       {/* Hidden (not just visually — unmounted) while isLiving is checked: a
           death date has no meaning for someone marked alive, and keeping the
           fields out of the form entirely means submitting can't accidentally

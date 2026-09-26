@@ -27,6 +27,7 @@ export function PersonProfileSections({
   familySlug,
   birthPlaceName,
   deathPlaceName,
+  residencePlaceName,
   counts,
   photos,
   viewer,
@@ -38,6 +39,7 @@ export function PersonProfileSections({
   familySlug: string;
   birthPlaceName: string | null;
   deathPlaceName: string | null;
+  residencePlaceName: string | null;
   counts: { stories: number; events: number; documents: number };
   photos: GalleryPhotoView[];
   viewer: ActingMember;
@@ -59,7 +61,7 @@ export function PersonProfileSections({
                 description={person.description}
                 facts={[
                   { label: "Девичья фамилия", value: person.maidenName },
-                  { label: "Прозвище", value: person.nickname },
+                  { label: "Живёт сейчас", value: residencePlaceName },
                   { label: "Место рождения", value: birthPlaceName },
                   { label: "Место смерти", value: deathPlaceName },
                   { label: "Причина смерти", value: person.deathCause },

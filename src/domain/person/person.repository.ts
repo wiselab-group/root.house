@@ -23,6 +23,7 @@ export interface PersonRecord {
   deathDate: PartialDate | null;
   birthPlaceId: string | null;
   deathPlaceId: string | null;
+  residencePlaceId: string | null;
   deathCause: string | null;
   description: string | null;
   religion: string | null;
@@ -65,6 +66,7 @@ function toRecord(row: typeof persons.$inferSelect): PersonRecord {
     }),
     birthPlaceId: row.birthPlaceId,
     deathPlaceId: row.deathPlaceId,
+    residencePlaceId: row.residencePlaceId,
     deathCause: row.deathCause,
     description: row.description,
     religion: row.religion,
@@ -152,6 +154,7 @@ export interface CreatePersonData {
   deathDate?: PartialDate | null;
   birthPlaceId?: string | null;
   deathPlaceId?: string | null;
+  residencePlaceId?: string | null;
   deathCause?: string | null;
   privacyLevel?: PrivacyLevel;
 }
@@ -191,6 +194,7 @@ export async function createPerson(
       deathDateApproximate: deathCols.approximate,
       birthPlaceId: data.birthPlaceId ?? null,
       deathPlaceId: data.deathPlaceId ?? null,
+      residencePlaceId: data.residencePlaceId ?? null,
       deathCause: data.deathCause ?? null,
       privacyLevel: data.privacyLevel ?? "family",
     })
@@ -232,6 +236,8 @@ export async function updatePerson(
   }
   if (data.birthPlaceId !== undefined) patch.birthPlaceId = data.birthPlaceId;
   if (data.deathPlaceId !== undefined) patch.deathPlaceId = data.deathPlaceId;
+  if (data.residencePlaceId !== undefined)
+    patch.residencePlaceId = data.residencePlaceId;
   if (data.deathCause !== undefined) patch.deathCause = data.deathCause;
   if (data.privacyLevel !== undefined) patch.privacyLevel = data.privacyLevel;
 

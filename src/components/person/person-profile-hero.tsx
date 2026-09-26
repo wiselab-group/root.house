@@ -1,24 +1,20 @@
 import { ArchiveImage } from "@/components/media/archive-image";
 import { mediaUrl } from "@/lib/media-url";
 import Link from "next/link";
-import {
-  CalendarIcon,
-  MapPinIcon,
-  LockIcon,
-  UserRoundIcon,
-} from "lucide-react";
+import { LockIcon, UserRoundIcon } from "lucide-react";
 import {
   personDisplayName,
   personInitials,
 } from "@/domain/person/display-name";
-import { formatPartialDate } from "@/domain/shared/partial-date";
 import type { PersonRecord } from "@/domain/person/person.service";
+import type { ProfilePlace } from "@/domain/person/profile-place";
 import type { MediaRecord } from "@/domain/media/media.service";
 import type { FamilyRole } from "@/domain/family/roles";
 import { HeroMoreMenu } from "@/components/hero/hero-more-menu";
 import { HeroTopBar } from "@/components/hero/hero-top-bar";
-import { HeroMeta, type HeroMetaItem } from "@/components/hero/hero-meta";
+import { HeroMeta } from "@/components/hero/hero-meta";
 import { glassChip } from "@/components/hero/glass";
+import { personHeroMeta } from "./person-hero-meta";
 
 /**
  * The Person Profile's hero, in the dark "photo dissolves into the page"
@@ -43,27 +39,21 @@ export function PersonProfileHero({
   familyId,
   familySlug,
   avatarMedia,
-  birthPlaceName,
-  deathPlaceName,
+  place,
   role,
 }: {
   person: PersonRecord;
   familyId: string;
   familySlug: string;
   avatarMedia: MediaRecord | null;
-  birthPlaceName: string | null;
-  deathPlaceName: string | null;
+  place: ProfilePlace | null;
   role: FamilyRole;
 }) {
   const canEdit = role === "owner" || role === "editor";
   const name = personDisplayName(person);
   const editHref = `/families/${familySlug}/people/${person.slug}/edit`;
 
-  const meta: HeroMetaItem[] = [];
-  const lifeSpan = lifeSpanLabel(person);
-  if (lifeSpan) meta.push({ Icon: CalendarIcon, label: lifeSpan });
-  const places = [birthPlaceName, deathPlaceName].filter(Boolean).join(" → ");
-  if (places) meta.push({ Icon: MapPinIcon, label: places });
+  const meta = personHeroMeta(person, place);
 
   return (
     <header className="relative isolate h-[clamp(440px,48vw,620px)] overflow-hidden">
@@ -135,15 +125,4 @@ export function PersonProfileHero({
       </div>
     </header>
   );
-}
-
-/** "12 марта 1988 г." for the living (no «род.» prefix, no dangling dash), "1938 г. — 2011 г." otherwise. */
-function lifeSpanLabel(person: PersonRecord): string | null {
-  const hasBirth = person.birthDate?.year != null;
-  const hasDeath = person.deathDate?.year != null;
-  if (person.isLiving) {
-    return hasBirth ? formatPartialDate(person.birthDate) : null;
-  }
-  if (!hasBirth && !hasDeath) return null;
-  return `${hasBirth ? formatPartialDate(person.birthDate) : "?"} — ${hasDeath ? formatPartialDate(person.deathDate) : "?"}`;
 }

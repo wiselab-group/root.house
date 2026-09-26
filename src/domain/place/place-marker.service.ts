@@ -7,12 +7,14 @@ import { listEventsWithPlace } from "@/domain/event/event.service";
 import type { EventRecord } from "@/domain/event/event.repository";
 import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 
+export type PersonPlaceRelation = "birth" | "death" | "residence";
+
 export interface MapMarkerPerson {
   id: string;
   slug: string;
   name: string;
-  /** Which of the Person's two Place links put them on this marker. */
-  relation: "birth" | "death";
+  /** Which of the Person's Place links put them on this marker. */
+  relation: PersonPlaceRelation;
 }
 
 export interface MapMarkerEvent {
@@ -66,7 +68,7 @@ export async function getFamilyMapMarkers(
   function addPersonLink(
     placeId: string | null,
     person: PersonRecord,
-    relation: "birth" | "death",
+    relation: PersonPlaceRelation,
   ) {
     if (!placeId) return;
     if (!placesById.has(placeId)) return;
@@ -90,6 +92,10 @@ export async function getFamilyMapMarkers(
   for (const person of people) {
     addPersonLink(person.birthPlaceId, person, "birth");
     addPersonLink(person.deathPlaceId, person, "death");
+    // Same rule as the profile: only the living have a current home.
+    if (person.isLiving) {
+      addPersonLink(person.residencePlaceId, person, "residence");
+    }
   }
 
   const eventsByPlaceId = new Map<string, MapMarkerEvent[]>();

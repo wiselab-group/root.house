@@ -75,7 +75,7 @@ export interface TreeAdapterInput {
  * buildTreeLayout locally instead of a full page reload), so it must never
  * carry privacy-sensitive or simply unneeded fields (createdBy, familyId,
  * privacyLevel, middleName, maidenName, birthPlaceId, deathPlaceId,
- * deathCause, description) into client JS, and must stay plain-JSON-safe
+ * residencePlaceId, deathCause, description) into client JS, and must stay plain-JSON-safe
  * (no Date — createdAt is intentionally omitted too, since orderingKeyByPersonId
  * isn't consumed by shouldBeLeft yet, see FamilyGraph's own doc comment).
  */
