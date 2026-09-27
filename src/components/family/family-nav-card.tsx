@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { ArrowRight, TreeDeciduous } from "lucide-react";
@@ -25,6 +26,7 @@ export function FamilyTreeLaunchCard({
   href: string;
   description: string;
 }) {
+  const t = useTranslations("familyNav");
   return (
     <Link
       href={href}
@@ -39,7 +41,7 @@ export function FamilyTreeLaunchCard({
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="font-heading text-2xl font-medium tracking-tight">
-          Семейное дерево
+          {t("tree")}
         </span>
         <span className="max-w-md text-foreground/60">{description}</span>
       </div>

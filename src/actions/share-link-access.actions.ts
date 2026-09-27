@@ -1,5 +1,7 @@
 "use server";
 
+import { getErrorMessage } from "@/i18n/errors";
+
 import { cookies } from "next/headers";
 import {
   verifyShareLinkPassword,
@@ -37,7 +39,7 @@ export async function verifyShareLinkPasswordAction(
     password: formData.get("password"),
   });
   if (!parsed.success) {
-    return { error: "Введите пароль." };
+    return { error: (await getErrorMessage())("passwordRequired") };
   }
 
   const result = await verifyShareLinkPassword(
@@ -50,11 +52,11 @@ export async function verifyShareLinkPasswordAction(
     // states are surfaced by the page itself on next render, not by this
     // action's error text, so this message only ever needs to cover the
     // password-mismatch case in practice.
-    return { error: "Неверный пароль." };
+    return { error: (await getErrorMessage())("wrongPassword") };
   }
 
   const link = await findShareLinkByTokenHashForCookie(parsed.data.token);
-  if (!link) return { error: "Неверный пароль." };
+  if (!link) return { error: (await getErrorMessage())("wrongPassword") };
 
   const cookieStore = await cookies();
   const maxAgeSeconds = link.expiresAt

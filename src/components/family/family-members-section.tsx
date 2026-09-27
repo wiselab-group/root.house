@@ -1,6 +1,6 @@
 import type { FamilyMemberWithUser } from "@/domain/family/family.service";
 import type { InvitationRecord } from "@/domain/invitation/invitation.service";
-import { ROLE_LABELS } from "@/domain/family/role-labels";
+import { useFormatter, useTranslations } from "next-intl";
 import { MemberRoleSelect } from "./member-role-select";
 import { RemoveMemberButton } from "./remove-member-button";
 import { PendingInvitationsList } from "./pending-invitations-list";
@@ -30,6 +30,8 @@ export function FamilyMembersSection({
   pendingInvitations: InvitationRecord[];
 }) {
   const singleOwner = ownerCount(members) <= 1;
+  const t = useTranslations("members");
+  const format = useFormatter();
 
   return (
     <div className="flex flex-col gap-6">
@@ -44,12 +46,10 @@ export function FamilyMembersSection({
                 {member.name ?? member.email}
               </span>
               <span className="text-xs text-muted-foreground">
-                {member.email} · с{" "}
-                {new Intl.DateTimeFormat("ru-RU", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                }).format(member.joinedAt)}
+                {t("joined", {
+                  email: member.email,
+                  date: format.dateTime(member.joinedAt, "long"),
+                })}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -76,7 +76,7 @@ export function FamilyMembersSection({
 
       {pendingInvitations.length > 0 && (
         <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium">Ожидают ответа</h3>
+          <h3 className="text-sm font-medium">{t("pending")}</h3>
           <PendingInvitationsList
             familyId={familyId}
             invitations={pendingInvitations}
@@ -85,8 +85,8 @@ export function FamilyMembersSection({
       )}
 
       <div className="flex flex-col gap-2">
-        <h3 className="text-sm font-medium">Пригласить участника</h3>
-        <InviteMemberForm familyId={familyId} roleLabels={ROLE_LABELS} />
+        <h3 className="text-sm font-medium">{t("invite")}</h3>
+        <InviteMemberForm familyId={familyId} />
       </div>
     </div>
   );

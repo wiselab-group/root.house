@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { revokeShareLinkAction } from "@/actions/share-link.actions";
 import { Button } from "@/components/ui/button";
 
@@ -20,6 +21,7 @@ export function ShareLinkRowActions({
   shareLinkId: string;
   disabled?: boolean;
 }) {
+  const t = useTranslations("members");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +44,7 @@ export function ShareLinkRowActions({
         aria-busy={isPending}
         onClick={handleRevoke}
       >
-        {isPending ? "Отзываем…" : "Отозвать"}
+        {isPending ? t("revoking") : t("revoke")}
       </Button>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>

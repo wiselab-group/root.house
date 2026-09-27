@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { BookOpen, Images, MapPin, Settings, Users } from "lucide-react";
 import { FamilyNavCard } from "./family-nav-card";
 
@@ -7,43 +8,45 @@ import { FamilyNavCard } from "./family-nav-card";
  * nav elsewhere). Split out of page.tsx to keep it under 150 lines.
  */
 export function FamilySectionLinks({ familySlug }: { familySlug: string }) {
+  const t = useTranslations("familyHome");
+  const tn = useTranslations("familyNav");
   const base = `/families/${familySlug}`;
   const links = [
     {
       href: `${base}/people`,
       icon: Users,
-      label: "Люди",
-      description: "Профили, поиск по имени и году",
+      label: tn("people"),
+      description: t("peopleDescription"),
     },
     {
       href: `${base}/stories`,
       icon: BookOpen,
-      label: "Истории",
-      description: "Семейные истории и воспоминания",
+      label: tn("stories"),
+      description: t("storiesDescription"),
     },
     {
       href: `${base}/photos`,
       icon: Images,
-      label: "Архив",
-      description: "Фото, видео и документы семьи",
+      label: tn("photos"),
+      description: t("photosDescription"),
     },
     {
       href: `${base}/map`,
       icon: MapPin,
-      label: "Карта",
-      description: "Места рождения, проживания и событий",
+      label: tn("map"),
+      description: t("mapDescription"),
     },
     {
       href: `${base}/settings`,
       icon: Settings,
-      label: "Настройки",
-      description: "Название, ссылка и описание архива",
+      label: tn("settings"),
+      description: t("settingsDescription"),
     },
   ] as const;
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-foreground/55">Другие разделы архива</p>
+      <p className="text-sm text-foreground/55">{t("otherSections")}</p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {links.map((link, index) => (
           <div

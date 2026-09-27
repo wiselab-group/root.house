@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -20,9 +22,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export const metadata: Metadata = {
-  title: "Семейное дерево",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("share");
+  return { title: t("title") };
+}
 
 /**
  * Anonymous, read-only entry point to a Share Link — deliberately outside
@@ -40,6 +43,7 @@ export default async function SharePage({
   const cookieValue = cookieStore.get("share_access")?.value ?? null;
 
   const access = await resolveShareLinkAccess(token, cookieValue);
+  const t = await getTranslations("share");
 
   if (access.kind === "granted") {
     return (
@@ -64,11 +68,9 @@ export default async function SharePage({
         >
           <CardHeader>
             <CardTitle className="font-heading text-xl">
-              Ссылка защищена паролем
+              {t("protectedTitle")}
             </CardTitle>
-            <CardDescription>
-              Введите пароль, который вам передали вместе со ссылкой.
-            </CardDescription>
+            <CardDescription>{t("protectedBody")}</CardDescription>
           </CardHeader>
           <CardContent>
             <ShareLinkPasswordForm token={token} />
@@ -84,19 +86,11 @@ function StatusCard({
 }: {
   variant: "not_found" | "expired" | "revoked";
 }) {
+  const t = useTranslations("share");
   const copy = {
-    not_found: {
-      title: "Ссылка недействительна",
-      description: "Проверьте, что скопировали её полностью.",
-    },
-    expired: {
-      title: "Срок действия ссылки истёк",
-      description: "Попросите владельца архива создать новую ссылку.",
-    },
-    revoked: {
-      title: "Эта ссылка была отозвана",
-      description: "Попросите владельца архива поделиться новой ссылкой.",
-    },
+    not_found: { title: t("notFoundTitle"), description: t("notFoundBody") },
+    expired: { title: t("expiredTitle"), description: t("expiredBody") },
+    revoked: { title: t("revokedTitle"), description: t("revokedBody") },
   }[variant];
 
   return (
@@ -142,16 +136,15 @@ async function GrantedTreeView({
   ]);
 
   if (!graph) {
+    const t = await getTranslations("share");
     return (
       <AuthShell>
         <Card className="w-full max-w-sm animate-content-enter rounded-2xl shadow-sm">
           <CardHeader>
             <CardTitle className="font-heading text-xl">
-              Материал больше не доступен
+              {t("goneTitle")}
             </CardTitle>
-            <CardDescription>
-              Этот материал больше не доступен по этой ссылке.
-            </CardDescription>
+            <CardDescription>{t("goneBody")}</CardDescription>
           </CardHeader>
         </Card>
       </AuthShell>

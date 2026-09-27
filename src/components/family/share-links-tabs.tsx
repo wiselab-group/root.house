@@ -1,16 +1,17 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { ShareLinkWithStatus } from "@/domain/share-link/share-link.service";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShareLinksList } from "./share-links-list";
 
 type Status = ShareLinkWithStatus["status"];
 
-const TAB_LABELS: Record<Status, string> = {
-  active: "Активные",
-  expired: "Истёкшие",
-  revoked: "Отозванные",
-};
+const TAB_KEYS = {
+  active: { label: "tabActive", empty: "emptyActive" },
+  expired: { label: "tabExpired", empty: "emptyExpired" },
+  revoked: { label: "tabRevoked", empty: "emptyRevoked" },
+} as const satisfies Record<Status, unknown>;
 
 const TAB_ORDER: Status[] = ["active", "expired", "revoked"];
 
@@ -32,6 +33,7 @@ export function ShareLinksTabs({
   shareLinks: ShareLinkWithStatus[];
   focusPersonNames: Record<string, string>;
 }) {
+  const t = useTranslations("shareLinks");
   const byStatus: Record<Status, ShareLinkWithStatus[]> = {
     active: [],
     expired: [],
@@ -47,7 +49,7 @@ export function ShareLinksTabs({
       <TabsList className="h-11! w-full">
         {TAB_ORDER.map((status) => (
           <TabsTrigger key={status} value={status} className="px-3 text-sm">
-            {TAB_LABELS[status]} ({byStatus[status].length})
+            {t(TAB_KEYS[status].label)} ({byStatus[status].length})
           </TabsTrigger>
         ))}
       </TabsList>
@@ -61,11 +63,7 @@ export function ShareLinksTabs({
             />
           ) : (
             <p className="text-sm text-muted-foreground">
-              {status === "active"
-                ? "Нет активных ссылок."
-                : status === "expired"
-                  ? "Нет истёкших ссылок."
-                  : "Нет отозванных ссылок."}
+              {t(TAB_KEYS[status].empty)}
             </p>
           )}
         </TabsContent>

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   resendInvitationAction,
   revokeInvitationAction,
@@ -22,6 +23,8 @@ export function InvitationRowActions({
   familyId: string;
   invitationId: string;
 }) {
+  const t = useTranslations("members");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +64,7 @@ export function InvitationRowActions({
       <div className="flex flex-1 items-center gap-2">
         <Input readOnly value={newInviteUrl} className="text-xs" />
         <Button type="button" size="sm" variant="outline" onClick={copyLink}>
-          {copied ? "Скопировано" : "Копировать"}
+          {copied ? tc("copied") : tc("copy")}
         </Button>
       </div>
     );
@@ -78,7 +81,7 @@ export function InvitationRowActions({
           aria-busy={isPending}
           onClick={handleResend}
         >
-          {isPending ? "Отправляем…" : "Отправить снова"}
+          {isPending ? t("sending") : t("resend")}
         </Button>
         <Button
           type="button"
@@ -88,7 +91,7 @@ export function InvitationRowActions({
           aria-busy={isPending}
           onClick={handleRevoke}
         >
-          {isPending ? "Отзываем…" : "Отозвать"}
+          {isPending ? t("revoking") : t("revoke")}
         </Button>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}

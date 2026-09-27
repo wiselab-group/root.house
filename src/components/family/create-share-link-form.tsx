@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -19,9 +21,10 @@ const initialState: CreateShareLinkFormState = {};
 
 function SubmitButton() {
   const { pending } = useFormStatus();
+  const t = useTranslations("shareLinks");
   return (
     <Button type="submit" disabled={pending} aria-busy={pending}>
-      {pending ? "Создаём…" : "Создать ссылку"}
+      {pending ? t("creating") : t("create")}
     </Button>
   );
 }
@@ -42,6 +45,8 @@ function SubmitButton() {
  * "private" objects are excluded either way, unconditionally.
  */
 export function CreateShareLinkForm({ familyId }: { familyId: string }) {
+  const t = useTranslations("shareLinks");
+  const tc = useTranslations("common");
   const boundAction = createShareLinkAction.bind(null, familyId);
   const [state, formAction] = useActionState(boundAction, initialState);
   const [copied, setCopied] = useState(false);
@@ -74,14 +79,11 @@ export function CreateShareLinkForm({ familyId }: { familyId: string }) {
   if (state.shareUrl) {
     return (
       <div className="flex flex-col gap-2 rounded-md border border-border p-3">
-        <p className="text-sm text-muted-foreground">
-          Ссылка создана. Сохраните её сейчас — показать её снова будет нельзя,
-          только отозвать и создать новую.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("created")}</p>
         <div className="flex items-center gap-2">
           <Input readOnly value={state.shareUrl} className="text-xs" />
           <Button type="button" size="sm" variant="outline" onClick={copyLink}>
-            {copied ? "Скопировано" : "Копировать"}
+            {copied ? tc("copied") : tc("copy")}
           </Button>
         </div>
       </div>
@@ -98,7 +100,7 @@ export function CreateShareLinkForm({ familyId }: { familyId: string }) {
             htmlFor="share-visibility-scope"
             className="text-xs text-muted-foreground"
           >
-            Что видно по ссылке
+            {t("scope")}
           </Label>
           <NativeSelect
             id="share-visibility-scope"
@@ -108,21 +110,17 @@ export function CreateShareLinkForm({ familyId }: { familyId: string }) {
               setVisibilityScope(e.target.value as ShareLinkVisibilityScope)
             }
           >
-            <option value="family_and_public">
-              Всё, что видно участникам семьи
-            </option>
-            <option value="public_only">Только отмеченное «публичным»</option>
+            <option value="family_and_public">{t("scopeFamily")}</option>
+            <option value="public_only">{t("scopePublic")}</option>
           </NativeSelect>
-          <p className="text-xs text-muted-foreground">
-            Приватные данные не показываются в любом случае.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("privateHidden")}</p>
         </div>
         <div className="flex flex-col gap-1">
           <Label
             htmlFor="share-focus-person"
             className="text-xs text-muted-foreground"
           >
-            Фокус дерева
+            {t("focus")}
           </Label>
           <NativeSelect
             id="share-focus-person"
@@ -132,7 +130,7 @@ export function CreateShareLinkForm({ familyId }: { familyId: string }) {
           >
             {visiblePersons?.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name}
+                {p.name || tc("unnamed")}
               </option>
             ))}
           </NativeSelect>
@@ -147,16 +145,16 @@ export function CreateShareLinkForm({ familyId }: { familyId: string }) {
             htmlFor="share-expiration"
             className="text-xs text-muted-foreground"
           >
-            Срок действия
+            {t("expiration")}
           </Label>
           <NativeSelect
             id="share-expiration"
             name="expirationPreset"
             defaultValue="7d"
           >
-            <option value="never">Никогда</option>
-            <option value="7d">7 дней</option>
-            <option value="30d">30 дней</option>
+            <option value="never">{t("never")}</option>
+            <option value="7d">{t("days", { count: 7 })}</option>
+            <option value="30d">{t("days", { count: 30 })}</option>
           </NativeSelect>
         </div>
         <div className="flex flex-col gap-1">
@@ -164,7 +162,7 @@ export function CreateShareLinkForm({ familyId }: { familyId: string }) {
             htmlFor="share-password"
             className="text-xs text-muted-foreground"
           >
-            Пароль (необязательно)
+            {t("password")}
           </Label>
           <PasswordInput id="share-password" name="password" />
           {state.fieldErrors?.password && (
@@ -178,8 +176,8 @@ export function CreateShareLinkForm({ familyId }: { familyId: string }) {
       {noOneVisible && (
         <p className="text-sm text-muted-foreground">
           {visibilityScope === "public_only"
-            ? "Ни один человек не отмечен «публичным» — отметьте хотя бы одного в его профиле, или выберите «Всё, что видно участникам семьи»."
-            : "В семье пока нет ни одного человека."}
+            ? t("noPublicPeople")
+            : t("noPeople")}
         </p>
       )}
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}

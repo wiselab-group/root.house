@@ -1,5 +1,8 @@
 "use server";
 
+import { getErrorMessage } from "@/i18n/errors";
+import { getValidationMessage } from "@/i18n/validation";
+
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
@@ -36,7 +39,8 @@ export async function inviteFamilyMemberAction(
   formData: FormData,
 ): Promise<InviteMemberFormState> {
   const session = await auth();
-  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
 
   await requireFamilyAccess(familyId, session.user.id, "owner");
 
@@ -46,18 +50,19 @@ export async function inviteFamilyMemberAction(
   });
 
   if (!parsed.success) {
+    const message = await getValidationMessage();
     const fieldErrors: InviteMemberFormState["fieldErrors"] = {};
     for (const issue of parsed.error.issues) {
       const key = issue.path[0];
       if (key === "email" || key === "role") {
-        fieldErrors[key] = issue.message;
+        fieldErrors[key] = message(issue);
       }
     }
     return { fieldErrors };
   }
 
   const family = await getFamilySummary(familyId);
-  if (!family) return { error: "Семья не найдена." };
+  if (!family) return { error: (await getErrorMessage())("familyNotFound") };
 
   try {
     const { inviteUrl } = await createInvitation({
@@ -73,7 +78,9 @@ export async function inviteFamilyMemberAction(
     return { inviteUrl };
   } catch (error) {
     if (error instanceof InvitationInvalidError) {
-      return { fieldErrors: { email: error.message } };
+      return {
+        fieldErrors: { email: (await getErrorMessage())(error.message) },
+      };
     }
     throw error;
   }
@@ -89,12 +96,13 @@ export async function resendInvitationAction(
   invitationId: string,
 ): Promise<ResendInvitationFormState> {
   const session = await auth();
-  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
 
   await requireFamilyAccess(familyId, session.user.id, "owner");
 
   const family = await getFamilySummary(familyId);
-  if (!family) return { error: "Семья не найдена." };
+  if (!family) return { error: (await getErrorMessage())("familyNotFound") };
 
   const { inviteUrl } = await resendInvitation(
     invitationId,
@@ -113,7 +121,8 @@ export async function revokeInvitationAction(
   invitationId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user)
+    throw new Error((await getErrorMessage())("sessionExpired"));
 
   await requireFamilyAccess(familyId, session.user.id, "owner");
   await revokeInvitation(invitationId, familyId);
@@ -148,7 +157,7 @@ export async function acceptInvitationAction(
 ): Promise<AcceptInvitationFormState> {
   const session = await auth();
   if (!session?.user?.email) {
-    return { error: "Сессия истекла — войдите заново." };
+    return { error: (await getErrorMessage())("sessionExpired") };
   }
 
   const result = await acceptInvitation(
@@ -158,13 +167,13 @@ export async function acceptInvitationAction(
   );
 
   if (!result.ok) {
-    const messages: Record<typeof result.reason, string> = {
-      not_found: "Приглашение не найдено или уже использовано.",
-      expired: "Срок действия приглашения истёк.",
-      revoked: "Это приглашение было отозвано.",
-      wrong_email: "Это приглашение отправлено на другой email.",
-    };
-    return { error: messages[result.reason] };
+    const codes = {
+      not_found: "invitationNotFound",
+      expired: "invitationExpired",
+      revoked: "invitationRevoked",
+      wrong_email: "invitationWrongEmail",
+    } as const satisfies Record<typeof result.reason, string>;
+    return { error: (await getErrorMessage())(codes[result.reason]) };
   }
 
   revalidatePath(`/families/${result.familySlug}`);

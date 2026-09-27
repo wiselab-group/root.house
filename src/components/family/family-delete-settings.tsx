@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { useTranslations } from "next-intl";
 import {
   deleteFamilyAction,
   type DeleteFamilyFormState,
@@ -23,6 +24,8 @@ const initialState: DeleteFamilyFormState = {};
 
 function ConfirmDeleteButton({ matchesName }: { matchesName: boolean }) {
   const { pending } = useFormStatus();
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   return (
     <Button
       type="submit"
@@ -30,7 +33,7 @@ function ConfirmDeleteButton({ matchesName }: { matchesName: boolean }) {
       disabled={pending || !matchesName}
       aria-busy={pending}
     >
-      {pending ? "Удаляем…" : "Удалить архив навсегда"}
+      {pending ? tc("deleting") : t("deleteForever")}
     </Button>
   );
 }
@@ -47,6 +50,8 @@ function DeleteFamilyDialogContent({
   familyName: string;
   onCancel: () => void;
 }) {
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const boundAction = deleteFamilyAction.bind(null, familyId);
   const [state, formAction] = useActionState(boundAction, initialState);
   const [confirmValue, setConfirmValue] = useState("");
@@ -55,11 +60,8 @@ function DeleteFamilyDialogContent({
   return (
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>Удалить архив «{familyName}»?</DialogTitle>
-        <DialogDescription>
-          Будут безвозвратно удалены все люди, связи, события, медиа и истории
-          этой семьи. Отменить это действие нельзя.
-        </DialogDescription>
+        <DialogTitle>{t("deleteTitle", { name: familyName })}</DialogTitle>
+        <DialogDescription>{t("deleteBody")}</DialogDescription>
       </DialogHeader>
       <form action={formAction} className="flex flex-col gap-3">
         <div className="flex flex-col gap-1.5">
@@ -67,8 +69,10 @@ function DeleteFamilyDialogContent({
             htmlFor="confirm-family-name"
             className="text-xs text-muted-foreground"
           >
-            Чтобы подтвердить, введите название семьи:{" "}
-            <strong>{familyName}</strong>
+            {t.rich("deleteConfirmLabel", {
+              name: familyName,
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}
           </Label>
           <Input
             id="confirm-family-name"
@@ -89,7 +93,7 @@ function DeleteFamilyDialogContent({
         </div>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onCancel}>
-            Отмена
+            {tc("cancel")}
           </Button>
           <ConfirmDeleteButton matchesName={matchesName} />
         </DialogFooter>
@@ -108,20 +112,18 @@ export function FamilyDeleteSettings({
   familyId: string;
   familyName: string;
 }) {
+  const t = useTranslations("settings");
   const [open, setOpen] = useState(false);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium">Удалить архив семьи</span>
-        <p className="text-sm text-muted-foreground">
-          Безвозвратно удаляет семью и все данные в ней — людей, связи, события,
-          медиа и истории.
-        </p>
+        <span className="text-sm font-medium">{t("deleteRowTitle")}</span>
+        <p className="text-sm text-muted-foreground">{t("deleteRowBody")}</p>
       </div>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger render={<Button type="button" variant="destructive" />}>
-          Удалить архив
+          {t("deleteArchive")}
         </DialogTrigger>
         <DeleteFamilyDialogContent
           familyId={familyId}

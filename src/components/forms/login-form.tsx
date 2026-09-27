@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { PencilIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { loginAction, type LoginFormState } from "@/actions/auth.actions";
 import { credentialsSchema } from "@/lib/validation/auth";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ function FieldError({ children }: { children: React.ReactNode }) {
 
 function SubmitButton({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus();
+  const t = useTranslations("auth");
   return (
     <Button
       type="submit"
@@ -34,20 +36,22 @@ function SubmitButton({ children }: { children: React.ReactNode }) {
       disabled={pending}
       aria-busy={pending}
     >
-      {pending ? "Входим…" : children}
+      {pending ? t("signingIn") : children}
     </Button>
   );
 }
 
 /**
  * Identifier-first login — email and password aren't shown together. Step 1
- * collects just the email (Enter or "Продолжить" advances); step 2 swaps in
+ * collects just the email (Enter or "Continue" advances); step 2 swaps in
  * the password field, autofocused, with the email shown read-only above it.
  * Both inputs stay mounted in the same <form> throughout so the existing
  * one-shot loginAction and browser autocomplete keep working unchanged —
  * only which step is visible changes, via a client step flag.
  */
 export function LoginForm({ callbackUrl }: { callbackUrl?: string } = {}) {
+  const t = useTranslations("auth");
+  const tv = useTranslations("validation");
   const [state, formAction] = useActionState(loginAction, initialState);
   const [step, setStep] = useState<"email" | "password">("email");
   const [email, setEmail] = useState("");
@@ -102,7 +106,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string } = {}) {
       )}
       {step === "email" ? (
         <div className="flex flex-col gap-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t("email")}</Label>
           <Input
             id="email"
             name="email"
@@ -123,7 +127,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string } = {}) {
               }
             }}
           />
-          {showEmailError && <FieldError>Введите корректный email.</FieldError>}
+          {showEmailError && <FieldError>{tv("emailInvalid")}</FieldError>}
         </div>
       ) : (
         <>
@@ -139,12 +143,12 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string } = {}) {
               className="flex shrink-0 cursor-pointer items-center gap-1 text-muted-foreground hover:text-foreground"
             >
               <PencilIcon className="size-3.5" />
-              Изменить
+              {t("change")}
             </button>
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="password">Пароль</Label>
+            <Label htmlFor="password">{t("password")}</Label>
             <PasswordInput
               ref={passwordRef}
               id="password"
@@ -161,10 +165,10 @@ export function LoginForm({ callbackUrl }: { callbackUrl?: string } = {}) {
 
       {step === "email" ? (
         <Button type="button" className="w-full" onClick={continueToPassword}>
-          Продолжить
+          {t("continue")}
         </Button>
       ) : (
-        <SubmitButton>Войти</SubmitButton>
+        <SubmitButton>{t("signIn")}</SubmitButton>
       )}
     </form>
   );

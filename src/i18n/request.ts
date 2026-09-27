@@ -1,6 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
 import { isLocale, LOCALE_COOKIE, negotiateLocale } from "./config";
+import { formats, TIME_ZONE } from "./formats";
 
 /**
  * next-intl without i18n routing: URLs carry no locale. The explicit choice
@@ -14,6 +15,8 @@ export default getRequestConfig(async () => {
 
   return {
     locale,
+    formats,
+    timeZone: TIME_ZONE,
     messages: (await import(`../../messages/${locale}.json`)).default,
   };
 });

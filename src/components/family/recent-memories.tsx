@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import Link from "next/link";
 import { ArchiveImage } from "@/components/media/archive-image";
@@ -28,19 +29,20 @@ export function RecentMemories({
   familySlug: string;
   canTag: boolean;
 }) {
+  const t = useTranslations("familyHome");
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
     <section className="flex flex-col gap-5">
       <div className="flex items-baseline justify-between gap-4">
         <h2 className="font-heading text-[1.625rem] font-normal">
-          Последние фото
+          {t("recentPhotos")}
         </h2>
         <Link
           href={`/families/${familySlug}/photos`}
           className="group flex shrink-0 items-center gap-1 text-sm text-foreground/60 transition-colors hover:text-foreground"
         >
-          Весь архив
+          {t("wholeArchive")}
           <ArrowRight
             className="size-3.5 transition-transform group-hover:translate-x-0.5"
             aria-hidden="true"
@@ -57,7 +59,7 @@ export function RecentMemories({
           >
             <ArchiveImage
               src={mediaUrl(photo.media.id, familyId, "thumb")}
-              alt={photo.media.title ?? "Семейное фото"}
+              alt={photo.media.title ?? t("familyPhoto")}
               fill
               sizes="(max-width: 640px) 33vw, 16vw"
               className="object-cover"

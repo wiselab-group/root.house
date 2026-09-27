@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { useTranslations } from "next-intl";
 import {
   inviteFamilyMemberAction,
   type InviteMemberFormState,
@@ -10,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
-import { ROLE_DESCRIPTIONS } from "@/domain/family/role-labels";
 import type { FamilyRole } from "@/domain/family/roles";
 
 const initialState: InviteMemberFormState = {};
@@ -19,9 +19,10 @@ const DEFAULT_ROLE: FamilyRole = "viewer";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
+  const t = useTranslations("members");
   return (
     <Button type="submit" disabled={pending} aria-busy={pending}>
-      {pending ? "Отправляем…" : "Отправить приглашение"}
+      {pending ? t("sending") : t("sendInvite")}
     </Button>
   );
 }
@@ -31,13 +32,11 @@ function SubmitButton() {
  * rather than navigating away, since email delivery is best-effort (see
  * src/lib/email/send-invitation.ts) and the link is the guaranteed path.
  */
-export function InviteMemberForm({
-  familyId,
-  roleLabels,
-}: {
-  familyId: string;
-  roleLabels: Record<FamilyRole, string>;
-}) {
+export function InviteMemberForm({ familyId }: { familyId: string }) {
+  const t = useTranslations("members");
+  const tc = useTranslations("common");
+  const tr = useTranslations("roles");
+  const trd = useTranslations("roleDescriptions");
   const boundAction = inviteFamilyMemberAction.bind(null, familyId);
   const [state, formAction] = useActionState(boundAction, initialState);
   const [copied, setCopied] = useState(false);
@@ -52,14 +51,11 @@ export function InviteMemberForm({
   if (state.inviteUrl) {
     return (
       <div className="flex flex-col gap-2 rounded-md border border-border p-3">
-        <p className="text-sm text-muted-foreground">
-          Приглашение создано. Если письмо не дойдёт, отправьте эту ссылку
-          вручную:
-        </p>
+        <p className="text-sm text-muted-foreground">{t("inviteCreated")}</p>
         <div className="flex items-center gap-2">
           <Input readOnly value={state.inviteUrl} className="text-xs" />
           <Button type="button" size="sm" variant="outline" onClick={copyLink}>
-            {copied ? "Скопировано" : "Копировать"}
+            {copied ? tc("copied") : tc("copy")}
           </Button>
         </div>
       </div>
@@ -88,7 +84,7 @@ export function InviteMemberForm({
             htmlFor="invite-role"
             className="text-xs text-muted-foreground"
           >
-            Роль
+            {t("role")}
           </Label>
           <NativeSelect
             id="invite-role"
@@ -98,16 +94,14 @@ export function InviteMemberForm({
           >
             {ROLE_OPTIONS.map((option) => (
               <option key={option} value={option}>
-                {roleLabels[option]}
+                {tr(option)}
               </option>
             ))}
           </NativeSelect>
         </div>
         <SubmitButton />
       </div>
-      <p className="max-w-md text-xs text-muted-foreground">
-        {ROLE_DESCRIPTIONS[role]}
-      </p>
+      <p className="max-w-md text-xs text-muted-foreground">{trd(role)}</p>
       {state.error && (
         <p className="w-full text-sm text-destructive">{state.error}</p>
       )}

@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import type { ShareLinkWithStatus } from "@/domain/share-link/share-link.service";
 import { listPersonsByFamily } from "@/domain/person/person.repository";
 import { CreateShareLinkForm } from "./create-share-link-form";
@@ -17,10 +18,13 @@ export async function ShareLinkSection({
   shareLinks: ShareLinkWithStatus[];
 }) {
   const persons = await listPersonsByFamily(familyId);
+  const t = await getTranslations("shareLinks");
+  const tc = await getTranslations("common");
   const focusPersonNames = Object.fromEntries(
     persons.map((p) => [
       p.id,
-      [p.firstName, p.lastName].filter(Boolean).join(" ").trim() || "Без имени",
+      [p.firstName, p.lastName].filter(Boolean).join(" ").trim() ||
+        tc("unnamed"),
     ]),
   );
 
@@ -28,7 +32,7 @@ export async function ShareLinkSection({
     <div className="flex flex-col gap-6">
       {shareLinks.length > 0 && (
         <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium">Ссылки</h3>
+          <h3 className="text-sm font-medium">{t("links")}</h3>
           <ShareLinksTabs
             familyId={familyId}
             shareLinks={shareLinks}
@@ -38,7 +42,7 @@ export async function ShareLinkSection({
       )}
 
       <div className="flex flex-col gap-2">
-        <h3 className="text-sm font-medium">Создать ссылку</h3>
+        <h3 className="text-sm font-medium">{t("create")}</h3>
         <CreateShareLinkForm familyId={familyId} />
       </div>
     </div>

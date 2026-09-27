@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { useTranslations } from "next-intl";
 import {
   acceptInvitationAction,
   type AcceptInvitationFormState,
@@ -13,13 +14,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ROLE_LABELS } from "@/domain/family/role-labels";
 import type { FamilyRole } from "@/domain/family/roles";
 
 const initialState: AcceptInvitationFormState = {};
 
 function ConfirmButton() {
   const { pending } = useFormStatus();
+  const t = useTranslations("invite");
   return (
     <Button
       type="submit"
@@ -27,7 +28,7 @@ function ConfirmButton() {
       disabled={pending}
       aria-busy={pending}
     >
-      {pending ? "Присоединяемся…" : "Принять приглашение"}
+      {pending ? t("accepting") : t("accept")}
     </Button>
   );
 }
@@ -53,6 +54,8 @@ export function AcceptInvitationCard({
   role: FamilyRole;
   inviterName: string;
 }) {
+  const t = useTranslations("invite");
+  const tr = useTranslations("roles");
   const boundAction = acceptInvitationAction.bind(null, token);
   const [state, formAction] = useActionState(boundAction, initialState);
 
@@ -60,11 +63,13 @@ export function AcceptInvitationCard({
     <>
       <CardHeader>
         <CardTitle className="font-heading text-xl">
-          Приглашение в семью «{familyName}»
+          {t("heading", { family: familyName })}
         </CardTitle>
         <CardDescription>
-          {inviterName || "Владелец семьи"} приглашает вас присоединиться в роли
-          «{ROLE_LABELS[role]}».
+          {t("body", {
+            inviter: inviterName || t("familyOwner"),
+            role: tr(role),
+          })}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">

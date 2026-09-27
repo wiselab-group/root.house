@@ -1,6 +1,8 @@
 "use server";
 
 import { AuthError } from "next-auth";
+import { getTranslations } from "next-intl/server";
+import { getValidationMessage } from "@/i18n/validation";
 import { registerSchema, credentialsSchema } from "@/lib/validation/auth";
 import {
   registerUser,
@@ -38,11 +40,12 @@ export async function registerAction(
   });
 
   if (!parsed.success) {
+    const message = await getValidationMessage();
     const fieldErrors: RegisterFormState["fieldErrors"] = {};
     for (const issue of parsed.error.issues) {
       const key = issue.path[0];
       if (key === "name" || key === "email" || key === "password") {
-        fieldErrors[key] = issue.message;
+        fieldErrors[key] = message(issue);
       }
     }
     return { fieldErrors };
@@ -52,7 +55,8 @@ export async function registerAction(
     await registerUser(parsed.data);
   } catch (error) {
     if (error instanceof EmailAlreadyRegisteredError) {
-      return { fieldErrors: { email: error.message } };
+      const t = await getTranslations("auth");
+      return { fieldErrors: { email: t("emailTaken") } };
     }
     throw error;
   }
@@ -95,8 +99,9 @@ export async function loginAction(
     password: formData.get("password"),
   });
 
+  const t = await getTranslations("auth");
   if (!parsed.success) {
-    return { error: "Введите корректные email и пароль." };
+    return { error: t("invalidCredentialsFormat") };
   }
 
   try {
@@ -107,7 +112,7 @@ export async function loginAction(
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return { error: "Неверный email или пароль." };
+      return { error: t("wrongCredentials") };
     }
     throw error;
   }
