@@ -51,13 +51,11 @@ export function PersonForm({
     if (state.saved) closeAfterSave?.();
   }, [state, closeAfterSave]);
 
-  // Controlled (not defaultChecked) because it gates whether the death-date
-  // fields render at all below — "жив(а)" + a death date is a contradiction
-  // the server also refuses to persist (see person.service.ts::reconcileLivingStatus),
-  // but hiding the fields client-side means the user never has a chance to
-  // create that contradiction in the first place, rather than discovering it
-  // was silently overridden after submit.
+  // Both controlled because they gate which fields render at all: the death
+  // fields for the living (a contradiction the server also refuses, see
+  // person.service.ts::reconcileLivingStatus), «Девичья фамилия» for men.
   const [isLiving, setIsLiving] = useState(person?.isLiving ?? true);
+  const [gender, setGender] = useState(person?.gender ?? "unknown");
 
   return (
     <form
@@ -67,10 +65,11 @@ export function PersonForm({
       className={cn("flex flex-col gap-6", panel && "min-h-full")}
       noValidate
     >
-      <PersonNameFields person={person} />
+      <PersonNameFields person={person} showMaidenName={gender !== "male"} />
 
       <PersonGenderLivingFields
-        gender={person?.gender}
+        gender={gender}
+        onGenderChange={setGender}
         isLiving={isLiving}
         onIsLivingChange={setIsLiving}
       />

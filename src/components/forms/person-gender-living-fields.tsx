@@ -15,10 +15,13 @@ const GENDER_OPTIONS = [
 
 export function PersonGenderLivingFields({
   gender,
+  onGenderChange,
   isLiving,
   onIsLivingChange,
 }: {
-  gender?: PersonRecord["gender"];
+  gender: PersonRecord["gender"];
+  /** Controlled: the name fields hide «Девичья фамилия» for men. */
+  onGenderChange: (value: PersonRecord["gender"]) => void;
   isLiving: boolean;
   onIsLivingChange: (value: boolean) => void;
 }) {
@@ -30,7 +33,10 @@ export function PersonGenderLivingFields({
         <NativeSelect
           id="gender"
           name="gender"
-          defaultValue={gender ?? "unknown"}
+          value={gender}
+          onChange={(event) =>
+            onGenderChange(event.target.value as PersonRecord["gender"])
+          }
         >
           {GENDER_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>

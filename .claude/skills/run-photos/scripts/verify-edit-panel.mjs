@@ -3,8 +3,9 @@
 //  A/C — person edit as an EditPanel over the profile (intercepted
 //        @modal/(.)edit): right panel on desktop, bottom sheet on phone,
 //        unsaved-changes prompt, save closes it and leaves no /edit entry
-//        in history, hard load of /edit still renders the standalone page.
-//  D   — story full-page editor with a local (localStorage) draft.
+//        in history; a hard load of /edit renders the same profile + panel,
+//        and closing it lands on the profile URL.
+//  D   — story full-page editor with a server-side draft.
 // Throwaway account + family only; the story row is inserted with SQL
 // scoped to this run's own family.
 //
@@ -124,8 +125,17 @@ async function main() {
 
     console.log("4/6 hard load of /edit");
     await page.goto(`${profileUrl}/edit`, { waitUntil: "networkidle" });
-    check((await page.getByRole("dialog").count()) === 0, "hard load renders the standalone page, no panel");
+    await page.getByRole("dialog").waitFor({ timeout: 20000 });
+    await page.locator("#firstName").waitFor({ timeout: 20000 });
+    await page.waitForTimeout(700);
+    check(
+      await page.locator("main h1", { hasText: "Купчик" }).isVisible(),
+      "hard load: the profile with the same panel over it",
+    );
     await shoot(page, "04-hard-load-edit-page");
+    await page.getByRole("dialog").getByRole("button", { name: "Закрыть" }).click();
+    await page.getByRole("dialog").waitFor({ state: "detached", timeout: 10000 });
+    check(new URL(page.url()).pathname === personPath, "hard load: closing lands on the profile URL");
 
     console.log("5/6 phone sheet");
     const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -211,7 +221,16 @@ async function main() {
     await page.getByRole("heading", { name: "Переезд в Гродно, 1984" }).waitFor({ timeout: 20000 });
     check(true, "event page shows the saved title");
     await page.goto(`${eventUrl}/edit`, { waitUntil: "networkidle" });
-    check((await page.getByRole("dialog").count()) === 0, "event: hard load renders the standalone page");
+    await page.getByRole("dialog").waitFor({ timeout: 20000 });
+    check(
+      // CSS, not a role query: the modal panel marks the page behind it
+      // inert, so it's out of the accessibility tree while open.
+      await page.locator("main h1", { hasText: "Переезд в Гродно" }).isVisible(),
+      "event: hard load shows the event page with the panel over it",
+    );
+    await page.keyboard.press("Escape");
+    await page.getByRole("dialog").waitFor({ state: "detached", timeout: 10000 });
+    check(new URL(page.url()).pathname === eventPath, "event: closing lands on the event URL");
 
     await page.goto(profileUrl, { waitUntil: "networkidle" });
     await page.getByRole("tab", { name: /Линия жизни/ }).click();

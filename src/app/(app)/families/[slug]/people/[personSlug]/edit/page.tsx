@@ -6,13 +6,10 @@ import { requireFamilyAccess } from "@/domain/family/access";
 import { getVisiblePerson } from "@/domain/person/person.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { resolvePersonIdBySlug } from "@/lib/resolve-person-slug";
-import { PersonForm } from "@/components/forms/person-form";
-import { AvatarEditor } from "@/components/forms/avatar-editor";
-import { updatePersonAction } from "@/actions/person.actions";
-import { loadPersonEdit } from "@/lib/load-person-edit";
-import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
-import { getFamilySummary } from "@/domain/family/family.service";
 import { personDisplayName } from "@/domain/person/display-name";
+import { EditPanel } from "@/components/edit-panel/edit-panel";
+import { PersonProfileView } from "../profile-view";
+import { PersonEditPanelContent } from "./panel-content";
 
 export async function generateMetadata({
   params,
@@ -34,51 +31,23 @@ export async function generateMetadata({
   return { title: t("editTitle", { name: personDisplayName(person, locale) }) };
 }
 
+/**
+ * A hard load of /…/edit (refresh, shared link): the profile with the same
+ * EditPanel over it that a click opens (the intercepted @modal/(.)edit
+ * route), so reloading mid-edit doesn't swap in a different page (user
+ * report 2026-09-27). With no in-app history to go back to, closing the
+ * panel replaces the URL with the profile's.
+ */
 export default async function EditPersonPage({
   params,
 }: PageProps<"/families/[slug]/people/[personSlug]/edit">) {
-  const tn = await getTranslations("familyNav");
-  const tc = await getTranslations("common");
-  const locale = await getLocale();
   const { slug, personSlug } = await params;
-  const data = await loadPersonEdit(slug, personSlug);
-  if (!data) return null;
-  const { familyId, personId, person, places } = data;
-  const family = await getFamilySummary(familyId);
-
   return (
-    <main className="mx-auto flex max-w-xl flex-col gap-8 px-6 py-12 sm:py-16">
-      <SetBreadcrumbs
-        items={[
-          { label: tn("myFamilies"), href: "/families" },
-          { label: family?.name ?? slug, href: `/families/${slug}` },
-          { label: tn("people"), href: `/families/${slug}/people` },
-          {
-            label: personDisplayName(person, locale),
-            href: `/families/${slug}/people/${personSlug}`,
-          },
-          { label: tc("edit") },
-        ]}
-      />
-      <div className="flex items-center gap-4">
-        <AvatarEditor familyId={familyId} personId={personId} person={person} />
-        <h1 className="font-heading text-title font-medium tracking-tight text-balance">
-          {personDisplayName(person, locale)}
-        </h1>
-      </div>
-
-      <section className="flex flex-col gap-6 border-t border-border pt-8">
-        {/* .bind() on the real "use server" action, not a closure — see
-            note in people/new/page.tsx for why this distinction matters. */}
-        <PersonForm
-          action={updatePersonAction.bind(null, familyId, personId)}
-          person={person}
-          places={places}
-          submitLabel={tc("save")}
-          submitPendingLabel={tc("saving")}
-          cancelHref={`/families/${slug}/people/${personSlug}`}
-        />
-      </section>
-    </main>
+    <>
+      <PersonProfileView slug={slug} personSlug={personSlug} />
+      <EditPanel closeHref={`/families/${slug}/people/${personSlug}`}>
+        <PersonEditPanelContent slug={slug} personSlug={personSlug} />
+      </EditPanel>
+    </>
   );
 }

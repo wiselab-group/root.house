@@ -8,13 +8,18 @@ import { cn } from "@/lib/utils";
 
 /** EditPanel's top row: the phone sheet's grab handle, the dialog's
  *  accessible title (with an optional leading slot, e.g. the avatar
- *  editor) and ✕, which goes through EditPanel's unsaved-changes check. */
+ *  editor) and ✕, which goes through EditPanel's unsaved-changes check.
+ *  `titleHidden` keeps the title for screen readers only — the person
+ *  panel's name is already right there in its own fields (user request
+ *  2026-09-27), so the header is just the portrait. */
 export function EditPanelHeader({
   title,
   leading,
+  titleHidden = false,
 }: {
   title: string;
   leading?: React.ReactNode;
+  titleHidden?: boolean;
 }) {
   const tc = useTranslations("common");
   return (
@@ -25,9 +30,17 @@ export function EditPanelHeader({
       />
       <div className="flex items-center gap-4">
         {leading}
-        <DialogPrimitive.Title className="min-w-0 flex-1 font-heading text-heading font-normal tracking-tight text-balance">
+        <DialogPrimitive.Title
+          className={
+            titleHidden
+              ? "sr-only"
+              : "min-w-0 flex-1 font-heading text-heading font-normal tracking-tight text-balance"
+          }
+        >
           {title}
         </DialogPrimitive.Title>
+        {/* Keeps ✕ on the right when the title takes no space. */}
+        {titleHidden && <span className="flex-1" aria-hidden="true" />}
         <DialogPrimitive.Close
           render={<Button variant="ghost" size="icon-sm" />}
           aria-label={tc("close")}

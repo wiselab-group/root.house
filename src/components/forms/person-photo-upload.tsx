@@ -13,8 +13,11 @@ import { PHOTO_UPLOAD_SIZE_STYLES as SIZE_STYLES } from "./person-photo-upload-s
 
 /**
  * Shared drag&drop avatar picker UI (reui's c-file-upload-2 pattern adapted
- * to this app's tokens) — click or drop an image directly onto the circular
- * preview instead of a separate "upload" button next to it. Deliberately
+ * to this app's tokens) — click or drop an image directly onto the preview
+ * instead of a separate "upload" button next to it. Styled as the app's one
+ * person avatar, PersonThumb (user request 2026-09-27: «ава должна быть в
+ * стиле сайта»): a rounded square with the sage identity ring, initials on
+ * the same glass fill — terracotta ring only while a file is dragged over. Deliberately
  * dumb about persistence: it only reports the picked File via onFileSelect
  * and shows whatever previewUrl/fallback the caller passes in, so both
  * AvatarEditor (uploads immediately, personId already exists) and
@@ -73,11 +76,9 @@ export function PersonPhotoUpload({
           aria-disabled={isDisabled}
           aria-busy={isBusy}
           className={cn(
-            "group/dropzone relative cursor-pointer overflow-hidden rounded-full border border-dashed border-border text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-            !previewUrl && "hover:border-primary/40",
+            "group/dropzone relative cursor-pointer overflow-hidden bg-glass-strong text-foreground/60 ring-[1.5px] ring-tree-accent transition-shadow duration-base ease-(--ease-reveal) focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none",
             styles.dropzone,
-            isDragging && "border-primary bg-primary/5",
-            previewUrl && "border-solid border-transparent",
+            isDragging && "ring-[3px] ring-primary",
             isDisabled && "pointer-events-none opacity-50",
           )}
           onClick={() => inputRef.current?.click()}
@@ -98,9 +99,26 @@ export function PersonPhotoUpload({
             disabled={isDisabled}
             className="sr-only"
           />
-          <Avatar size="lg" className={cn(styles.avatar, "after:border-none")}>
-            {previewUrl && <AvatarImage src={previewUrl} alt="" />}
-            <AvatarFallback className={styles.fallbackText}>
+          <Avatar
+            size="lg"
+            className={cn(
+              styles.avatar,
+              "rounded-none bg-transparent after:border-none",
+            )}
+          >
+            {previewUrl && (
+              <AvatarImage
+                src={previewUrl}
+                alt=""
+                className="rounded-none object-cover object-[50%_25%]"
+              />
+            )}
+            <AvatarFallback
+              className={cn(
+                styles.fallbackText,
+                "rounded-none bg-transparent font-medium text-foreground/60",
+              )}
+            >
               {isBusy ? null : previewUrl ? null : fallback}
             </AvatarFallback>
           </Avatar>
@@ -130,7 +148,8 @@ export function PersonPhotoUpload({
             onClick={onRemove}
             disabled={isDisabled}
             className={cn(
-              "absolute end-0 top-0 z-10 rounded-full bg-background",
+              // On the corner, clear of the face.
+              "absolute -end-2 -top-2 z-10 rounded-full bg-background",
               styles.remove,
             )}
             aria-label={removeButtonLabel}

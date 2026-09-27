@@ -3,8 +3,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { PersonRecord } from "@/domain/person/person.service";
 
-/** Name fields — split out to keep PersonForm under the 150-line limit. */
-export function PersonNameFields({ person }: { person?: PersonRecord | null }) {
+/** Name fields — split out to keep PersonForm under the 150-line limit.
+ *  «Девичья фамилия» is unmounted (not just hidden) for men, so it's also
+ *  not submitted — same pattern as the death fields for the living. */
+export function PersonNameFields({
+  person,
+  showMaidenName,
+}: {
+  person?: PersonRecord | null;
+  showMaidenName: boolean;
+}) {
   const t = useTranslations("personForm");
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -32,14 +40,16 @@ export function PersonNameFields({ person }: { person?: PersonRecord | null }) {
           defaultValue={person?.middleName ?? ""}
         />
       </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="maidenName">{t("maidenName")}</Label>
-        <Input
-          id="maidenName"
-          name="maidenName"
-          defaultValue={person?.maidenName ?? ""}
-        />
-      </div>
+      {showMaidenName && (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="maidenName">{t("maidenName")}</Label>
+          <Input
+            id="maidenName"
+            name="maidenName"
+            defaultValue={person?.maidenName ?? ""}
+          />
+        </div>
+      )}
     </div>
   );
 }
