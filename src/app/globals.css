@@ -844,9 +844,21 @@ body:has(.photo-backdrop) .app-header-bar {
    did in light mode. */
 .react-flow.dark {
   --xy-background-color: transparent;
-  --xy-minimap-background-color: var(--card);
-  --xy-minimap-mask-background-color: oklch(0.17 0.02 50 / 60%);
-  --xy-minimap-node-background-color: var(--muted);
+  /* Minimap: it read as one flat smudge (--muted people on --card, no
+     visible viewport). The panel itself is the dock's glass (tree-canvas.tsx
+     className); people are sage like every card's ring, the part of the
+     tree outside the viewport is dimmed, and the viewport frame is
+     terracotta — «what you're looking at», per the palette roles. */
+  --xy-minimap-background-color: transparent;
+  --xy-minimap-mask-background-color: color-mix(
+    in oklch,
+    var(--background) 55%,
+    transparent
+  );
+  /* The terracotta frame itself is drawn rounded by MiniMapViewportFrame —
+     the mask's own stroke can't take a radius. */
+  --xy-minimap-mask-stroke-color: transparent;
+  --xy-minimap-node-background-color: var(--tree-accent);
   --xy-controls-button-background-color: var(--card);
   --xy-controls-button-background-color-hover: var(--muted);
   --xy-controls-button-color: var(--foreground);

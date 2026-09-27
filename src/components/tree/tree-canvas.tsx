@@ -25,9 +25,11 @@ import {
 } from "@/domain/tree/tree-adapter";
 import {
   toReactFlow,
+  type PersonFlowNode,
   type TreeHighlightState,
 } from "./adapters/xyflow-adapter";
 import { PersonNode } from "./person-node";
+import { MiniMapViewportFrame } from "./minimap-viewport-frame";
 import { RelationshipEdge } from "./relationship-edge";
 import { UnionChildEdge } from "./union-child-edge";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
@@ -626,11 +628,22 @@ export function TreeCanvas({
             map. pointer-fine (mouse/trackpad) is the actual "desktop"
             signal, not viewport width alone. */}
             {mounted && (
-              <MiniMap
+              <MiniMap<PersonFlowNode>
                 pannable
                 zoomable
-                className="hidden bg-card! md:pointer-fine:block"
+                nodeBorderRadius={32}
+                // Filtered-out / off-trace people fade here as on the canvas.
+                nodeColor={(node) =>
+                  node.data.isFilterMatch === false ||
+                  node.data.isOnTracePath === false
+                    ? "color-mix(in oklch, var(--tree-accent) 30%, transparent)"
+                    : "var(--tree-accent)"
+                }
+                className="hidden overflow-hidden rounded-2xl border border-glass-edge bg-background/60! shadow-xl shadow-black/40 backdrop-blur-xl backdrop-saturate-150 md:pointer-fine:block"
               />
+            )}
+            {mounted && (
+              <MiniMapViewportFrame className="hidden md:pointer-fine:block" />
             )}
           </ReactFlow>
         </div>
