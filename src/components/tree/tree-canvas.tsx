@@ -31,7 +31,8 @@ import { RelationshipEdge } from "./relationship-edge";
 import { UnionChildEdge } from "./union-child-edge";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useHasMounted } from "./use-has-mounted";
-import { TreeToolsMenu } from "./tree-tools-menu";
+import { TreeDock } from "./dock/tree-dock";
+import type { DockKinship } from "./dock/kinship-dock-item";
 import { useCollapsedBranches } from "./use-collapsed-branches";
 import {
   pruneCollapsedDescendants,
@@ -148,7 +149,7 @@ export function TreeCanvas({
   shareToken,
   onOpenFilter,
   isFilterActive,
-  toolbarExtra,
+  kinship,
   overlay,
 }: {
   graph: TreeLayoutGraph;
@@ -166,11 +167,10 @@ export function TreeCanvas({
   familySlug: string;
   /** Filter/Focus (tree-filter.ts) + Relationship Trace (tree-trace.ts) state to render — see xyflow-adapter.ts's TreeHighlightState. Omit when neither is active. Reused as-is across a client-side re-focus (rewrite plan §7 Stage 7): filterMatchedIds/tracePersonIds/traceEdgeIds are person/edge ID sets, not position-dependent, and buildTreeLayout always lays out the SAME full connected family regardless of which person is the root — so a re-focus never changes who's in these sets, only where they're drawn. */
   highlight?: TreeHighlightState;
-  /** Anonymous Share Link view (see app/share/[token]/page.tsx) — forces
-   *  dragging off, never wires focus-switching (no updateDefaultFocusPersonAction
-   *  call, no URL ?focus= navigation — the link shows exactly the tree its
-   *  owner configured), and hides the drag-lock control entirely since
-   *  there's nothing left for it to toggle. */
+  /** Anonymous Share Link view (see app/share/[token]/page.tsx) — never
+   *  wires focus-switching (no updateDefaultFocusPersonAction call, no URL
+   *  ?focus= navigation — the link shows exactly the tree its owner
+   *  configured). */
   readOnly?: boolean;
   /** The Share Link's own token — required when readOnly, used to build
    *  each card's avatar URL against /api/share/[token]/media/[mediaId]
@@ -178,15 +178,13 @@ export function TreeCanvas({
    *  xyflow-adapter.ts::buildPhotoUrl). */
   shareToken?: string;
   /** Opens TreeToolbar's own TreeFilterPanel — passed through so the
-   *  "Инструменты" menu inside TreeCanvas (tree-tools-menu.tsx) can trigger
-   *  it without TreeCanvas owning that dialog state itself. Undefined on the
-   *  Share Link surface (TreeToolbar isn't rendered there), which hides the
-   *  row. */
+   *  dock inside TreeCanvas (dock/tree-dock.tsx) can trigger it without
+   *  TreeCanvas owning that dialog state itself. Undefined on the Share
+   *  Link surface (TreeToolbar isn't rendered there), which hides it. */
   onOpenFilter?: () => void;
   isFilterActive?: boolean;
-  /** Extra controls for the bottom bar, beside "Инструменты" (TreeToolbar's
-   *  "Родство" button). */
-  toolbarExtra?: React.ReactNode;
+  /** The dock's "Родство" item — TreeToolbar's Relationship Trace state. */
+  kinship?: DockKinship;
   /** Floating UI rendered INSIDE <ReactFlow>, so it can move the viewport
    *  via useReactFlow (TreeToolbar's Relationship Trace panel). */
   overlay?: React.ReactNode;
@@ -194,19 +192,6 @@ export function TreeCanvas({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  // Global drag lock — starts LOCKED (false): cards are meant to stay put at
-  // their computed layout position, dragging is an opt-in "let me nudge this
-  // one card" mode the lock row in TreeToolsMenu toggles. Plain
-  // session state (not persisted) — every visit re-opens
-  // locked, matching the layout the server just computed. Deliberately does
-  // NOT also gate elementsSelectable: a card's click-to-open-popover
-  // ("Посмотреть профиль"/"Сделать фокус-персоной", see person-node.tsx) is
-  // a plain PopoverTrigger, not XYFlow's own node-selection UI — locking
-  // elementsSelectable to this same state was blocking that click,
-  // silently disabling the popover while drag was locked, which had no
-  // relation to dragging at all.
-  const [nodesDraggable, setNodesDraggable] = useState(false);
-
   // XYFlow's own <MiniMap> picks its shapeRendering attribute from
   // `typeof window === 'undefined' || !!window.chrome` at render time (see
   // @xyflow/react's MiniMap source) — on the server that's always
@@ -573,8 +558,13 @@ export function TreeCanvas({
             onEdgesChange={onEdgesChange}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
-            nodesDraggable={!readOnly && nodesDraggable}
-            nodesConnectable={!readOnly && nodesDraggable}
+            // Cards always stay at their computed layout position — the
+            // opt-in "Разрешить перетаскивание" toggle was removed per user
+            // request (2026-09-27). elementsSelectable is deliberately left
+            // on: a card's click popover is a plain PopoverTrigger, and
+            // turning selection off once silently blocked that click.
+            nodesDraggable={false}
+            nodesConnectable={false}
             proOptions={{ hideAttribution: true }}
             // No fitView here — FocusViewport below centers on the focus
             // person at a fixed 85% zoom instead (per the family's "opens with
@@ -612,20 +602,15 @@ export function TreeCanvas({
               isInitialLoad={isInitialLoad}
             />
             {readOnly ? (
-              // No drag-lock toggle to show (dragging is force-disabled
-              // above), and no Filter row either (TreeToolbar itself isn't
-              // rendered on the read-only Share Link surface, so
-              // onOpenFilter is never passed down there).
-              <TreeToolsMenu />
+              // No Filter/Родство (TreeToolbar itself isn't rendered on
+              // the read-only Share Link surface).
+              <TreeDock />
             ) : (
-              <TreeToolsMenu
-                draggable={nodesDraggable}
-                setDraggable={setNodesDraggable}
+              <TreeDock
                 onOpenFilter={onOpenFilter}
                 isFilterActive={isFilterActive}
-              >
-                {toolbarExtra}
-              </TreeToolsMenu>
+                kinship={kinship}
+              />
             )}
             {overlay}
             {/* Minimap needs room to read as a map, not a smudge — skip it below

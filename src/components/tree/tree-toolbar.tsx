@@ -8,7 +8,8 @@ import { isEmptyFilter, type PersonFilter } from "@/domain/tree/tree-filter";
 import type { TreeLayoutGraph } from "@/domain/tree/tree-layout.builder";
 import type { TreeClientGraphPayload } from "@/domain/tree/tree-adapter";
 import type { TreeHighlightState } from "./adapters/xyflow-adapter";
-import { KinshipButton } from "./kinship/kinship-button";
+import { personDisplayName } from "@/domain/person/display-name";
+import { DOCK_SHORTCUT_LABELS } from "./dock/use-dock-shortcuts";
 import { KinshipProvider } from "./kinship/kinship-context";
 import { KinshipPanel } from "./kinship/kinship-panel";
 import { useKinshipTrace } from "./kinship/use-kinship-trace";
@@ -16,12 +17,12 @@ import { useKinshipTrace } from "./kinship/use-kinship-trace";
 /**
  * Wraps TreeCanvas with Filter and Relationship Trace (plan §16-17).
  *
- * Filter is a row in TreeCanvas's "Инструменты" menu that opens
+ * Filter is an item in TreeCanvas's dock (dock/tree-dock.tsx) that opens
  * TreeFilterPanel (a dialog owned here); it writes ?filter= with a real
  * navigation, since the server re-lays out the filtered tree.
  *
- * Relationship Trace ("Родство") has its own button beside that menu and
- * its own non-modal panel (kinship/). It runs entirely in the browser off
+ * Relationship Trace ("Родство") is the dock's labelled item, with its own
+ * non-modal panel (kinship/). It runs entirely in the browser off
  * the raw graph the page already sent — see useKinshipTrace — and reaches
  * the tree through two channels: highlight sets merged into `highlight`
  * below, and KinshipContext for the cards (pick-on-click, "Сравнить с…").
@@ -76,6 +77,21 @@ export function TreeToolbar({
     [trace.pickSlot, trace.pick, trace.compareWith],
   );
 
+  const { summary, aId, bId, personsById, isPanelOpen, setPanelOpen } = trace;
+  const personA = aId ? personsById.get(aId) : undefined;
+  const personB = bId ? personsById.get(bId) : undefined;
+  const dockKinship = {
+    headline: summary?.headline ?? null,
+    pair:
+      personA && personB
+        ? `${personDisplayName(personA)} ↔ ${personDisplayName(personB)}`
+        : null,
+    isPanelOpen,
+    onToggle: () => setPanelOpen(!isPanelOpen),
+    onReset: trace.reset,
+    shortcut: DOCK_SHORTCUT_LABELS.kinship,
+  };
+
   // A person with no recorded relationship at all (layout/types.ts's
   // NormalizedPerson.isIsolated) is still placed on the canvas — as a
   // connector-less card in a row below the tree (see placeIsolatedPersons,
@@ -97,7 +113,7 @@ export function TreeToolbar({
         highlight={mergedHighlight}
         onOpenFilter={() => setFilterPanelOpen(true)}
         isFilterActive={!isEmptyFilter(filter)}
-        toolbarExtra={<KinshipButton trace={trace} />}
+        kinship={dockKinship}
         overlay={<KinshipPanel trace={trace} familyId={familyId} />}
       />
 
@@ -109,8 +125,8 @@ export function TreeToolbar({
       />
 
       {isolatedCount > 0 && (
-        // top-center, not bottom-center — that spot is the "Инструменты" /
-        // "Родство" bar (tree-tools-menu.tsx) rendered inside TreeCanvas.
+        // top-center, not bottom-center — that spot is the dock
+        // (dock/tree-dock.tsx) rendered inside TreeCanvas.
         <div
           className="absolute top-3 left-1/2 z-10 -translate-x-1/2 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground shadow-md"
           role="status"
