@@ -5,11 +5,12 @@ import { LinkButton } from "@/components/ui/link-button";
 /**
  * Top bar for the public marketing page — same brand-mark-plus-actions shape
  * as AppHeader, but with signed-out CTAs (log in / get started) instead of
- * breadcrumbs and a sign-out button.
+ * breadcrumbs and a sign-out button. Laid over the hero (absolute), so the
+ * hero's sticky viewport starts at the very top of the screen.
  */
 export function MarketingHeader() {
   return (
-    <header className="border-b border-border px-6 py-3">
+    <header className="absolute inset-x-0 top-0 z-20 px-6 py-4">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
         <Link href="/" className="shrink-0">
           <BrandMark />

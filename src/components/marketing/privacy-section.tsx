@@ -1,40 +1,55 @@
-import { Lock, Users, MailPlus } from "lucide-react";
-import { MarketingSectionHeading } from "@/components/marketing/marketing-section-heading";
-import { PrivacyFeatureCard } from "@/components/marketing/privacy-feature-card";
+import { Lock, MailPlus, Users } from "lucide-react";
 
 /** Only real, documented capabilities (docs/architecture.md § Roles,
  *  Privacy, Invitations) — no invented security claims. */
-const CARDS = [
+const FACTS = [
   {
     icon: Lock,
     title: "Private by default",
     description:
-      "Every family archive is its own private space. Nothing is public unless someone explicitly makes it so.",
+      "Every family archive is its own closed space. Nothing is public unless you publish it.",
   },
   {
     icon: Users,
     title: "Roles that make sense",
     description:
-      "Owners, editors, contributors, and viewers — everyone gets exactly the access they need, nothing more.",
+      "Owners, editors, contributors and viewers — each gets exactly the access they need.",
   },
   {
     icon: MailPlus,
     title: "Invite-only",
     description:
-      "Bring family in with a real invitation — by email or a private link — never an open sign-up.",
+      "Family joins by a personal invitation or a private link, never an open sign-up.",
   },
 ];
 
+/** One quiet band rather than three cards: privacy is part of the promise,
+ *  not a feature grid. */
 export function PrivacySection() {
   return (
-    <section className="px-6 py-16 sm:py-20">
-      <div className="mx-auto flex max-w-5xl flex-col items-center gap-10">
-        <MarketingSectionHeading title="Your family's story stays your family's." />
-        <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-3">
-          {CARDS.map((card) => (
-            <PrivacyFeatureCard key={card.title} {...card} />
+    <section aria-labelledby="privacy-title" className="px-6 py-section">
+      <div className="mx-auto grid max-w-6xl gap-10 border-y border-border py-12 lg:grid-cols-[1fr_2fr] lg:gap-16">
+        <h2
+          id="privacy-title"
+          className="font-heading text-title font-medium text-balance"
+        >
+          Your family&apos;s story stays your family&apos;s.
+        </h2>
+        <ul className="grid gap-8 sm:grid-cols-3">
+          {FACTS.map(({ icon: Icon, title, description }) => (
+            <li key={title} className="flex flex-col gap-2">
+              <Icon
+                className="size-5 text-muted-foreground"
+                aria-hidden="true"
+                strokeWidth={1.5}
+              />
+              <span className="font-medium text-foreground">{title}</span>
+              <span className="text-sm text-muted-foreground">
+                {description}
+              </span>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   );

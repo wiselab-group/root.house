@@ -4,12 +4,15 @@ import { cn } from "@/lib/utils";
 /** Shared eyebrow + heading + optional subcopy block reused across most
  *  marketing sections, so heading markup/spacing doesn't drift per-section. */
 export function MarketingSectionHeading({
+  id,
   eyebrow,
   title,
   subcopy,
   align = "center",
   className,
 }: {
+  /** For the section's aria-labelledby. */
+  id?: string;
   eyebrow?: string;
   title: string;
   subcopy?: ReactNode;
@@ -31,7 +34,7 @@ export function MarketingSectionHeading({
           {eyebrow}
         </span>
       )}
-      <h2 className="font-heading text-title font-medium text-balance">
+      <h2 id={id} className="font-heading text-title font-medium text-balance">
         {title}
       </h2>
       {subcopy && (

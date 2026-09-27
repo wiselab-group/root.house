@@ -1,0 +1,161 @@
+/*
+ * Landing-only motion (src/components/marketing/). Kept out of globals.css:
+ * none of it applies inside the app. transform/opacity only, named easing
+ * tokens only (CLAUDE.md § Animation rules).
+ */
+
+/* ---------------------------------------------------------------------
+ * First-visit intro (intro-preloader.tsx + intro-script.ts).
+ * intro-script.ts sets html[data-intro]:
+ *   "play"    — first visit, intro running (overlay shown, scroll locked)
+ *   "ended"   — intro finished on its own
+ *   "skipped" — visitor clicked / pressed Esc
+ * No attribute (return visit, reduced motion, no JS) = no intro at all and
+ * a static hero.
+ * ------------------------------------------------------------------- */
+.intro-overlay {
+  --intro-step: 260ms;
+  --intro-lift-at: 1500ms;
+  --intro-lift: 700ms;
+  display: none;
+}
+html[data-intro="play"] {
+  overflow: hidden;
+}
+html[data-intro="play"] .intro-overlay {
+  display: block;
+}
+
+.intro-panel {
+  animation: intro-lift var(--intro-lift) var(--ease-transition) forwards;
+  animation-delay: var(--intro-lift-at);
+}
+/* The curved lower edge flattens as the panel lifts away. */
+.intro-curve {
+  transform-origin: top;
+  animation: intro-flatten var(--intro-lift) var(--ease-transition) forwards;
+  animation-delay: var(--intro-lift-at);
+}
+.intro-word {
+  opacity: 0;
+  animation: intro-word var(--intro-step) var(--ease-reveal) both;
+  animation-delay: calc(var(--i) * var(--intro-step));
+}
+/* The last word ("You") stays until the panel lifts. */
+.intro-word:last-child {
+  animation-name: intro-word-hold;
+}
+
+@keyframes intro-word {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  30%,
+  70% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+@keyframes intro-word-hold {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes intro-lift {
+  to {
+    transform: translateY(-100%);
+  }
+}
+@keyframes intro-flatten {
+  to {
+    transform: scaleY(0);
+  }
+}
+
+/* ---------------------------------------------------------------------
+ * Hero entrance — plays only when the intro played (first visit). Waits
+ * for the lifting panel while it runs; a skip drops the wait so the hero
+ * rises immediately. Return visits: the class does nothing.
+ * ------------------------------------------------------------------- */
+html[data-intro="play"],
+html[data-intro="ended"] {
+  --intro-offset: 1650ms;
+}
+html[data-intro] .intro-rise {
+  animation: intro-rise 900ms var(--ease-reveal) backwards;
+  animation-delay: calc(var(--intro-offset, 0ms) + var(--rise-delay, 0ms));
+}
+@keyframes intro-rise {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------------------------------------------------------------------
+ * Memory box → tree (memory-box-section.tsx). Each fragment gets its own
+ * eased progress --t (0 = scattered, 1 = in its tree slot) from JS; the
+ * from/to coordinates are per-breakpoint custom properties in cqw of the
+ * stage, so one --t drives both layouts without measuring anything.
+ * ------------------------------------------------------------------- */
+.memory-stage {
+  container-type: inline-size;
+}
+.memory-fragment {
+  --fx: var(--fx-m);
+  --fy: var(--fy-m);
+  --fr: var(--fr-m);
+  --tx: var(--tx-m);
+  --ty: var(--ty-m);
+  --w: 24cqw;
+  width: var(--w);
+  translate: calc((var(--fx) + (var(--tx) - var(--fx)) * var(--t)) * 1cqw - 50%)
+    calc((var(--fy) + (var(--ty) - var(--fy)) * var(--t)) * 1cqw);
+  rotate: calc(var(--fr) * (1 - var(--t)) * 1deg);
+}
+@media (min-width: 640px) {
+  .memory-fragment {
+    --fx: var(--fx-d);
+    --fy: var(--fy-d);
+    --fr: var(--fr-d);
+    --tx: var(--tx-d);
+    --ty: var(--ty-d);
+    --w: 11cqw;
+  }
+}
+/* Paper face fades out and the person card fades in over the last part
+   of each fragment's own travel. */
+.memory-fragment-face {
+  opacity: calc(1 - clamp(0, (var(--t) - 0.55) / 0.4, 1));
+}
+.memory-card-face {
+  opacity: clamp(0, (var(--t) - 0.55) / 0.4, 1);
+}
+
+/* Hero "Scroll" hint: a short bright segment runs down its track, over and
+   over. The global reduced-motion rule stops it after one pass. */
+.scroll-hint-runner {
+  animation: scroll-hint-run 1800ms var(--ease-transition) infinite;
+}
+@keyframes scroll-hint-run {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(200%);
+  }
+}

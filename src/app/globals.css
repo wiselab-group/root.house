@@ -70,6 +70,11 @@
 @theme {
   --text-display-lg: clamp(3rem, 2.55rem + 1.9vw, 3.75rem);
   --text-display-lg--line-height: 1.05;
+  /* Landing hero only: the rolling keyword ("the move in 1956") must fit a
+     343px phone column on one line, so it starts smaller than display-lg
+     and grows past it on wide screens. */
+  --text-hero: clamp(1.875rem, 1rem + 4.2vw, 4.25rem);
+  --text-hero--line-height: 1.08;
   --text-display: clamp(2.25rem, 1.5rem + 3vw, 3.75rem);
   --text-display--line-height: 1.05;
   --text-title: clamp(1.875rem, 1.6rem + 1vw, 2.25rem);

@@ -48,7 +48,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     // `dark` app-wide (user request 2026-09-25): every page uses the warm
     // dark archive palette Family Home introduced — see .dark in globals.css.
+    // suppressHydrationWarning: the landing's first-visit intro script sets
+    // data-intro on <html> before hydration (see intro-script.ts) — this
+    // only silences that one element's own attribute diff, not its children.
     <html
+      suppressHydrationWarning
       lang="ru"
       className={`dark ${geistSans.variable} ${geistMono.variable} ${lora.variable} h-full antialiased`}
     >
