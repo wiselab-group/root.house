@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { TreeCanvas } from "./tree-canvas";
@@ -45,6 +45,7 @@ export function TreeToolbar({
   highlight?: TreeHighlightState;
   filter: PersonFilter;
 }) {
+  const tTree = useTranslations("tree");
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -133,9 +134,7 @@ export function TreeToolbar({
           className="absolute top-3 left-1/2 z-10 -translate-x-1/2 rounded-full border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground shadow-md"
           role="status"
         >
-          {isolatedCount === 1
-            ? "1 человек не привязан к дереву"
-            : `${isolatedCount} человек не привязаны к дереву`}
+          {tTree("isolated", { count: isolatedCount })}
         </div>
       )}
     </KinshipProvider>

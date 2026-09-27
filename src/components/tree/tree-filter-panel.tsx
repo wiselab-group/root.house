@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import {
   Dialog,
@@ -14,13 +15,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { PersonFilter } from "@/domain/tree/tree-filter";
 
-const GENDER_OPTIONS: Array<{
-  value: NonNullable<PersonFilter["gender"]>[number];
-  label: string;
-}> = [
-  { value: "male", label: "Мужской" },
-  { value: "female", label: "Женский" },
-  { value: "unknown", label: "Неизвестен" },
+const GENDER_OPTIONS: Array<NonNullable<PersonFilter["gender"]>[number]> = [
+  "male",
+  "female",
+  "unknown",
 ];
 
 /**
@@ -44,6 +42,7 @@ export function TreeFilterPanel({
   filter: PersonFilter;
   onApply: (filter: PersonFilter) => void;
 }) {
+  const t = useTranslations("treeFilter");
   const [draft, setDraft] = useState<PersonFilter>(filter);
 
   function toggleGender(value: NonNullable<PersonFilter["gender"]>[number]) {
@@ -58,40 +57,37 @@ export function TreeFilterPanel({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Фильтр по дереву</DialogTitle>
-          <DialogDescription>
-            Совпадающие люди выделяются, остальные остаются на дереве
-            приглушёнными.
-          </DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label>Пол</Label>
+            <Label>{t("gender")}</Label>
             <div className="flex flex-wrap gap-1.5">
               {GENDER_OPTIONS.map((option) => (
                 <Button
-                  key={option.value}
+                  key={option}
                   type="button"
                   size="sm"
                   variant={
-                    draft.gender?.includes(option.value) ? "default" : "outline"
+                    draft.gender?.includes(option) ? "default" : "outline"
                   }
-                  onClick={() => toggleGender(option.value)}
+                  onClick={() => toggleGender(option)}
                 >
-                  {option.label}
+                  {t(option)}
                 </Button>
               ))}
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="filter-birth-from">Год рождения</Label>
+            <Label htmlFor="filter-birth-from">{t("birthYear")}</Label>
             <div className="flex items-center gap-2">
               <Input
                 id="filter-birth-from"
                 type="number"
-                placeholder="от"
+                placeholder={t("from")}
                 value={draft.birthYearFrom ?? ""}
                 onChange={(e) =>
                   setDraft({
@@ -104,7 +100,7 @@ export function TreeFilterPanel({
               />
               <Input
                 type="number"
-                placeholder="до"
+                placeholder={t("to")}
                 value={draft.birthYearTo ?? ""}
                 onChange={(e) =>
                   setDraft({
@@ -119,7 +115,7 @@ export function TreeFilterPanel({
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label>Статус</Label>
+            <Label>{t("status")}</Label>
             <div className="flex flex-wrap gap-1.5">
               <Button
                 type="button"
@@ -132,7 +128,7 @@ export function TreeFilterPanel({
                   })
                 }
               >
-                Живые
+                {t("living")}
               </Button>
               <Button
                 type="button"
@@ -145,7 +141,7 @@ export function TreeFilterPanel({
                   })
                 }
               >
-                Умершие
+                {t("deceased")}
               </Button>
             </div>
           </div>
@@ -160,7 +156,7 @@ export function TreeFilterPanel({
               onOpenChange(false);
             }}
           >
-            Сбросить
+            {t("reset")}
           </Button>
           <Button
             onClick={() => {
@@ -168,7 +164,7 @@ export function TreeFilterPanel({
               onOpenChange(false);
             }}
           >
-            Применить
+            {t("apply")}
           </Button>
         </DialogFooter>
       </DialogContent>

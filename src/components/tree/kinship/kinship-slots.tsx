@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { ArrowUpDownIcon, MousePointerClickIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { personDisplayName } from "@/domain/person/display-name";
@@ -28,6 +28,7 @@ export function KinshipSlots({
   onSelect: (slot: TraceSlot, personId: string | null) => void;
   onSwap: () => void;
 }) {
+  const t = useTranslations("kinship");
   const locale = useLocale();
   const asValue = (person: TreePersonClientPayload | null) =>
     person ? { id: person.id, name: personDisplayName(person, locale) } : null;
@@ -38,14 +39,14 @@ export function KinshipSlots({
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <PersonCombobox
             familyId={familyId}
-            label="Первый человек"
+            label={t("first")}
             value={asValue(personA)}
             onChange={(person) => onSelect("traceA", person?.id ?? null)}
             excludeId={personB?.id}
           />
           <PersonCombobox
             familyId={familyId}
-            label="Второй человек"
+            label={t("second")}
             value={asValue(personB)}
             onChange={(person) => onSelect("traceB", person?.id ?? null)}
             excludeId={personA?.id}
@@ -55,7 +56,7 @@ export function KinshipSlots({
           variant="outline"
           size="icon-sm"
           className="mt-7"
-          aria-label="Поменять местами"
+          aria-label={t("swap")}
           disabled={!personA && !personB}
           onClick={onSwap}
         >
@@ -65,8 +66,7 @@ export function KinshipSlots({
       {pickSlot && (
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
           <MousePointerClickIcon className="size-3.5 shrink-0 fill-none! text-primary" />
-          {pickSlot === "traceA" ? "Первого" : "Второго"} человека можно выбрать
-          прямо на дереве
+          {t("pickHint", { slot: pickSlot === "traceA" ? "first" : "second" })}
         </p>
       )}
     </div>

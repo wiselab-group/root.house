@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useLocale } from "next-intl";
 import { buildGenealogyGraph } from "@/domain/relationship/genealogy-graph";
 import { findRelationshipPath } from "@/domain/relationship/genealogy-algorithms";
 import {
@@ -57,6 +58,7 @@ export function useKinshipTrace(
   const aId = readSlot("traceA");
   const bId = readSlot("traceB");
 
+  const locale = useLocale();
   const genderOf = useCallback(
     (id: string): KinGender => personsById.get(id)?.gender ?? "unknown",
     [personsById],
@@ -67,13 +69,15 @@ export function useKinshipTrace(
     [genealogy, aId, bId],
   );
   const summary = useMemo(
-    () => (outcome ? describeKinship(outcome, genderOf) : null),
-    [outcome, genderOf],
+    () => (outcome ? describeKinship(outcome, genderOf, locale) : null),
+    [outcome, genderOf, locale],
   );
   const stops = useMemo(
     () =>
-      outcome?.status === "found" ? describePathStops(outcome, genderOf) : [],
-    [outcome, genderOf],
+      outcome?.status === "found"
+        ? describePathStops(outcome, genderOf, locale)
+        : [],
+    [outcome, genderOf, locale],
   );
 
   // Only a found path dims the tree — "not related" has nothing to point

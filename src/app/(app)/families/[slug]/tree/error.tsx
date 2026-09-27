@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
 import {
   Card,
@@ -18,21 +19,19 @@ import { LinkButton } from "@/components/ui/link-button";
  * of Next.js's generic error screen when that happens.
  */
 export default function FamilyTreeError() {
+  const t = useTranslations("tree");
   const params = useParams<{ slug: string }>();
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
       <Card>
         <CardHeader>
-          <CardTitle>Не удалось построить дерево для этой семьи</CardTitle>
-          <CardDescription>
-            Что-то пошло не так при расчёте расположения карточек. Мы уже знаем
-            об ошибке — попробуйте вернуться на страницу семьи.
-          </CardDescription>
+          <CardTitle>{t("errorTitle")}</CardTitle>
+          <CardDescription>{t("errorBody")}</CardDescription>
         </CardHeader>
         <CardContent>
           <LinkButton href={`/families/${params.slug}`}>
-            Вернуться к семье
+            {t("backToFamily")}
           </LinkButton>
         </CardContent>
       </Card>

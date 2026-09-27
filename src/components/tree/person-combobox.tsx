@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   useEffect,
   useId,
@@ -51,6 +51,7 @@ export function PersonCombobox({
   excludeId?: string;
   className?: string;
 }) {
+  const t = useTranslations("tree");
   const locale = useLocale();
   const inputId = useId();
   const [results, setResults] = useState<PersonSearchResult[]>([]);
@@ -185,12 +186,12 @@ export function PersonCombobox({
           <SearchIcon className="pointer-events-none absolute left-3.5 size-4 text-muted-foreground" />
           <Combobox.Input
             id={inputId}
-            placeholder="Иванов, Анна, 1924…"
+            placeholder={t("searchPlaceholder")}
             className="h-full w-full min-w-0 rounded-lg bg-transparent py-1 pr-9 pl-10 text-base text-foreground outline-none placeholder:text-muted-foreground md:text-sm"
           />
           <Combobox.Clear
             className="absolute right-2 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label={`Сбросить ${label.toLowerCase()}`}
+            aria-label={t("resetField", { label: label.toLowerCase() })}
           >
             <XIcon className="size-4" />
           </Combobox.Clear>
@@ -211,13 +212,13 @@ export function PersonCombobox({
           >
             <div className="max-h-72 overflow-y-auto overscroll-contain p-1 scroll-pt-1 scroll-pb-1">
               <Combobox.Status className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
-                {isPending ? "Ищем…" : null}
+                {isPending ? t("searching") : null}
               </Combobox.Status>
               <Combobox.Empty className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
                 {!isPending
                   ? query.trim().length > 0
-                    ? "Ничего не найдено."
-                    : "В семье пока никого нет."
+                    ? t("nothingFound")
+                    : t("noPeople")
                   : null}
               </Combobox.Empty>
               <Combobox.List>

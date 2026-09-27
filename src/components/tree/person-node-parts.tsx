@@ -1,9 +1,12 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Handle, Position } from "@xyflow/react";
 import { PlusIcon, MinusIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
+import { nameFallback } from "@/domain/person/display-name";
+import type { Locale } from "@/domain/shared/locale";
 
 /**
  * person-node-parts.tsx — small pieces split out of person-node.tsx purely
@@ -95,6 +98,7 @@ export function CollapseToggleButton({
   onToggle: () => void;
   className?: string;
 }) {
+  const tTree = useTranslations("tree");
   const isCollapsed = collapsedDescendantCount !== undefined;
   return (
     <button
@@ -118,13 +122,13 @@ export function CollapseToggleButton({
       }}
       aria-label={
         isCollapsed
-          ? `Показать ${collapsedDescendantCount} скрытых потомков`
-          : "Свернуть потомков"
+          ? tTree("expandHidden", { count: collapsedDescendantCount })
+          : tTree("collapse")
       }
       title={
         isCollapsed
-          ? `Показать ${collapsedDescendantCount} скрытых потомков`
-          : "Свернуть потомков"
+          ? tTree("expandHidden", { count: collapsedDescendantCount })
+          : tTree("collapse")
       }
     >
       {isCollapsed ? (
@@ -196,11 +200,14 @@ export function buildCardFrameClassName({
   );
 }
 
-export function personLabel(data: PersonFlowNode["data"]): string {
+export function personLabel(
+  data: PersonFlowNode["data"],
+  locale: Locale,
+): string {
   const parts = [data.firstName, data.lastName].filter(Boolean);
   if (parts.length > 0) return parts.join(" ");
   if (data.nickname) return data.nickname;
-  return data.isPlaceholder ? "Неизвестный родственник" : "Без имени";
+  return nameFallback(data.isPlaceholder, locale);
 }
 
 export function yearRange(data: PersonFlowNode["data"]): string | null {

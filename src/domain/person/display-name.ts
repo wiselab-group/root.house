@@ -25,7 +25,12 @@ export function personDisplayName(
       : parts.join(" ");
   }
   if (person.nickname) return person.nickname;
-  return FALLBACK[locale][person.isPlaceholder ? "placeholder" : "unnamed"];
+  return nameFallback(person.isPlaceholder, locale);
+}
+
+/** «Неизвестный родственник» / «Без имени» for a person with no name at all. */
+export function nameFallback(isPlaceholder: boolean, locale: Locale): string {
+  return FALLBACK[locale][isPlaceholder ? "placeholder" : "unnamed"];
 }
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { ArrowDownIcon, ArrowUpIcon, HeartHandshakeIcon } from "lucide-react";
 import { personDisplayName } from "@/domain/person/display-name";
 import type { KinshipPathStop } from "@/domain/relationship/kinship-terms";
@@ -14,15 +14,18 @@ const VIA_ICON = {
 } as const;
 
 const VIA_LABEL = {
-  up: "вверх, к родителю",
-  down: "вниз, к ребёнку",
-  partner: "через брак",
+  up: "viaUp",
+  down: "viaDown",
+  partner: "viaPartner",
 } as const;
 
-function stopRole(stop: KinshipPathStop): string {
-  if (stop.via === null) return "начало пути";
+function stopRole(
+  stop: KinshipPathStop,
+  t: ReturnType<typeof useTranslations<"kinship">>,
+): string {
+  if (stop.via === null) return t("pathStart");
   const role = stop.role ?? "";
-  return stop.isCommonAncestor ? `${role} · общий предок` : role;
+  return stop.isCommonAncestor ? t("commonAncestor", { role }) : role;
 }
 
 /**
@@ -42,6 +45,7 @@ export function KinshipPath({
   familyId: string;
   onPanTo: (personId: string) => void;
 }) {
+  const t = useTranslations("kinship");
   const locale = useLocale();
   const entries = stops.flatMap((stop) => {
     const person = personsById.get(stop.personId);
@@ -51,7 +55,7 @@ export function KinshipPath({
   return (
     <>
       <ol
-        aria-label="Путь родства"
+        aria-label={t("path")}
         className="relative hidden flex-col md:pointer-fine:flex"
       >
         <span
@@ -83,12 +87,12 @@ export function KinshipPath({
                         : "text-xs text-muted-foreground"
                     }
                   >
-                    {stopRole(stop)}
+                    {stopRole(stop, t)}
                   </span>
                 </span>
                 {Icon && stop.via && (
                   <Icon
-                    aria-label={VIA_LABEL[stop.via]}
+                    aria-label={t(VIA_LABEL[stop.via])}
                     className="size-3.5 shrink-0 fill-none! text-muted-foreground"
                   />
                 )}
@@ -99,7 +103,7 @@ export function KinshipPath({
       </ol>
 
       <ol
-        aria-label="Путь родства"
+        aria-label={t("path")}
         className="-mx-1 flex overflow-x-auto overscroll-x-contain pb-1 md:pointer-fine:hidden"
       >
         {entries.map(({ stop, person }, index) => (
@@ -130,7 +134,7 @@ export function KinshipPath({
                     : "line-clamp-2 text-[0.65rem] leading-tight text-muted-foreground"
                 }
               >
-                {stop.via === null ? "начало" : stop.role}
+                {stop.via === null ? t("start") : stop.role}
               </span>
             </button>
           </li>

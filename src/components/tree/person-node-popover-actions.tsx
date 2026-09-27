@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations, useLocale } from "next-intl";
 import Link from "next/link";
 import { RouteIcon, UserIcon } from "lucide-react";
 import { PopoverClose } from "@/components/ui/popover";
@@ -34,7 +35,9 @@ export function PersonNodePopoverActions({
 }: {
   data: PersonFlowNode["data"];
 }) {
-  const name = personLabel(data);
+  const locale = useLocale();
+  const t = useTranslations("tree");
+  const name = personLabel(data, locale);
   const years = yearRange(data);
   const kinship = useKinshipContext();
 
@@ -62,7 +65,7 @@ export function PersonNodePopoverActions({
           }
         >
           <UserIcon className="size-3.5 shrink-0 text-muted-foreground" />
-          Посмотреть профиль
+          {t("viewProfile")}
         </PopoverClose>
       )}
       {kinship && (
@@ -76,7 +79,7 @@ export function PersonNodePopoverActions({
           }
         >
           <RouteIcon className="size-3.5 shrink-0 text-muted-foreground" />
-          Сравнить с…
+          {t("compareWith")}
         </PopoverClose>
       )}
     </div>

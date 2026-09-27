@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 
 /**
@@ -8,10 +9,11 @@ import { Loader2 } from "lucide-react";
  * is AppHeader's fixed height, subtracted the same way here).
  */
 export default function FamilyTreeLoading() {
+  const t = useTranslations("tree");
   return (
     <main className="flex h-[calc(100svh-4.5rem)] flex-col items-center justify-center gap-3 text-muted-foreground">
       <Loader2 className="size-6 animate-spin" aria-hidden="true" />
-      <p className="text-sm">Строим дерево…</p>
+      <p className="text-sm">{t("loading")}</p>
     </main>
   );
 }

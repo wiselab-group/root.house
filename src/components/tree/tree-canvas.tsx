@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
@@ -42,6 +43,8 @@ import {
 } from "./prune-collapsed";
 import { TreeLayoutPositionsProvider } from "./tree-layout-positions-context";
 import { TreeJustExpandedEdgesProvider } from "./tree-just-expanded-edges-context";
+import { nameFallback } from "@/domain/person/display-name";
+import type { Locale } from "@/domain/shared/locale";
 
 const nodeTypes = { person: PersonNode };
 const edgeTypes = {
@@ -58,11 +61,11 @@ const edgeTypes = {
  * shapes carry the same fields under the same names, so the logic itself
  * must stay identical, just typed against a different input.
  */
-function layoutPersonLabel(person: LayoutPersonNode): string {
+function layoutPersonLabel(person: LayoutPersonNode, locale: Locale): string {
   const parts = [person.firstName, person.lastName].filter(Boolean);
   if (parts.length > 0) return parts.join(" ");
   if (person.nickname) return person.nickname;
-  return person.isPlaceholder ? "Неизвестный родственник" : "Без имени";
+  return nameFallback(person.isPlaceholder, locale);
 }
 
 /**
@@ -189,6 +192,8 @@ export function TreeCanvas({
    *  via useReactFlow (TreeToolbar's Relationship Trace panel). */
   overlay?: React.ReactNode;
 }) {
+  const tTree = useTranslations("tree");
+  const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -296,22 +301,22 @@ export function TreeCanvas({
       applyFocus(personId);
 
       toast(
-        `Дерево теперь открывается с фокусом на ${
-          newFocusNode
-            ? layoutPersonLabel(newFocusNode.person)
-            : "этого человека"
-        }`,
+        tTree("focusToast", {
+          name: newFocusNode
+            ? layoutPersonLabel(newFocusNode.person, locale)
+            : tTree("thisPerson"),
+        }),
         previousFocusNode
           ? {
               action: {
-                label: "Отменить",
+                label: tTree("undo"),
                 onClick: () => applyFocus(previousFocusId),
               },
             }
           : undefined,
       );
     },
-    [applyFocus, effectiveGraph],
+    [applyFocus, effectiveGraph, locale, tTree],
   );
 
   // Collapse/expand (rewrite plan §7 Stage 5) — purely client-side, ephemeral

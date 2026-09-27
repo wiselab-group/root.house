@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { RouteIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ShowDockHint } from "./dock-tooltip";
@@ -30,11 +31,10 @@ export function KinshipDockItem({
   kinship: DockKinship;
   onHint: ShowDockHint;
 }) {
+  const t = useTranslations("kinship");
   const { headline, isPanelOpen, shortcut } = kinship;
   const isActive = headline !== null;
-  const hintLabel = isActive
-    ? "Открыть панель родства"
-    : "Сравнить родство двух людей";
+  const hintLabel = isActive ? t("openPanel") : t("compare");
   const text =
     "block whitespace-nowrap transition-[opacity,transform] duration-slow ease-(--ease-reveal)";
 
@@ -44,7 +44,7 @@ export function KinshipDockItem({
         className="md:pointer-fine:hidden"
         icon={<RouteIcon />}
         label={hintLabel}
-        shortLabel="Родство"
+        shortLabel={t("title")}
         pressed={isActive || isPanelOpen}
         onClick={kinship.onToggle}
         onHint={onHint}
@@ -76,7 +76,7 @@ export function KinshipDockItem({
                 isActive && "absolute inset-x-0 top-0 -translate-y-2 opacity-0",
               )}
             >
-              Родство
+              {t("title")}
             </span>
             {headline && (
               <span
@@ -93,12 +93,10 @@ export function KinshipDockItem({
         {isActive && (
           <button
             type="button"
-            aria-label="Сбросить сравнение"
+            aria-label={t("resetCompare")}
             onClick={kinship.onReset}
-            onPointerEnter={(e) =>
-              onHint(e.currentTarget, "Сбросить сравнение")
-            }
-            onFocus={(e) => onHint(e.currentTarget, "Сбросить сравнение")}
+            onPointerEnter={(e) => onHint(e.currentTarget, t("resetCompare"))}
+            onFocus={(e) => onHint(e.currentTarget, t("resetCompare"))}
             className="ml-0.5 flex size-8 cursor-pointer items-center justify-center rounded-full text-muted-foreground outline-none transition-colors duration-base ease-(--ease-reveal) hover:bg-foreground/8 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           >
             <XIcon className="size-4 fill-none!" />
@@ -114,6 +112,7 @@ export function KinshipDockItem({
  * tab-bar cell is too narrow to hold it. Tapping it reopens the panel.
  */
 export function KinshipShelf({ kinship }: { kinship: DockKinship }) {
+  const t = useTranslations("kinship");
   if (!kinship.headline || kinship.isPanelOpen) return null;
   return (
     <div className="flex animate-in items-center gap-2 rounded-2xl border border-primary bg-background/60 py-1.5 pr-1.5 pl-4 shadow-xl shadow-black/40 backdrop-blur-xl backdrop-saturate-150 duration-slow ease-(--ease-reveal) fade-in-0 slide-in-from-bottom-2 motion-reduce:animate-none md:pointer-fine:hidden">
@@ -133,7 +132,7 @@ export function KinshipShelf({ kinship }: { kinship: DockKinship }) {
       </button>
       <button
         type="button"
-        aria-label="Сбросить сравнение"
+        aria-label={t("resetCompare")}
         onClick={kinship.onReset}
         className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-foreground/8 text-foreground outline-none active:scale-[0.94] focus-visible:ring-2 focus-visible:ring-ring"
       >

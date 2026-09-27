@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useReactFlow } from "@xyflow/react";
 import { FilterIcon, ScanIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,7 @@ export function TreeDock({
   /** Omit (Share Link view) to drop "Родство". */
   kinship?: DockKinship;
 }) {
+  const t = useTranslations("tree");
   const { fitView } = useReactFlow();
   const reducedMotion = useReducedMotion();
   const { hint, show, hide } = useDockHint();
@@ -70,7 +72,7 @@ export function TreeDock({
           {kinship && <KinshipShelf kinship={kinship} />}
           <div
             role="toolbar"
-            aria-label="Инструменты дерева"
+            aria-label={t("tools")}
             onPointerLeave={hide}
             onBlur={(e) => {
               if (!e.currentTarget.contains(e.relatedTarget)) hide();
@@ -83,8 +85,8 @@ export function TreeDock({
             {onOpenFilter && (
               <DockItem
                 icon={<FilterIcon />}
-                label="Фильтр"
-                shortLabel="Фильтр"
+                label={t("filter")}
+                shortLabel={t("filter")}
                 shortcut={DOCK_SHORTCUT_LABELS.filter}
                 onClick={onOpenFilter}
                 pressed={isFilterActive}
@@ -94,8 +96,8 @@ export function TreeDock({
             )}
             <DockItem
               icon={<ScanIcon />}
-              label="Показать всё дерево"
-              shortLabel="Всё дерево"
+              label={t("showAll")}
+              shortLabel={t("showAllShort")}
               shortcut={DOCK_SHORTCUT_LABELS.fit}
               onClick={fit}
               onHint={show}

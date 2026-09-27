@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import {
@@ -64,9 +65,10 @@ import { useKinshipContext } from "./kinship/kinship-context";
  * ONE badge on their partnership line, never one per card.
  */
 export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
+  const locale = useLocale();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const kinship = useKinshipContext();
-  const name = personLabel(data);
+  const name = personLabel(data, locale);
   const years = yearRange(data);
   const initials = personInitials(data);
 

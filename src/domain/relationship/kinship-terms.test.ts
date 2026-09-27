@@ -31,7 +31,33 @@ describe("bloodKinTerm", () => {
     [1, 4, "female", "правнучатая племянница"],
     [2, 2, "unknown", "двоюродный брат или сестра"],
   ] as const)("up=%i down=%i %s → %s", (up, down, gender, expected) => {
-    expect(bloodKinTerm(up, down, gender)).toBe(expected);
+    expect(bloodKinTerm(up, down, gender, "ru")).toBe(expected);
+  });
+});
+
+describe("bloodKinTerm (en)", () => {
+  it.each([
+    [1, 0, "male", "father"],
+    [1, 0, "unknown", "parent"],
+    [2, 0, "female", "grandmother"],
+    [4, 0, "male", "great-great-grandfather"],
+    [5, 0, "male", "3rd great-grandfather"],
+    [0, 1, "female", "daughter"],
+    [0, 3, "male", "great-grandson"],
+    [1, 1, "female", "sister"],
+    [1, 1, "unknown", "sibling"],
+    [2, 2, "male", "first cousin"],
+    [3, 3, "female", "second cousin"],
+    [2, 1, "female", "aunt"],
+    [3, 1, "male", "great-uncle"],
+    [3, 2, "male", "first cousin once removed"],
+    [4, 2, "female", "first cousin twice removed"],
+    [1, 2, "female", "niece"],
+    [1, 3, "male", "grandnephew"],
+    [1, 4, "female", "great-grandniece"],
+    [2, 1, "unknown", "uncle or aunt"],
+  ] as const)("up=%i down=%i %s → %s", (up, down, gender, expected) => {
+    expect(bloodKinTerm(up, down, gender, "en")).toBe(expected);
   });
 });
 
@@ -79,7 +105,7 @@ describe("describeKinship", () => {
   it("names second cousins as a pair", () => {
     const { graph, genderOf } = sokolovFamily();
     const outcome = findRelationshipPath(graph, "anna", "maria");
-    expect(describeKinship(outcome, genderOf)).toEqual({
+    expect(describeKinship(outcome, genderOf, "ru")).toEqual({
       headline: "Троюродные сёстры",
       roles: null,
       detail: null,
@@ -89,7 +115,7 @@ describe("describeKinship", () => {
   it("gives each side its own term when the relation isn't symmetric", () => {
     const { graph, genderOf } = sokolovFamily();
     const outcome = findRelationshipPath(graph, "nikolai", "pavel");
-    expect(describeKinship(outcome, genderOf)).toEqual({
+    expect(describeKinship(outcome, genderOf, "ru")).toEqual({
       headline: "Дядя и племянник",
       roles: { a: "дядя", b: "племянник" },
       detail: null,
@@ -99,9 +125,33 @@ describe("describeKinship", () => {
   it("orders direct lineage from A's side", () => {
     const { graph, genderOf } = sokolovFamily();
     const outcome = findRelationshipPath(graph, "maria", "fedor");
-    expect(describeKinship(outcome, genderOf).headline).toBe(
+    expect(describeKinship(outcome, genderOf, "ru").headline).toBe(
       "Правнучка и прадедушка",
     );
+  });
+});
+
+describe("describeKinship (en)", () => {
+  it("words pairs in English", () => {
+    const { graph, genderOf } = sokolovFamily();
+    expect(
+      describeKinship(
+        findRelationshipPath(graph, "anna", "maria"),
+        genderOf,
+        "en",
+      ).headline,
+    ).toBe("Second cousins");
+    expect(
+      describeKinship(
+        findRelationshipPath(graph, "nikolai", "pavel"),
+        genderOf,
+        "en",
+      ),
+    ).toEqual({
+      headline: "Uncle and nephew",
+      roles: { a: "uncle", b: "nephew" },
+      detail: null,
+    });
   });
 });
 
@@ -111,7 +161,7 @@ describe("describePathStops", () => {
     const outcome = findRelationshipPath(graph, "anna", "maria");
     if (outcome.status !== "found") throw new Error("expected a path");
     expect(
-      describePathStops(outcome, genderOf).map((s) => [
+      describePathStops(outcome, genderOf, "ru").map((s) => [
         s.personId,
         s.via,
         s.role,

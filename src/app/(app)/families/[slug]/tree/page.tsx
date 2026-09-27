@@ -22,9 +22,10 @@ import { LinkButton } from "@/components/ui/link-button";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 
-export const metadata: Metadata = {
-  title: "Дерево",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("tree");
+  return { title: t("metaTitle") };
+}
 
 // KNOWN GAP: the tree visualization does not yet filter PRIVATE persons out
 // of the graph (unlike the /people list, profile pages, and photo/story/
@@ -54,6 +55,7 @@ export default async function FamilyTreePage({
   params,
   searchParams,
 }: PageProps<"/families/[slug]/tree">) {
+  const t = await getTranslations("tree");
   const tn = await getTranslations("familyNav");
   const { slug } = await params;
   const { focus, filter: filterParam } = await searchParams;
@@ -69,7 +71,7 @@ export default async function FamilyTreePage({
   const breadcrumbItems = [
     { label: tn("myFamilies"), href: "/families" },
     { label: family?.name ?? slug, href: `/families/${slug}` },
-    { label: "Семейное дерево" },
+    { label: t("title") },
   ];
 
   if (people.length === 0) {
@@ -78,14 +80,12 @@ export default async function FamilyTreePage({
         <SetBreadcrumbs items={breadcrumbItems} />
         <Card>
           <CardHeader>
-            <CardTitle>Дерево пока пустое</CardTitle>
-            <CardDescription>
-              Добавьте хотя бы одного человека, чтобы увидеть дерево.
-            </CardDescription>
+            <CardTitle>{t("emptyTitle")}</CardTitle>
+            <CardDescription>{t("emptyBody")}</CardDescription>
           </CardHeader>
           <CardContent>
             <LinkButton href={`/families/${slug}/people/new`}>
-              Добавить человека
+              {t("addPerson")}
             </LinkButton>
           </CardContent>
         </Card>

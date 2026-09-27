@@ -71,9 +71,7 @@ export async function validateParentChild(
   deps: { personExists: PersonExistsFn; isAncestorOf: IsAncestorOfFn },
 ): Promise<void> {
   if (input.parentId === input.childId) {
-    throw new RelationshipValidationError(
-      "Человек не может быть своим собственным родителем.",
-    );
+    throw new RelationshipValidationError("selfParent");
   }
 
   const [parent, child] = await Promise.all([
@@ -81,9 +79,7 @@ export async function validateParentChild(
     deps.personExists(input.childId, familyId),
   ]);
   if (!parent || !child) {
-    throw new RelationshipValidationError(
-      "Один из людей не найден в этой семье.",
-    );
+    throw new RelationshipValidationError("personMissing");
   }
 
   // Would inserting parent->child make `parentId` a descendant of `childId`?
@@ -94,9 +90,7 @@ export async function validateParentChild(
     familyId,
   );
   if (wouldCreateCycle) {
-    throw new RelationshipValidationError(
-      "Эта связь создала бы цикл в родословной (человек не может быть предком самого себя).",
-    );
+    throw new RelationshipValidationError("cycle");
   }
 }
 
@@ -186,9 +180,7 @@ export async function validatePartnership(
   deps: { personExists: PersonExistsFn },
 ): Promise<void> {
   if (input.person1Id === input.person2Id) {
-    throw new RelationshipValidationError(
-      "Человек не может состоять в партнёрстве сам с собой.",
-    );
+    throw new RelationshipValidationError("selfPartner");
   }
 
   const [person1, person2] = await Promise.all([
@@ -196,9 +188,7 @@ export async function validatePartnership(
     deps.personExists(input.person2Id, familyId),
   ]);
   if (!person1 || !person2) {
-    throw new RelationshipValidationError(
-      "Один из людей не найден в этой семье.",
-    );
+    throw new RelationshipValidationError("personMissing");
   }
 }
 
