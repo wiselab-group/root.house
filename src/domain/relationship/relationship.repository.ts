@@ -296,6 +296,33 @@ export async function updatePartnershipStartDate(
   return result.length > 0;
 }
 
+/** Sets (or clears) when a partnership ended — the «Свадьба» panel's date
+ *  of divorce. Same narrow one-field shape as updatePartnershipStartDate. */
+export async function updatePartnershipEndDate(
+  id: string,
+  familyId: string,
+  endDate: PartialDate | null,
+): Promise<boolean> {
+  const cols = toColumns(endDate);
+  const result = await db
+    .update(relationshipsPartnership)
+    .set({
+      endDateYear: cols.year,
+      endDateMonth: cols.month,
+      endDateDay: cols.day,
+      endDatePrecision: cols.precision,
+      endDateApproximate: cols.approximate,
+    })
+    .where(
+      and(
+        eq(relationshipsPartnership.id, id),
+        eq(relationshipsPartnership.familyId, familyId),
+      ),
+    )
+    .returning({ id: relationshipsPartnership.id });
+  return result.length > 0;
+}
+
 export async function deletePartnership(
   id: string,
   familyId: string,

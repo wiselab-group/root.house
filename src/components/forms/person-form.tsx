@@ -17,6 +17,7 @@ import { useScrollToHash } from "@/lib/use-scroll-to-hash";
 import { useEditPanel } from "@/components/edit-panel/edit-panel";
 import { PersonFormActions } from "./person-form-actions";
 import { cn } from "@/lib/utils";
+import { submitWithoutReset } from "@/lib/submit-without-reset";
 
 export function PersonForm({
   action,
@@ -39,7 +40,10 @@ export function PersonForm({
   cancelHref?: string;
 }) {
   const t = useTranslations("personForm");
-  const [state, formAction] = useActionState(action, {} as PersonFormState);
+  const [state, formAction, pending] = useActionState(
+    action,
+    {} as PersonFormState,
+  );
   useScrollToHash(); // «Редактировать» on a Линия жизни card → #birth/#death
   const panel = useEditPanel();
   const closeAfterSave = panel?.closeAfterSave;
@@ -57,7 +61,7 @@ export function PersonForm({
 
   return (
     <form
-      action={formAction}
+      onSubmit={submitWithoutReset(formAction)}
       // min-h-full in the panel lets the pinned action row sit at the
       // bottom even when the form is shorter than the panel.
       className={cn("flex flex-col gap-6", panel && "min-h-full")}
@@ -136,6 +140,7 @@ export function PersonForm({
         ))}
 
       <PersonFormActions
+        pending={pending}
         submitLabel={submitLabel}
         submitPendingLabel={submitPendingLabel}
         cancelHref={cancelHref}

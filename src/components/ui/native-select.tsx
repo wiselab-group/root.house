@@ -16,9 +16,18 @@ import { cn } from "@/lib/utils";
  * (visibly off-center at h-11, see the bug this fixed), while an
  * absolutely-centered icon is exact by construction in every browser.
  */
-function NativeSelect({ className, ...props }: React.ComponentProps<"select">) {
+function NativeSelect({
+  className,
+  containerClassName,
+  ...props
+}: React.ComponentProps<"select"> & {
+  /** Sizes the wrapper the chevron is positioned in — a select narrowed
+   *  with `className="w-auto"` alone leaves the wrapper full-width, and the
+   *  chevron drifts to the far edge of the row, away from the select. */
+  containerClassName?: string;
+}) {
   return (
-    <div className="relative w-full">
+    <div className={cn("relative w-full", containerClassName)}>
       <select
         data-slot="native-select"
         className={cn(

@@ -9,6 +9,7 @@ import { StoryEditorToolbar } from "@/components/story/story-editor-toolbar";
 import { StoryDraftBanner } from "@/components/story/story-draft-banner";
 import { useStoryDraft } from "@/components/story/use-story-draft";
 import { removeDraft } from "@/components/story/story-draft-store";
+import { submitWithoutReset } from "@/lib/submit-without-reset";
 import { PrivacyLevelSelect } from "./privacy-level-select";
 import type { PrivacyLevel } from "@/db/schema";
 
@@ -44,21 +45,27 @@ export function EditStoryForm({
   const t = useTranslations("storyForm");
   const tc = useTranslations("common");
   const boundAction = updateStoryAction.bind(null, familyId, storyId);
-  const [state, formAction] = useActionState(boundAction, initialState);
+  const [state, formAction, pending] = useActionState(
+    boundAction,
+    initialState,
+  );
   const [selectedPeople, setSelectedPeople] = useState(people);
   const draft = useStoryDraft(storyId, { title, body });
 
   return (
     <form
-      action={formAction}
       // The submitted text is the draft's replacement; a failed save keeps
       // it in the fields, and the next keystroke writes a fresh draft.
-      onSubmit={() => removeDraft(storyId)}
+      onSubmit={(event) => {
+        removeDraft(storyId);
+        submitWithoutReset(formAction)(event);
+      }}
       className="flex flex-col"
     >
       <StoryEditorToolbar
         backHref={cancelHref}
         draftSaved={draft.draftSaved}
+        pending={pending}
         notice={
           draft.leftoverDraft && (
             <StoryDraftBanner

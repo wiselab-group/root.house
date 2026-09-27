@@ -16,14 +16,19 @@ import {
   addParentChild,
   addPartnership,
   editPartnershipStartDate,
+  editPartnershipEndDate,
   removeParentChild,
   removePartnership,
   setPartnershipStatus,
   RelationshipValidationError,
   type ParentRole,
 } from "@/domain/relationship/relationship.service";
+import { getPartnershipById } from "@/domain/relationship/relationship.repository";
 import { addPartnershipSchema } from "@/lib/validation/relationship";
-import type { PartialDate } from "@/domain/shared/partial-date";
+import {
+  comparePartialDates,
+  type PartialDate,
+} from "@/domain/shared/partial-date";
 
 export interface RelationshipFormState {
   error?: string;
@@ -78,7 +83,8 @@ async function resolveOtherPersonId(
 }
 
 /**
- * Parses the optional partnership start-date fields straight off the raw
+ * Parses an optional partnership date's fields (`startDate…` — the
+ * wedding, or `endDate…` — when the marriage ended) straight off the raw
  * FormData (not via partialDateFromFormData) so "month/day filled, year
  * blank" can be told apart from "nothing filled in at all" and rejected
  * rather than silently discarded — see addPartnershipSchema's own doc.
@@ -86,11 +92,14 @@ async function resolveOtherPersonId(
  * no known date) or throws RelationshipValidationError if a year is missing
  * while month/day are present.
  */
-function parsePartnershipStartDate(formData: FormData): PartialDate | null {
-  const yearRaw = formData.get("startDateYear");
-  const monthRaw = formData.get("startDateMonth");
-  const dayRaw = formData.get("startDateDay");
-  const isApproximate = formData.get("startDateApproximate") === "on";
+function parsePartnershipDate(
+  formData: FormData,
+  prefix: "startDate" | "endDate" = "startDate",
+): PartialDate | null {
+  const yearRaw = formData.get(`${prefix}Year`);
+  const monthRaw = formData.get(`${prefix}Month`);
+  const dayRaw = formData.get(`${prefix}Day`);
+  const isApproximate = formData.get(`${prefix}Approximate`) === "on";
 
   const anyFieldFilled = [yearRaw, monthRaw, dayRaw].some(
     (value) => typeof value === "string" && value !== "",
@@ -169,7 +178,7 @@ export async function addRelativeAction(
         await getLocale(),
       );
     } else {
-      const startDate = parsePartnershipStartDate(formData);
+      const startDate = parsePartnershipDate(formData);
       await addPartnership(
         familyId,
         session.user.id,
@@ -272,7 +281,7 @@ export interface UpdatePartnershipDateFormState {
  * partnerships created before this field existed in the UI (see
  * add-relative-form.tsx's spouse flow, which only sets it at creation time)
  * or where it simply wasn't known yet. Same year-required-if-any-part-given
- * validation as creation (parsePartnershipStartDate/addPartnershipSchema).
+ * validation as creation (parsePartnershipDate/addPartnershipSchema).
  */
 export async function updatePartnershipDateAction(
   familyId: string,
@@ -290,7 +299,7 @@ export async function updatePartnershipDateAction(
 
   let startDate: PartialDate | null;
   try {
-    startDate = parsePartnershipStartDate(formData);
+    startDate = parsePartnershipDate(formData);
   } catch (error) {
     if (error instanceof RelationshipValidationError) {
       return { error: (await getErrorMessage())(error.message) };
@@ -308,4 +317,69 @@ export async function updatePartnershipDateAction(
   revalidatePath(`/families/${familySlug}/people/${personSlug}`);
   revalidatePath(`/families/${familySlug}/people/${otherPersonSlug}`);
   return {};
+}
+
+export interface UpdateMarriageFormState {
+  error?: string;
+  /** Set on success — the EditPanel closes itself. */
+  saved?: boolean;
+}
+
+/**
+ * Saves the «Свадьба» panel opened from a Person's Линия жизни: the
+ * wedding date, whether the marriage is still ongoing and — when it isn't —
+ * when it ended, in one submit (date and status used to live behind two
+ * separate hover-only icons on the spouse row). The status is only written
+ * when the switch actually changed — setPartnershipStatus maps «ended» to
+ * `divorced`, which would otherwise silently overwrite a
+ * `widowed`/`separated` ending on every date edit. An ongoing marriage has
+ * no end date, so switching back on clears it.
+ */
+export async function updateMarriageAction(
+  familyId: string,
+  personId: string,
+  otherPersonId: string,
+  relationshipId: string,
+  _prevState: UpdateMarriageFormState,
+  formData: FormData,
+): Promise<UpdateMarriageFormState> {
+  const session = await auth();
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
+
+  await requireFamilyAccess(familyId, session.user.id, "editor");
+  const existing = await getPartnershipById(relationshipId, familyId);
+  if (!existing) return { error: (await getErrorMessage())("generic") };
+
+  const isCurrent = formData.get("isCurrent") === "on";
+  let startDate: PartialDate | null;
+  let endDate: PartialDate | null;
+  try {
+    startDate = parsePartnershipDate(formData, "startDate");
+    endDate = isCurrent ? null : parsePartnershipDate(formData, "endDate");
+    if (startDate && endDate && comparePartialDates(endDate, startDate) < 0) {
+      throw new RelationshipValidationError("endBeforeStart");
+    }
+  } catch (error) {
+    if (error instanceof RelationshipValidationError) {
+      return { error: (await getErrorMessage())(error.message) };
+    }
+    throw error;
+  }
+
+  await editPartnershipStartDate(relationshipId, familyId, startDate);
+  await editPartnershipEndDate(relationshipId, familyId, endDate);
+  if (isCurrent !== existing.isCurrent) {
+    await setPartnershipStatus(relationshipId, familyId, isCurrent);
+  }
+
+  const familySlug = await getFamilySlugById(familyId);
+  const [personSlug, otherPersonSlug] = await Promise.all([
+    getPersonSlugById(personId, familyId),
+    getPersonSlugById(otherPersonId, familyId),
+  ]);
+  revalidatePath(`/families/${familySlug}/people/${personSlug}`);
+  revalidatePath(`/families/${familySlug}/people/${otherPersonSlug}`);
+  revalidatePath(`/families/${familySlug}/tree`);
+  return { saved: true };
 }

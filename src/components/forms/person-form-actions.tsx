@@ -1,7 +1,6 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { useEditPanel } from "@/components/edit-panel/edit-panel";
@@ -10,11 +9,12 @@ import { EditPanelFooter } from "@/components/edit-panel/edit-panel-parts";
 function SubmitButton({
   label,
   pendingLabel,
+  pending,
 }: {
   label: string;
   pendingLabel: string;
+  pending: boolean;
 }) {
-  const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} aria-busy={pending}>
       {pending ? pendingLabel : label}
@@ -28,15 +28,23 @@ export function PersonFormActions({
   submitLabel,
   submitPendingLabel,
   cancelHref,
+  pending,
 }: {
   submitLabel: string;
   submitPendingLabel: string;
   cancelHref?: string;
+  /** From PersonForm's useActionState — the form submits via
+   *  submitWithoutReset, which useFormStatus doesn't see. */
+  pending: boolean;
 }) {
   const tc = useTranslations("common");
   const panel = useEditPanel();
   const submit = (
-    <SubmitButton label={submitLabel} pendingLabel={submitPendingLabel} />
+    <SubmitButton
+      label={submitLabel}
+      pendingLabel={submitPendingLabel}
+      pending={pending}
+    />
   );
 
   if (panel) {

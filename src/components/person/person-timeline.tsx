@@ -87,8 +87,10 @@ export async function PersonTimeline({
       event,
       familyId,
       familySlug,
+      personId,
       personSlug,
       canEdit,
+      partnerships,
       eventEditDataById,
       wording,
     });

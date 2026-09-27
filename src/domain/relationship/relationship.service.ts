@@ -30,6 +30,7 @@ import {
   insertPartnership,
   setPartnershipCurrent,
   updatePartnershipStartDate,
+  updatePartnershipEndDate,
   type ParentChildRecord,
   type PartnershipRecord,
 } from "./relationship.repository";
@@ -309,6 +310,16 @@ export async function editPartnershipStartDate(
   startDate: PartialDate | null,
 ): Promise<boolean> {
   return updatePartnershipStartDate(id, familyId, startDate);
+}
+
+/** Sets (or clears) when a partnership ended. Same thin pass-through
+ *  shape as editPartnershipStartDate. */
+export async function editPartnershipEndDate(
+  id: string,
+  familyId: string,
+  endDate: PartialDate | null,
+): Promise<boolean> {
+  return updatePartnershipEndDate(id, familyId, endDate);
 }
 
 export interface FamilyOfPerson {

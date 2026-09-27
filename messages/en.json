@@ -66,7 +66,8 @@
     "storyBodyRequired": "Tell the story",
     "coordinateInvalid": "Invalid coordinate",
     "placeNameRequired": "Enter the place name",
-    "coordinatesPair": "Enter both coordinates or neither"
+    "coordinatesPair": "Enter both coordinates or neither",
+    "endBeforeStart": "The marriage can’t end before the wedding"
   },
   "auth": {
     "loginTitle": "Sign in",
@@ -367,7 +368,13 @@
     "edit": "Edit",
     "editEvent": "Edit event",
     "noEvents": "No events yet.",
-    "details": "Details"
+    "details": "Details",
+    "weddingTitle": "Wedding",
+    "weddingDate": "Wedding date",
+    "marriageOngoing": "The marriage is ongoing",
+    "marriageOngoingHint": "Turn off if the marriage ended: the tree line will get a divorce mark.",
+    "divorceDate": "Divorce date",
+    "marriageEndDate": "When the marriage ended"
   },
   "profile": {
     "birthPlace": "Place of birth",

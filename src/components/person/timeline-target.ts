@@ -6,6 +6,8 @@ import type {
 } from "@/domain/event/event.service";
 import type { EventWording } from "./event-wording";
 import type { PlaceRecord } from "@/domain/place/place.service";
+import type { PartnershipRecord } from "@/domain/relationship/relationship.repository";
+import type { PartialDate } from "@/domain/shared/partial-date";
 
 /**
  * Where a timeline row's interaction goes — resolved server-side (see
@@ -33,6 +35,19 @@ export type TimelineRowTarget =
       event: EventRecord;
       participants: EventParticipantWithName[];
       places: PlaceRecord[];
+    }
+  | {
+      /** The synthetic «Свадьба» — edited in an EditPanel (wedding date +
+       *  still-ongoing), see MarriageEditForm. */
+      kind: "marriage-edit";
+      familyId: string;
+      personId: string;
+      otherPersonId: string;
+      relationshipId: string;
+      startDate: PartialDate | null;
+      endDate: PartialDate | null;
+      isCurrent: boolean;
+      status: PartnershipRecord["status"];
     };
 
 export function isTimelineRowInteractive(target: TimelineRowTarget): boolean {
@@ -47,26 +62,32 @@ export function isTimelineRowInteractive(target: TimelineRowTarget): boolean {
  * Synthetic rows have no `events` row of their own, so they lead to where
  * the record they're derived from is edited — and where every fact the card
  * shows (place, cause, parents) can be fixed, not just the date:
- * birth/death to the profile form, scrolled to that block; a marriage to
- * the profile's own «Семья» list (spouse pills, where partnership dates
- * and status live). A narrow date-only dialog used to sit here and was
- * removed on user request 2026-09-26: the card now shows more than a date,
- * and a button that could only fix the date misled.
+ * birth/death to the profile form, scrolled to that block; a marriage to a
+ * «Свадьба» EditPanel with its date AND whether it's still ongoing. (A
+ * date-only dialog was removed on user request 2026-09-26 — the card shows
+ * more than a date; then a «#family» link replaced it, but its controls
+ * were hover-only icons on the spouse row, so the user found nothing to
+ * edit there — reported 2026-09-27.)
  */
 export function timelineRowTargetFor({
   event,
   familyId,
   familySlug,
+  personId,
   personSlug,
   canEdit,
+  partnerships,
   eventEditDataById,
   wording,
 }: {
   event: TimelineEvent;
   familyId: string;
   familySlug: string;
+  personId: string;
   personSlug: string;
   canEdit: boolean;
+  /** The person's partnerships — the «Свадьба» rows are derived from them. */
+  partnerships: PartnershipRecord[];
   /** Only populated for real events this member may edit (see
    *  resolveEventEditData). A real event this member can only view has no
    *  entry here and falls back to `link` (the read-only details page). */
@@ -109,6 +130,25 @@ export function timelineRowTargetFor({
     };
   }
   if (event.type === "marriage") {
+    const partnership = partnerships.find(
+      (item) => event.id === `synthetic:marriage:${item.id}`,
+    );
+    if (partnership) {
+      return {
+        kind: "marriage-edit",
+        familyId,
+        personId,
+        otherPersonId:
+          partnership.person1Id === personId
+            ? partnership.person2Id
+            : partnership.person1Id,
+        relationshipId: partnership.id,
+        startDate: partnership.startDate,
+        endDate: partnership.endDate,
+        isCurrent: partnership.isCurrent,
+        status: partnership.status,
+      };
+    }
     return {
       kind: "link",
       href: "#family",

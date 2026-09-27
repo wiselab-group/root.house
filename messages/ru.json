@@ -66,7 +66,8 @@
     "storyBodyRequired": "Расскажите историю",
     "coordinateInvalid": "Некорректная координата",
     "placeNameRequired": "Введите название места",
-    "coordinatesPair": "Укажите обе координаты или ни одной"
+    "coordinatesPair": "Укажите обе координаты или ни одной",
+    "endBeforeStart": "Брак не может завершиться раньше свадьбы"
   },
   "auth": {
     "loginTitle": "Вход",
@@ -367,7 +368,13 @@
     "edit": "Редактировать",
     "editEvent": "Редактировать событие",
     "noEvents": "Событий пока нет.",
-    "details": "Подробнее"
+    "details": "Подробнее",
+    "weddingTitle": "Свадьба",
+    "weddingDate": "Дата свадьбы",
+    "marriageOngoing": "Брак продолжается",
+    "marriageOngoingHint": "Выключите, если брак завершился: на дереве линия получит знак развода.",
+    "divorceDate": "Дата развода",
+    "marriageEndDate": "Когда брак завершился"
   },
   "profile": {
     "birthPlace": "Место рождения",

@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl";
 import { useActionState, useEffect, useState } from "react";
-import { useFormStatus } from "react-dom";
 import {
   updateEventAction,
   type EventFormState,
@@ -14,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useEditPanel } from "@/components/edit-panel/edit-panel";
 import { EditPanelFooter } from "@/components/edit-panel/edit-panel-parts";
 import { cn } from "@/lib/utils";
+import { submitWithoutReset } from "@/lib/submit-without-reset";
 import { EventTypeTitleFields } from "./event-type-title-fields";
 import { EventDateRangeFields } from "./event-date-range-fields";
 import { PlaceField } from "./place-field";
@@ -27,9 +27,8 @@ import type { PlaceRecord } from "@/domain/place/place.service";
 
 const initialState: EventFormState = {};
 
-function SubmitButton() {
+function SubmitButton({ pending }: { pending: boolean }) {
   const tc = useTranslations("common");
-  const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} aria-busy={pending}>
       {pending ? tc("saving") : tc("save")}
@@ -67,7 +66,10 @@ export function EditEventForm({
     event.id,
     panel ? null : (cancelHref ?? null),
   );
-  const [state, formAction] = useActionState(boundAction, initialState);
+  const [state, formAction, pending] = useActionState(
+    boundAction,
+    initialState,
+  );
   const [eventType, setEventType] = useState<EventType>(event.type);
   const [showRange, setShowRange] = useState(Boolean(event.endDate));
   const [participantRows, setParticipantRows] = useState(participants);
@@ -79,7 +81,7 @@ export function EditEventForm({
 
   return (
     <form
-      action={formAction}
+      onSubmit={submitWithoutReset(formAction)}
       className={cn("flex flex-col gap-4", panel && "min-h-full")}
     >
       <EventTypeTitleFields
@@ -136,11 +138,11 @@ export function EditEventForm({
           <Button type="button" variant="ghost" onClick={panel.requestClose}>
             {tc("cancel")}
           </Button>
-          <SubmitButton />
+          <SubmitButton pending={pending} />
         </EditPanelFooter>
       ) : (
         <div className="flex items-center gap-3">
-          <SubmitButton />
+          <SubmitButton pending={pending} />
           {cancelHref && (
             <LinkButton href={cancelHref} variant="ghost">
               {tc("cancel")}

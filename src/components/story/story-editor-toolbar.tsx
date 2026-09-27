@@ -1,14 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useFormStatus } from "react-dom";
 import { ArrowLeftIcon, CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 
-function SaveButton() {
+function SaveButton({ pending }: { pending: boolean }) {
   const tc = useTranslations("common");
-  const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} aria-busy={pending}>
       {pending ? tc("saving") : tc("save")}
@@ -23,10 +21,14 @@ function SaveButton() {
 export function StoryEditorToolbar({
   backHref,
   draftSaved,
+  pending,
   notice,
 }: {
   backHref: string;
   draftSaved: boolean;
+  /** The form submits via submitWithoutReset, which useFormStatus doesn't
+   *  see — so the editor passes useActionState's own pending flag. */
+  pending: boolean;
   notice?: React.ReactNode;
 }) {
   const t = useTranslations("storyForm");
@@ -49,7 +51,7 @@ export function StoryEditorToolbar({
               </>
             )}
           </p>
-          <SaveButton />
+          <SaveButton pending={pending} />
         </div>
       </div>
       {notice && (

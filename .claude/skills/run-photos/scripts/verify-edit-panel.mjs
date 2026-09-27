@@ -91,6 +91,16 @@ async function main() {
     await prompt.getByRole("button", { name: "Остаться" }).click();
     check(await page.getByRole("dialog").isVisible(), "«Остаться» keeps the panel open");
 
+    // A server-side validation error must not reset what was typed.
+    await page.fill("#religion", "а".repeat(130));
+    await page.getByRole("dialog").getByRole("button", { name: "Сохранить" }).click();
+    await page.getByRole("dialog").locator("p.text-destructive").first().waitFor({ timeout: 10000 });
+    check(
+      (await page.locator("#middleName").inputValue()) === "Иванович",
+      "person: typed fields survive a validation error",
+    );
+    await page.fill("#religion", "");
+
     await page.fill("#lastName", "Купчик-Ушкар");
     await page.getByRole("dialog").getByRole("button", { name: "Сохранить" }).click();
     await page.getByRole("dialog").waitFor({ state: "detached", timeout: 20000 });
@@ -171,6 +181,29 @@ async function main() {
     await page.waitForTimeout(700);
     check(new URL(page.url()).pathname === `${eventPath}/edit`, "event: URL is /edit while panel open");
     await shoot(page, "11-event-panel");
+    const roleSelects = page.getByRole("dialog").locator('select[aria-label^="Роль"], li select');
+    check((await roleSelects.count()) === 0, "event: no one-option role dropdown for «Переезд»");
+    await page.selectOption("#type", "baptism");
+    await roleSelects.first().waitFor({ timeout: 5000 });
+    const box = await roleSelects.first().boundingBox();
+    const chevron = await page.getByRole("dialog").locator("li svg.lucide-chevron-down").first().boundingBox();
+    check(
+      box && chevron && chevron.x > box.x && chevron.x + chevron.width < box.x + box.width,
+      "event: «Крещение» offers the role choice, chevron inside the select",
+    );
+    await page.getByRole("dialog").locator("li").first().scrollIntoViewIfNeeded();
+    await shoot(page, "11b-event-panel-baptism-roles");
+    await page.selectOption("#type", "migration");
+    await page.fill("#description", "Переехали всей семьёй осенью.");
+    // Over the schema's 200-char max: passes the browser's `required`, fails
+    // on the server — a real round-trip error.
+    await page.fill("#title", "П".repeat(210));
+    await page.getByRole("dialog").getByRole("button", { name: "Сохранить" }).click();
+    await page.getByRole("dialog").locator("p.text-destructive").first().waitFor({ timeout: 10000 });
+    check(
+      (await page.locator("#description").inputValue()) === "Переехали всей семьёй осенью.",
+      "event: typed fields survive a validation error",
+    );
     await page.fill("#title", "Переезд в Гродно, 1984");
     await page.getByRole("dialog").getByRole("button", { name: "Сохранить" }).click();
     await page.getByRole("dialog").waitFor({ state: "detached", timeout: 20000 });
