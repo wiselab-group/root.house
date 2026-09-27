@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
+import { useTranslations } from "next-intl";
 import { LinkButton } from "@/components/ui/link-button";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 
@@ -10,6 +11,7 @@ import { LocaleSwitcher } from "@/components/locale-switcher";
  * hero's sticky viewport starts at the very top of the screen.
  */
 export function MarketingHeader() {
+  const t = useTranslations("landing");
   return (
     <header className="absolute inset-x-0 top-0 z-20 px-6 py-4">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
@@ -19,9 +21,9 @@ export function MarketingHeader() {
         <div className="flex shrink-0 items-center gap-2">
           <LocaleSwitcher className="max-sm:hidden" />
           <LinkButton href="/login" variant="ghost">
-            Log in
+            {t("logIn")}
           </LinkButton>
-          <LinkButton href="/register">Get started</LinkButton>
+          <LinkButton href="/register">{t("getStarted")}</LinkButton>
         </div>
       </div>
     </header>

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { MarketingSectionHeading } from "@/components/marketing/marketing-section-heading";
 import { PricingTierCard } from "@/components/marketing/pricing-tier-card";
 
@@ -10,37 +11,26 @@ import { PricingTierCard } from "@/components/marketing/pricing-tier-card";
 const SHOW_PRICING = false;
 
 export function PricingSection() {
+  const t = useTranslations("landing");
   if (!SHOW_PRICING) return null;
 
   return (
     <section className="px-6 py-16 sm:py-20">
       <div className="mx-auto flex max-w-4xl flex-col items-center gap-10">
-        <MarketingSectionHeading title="Simple pricing, for the whole family." />
+        <MarketingSectionHeading title={t("pricingTitle")} />
         <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2">
           <PricingTierCard
-            name="Free"
+            name={t("free")}
             price="€0"
-            features={[
-              "Family tree",
-              "People & relationships",
-              "Basic memories",
-              "Invite family",
-            ]}
+            features={t("freeFeatures").split("|")}
           />
           <PricingTierCard
-            name="Family Archive"
+            name={t("archiveTier")}
             price="€59"
-            cadence="year"
-            description="For the whole family."
+            cadence={t("perYear")}
+            description={t("archiveTierDescription")}
             recommended
-            features={[
-              "Unlimited family members",
-              "Unlimited photos & stories",
-              "Full timeline",
-              "Collaboration & roles",
-              "Private family space",
-              "Search",
-            ]}
+            features={t("archiveFeatures").split("|")}
           />
         </div>
       </div>

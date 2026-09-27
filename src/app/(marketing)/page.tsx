@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { INTRO_SCRIPT } from "@/components/marketing/intro/intro-script";
@@ -11,20 +12,22 @@ import { PrivacySection } from "@/components/marketing/privacy-section";
 import { PricingSection } from "@/components/marketing/pricing-section";
 import { FinalCtaSection } from "@/components/marketing/final-cta-section";
 
-const TITLE = "Root house — Create the living story of your family";
-const DESCRIPTION =
-  "A private home for your family's people, photos and stories. Build the tree, keep the memories behind it, and invite the relatives who remember.";
-
-export const metadata: Metadata = {
-  title: { absolute: TITLE },
-  description: DESCRIPTION,
-  openGraph: {
-    type: "website",
-    locale: "en_US",
-    title: TITLE,
-    description: DESCRIPTION,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("landing");
+  const locale = await getLocale();
+  const title = t("metaTitle");
+  const description = t("metaDescription");
+  return {
+    title: { absolute: title },
+    description,
+    openGraph: {
+      type: "website",
+      locale: locale === "ru" ? "ru_RU" : "en_US",
+      title,
+      description,
+    },
+  };
+}
 
 export default async function MarketingPage() {
   const session = await auth();

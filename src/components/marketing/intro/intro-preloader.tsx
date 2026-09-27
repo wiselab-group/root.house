@@ -1,10 +1,10 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, type AnimationEvent, type CSSProperties } from "react";
 
 /** Generations handing the story down until it reaches the visitor — the
  *  last word stays on screen while the panel lifts away. */
-const WORDS = ["Great-grandfather", "Grandmother", "Father", "Mother", "You"];
 
 type IntroEnd = "ended" | "skipped";
 
@@ -22,6 +22,7 @@ function finishIntro(state: IntroEnd) {
  * visit plays it. Click or Esc skips.
  */
 export function IntroPreloader() {
+  const t = useTranslations("landing");
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") finishIntro("skipped");
@@ -46,16 +47,18 @@ export function IntroPreloader() {
       >
         <div className="flex h-full items-center justify-center px-6">
           <p className="relative h-[1.2em] w-full font-heading text-display font-medium">
-            {WORDS.map((word, index) => (
-              <span
-                key={word}
-                className="intro-word absolute inset-0 flex items-center justify-center gap-[0.35em]"
-                style={{ "--i": index } as CSSProperties}
-              >
-                <span className="size-[0.18em] shrink-0 rounded-full bg-primary" />
-                {word}
-              </span>
-            ))}
+            {t("intro")
+              .split("|")
+              .map((word, index) => (
+                <span
+                  key={word}
+                  className="intro-word absolute inset-0 flex items-center justify-center gap-[0.35em]"
+                  style={{ "--i": index } as CSSProperties}
+                >
+                  <span className="size-[0.18em] shrink-0 rounded-full bg-primary" />
+                  {word}
+                </span>
+              ))}
           </p>
         </div>
         <div className="intro-curve absolute top-full -left-[10%] h-[14svh] w-[120%] rounded-b-[50%] bg-background" />

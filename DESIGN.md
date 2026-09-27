@@ -9,7 +9,7 @@
 ## Typography
 
 - **Body/UI**: Geist Sans (`--font-geist-sans`, subsets `latin`+`cyrillic` —
-  весь интерфейс на русском, это обязательно), через Tailwind `font-sans`.
+  интерфейс двуязычный RU/EN, а семейные имена — кириллица в любом языке, это обязательно), через Tailwind `font-sans`.
 - **Заголовки** (Person Profile, Story, карточные `CardTitle`, страничные
   `<h1>`): Lora (`--font-lora`) через утилиту `.font-heading` — тёплый,
   «архивный» serif. DESIGN.md изначально называл Fraunces/DM Serif Display —

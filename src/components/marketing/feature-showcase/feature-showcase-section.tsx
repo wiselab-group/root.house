@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { MarketingSectionHeading } from "@/components/marketing/marketing-section-heading";
@@ -13,6 +14,7 @@ import { SHOWCASE_FEATURES } from "./features.data";
  * aria-expanded, so it works from the keyboard like any disclosure.
  */
 export function FeatureShowcaseSection() {
+  const t = useTranslations("landing");
   const [activeIndex, setActiveIndex] = useState(0);
   const active = SHOWCASE_FEATURES[activeIndex];
 
@@ -23,8 +25,8 @@ export function FeatureShowcaseSection() {
           <MarketingSectionHeading
             id="showcase-title"
             align="left"
-            eyebrow="Inside Root house"
-            title="A person is more than a name and two dates."
+            eyebrow={t("showcaseEyebrow")}
+            title={t("showcaseTitle")}
           />
           <ul className="divide-y divide-border border-y border-border">
             {SHOWCASE_FEATURES.map((feature, index) => {
@@ -49,12 +51,12 @@ export function FeatureShowcaseSection() {
                           : "text-muted-foreground group-hover:text-foreground",
                       )}
                     >
-                      {feature.title}
+                      {t(`features.${feature.id}.title`)}
                     </span>
                   </button>
                   {isOpen && (
                     <p className="animate-content-enter pb-5 pl-9 text-balance text-muted-foreground">
-                      {feature.body}
+                      {t(`features.${feature.id}.body`)}
                     </p>
                   )}
                 </li>
@@ -65,7 +67,7 @@ export function FeatureShowcaseSection() {
         <div
           id="showcase-illustration"
           role="img"
-          aria-label={active.title}
+          aria-label={t(`features.${active.id}.title`)}
           className="relative aspect-[4/3] w-full max-lg:order-first"
         >
           {SHOWCASE_FEATURES.map(({ id, Panel }, index) => (

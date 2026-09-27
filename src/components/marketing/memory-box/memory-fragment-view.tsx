@@ -1,7 +1,8 @@
 import type { CSSProperties } from "react";
 import { MiniPersonCard } from "@/components/marketing/shared/mini-person-card";
 import { PortraitSilhouette } from "@/components/marketing/shared/portrait-silhouette";
-import { HARTLEY_FAMILY } from "@/components/marketing/shared/hartley-family";
+import { useDemoFamily } from "@/components/marketing/shared/use-demo-family";
+import { useTranslations } from "next-intl";
 import type { MemoryFragment } from "./memory-fragments.data";
 
 /**
@@ -18,6 +19,8 @@ export function MemoryFragmentView({
   fragment: MemoryFragment;
   t: number;
 }) {
+  const tl = useTranslations("landing");
+  const family = useDemoFamily();
   const { from, to } = fragment;
   const style = {
     "--t": t,
@@ -39,13 +42,13 @@ export function MemoryFragmentView({
       style={style}
     >
       <div className="memory-card-face">
-        <MiniPersonCard {...HARTLEY_FAMILY[fragment.person]} />
+        <MiniPersonCard {...family[fragment.person]} />
       </div>
       <div className="memory-fragment-face absolute inset-x-0 top-0">
         {fragment.kind === "photo" ? (
-          <PaperPhoto caption={fragment.text} />
+          <PaperPhoto caption={tl(`fragments.${fragment.person}`)} />
         ) : (
-          <PaperNote text={fragment.text} />
+          <PaperNote text={tl(`fragments.${fragment.person}`)} />
         )}
       </div>
     </div>

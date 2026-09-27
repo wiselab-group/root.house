@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
@@ -20,6 +21,7 @@ import { MemoryFragmentView } from "./memory-fragment-view";
  * Reduced motion: no tall wrapper, the finished tree.
  */
 export function MemoryBoxSection() {
+  const t = useTranslations("landing");
   const wrapperRef = useRef<HTMLElement>(null);
   const scrollProgress = useScrollProgress(wrapperRef);
   const prefersReducedMotion = useReducedMotion();
@@ -55,7 +57,7 @@ export function MemoryBoxSection() {
               transform: `translateY(${(1 - problem) * -12}px)`,
             }}
           >
-            The photos are there. Who&apos;s in them — only grandma remembers.
+            {t("memoryProblem")}
           </h2>
           <p
             className="col-start-1 row-start-1 font-heading text-title font-medium text-balance transition-[opacity,transform] duration-slow ease-(--ease-reveal)"
@@ -64,7 +66,7 @@ export function MemoryBoxSection() {
               transform: `translateY(${(1 - answer) * 12}px)`,
             }}
           >
-            Root house gives every memory a person to belong to.
+            {t("memoryAnswer")}
           </p>
         </div>
         <div className="memory-stage relative mx-auto aspect-square w-[min(100%,calc(100svh-15rem))] sm:aspect-[16/10] sm:w-[min(100%,calc((100svh-15rem)*1.6))]">

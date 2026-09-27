@@ -7,8 +7,7 @@ type Point = { x: number; y: number; r?: number };
 export type MemoryFragment = {
   person: DemoPersonId;
   kind: "photo" | "note";
-  /** Handwritten caption (photo) or the note's text. */
-  text: string;
+  /* The handwritten caption / note text lives in `landing.fragments.<person>`. */
   from: { desktop: Point; mobile: Point };
   to: { desktop: Point; mobile: Point };
 };
@@ -23,49 +22,42 @@ export const MEMORY_FRAGMENTS: readonly MemoryFragment[] = [
   {
     person: "ivan",
     kind: "photo",
-    text: "Ivan, 1950",
     from: { desktop: { x: 14, y: 5, r: -8 }, mobile: { x: 18, y: 6, r: -8 } },
     to: { desktop: { x: 30, y: 3 }, mobile: { x: 20, y: 2 } },
   },
   {
     person: "vera",
     kind: "note",
-    text: "Grandma Vera — Riga, '52",
     from: { desktop: { x: 86, y: 4, r: 7 }, mobile: { x: 80, y: 4, r: 7 } },
     to: { desktop: { x: 50, y: 3 }, mobile: { x: 48, y: 2 } },
   },
   {
     person: "paul",
     kind: "note",
-    text: "Dear Paul, the lake froze early this year…",
     from: { desktop: { x: 10, y: 33, r: 5 }, mobile: { x: 14, y: 42, r: 6 } },
     to: { desktop: { x: 30, y: 24 }, mobile: { x: 18, y: 36 } },
   },
   {
     person: "margaret",
     kind: "photo",
-    text: "Maggie, summer '58",
     from: { desktop: { x: 57, y: 17, r: -5 }, mobile: { x: 54, y: 30, r: -5 } },
     to: { desktop: { x: 50, y: 24 }, mobile: { x: 50, y: 36 } },
   },
   {
     person: "david",
     kind: "note",
-    text: "12 · VI · 1986 — registry office",
     from: { desktop: { x: 88, y: 33, r: -9 }, mobile: { x: 84, y: 46, r: -9 } },
     to: { desktop: { x: 70, y: 24 }, mobile: { x: 82, y: 36 } },
   },
   {
     person: "owen",
     kind: "photo",
-    text: "Owen, 1990",
     from: { desktop: { x: 32, y: 40, r: 8 }, mobile: { x: 30, y: 70, r: 8 } },
     to: { desktop: { x: 50, y: 45 }, mobile: { x: 52, y: 70 } },
   },
   {
     person: "lily",
     kind: "photo",
-    text: "Lily — first day of school",
     from: { desktop: { x: 72, y: 42, r: -6 }, mobile: { x: 72, y: 72, r: -6 } },
     to: { desktop: { x: 70, y: 45 }, mobile: { x: 80, y: 70 } },
   },

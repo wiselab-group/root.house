@@ -1,10 +1,9 @@
+import { useTranslations } from "next-intl";
+import { useDemoFamily } from "@/components/marketing/shared/use-demo-family";
 import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 import { MiniPersonCard } from "@/components/marketing/shared/mini-person-card";
-import {
-  HARTLEY_FAMILY,
-  type DemoPersonId,
-} from "@/components/marketing/shared/hartley-family";
+import { type DemoPersonId } from "@/components/marketing/shared/hartley-family";
 import { HERO_KEYWORDS } from "./hero-keywords.data";
 
 /** Card top-center positions, % of the square box. Card width 22% → its
@@ -41,6 +40,8 @@ export function HeroTreeVignette({
   className?: string;
   style?: CSSProperties;
 }) {
+  const t = useTranslations("landing");
+  const family = useDemoFamily();
   const keyword = HERO_KEYWORDS[activeIndex];
   const isWholeFamily = keyword.highlight.length === 0;
 
@@ -82,8 +83,8 @@ export function HeroTreeVignette({
             {/* First names only — the vignette is small, and a wrapped
                 "Ivan / Hartley" collides with the memory chips. */}
             <MiniPersonCard
-              name={HARTLEY_FAMILY[id].name.split(" ")[0]}
-              years={HARTLEY_FAMILY[id].years}
+              name={family[id].name.split(" ")[0]}
+              years={family[id].years}
               active={isLit}
             />
           </div>
@@ -91,7 +92,7 @@ export function HeroTreeVignette({
       })}
       {HERO_KEYWORDS.map((item, index) => (
         <span
-          key={item.text}
+          key={item.id}
           className={cn(
             "absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-glass-edge bg-glass-strong px-3 py-1 text-xs whitespace-nowrap text-foreground backdrop-blur-md transition-[opacity,transform] duration-slow ease-(--ease-reveal)",
             index === activeIndex
@@ -100,7 +101,7 @@ export function HeroTreeVignette({
           )}
           style={{ left: `${item.noteAt.x}%`, top: `${item.noteAt.y}%` }}
         >
-          {item.note}
+          {t(`keywords.${item.id}.note`)}
         </span>
       ))}
     </div>

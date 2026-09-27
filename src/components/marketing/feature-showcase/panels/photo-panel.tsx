@@ -1,26 +1,30 @@
+import { useTranslations } from "next-intl";
+import { useDemoFamily } from "@/components/marketing/shared/use-demo-family";
 import { UserRoundPlus } from "lucide-react";
 import { PortraitSilhouette } from "@/components/marketing/shared/portrait-silhouette";
 import { GlassPill, PanelFrame } from "./panel-frame";
 
 /** Three people in an old group photo, x = center in %. */
 const PEOPLE = [
-  { x: 26, name: "Ivan Hartley" },
-  { x: 50, name: "Vera Hartley" },
-  { x: 74, name: "Paul Hartley" },
-];
+  { x: 26, id: "ivan" },
+  { x: 50, id: "vera" },
+  { x: 74, id: "paul" },
+] as const;
 const SPOTLIT = 1;
 
 /** Lightbox with tagged people: the photo dims except a soft circle around
  *  the hovered face (the app's PhotoTagSpotlight), whose name floats below
  *  it. */
 export function PhotoPanel() {
+  const t = useTranslations("landing");
+  const family = useDemoFamily();
   const spot = PEOPLE[SPOTLIT];
   return (
     <PanelFrame className="bg-background p-0">
       <div className="absolute inset-[8%_10%_14%] overflow-hidden rounded-xl bg-secondary">
-        {PEOPLE.map(({ x, name }) => (
+        {PEOPLE.map(({ x, id }) => (
           <PortraitSilhouette
-            key={name}
+            key={id}
             className="absolute bottom-0 w-[34%] -translate-x-1/2 text-muted-foreground/60"
             style={{ left: `${x}%` }}
           />
@@ -35,15 +39,15 @@ export function PhotoPanel() {
           className="absolute -translate-x-1/2"
           style={{ left: `${spot.x}%`, top: "76%" }}
         >
-          {spot.name}
+          {family[spot.id].name}
         </GlassPill>
       </div>
       <div className="absolute inset-x-[10%] bottom-[3%] flex items-center justify-between">
         <span className="text-[clamp(0.625rem,0.45rem+0.9cqw,0.8125rem)] text-muted-foreground">
-          Summer at the lake · 1961
+          {t("panel.lakeSummer")}
         </span>
         <GlassPill>
-          <UserRoundPlus className="size-[1em]" /> Tag people
+          <UserRoundPlus className="size-[1em]" /> {t("panel.tagPeople")}
         </GlassPill>
       </div>
     </PanelFrame>

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Check } from "lucide-react";
 import { LinkButton } from "@/components/ui/link-button";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ export function PricingTierCard({
   features: readonly string[];
   recommended?: boolean;
 }) {
+  const t = useTranslations("landing");
   return (
     <div
       className={cn(
@@ -55,7 +57,7 @@ export function PricingTierCard({
         variant={recommended ? "default" : "outline"}
         className="mt-auto"
       >
-        Get started
+        {t("getStarted")}
       </LinkButton>
     </div>
   );

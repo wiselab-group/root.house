@@ -1,5 +1,5 @@
 import { MiniPersonCard } from "@/components/marketing/shared/mini-person-card";
-import { HARTLEY_FAMILY } from "@/components/marketing/shared/hartley-family";
+import { useDemoFamily } from "@/components/marketing/shared/use-demo-family";
 import {
   MEMORY_CONNECTORS,
   MEMORY_FRAGMENTS,
@@ -11,6 +11,7 @@ import { PanelFrame } from "./panel-frame";
  *  literally the same family tree; scaled up as a whole (cards and lines
  *  together, so they stay aligned) since the slots leave wide margins. */
 export function TreePanel() {
+  const family = useDemoFamily();
   const { viewBox, paths } = MEMORY_CONNECTORS.desktop;
   return (
     <PanelFrame className="flex items-center bg-tree-canvas p-[4%]">
@@ -33,10 +34,7 @@ export function TreePanel() {
             className="absolute w-[11%] -translate-x-1/2"
             style={{ left: `${to.desktop.x}%`, top: `${to.desktop.y}cqw` }}
           >
-            <MiniPersonCard
-              {...HARTLEY_FAMILY[person]}
-              active={person === "owen"}
-            />
+            <MiniPersonCard {...family[person]} active={person === "owen"} />
           </div>
         ))}
       </div>

@@ -88,7 +88,8 @@ Visual Target: Awwwards/FWA-уровень качества, но тёплый �
 WCAG-контраст (см. DESIGN.md § Color Tokens) так, чтобы читаться как
 «кора/ветки/листва», не конфликтуя друг с другом; НЕ стартаперский
 сине-фиолетовый градиент. Заголовки — Lora (`.font-heading`), UI — Geist
-Sans; оба с кириллическим subset (весь интерфейс на русском).
+Sans; оба с кириллическим subset (интерфейс двуязычный RU/EN, имена семей —
+кириллица в любом языке).
 
 Исключение из «терракота — единственный цвет действия»: `--confirm`
 (тот же sage, что линия жизни) — только для «Готово», которое завершает
@@ -440,6 +441,30 @@ tree-v2/tree-v3/tree-v4 — удалены). `src/domain/tree/tree-layout.builde
 данных из Neon (`getFocusTreeLayout`/`getRawTreeGraph`), не только на
 синтетике: синтетические репро могут случайно не задеть нужную комбинацию
 условий (пример: пробел из пункта 3 выше найден именно так).
+
+## I18N
+
+- Два языка: `ru` (default) и `en` — next-intl **без URL-префиксов**. Локаль:
+  cookie `NEXT_LOCALE` → `Accept-Language` → `ru` (`src/i18n/request.ts`).
+  Явный выбор (переключатель `components/locale-switcher.tsx`) сохраняется в
+  `users.locale` и возвращается в cookie при входе (`src/i18n/sync-locale.ts`).
+- Весь UI-текст — только в `messages/ru.json` + `messages/en.json` (одинаковый
+  набор ключей, `ru.json` — источник типов в `src/global.d.ts`). Сервер:
+  `getTranslations`, клиент/серверные sync-компоненты: `useTranslations`.
+  Счётчики — только ICU plural (`counts.*`), даты — `useFormatter`/
+  `getFormatter` с именованными форматами (`src/i18n/formats.ts`, UTC).
+- `src/domain/**` не импортирует next-intl: форматтеры, которым нужен язык
+  (`formatPartialDate`, `personDisplayName`, `relationLabel`, `kinship-terms`),
+  принимают `locale: Locale` параметром. Словарь языка внутри domain — только
+  там, где это грамматика, а не подпись (падежи месяцев, термины родства).
+- Domain/сервисы возвращают или бросают **коды** ошибок (`errors.*`), zod-схемы
+  — ключи `validation.*`; action переводит их через `getErrorMessage()`/
+  `getValidationMessage()` (`src/i18n/`). Никакого русского текста в throw.
+- Domain отдаёт структуру, а не фразы: синтетические события таймлайна имеют
+  пустой `title`, возраст — число; формулирует UI (`getEventWording`).
+- Защита: `src/i18n/no-hardcoded-cyrillic.test.ts` (кириллица в коде вне
+  комментариев и allowlist-словарей — падение) и `messages.test.ts` (паритет
+  ключей ru/en).
 
 ## CODE RULES
 

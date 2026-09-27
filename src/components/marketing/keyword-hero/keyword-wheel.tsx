@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { keywordOpacity } from "@/components/marketing/shared/scroll-math";
 import { HERO_KEYWORDS } from "./hero-keywords.data";
@@ -12,6 +13,7 @@ const STEP_EM = 1.08;
  * heading's accessible text ends with a fixed "your family".
  */
 export function KeywordWheel({ position }: { position: number }) {
+  const t = useTranslations("landing");
   const lastIndex = HERO_KEYWORDS.length - 1;
   return (
     <>
@@ -20,7 +22,7 @@ export function KeywordWheel({ position }: { position: number }) {
           const distance = index - position;
           return (
             <span
-              key={keyword.text}
+              key={keyword.id}
               className={cn(
                 "absolute inset-x-0 top-0 block whitespace-nowrap transition-[transform,opacity] duration-instant ease-(--ease-reveal) will-change-transform",
                 index === lastIndex && "text-primary italic",
@@ -30,13 +32,13 @@ export function KeywordWheel({ position }: { position: number }) {
                 opacity: keywordOpacity(distance),
               }}
             >
-              {keyword.text}
+              {t(`keywords.${keyword.id}.text`)}
               {index === lastIndex && "."}
             </span>
           );
         })}
       </span>
-      <span className="sr-only">your family.</span>
+      <span className="sr-only">{t("heroFallback")}</span>
     </>
   );
 }
