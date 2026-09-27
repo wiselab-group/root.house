@@ -176,6 +176,13 @@
       "when": 1790525933631,
       "tag": "0024_magical_talon",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1790540629578,
+      "tag": "0025_pink_daimon_hellstrom",
+      "breakpoints": true
     }
   ]
 }

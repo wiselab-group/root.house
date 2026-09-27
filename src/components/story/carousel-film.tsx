@@ -54,7 +54,11 @@ export function CarouselFilm({
               aria-pressed={index === current}
               aria-label={slide.caption ?? tStories("photoN", { n: index + 1 })}
               onClick={() => onSelect(index)}
-              className="h-14 shrink-0 overflow-hidden rounded-md bg-muted opacity-55 transition-[opacity,transform] duration-base ease-(--ease-reveal) hover:-translate-y-0.5 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-pressed:-translate-y-1 aria-pressed:opacity-100 aria-pressed:ring-2 aria-pressed:ring-foreground"
+              // No lift on hover/current: the strip scrolls horizontally, so
+              // it clips vertically too — a raised thumb lost its ring's top
+              // edge and sat off the others' line. Current = ring + full
+              // opacity, all thumbs on one baseline; the ring fits in p-1.
+              className="photo-tone relative h-14 shrink-0 overflow-hidden rounded-md bg-muted opacity-55 transition-[opacity,transform] duration-base ease-(--ease-reveal) hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-95 aria-pressed:opacity-100 aria-pressed:ring-2 aria-pressed:ring-foreground"
             >
               <ArchiveImage
                 src={slide.thumbSrc}
@@ -80,7 +84,10 @@ export function CarouselFilm({
             <svg
               aria-hidden="true"
               viewBox="0 0 52 52"
-              className="pointer-events-none absolute -inset-0.5 size-[calc(100%+4px)] -rotate-90"
+              // `!`: glassIconButtonLarge's `[&_svg]:size-5` (meant for the
+              // icon) is more specific and shrank the ring to a 20px
+              // spinner-like arc in the button's corner.
+              className="pointer-events-none absolute -inset-0.5 size-[calc(100%+4px)]! -rotate-90"
             >
               <circle
                 key={current}

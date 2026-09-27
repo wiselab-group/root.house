@@ -174,6 +174,10 @@
      .photo-backdrop, where --tree-accent falls back to the tree's muddier
      shade (user: "почему-то он не зеленый"). */
   --upload-progress: oklch(0.58 0.05 126);
+  /* The archive's warm print tone, multiplied over family photos — a white
+     wall becomes beige-sepia, not screen white. Same in both themes: it
+     belongs to the photo, not the UI. See .photo-tone / .hero-photo-mask. */
+  --photo-tone: oklch(0.8 0.045 62);
   /* «Готово» that commits a mode's edits (PhotoArrangeBar) — the lifeline
      sage again, by user request ("логичнее всего сделать зеленой"): done =
      settled, not a new action, so not terracotta. A step darker than
@@ -658,8 +662,26 @@ body:has(.photo-backdrop) .app-header {
     pointer-events: none;
   }
   .hero-photo-mask::before {
-    background: oklch(0.8 0.045 62);
+    background: var(--photo-tone);
     mix-blend-mode: multiply;
+  }
+
+  /* The same beige print tone on any other family photo — every photo of a
+     story (user request 2026-09-27: full-bleed slides, filmstrip and grid
+     thumbs, not only the dissolving portraits). The element must already be
+     positioned (absolute/relative) and hold the image. */
+  .photo-tone {
+    isolation: isolate;
+  }
+  .photo-tone::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+    background: var(--photo-tone);
+    mix-blend-mode: multiply;
+    pointer-events: none;
   }
   .hero-photo-mask::after {
     background: linear-gradient(
@@ -763,9 +785,23 @@ body:has(.photo-backdrop) .app-header {
       stroke-dashoffset: 0;
     }
   }
+  /* `linear` on purpose — the one exception to CLAUDE.md's no-linear rule:
+     the ring is a clock, not motion, and must fill at an even pace (user
+     request 2026-09-28: an eased ring went slow–fast–slow). */
   .animate-carousel-ring {
     stroke-dasharray: 1;
-    animation: carousel-ring 6s var(--ease-transition) forwards;
+    animation: carousel-ring 6s linear forwards;
+  }
+}
+
+/* The ring is the slideshow's timer (the next slide comes on its
+   animationend), not decoration: the reduced-motion rule above shrinks
+   every animation to 0.01ms, which turned a slideshow started by hand into
+   a nonstop flicker. Keep its 6s; the slides themselves still switch
+   instantly under reduced motion. Class specificity beats that rule's `*`. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-carousel-ring {
+    animation-duration: 6s !important;
   }
 }
 

@@ -33,6 +33,7 @@ import {
   upsertPhotoTagPosition,
   clearPhotoTagPosition,
   removePersonFromMedia,
+  replaceStoryPhotos,
   type CreateMediaData,
   type MediaRecord,
   type MediaTaggedAlbum,
@@ -420,6 +421,45 @@ export async function getVisibleStoryPhotos(
   member: ActingMember,
 ): Promise<MediaRecord[]> {
   return filterVisibleMedia(await getPhotosForStory(storyId, familyId), member);
+}
+
+/**
+ * Saves the photos `member` picked for a Story's hero carousel, in order.
+ * Only photos `member` may see can be added. Attached photos `member` can't
+ * see (another member's private photo) never reached their editor, so they
+ * are kept, after the picked ones, rather than silently unlinked.
+ */
+export async function setStoryPhotos(
+  storyId: string,
+  familyId: string,
+  member: ActingMember,
+  mediaIds: string[],
+): Promise<void> {
+  const current = await getPhotosForStory(storyId, familyId);
+  const hidden = current
+    .filter((photo) => filterVisibleMedia([photo], member).length === 0)
+    .map((photo) => photo.id);
+  const hiddenIds = new Set(hidden);
+  const picked = [...new Set(mediaIds)].filter((id) => !hiddenIds.has(id));
+
+  const pickable = await Promise.all(
+    picked.map((id) => getMediaById(id, familyId)),
+  );
+  const visible = filterVisibleMedia(
+    pickable.filter((photo) => photo !== null),
+    member,
+  ).map((photo) => photo.id);
+
+  await replaceStoryPhotos(storyId, familyId, [...visible, ...hidden]);
+}
+
+/** Every family photo `member` may see, in gallery order — the story editor's
+ *  «Фото истории» picker. */
+export async function listPickablePhotos(
+  familyId: string,
+  member: ActingMember,
+): Promise<MediaRecord[]> {
+  return filterVisibleMedia(await getMediaForFamily(familyId), member);
 }
 
 /** The family-wide photo gallery (/families/[slug]/photos). */

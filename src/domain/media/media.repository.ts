@@ -122,9 +122,9 @@ export async function getMediaForPerson(
   return rows.map((r) => toRecord(r.media));
 }
 
-/** All photo Media attached to a Story, in gallery order — the Story page's
- *  hero carousel. Family-scoped in the same query (IDOR-safe, see
- *  getMediaById), photos only. */
+/** All photo Media attached to a Story, in the order its editor arranged
+ *  them (first = the cover) — the Story page's hero carousel. Family-scoped
+ *  in the same query (IDOR-safe, see getMediaById), photos only. */
 export async function getPhotosForStory(
   storyId: string,
   familyId: string,
@@ -140,9 +140,46 @@ export async function getPhotosForStory(
         eq(media.kind, "photo"),
       ),
     )
-    .orderBy(...GALLERY_ORDER);
+    .orderBy(mediaStory.position, ...GALLERY_ORDER);
 
   return rows.map((r) => toRecord(r.media));
+}
+
+/**
+ * Replaces a Story's attached photos with `mediaIds`, in that order
+ * (position 0 = the cover). Delete-then-reinsert, same as
+ * story.repository.ts::replaceStoryPeople. Ids that aren't photos of
+ * `familyId` are dropped by the insert's own SELECT, so a cross-family id
+ * never gets linked. The caller must already have verified the story
+ * belongs to `familyId`.
+ */
+export async function replaceStoryPhotos(
+  storyId: string,
+  familyId: string,
+  mediaIds: string[],
+): Promise<void> {
+  await db.delete(mediaStory).where(eq(mediaStory.storyId, storyId));
+  if (mediaIds.length === 0) return;
+
+  const valid = await db
+    .select({ id: media.id })
+    .from(media)
+    .where(
+      and(
+        inArray(media.id, mediaIds),
+        eq(media.familyId, familyId),
+        eq(media.kind, "photo"),
+      ),
+    );
+  const validIds = new Set(valid.map((row) => row.id));
+  const ordered = mediaIds.filter((id) => validIds.has(id));
+  if (ordered.length === 0) return;
+
+  await db
+    .insert(mediaStory)
+    .values(
+      ordered.map((mediaId, position) => ({ mediaId, storyId, position })),
+    );
 }
 
 /** All document Media linked to a given Person, in gallery order (see

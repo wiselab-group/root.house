@@ -10,6 +10,7 @@ import {
   getStoryPersonIds,
 } from "@/domain/story/story.service";
 import { listPeople } from "@/domain/person/person.service";
+import { getVisibleStoryPhotos } from "@/domain/media/media.service";
 import { personDisplayName } from "@/domain/person/display-name";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { resolveStoryIdBySlug } from "@/lib/resolve-story-slug";
@@ -65,13 +66,19 @@ export default async function EditStoryPage({
   if (!story || !canEditStory(viewer, story)) notFound();
   const isDraft = story.status === "draft";
 
-  const [personIds, allPeople, family, serverDraft] = await Promise.all([
-    getStoryPersonIds(storyId),
-    listPeople(familyId),
-    getFamilySummary(familyId),
-    // A draft story's own row is already the latest autosave.
-    isDraft ? null : getMyStoryDraft(storyId, session.user.id, familyId),
-  ]);
+  const [personIds, allPeople, family, serverDraft, storyPhotos] =
+    await Promise.all([
+      getStoryPersonIds(storyId),
+      listPeople(familyId),
+      getFamilySummary(familyId),
+      // A draft story's own row is already the latest autosave.
+      isDraft ? null : getMyStoryDraft(storyId, session.user.id, familyId),
+      getVisibleStoryPhotos(storyId, familyId, viewer),
+    ]);
+  const photos = storyPhotos.map((photo) => ({
+    id: photo.id,
+    alt: photo.title ?? photo.description,
+  }));
   const peopleById = new Map(allPeople.map((p) => [p.id, p]));
   const people = personIds
     .map((id) => peopleById.get(id))
@@ -109,6 +116,7 @@ export default async function EditStoryPage({
         body={story.body}
         privacyLevel={story.privacyLevel}
         people={people}
+        photos={photos}
         isDraft={isDraft}
         serverDraft={
           serverDraft && { title: serverDraft.title, body: serverDraft.body }

@@ -24,6 +24,10 @@ import {
   removeStory,
   saveStoryDraftContent,
 } from "@/domain/story/story.service";
+import {
+  listPickablePhotos,
+  setStoryPhotos,
+} from "@/domain/media/media.service";
 
 export interface StoryFormState {
   error?: string;
@@ -87,9 +91,10 @@ export async function updateStoryAction(
     "contributor",
   );
 
+  const viewer = { userId: session.user.id, role: member.role };
   const existing = await getStory(storyId, familyId);
   if (!existing) return { error: (await getErrorMessage())("storyNotFound") };
-  if (!canEditStory({ userId: session.user.id, role: member.role }, existing)) {
+  if (!canEditStory(viewer, existing)) {
     return { error: (await getErrorMessage())("noStoryEdit") };
   }
 
@@ -109,6 +114,9 @@ export async function updateStoryAction(
   }
 
   const personIds = formData.getAll("personId").map(String).filter(Boolean);
+  // «Фото истории», in carousel order — the first is the cover.
+  const photoIds = formData.getAll("photoId").map(String).filter(Boolean);
+  await setStoryPhotos(storyId, familyId, viewer, photoIds);
 
   if (existing.status === "draft") {
     const { slug } = await publishStory(existing, session.user.id, {
@@ -255,4 +263,35 @@ export async function discardStoryDraftAction(
   if (!session?.user) throw new Error("Session expired.");
   await requireFamilyAccess(familyId, session.user.id, "contributor");
   await discardMyStoryDraft(storyId, session.user.id, familyId);
+}
+
+export interface StoryPhotoChoice {
+  id: string;
+  alt: string | null;
+}
+
+/**
+ * The family archive's photos for the story editor's «Фото истории»
+ * picker, loaded when the picker opens rather than with the editor page —
+ * only what `member` may see, just ids and captions (the client builds the
+ * thumb URLs with mediaUrl).
+ */
+export async function listStoryPhotoChoicesAction(
+  familyId: string,
+): Promise<StoryPhotoChoice[]> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Session expired.");
+  const member = await requireFamilyAccess(
+    familyId,
+    session.user.id,
+    "contributor",
+  );
+  const photos = await listPickablePhotos(familyId, {
+    userId: session.user.id,
+    role: member.role,
+  });
+  return photos.map((photo) => ({
+    id: photo.id,
+    alt: photo.title ?? photo.description,
+  }));
 }

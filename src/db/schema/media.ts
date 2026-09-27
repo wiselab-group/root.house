@@ -198,6 +198,10 @@ export const mediaStory = pgTable(
     storyId: uuid("story_id")
       .notNull()
       .references(() => stories.id, { onDelete: "cascade" }),
+    // The photo's place in THIS story's hero carousel, 0 = the cover. Its
+    // own column, not media.sortOrder — that one is the photo's global
+    // gallery order, shared by every album and profile holding it.
+    position: integer("position").notNull().default(0),
   },
   (table) => [
     uniqueIndex("media_story_unique").on(table.mediaId, table.storyId),

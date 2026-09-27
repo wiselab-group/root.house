@@ -1,0 +1,1 @@
+ALTER TABLE "media_story" ADD COLUMN "position" integer DEFAULT 0 NOT NULL;

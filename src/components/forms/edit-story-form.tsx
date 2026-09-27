@@ -1,15 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { updateStoryAction } from "@/actions/story.actions";
-import type { StoryFormState } from "@/actions/story.actions";
-import { PersonMultiCombobox } from "@/components/media/person-multi-combobox";
+import type { StoryFormState, StoryPhotoChoice } from "@/actions/story.actions";
+import { StoryDetailsSection } from "@/components/story/story-details-section";
 import { StoryEditorToolbar } from "@/components/story/story-editor-toolbar";
 import { StoryDraftBanner } from "@/components/story/story-draft-banner";
 import { useStoryAutosave } from "@/components/story/use-story-autosave";
 import { submitWithoutReset } from "@/lib/submit-without-reset";
-import { PrivacyLevelSelect } from "./privacy-level-select";
 import type { PrivacyLevel } from "@/db/schema";
 
 const initialState: StoryFormState = {};
@@ -21,8 +20,8 @@ const initialState: StoryFormState = {};
  * exactly like StoryArticle's reading column, so the text looks while
  * writing the way it will read. Title and text autosave to the server
  * (useStoryAutosave), so a closed tab or another device never loses them;
- * people and privacy sit below the text, out of the way and are saved with
- * the submit. A draft story (status `draft`, only its author sees it)
+ * people, privacy and the hero carousel's photos sit below the text, out
+ * of the way and are saved with the submit. A draft story (status `draft`, only its author sees it)
  * submits as «Опубликовать»; a published one as «Сохранить».
  * updateStoryAction redirects to the story on success.
  */
@@ -33,6 +32,7 @@ export function EditStoryForm({
   body,
   privacyLevel,
   people,
+  photos,
   isDraft,
   serverDraft,
   cancelHref,
@@ -43,6 +43,8 @@ export function EditStoryForm({
   body: string;
   privacyLevel: PrivacyLevel;
   people: { id: string; name: string }[];
+  /** The hero carousel's photos, in order — see StoryPhotosField. */
+  photos: StoryPhotoChoice[];
   isDraft: boolean;
   /** This user's autosaved edits to a published story from an earlier
    *  visit — see useStoryAutosave. */
@@ -56,7 +58,6 @@ export function EditStoryForm({
     boundAction,
     initialState,
   );
-  const [selectedPeople, setSelectedPeople] = useState(people);
   const draft = useStoryAutosave({
     familyId,
     storyId,
@@ -124,32 +125,12 @@ export function EditStoryForm({
           <p className="text-sm text-destructive">{state.fieldErrors.body}</p>
         )}
 
-        <section
-          aria-labelledby="story-details"
-          className="mt-8 flex flex-col gap-5 border-t border-border pt-8"
-        >
-          <h2
-            id="story-details"
-            className="text-xs tracking-[0.12em] text-foreground/45 uppercase"
-          >
-            {t("details")}
-          </h2>
-          <PersonMultiCombobox
-            familyId={familyId}
-            label={t("people")}
-            value={selectedPeople}
-            onChange={setSelectedPeople}
-          />
-          {selectedPeople.map((person) => (
-            <input
-              key={person.id}
-              type="hidden"
-              name="personId"
-              value={person.id}
-            />
-          ))}
-          <PrivacyLevelSelect defaultValue={privacyLevel} />
-        </section>
+        <StoryDetailsSection
+          familyId={familyId}
+          people={people}
+          photos={photos}
+          privacyLevel={privacyLevel}
+        />
 
         {state.error && (
           <p className="text-sm text-destructive">{state.error}</p>

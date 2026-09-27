@@ -50,7 +50,7 @@ export function CarouselGrid({
             tabIndex={open ? 0 : -1}
             aria-label={slide.caption ?? tStories("photoN", { n: index + 1 })}
             onClick={() => onSelect(index)}
-            className="aspect-4/3 overflow-hidden rounded-xl bg-muted transition-transform duration-slow ease-(--ease-reveal) hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="photo-tone relative aspect-4/3 overflow-hidden rounded-xl bg-muted transition-transform duration-slow ease-(--ease-reveal) hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             <ArchiveImage
               src={slide.thumbSrc}
