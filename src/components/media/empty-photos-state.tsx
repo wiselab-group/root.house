@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { ImagesIcon } from "lucide-react";
 
 /** Same teaching-empty-state shape as /families, /people and /places — a
@@ -11,19 +12,16 @@ import { ImagesIcon } from "lucide-react";
  *  dead-end CTA they can't act on — the header's own UploadPhotoDialog is
  *  the only upload entry point either way, so no button is duplicated here. */
 export function EmptyPhotosState({ canUpload }: { canUpload: boolean }) {
+  const t = useTranslations("media");
   return (
     <div className="flex flex-col items-center gap-6 rounded-2xl border border-dashed border-border px-6 py-16 text-center">
       <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
         <ImagesIcon className="size-6" strokeWidth={1.75} aria-hidden="true" />
       </span>
       <div className="flex max-w-sm flex-col gap-2">
-        <h2 className="font-heading text-xl font-medium">
-          Фотографий пока нет
-        </h2>
+        <h2 className="font-heading text-xl font-medium">{t("emptyTitle")}</h2>
         <p className="text-muted-foreground">
-          {canUpload
-            ? "Добавьте первое фото — со временем здесь соберётся семейный альбом."
-            : "Когда кто-то из семьи добавит фото, они появятся здесь."}
+          {canUpload ? t("emptyCanAdd") : t("emptyViewer")}
         </p>
       </div>
     </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { CheckIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { QueuedPhotoPreview } from "./queued-photo-preview";
@@ -38,6 +39,8 @@ export function PhotoUploadGrid({
   photos: QueuedPhoto[];
   onRemove: (id: string) => void;
 }) {
+  const t = useTranslations("media");
+  const tc = useTranslations("common");
   if (photos.length === 0) return null;
 
   return (
@@ -56,7 +59,7 @@ export function PhotoUploadGrid({
             <button
               type="button"
               onClick={() => onRemove(photo.id)}
-              aria-label={`Убрать ${photo.file.name}`}
+              aria-label={t("removeFile", { name: photo.file.name })}
               className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-foreground/60 text-background opacity-0 transition-opacity group-hover/tile:opacity-100"
             >
               <XIcon className="size-3" />
@@ -72,7 +75,7 @@ export function PhotoUploadGrid({
           {photo.status === "uploading" && (
             <UploadProgressBar
               value={photo.progress}
-              label={`Загрузка ${photo.file.name}`}
+              label={t("uploadingFile", { name: photo.file.name })}
               className="absolute inset-x-1.5 bottom-1.5"
             />
           )}
@@ -83,7 +86,7 @@ export function PhotoUploadGrid({
                 "absolute inset-0 flex items-center justify-center bg-destructive/80 p-1 text-center text-[10px] leading-tight text-white",
               )}
             >
-              {photo.error ?? "Ошибка"}
+              {photo.error ?? tc("error")}
             </div>
           )}
         </div>

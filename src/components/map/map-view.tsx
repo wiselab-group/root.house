@@ -4,7 +4,9 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { setWorkerUrl, type StyleSpecification } from "maplibre-gl";
 import Map, { NavigationControl, type MapRef } from "react-map-gl/maplibre";
 import { forwardRef, useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { localizeStyleLabels } from "@/lib/maptiler-style-language";
+import { MapLoading } from "./map-loading";
 
 /**
  * The ONLY module in the codebase allowed to import maplibre-gl/react-map-gl
@@ -61,6 +63,8 @@ export const MapView = forwardRef<
   },
   ref,
 ) {
+  const t = useTranslations("map");
+  const locale = useLocale();
   const hasKey = Boolean(process.env.NEXT_PUBLIC_MAPTILER_API_KEY);
   const [style, setStyle] = useState<StyleSpecification | string | null>(null);
 
@@ -70,7 +74,7 @@ export const MapView = forwardRef<
     fetch(MAPTILER_STYLE_URL)
       .then((res) => res.json())
       .then((raw: StyleSpecification) => {
-        if (!cancelled) setStyle(localizeStyleLabels(raw));
+        if (!cancelled) setStyle(localizeStyleLabels(raw, locale));
       })
       .catch(() => {
         // Falls back to letting maplibre fetch+parse the style URL itself
@@ -81,12 +85,12 @@ export const MapView = forwardRef<
     return () => {
       cancelled = true;
     };
-  }, [hasKey]);
+  }, [hasKey, locale]);
 
   if (!hasKey) {
     return (
       <div className="flex h-full w-full items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30 text-center text-sm text-muted-foreground">
-        Карта недоступна — не настроен ключ MapTiler.
+        {t("noKey")}
       </div>
     );
   }
@@ -94,9 +98,7 @@ export const MapView = forwardRef<
   if (!style) {
     return (
       <div className={className} style={{ width: "100%", height: "100%" }}>
-        <div className="flex h-full w-full items-center justify-center rounded-2xl border border-border bg-muted/30 text-sm text-muted-foreground">
-          Загружаем карту…
-        </div>
+        <MapLoading />
       </div>
     );
   }

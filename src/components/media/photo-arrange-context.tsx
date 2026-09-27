@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { ArrowDownUpIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ export function PhotoArrangeHeaderButton({
 }: {
   look: "link" | "button";
 }) {
+  const t = useTranslations("media");
   const { isArranging, setArranging } = usePhotoArrange();
   const hidden = isArranging ? "invisible" : "";
 
@@ -61,7 +63,7 @@ export function PhotoArrangeHeaderButton({
         <ArrowDownUpIcon />
         {/* Icon only on phones — next to the page title and «Добавить» the
             full label pushed the row past a 390px screen. */}
-        <span className="max-sm:sr-only">Упорядочить</span>
+        <span className="max-sm:sr-only">{t("arrange")}</span>
       </Button>
     );
   }
@@ -77,7 +79,7 @@ export function PhotoArrangeHeaderButton({
         className="size-3.5 max-sm:size-4.5"
         aria-hidden="true"
       />
-      <span className="max-sm:sr-only">Упорядочить</span>
+      <span className="max-sm:sr-only">{t("arrange")}</span>
     </button>
   );
 }

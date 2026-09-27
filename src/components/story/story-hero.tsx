@@ -1,3 +1,4 @@
+import { useFormatter, useTranslations } from "next-intl";
 import { BookOpenIcon, CalendarIcon, ClockIcon, LockIcon } from "lucide-react";
 import type { PrivacyLevel } from "@/db/schema";
 import { HeroTopBar } from "@/components/hero/hero-top-bar";
@@ -5,12 +6,6 @@ import { HeroMeta } from "@/components/hero/hero-meta";
 import { glassChip } from "@/components/hero/glass";
 import { StoryCarousel, type CarouselSlide } from "./story-carousel";
 import { HeroMoreMenu } from "@/components/hero/hero-more-menu";
-
-const createdFormat = new Intl.DateTimeFormat("ru-RU", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
 
 /**
  * The Story page's hero, in the same dark photo-backdrop style as the
@@ -38,6 +33,9 @@ export function StoryHero({
   editHref: string | null;
   deleteProps: { familyId: string; storyId: string } | null;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("stories");
+  const format = useFormatter();
   const hasFilm = slides.length > 1;
   return (
     <header
@@ -51,7 +49,7 @@ export function StoryHero({
 
       <HeroTopBar
         backHref={backHref}
-        backLabel="Истории"
+        backLabel={t("title")}
         actions={
           <HeroMoreMenu
             editHref={editHref}
@@ -72,12 +70,12 @@ export function StoryHero({
         <div className="flex flex-wrap gap-1.5">
           <span className={glassChip}>
             <BookOpenIcon aria-hidden="true" />
-            История
+            {t("pill")}
           </span>
           {privacyLevel === "private" && (
             <span className={glassChip}>
               <LockIcon aria-hidden="true" />
-              Только я
+              {tc("onlyMe")}
             </span>
           )}
         </div>
@@ -86,10 +84,13 @@ export function StoryHero({
         </h1>
         <HeroMeta
           items={[
-            { Icon: ClockIcon, label: `${readingMinutes} мин чтения` },
+            {
+              Icon: ClockIcon,
+              label: t("minutesReading", { count: readingMinutes }),
+            },
             {
               Icon: CalendarIcon,
-              label: `Добавлено ${createdFormat.format(createdAt)}`,
+              label: t("added", { date: format.dateTime(createdAt, "long") }),
             },
           ]}
         />

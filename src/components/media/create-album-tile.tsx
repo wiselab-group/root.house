@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { PlusIcon } from "lucide-react";
 import {
@@ -22,17 +23,18 @@ import { AlbumForm } from "@/components/forms/album-form";
  * form this creation entry point now lives inside the grid itself.
  */
 export function CreateAlbumTile({ familyId }: { familyId: string }) {
+  const t = useTranslations("media");
   const [open, setOpen] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger className="group flex aspect-square w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary">
         <PlusIcon className="size-6" strokeWidth={1.75} aria-hidden="true" />
-        <span className="text-sm font-medium">Новый альбом</span>
+        <span className="text-sm font-medium">{t("newAlbum")}</span>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Новый альбом</DialogTitle>
+          <DialogTitle>{t("newAlbum")}</DialogTitle>
         </DialogHeader>
         <AlbumForm
           familyId={familyId}

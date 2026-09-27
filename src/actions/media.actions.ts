@@ -44,7 +44,7 @@ export async function deleteMediaAction(
   mediaId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   const member = await requireFamilyAccess(
     familyId,
@@ -63,7 +63,7 @@ export async function deleteMediaAction(
       },
     )
   ) {
-    throw new ForbiddenError("У вас нет прав на удаление этого файла.");
+    throw new ForbiddenError("You may not delete this file.");
   }
 
   // Fetched before removeMedia — media_person/media_album rows cascade-
@@ -110,7 +110,7 @@ export async function removePersonAvatarAction(
   personId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
 
@@ -157,7 +157,7 @@ export async function reorderMediaAction(
   revalidateOnPath: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   await requireFamilyAccess(familyId, session.user.id, "contributor");
 
@@ -179,7 +179,7 @@ export async function setPersonPortraitAction(
   mediaId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
 
@@ -188,7 +188,7 @@ export async function setPersonPortraitAction(
     getMedia(mediaId, familyId),
   ]);
   if (!person || !record || record.kind !== "photo") {
-    throw new Error("Фото не найдено.");
+    throw new Error("Photo not found.");
   }
   if (person.photoMediaId === mediaId) return;
 

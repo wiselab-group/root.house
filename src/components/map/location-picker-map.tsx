@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
 import type { MapRef } from "react-map-gl/maplibre";
 import { MapView } from "./map-view";
@@ -30,6 +31,7 @@ export function LocationPickerMap({
   flyToken: number;
   onPick: (point: LatLng) => void;
 }) {
+  const t = useTranslations("map");
   const mapRef = useRef<MapRef>(null);
 
   useEffect(() => {
@@ -67,7 +69,7 @@ export function LocationPickerMap({
       </MapView>
       {!point && (
         <p className="pointer-events-none absolute inset-x-0 top-2 mx-auto w-fit rounded-full bg-background/80 px-3 py-1 text-xs text-foreground backdrop-blur-sm">
-          Нажмите на карту, чтобы поставить отметку
+          {t("pickHint")}
         </p>
       )}
     </div>

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 import { BookOpen } from "lucide-react";
@@ -16,16 +17,18 @@ import { StoriesList } from "@/components/story/stories-list";
 import { AddStoryFullForm } from "@/components/forms/add-story-full-form";
 import { CollapsibleForm } from "@/components/forms/collapsible-form";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
-import { storyCountLabel } from "@/domain/shared/pluralize-ru";
 import type { PersonRecord } from "@/domain/person/person.repository";
 
-export const metadata: Metadata = {
-  title: "Истории",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("stories");
+  return { title: t("title") };
+}
 
 export default async function StoriesPage({
   params,
 }: PageProps<"/families/[slug]/stories">) {
+  const tCount = await getTranslations("counts");
+  const t = await getTranslations("stories");
   const tn = await getTranslations("familyNav");
   const { slug } = await params;
   const session = await auth();
@@ -63,17 +66,19 @@ export default async function StoriesPage({
         items={[
           { label: tn("myFamilies"), href: "/families" },
           { label: family?.name ?? slug, href: `/families/${slug}` },
-          { label: "Истории" },
+          { label: t("title") },
         ]}
       />
       <div className="flex flex-col gap-2">
         <h1 className="font-heading text-title font-medium tracking-tight text-balance">
-          Истории
+          {t("title")}
         </h1>
         <p className="text-muted-foreground">
           {stories.length > 0
-            ? `${storyCountLabel(stories.length)} — то, что стоит помнить и передать дальше.`
-            : "Семейные истории и воспоминания."}
+            ? t("countLead", {
+                stories: tCount("stories", { count: stories.length }),
+              })
+            : t("lead")}
         </p>
       </div>
 
@@ -88,7 +93,7 @@ export default async function StoriesPage({
       )}
 
       {stories.length > 0 && canAdd && (
-        <CollapsibleForm triggerLabel="Добавить историю">
+        <CollapsibleForm triggerLabel={t("add")}>
           <AddStoryFullForm familyId={familyId} />
         </CollapsibleForm>
       )}
@@ -106,22 +111,18 @@ function EmptyStoriesState({
   canAdd: boolean;
   familyId: string;
 }) {
+  const t = useTranslations("stories");
   return (
     <div className="flex flex-col items-center gap-6 rounded-2xl border border-dashed border-border px-6 py-16 text-center">
       <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
         <BookOpen className="size-6" strokeWidth={1.75} aria-hidden="true" />
       </span>
       <div className="flex max-w-sm flex-col gap-2">
-        <h2 className="font-heading text-xl font-medium">
-          Семейные истории пока не рассказаны
-        </h2>
-        <p className="text-muted-foreground">
-          Как познакомились бабушка с дедушкой, переезд в другой город, летние
-          каникулы у родных — запишите то, что стоит передать дальше.
-        </p>
+        <h2 className="font-heading text-xl font-medium">{t("emptyTitle")}</h2>
+        <p className="text-muted-foreground">{t("emptyBody")}</p>
       </div>
       {canAdd && (
-        <CollapsibleForm triggerLabel="Добавить первую историю">
+        <CollapsibleForm triggerLabel={t("addFirst")}>
           <AddStoryFullForm familyId={familyId} />
         </CollapsibleForm>
       )}

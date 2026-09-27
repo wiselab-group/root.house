@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ChevronDownIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +29,7 @@ export function AlbumMultiCombobox({
   value: { id: string; name: string }[];
   onChange: (albums: { id: string; name: string }[]) => void;
 }) {
+  const t = useTranslations("media");
   function toggle(album: { id: string; name: string }, checked: boolean) {
     onChange(
       checked
@@ -42,7 +44,7 @@ export function AlbumMultiCombobox({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium">Альбомы (необязательно)</span>
+      <span className="text-sm font-medium">{t("albumsOptional")}</span>
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -55,10 +57,10 @@ export function AlbumMultiCombobox({
           }
         >
           {albums.length === 0
-            ? "В семье пока нет альбомов"
+            ? t("noAlbums")
             : value.length > 0
-              ? `Выбрано: ${value.length}`
-              : "Выбрать альбомы"}
+              ? t("selectedCount", { count: value.length })
+              : t("pickAlbums")}
           <ChevronDownIcon className="size-4 text-muted-foreground" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">

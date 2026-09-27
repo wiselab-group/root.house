@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useOptimistic, useState } from "react";
 import { PencilIcon } from "lucide-react";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
@@ -81,6 +82,7 @@ function EditPlaceRowButton({
   familyId: string;
   place: PlaceRecord;
 }) {
+  const tPlaces = useTranslations("places");
   const [open, setOpen] = useState(false);
 
   return (
@@ -91,7 +93,7 @@ function EditPlaceRowButton({
             type="button"
             variant="ghost"
             size="icon"
-            aria-label={`Редактировать «${place.name}»`}
+            aria-label={tPlaces("editNamed", { name: place.name })}
           />
         }
       >

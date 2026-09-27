@@ -1,9 +1,9 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ArchiveImage } from "@/components/media/archive-image";
 import { XIcon } from "lucide-react";
 import { glassPill } from "@/components/hero/glass";
-import { photoCountLabel } from "@/domain/shared/pluralize-ru";
 import type { CarouselSlide } from "./story-carousel";
 
 /**
@@ -22,11 +22,15 @@ export function CarouselGrid({
   onClose: () => void;
   onSelect: (index: number) => void;
 }) {
+  const tCount = useTranslations("counts");
+  const tStories = useTranslations("stories");
+  const tc = useTranslations("common");
+  const t = useTranslations("stories");
   return (
     <div
       role="dialog"
       aria-modal="false"
-      aria-label="Все фото истории"
+      aria-label={t("allPhotos")}
       aria-hidden={!open}
       onKeyDown={(event) => {
         if (event.key === "Escape") onClose();
@@ -36,7 +40,7 @@ export function CarouselGrid({
       }`}
     >
       <h2 className="font-heading text-xl font-normal">
-        {photoCountLabel(slides.length)}
+        {tCount("photos", { count: slides.length })}
       </h2>
       <div className="grid w-full max-w-3xl grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-4">
         {slides.map((slide, index) => (
@@ -44,7 +48,7 @@ export function CarouselGrid({
             key={slide.id}
             type="button"
             tabIndex={open ? 0 : -1}
-            aria-label={slide.caption ?? `Фото ${index + 1}`}
+            aria-label={slide.caption ?? tStories("photoN", { n: index + 1 })}
             onClick={() => onSelect(index)}
             className="aspect-4/3 overflow-hidden rounded-xl bg-muted transition-transform duration-slow ease-(--ease-reveal) hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
@@ -65,7 +69,7 @@ export function CarouselGrid({
         onClick={onClose}
       >
         <XIcon aria-hidden="true" />
-        Закрыть
+        {tc("close")}
       </button>
     </div>
   );

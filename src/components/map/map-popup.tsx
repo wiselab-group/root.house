@@ -35,6 +35,7 @@ export function MapPopup({
   familySlug: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("map");
   const tTypes = useTranslations("eventTypes");
   const location = [marker.region, marker.country].filter(Boolean).join(", ");
 
@@ -93,9 +94,7 @@ export function MapPopup({
         )}
 
         {marker.people.length === 0 && marker.events.length === 0 && (
-          <p className="text-xs text-muted-foreground">
-            Пока ничего не привязано к этому месту.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("empty")}</p>
         )}
       </div>
     </Popup>

@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -11,9 +12,10 @@ import { canCreate } from "@/domain/family/permissions";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { PhotosPageLayout } from "@/components/media/photos-page-layout";
 
-export const metadata: Metadata = {
-  title: "Архив",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("media");
+  return { title: t("archive") };
+}
 
 export default async function PhotosPage({
   params,

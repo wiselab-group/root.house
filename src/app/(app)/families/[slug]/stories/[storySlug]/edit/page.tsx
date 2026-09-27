@@ -31,12 +31,15 @@ export async function generateMetadata({
     role: member.role,
   });
   if (!story) return {};
-  return { title: `Редактировать — ${story.title}` };
+  const t = await getTranslations("stories");
+  return { title: t("editTitle", { title: story.title }) };
 }
 
 export default async function EditStoryPage({
   params,
 }: PageProps<"/families/[slug]/stories/[storySlug]/edit">) {
+  const tc = await getTranslations("common");
+  const t = await getTranslations("stories");
   const tn = await getTranslations("familyNav");
   const locale = await getLocale();
   const { slug, storySlug } = await params;
@@ -81,9 +84,9 @@ export default async function EditStoryPage({
         items={[
           { label: tn("myFamilies"), href: "/families" },
           { label: family?.name ?? slug, href: `/families/${slug}` },
-          { label: "Истории", href: `/families/${slug}/stories` },
+          { label: t("title"), href: `/families/${slug}/stories` },
           { label: story.title, href: storyHref },
-          { label: "Редактировать" },
+          { label: tc("edit") },
         ]}
       />
       <h1 className="font-heading text-title font-medium tracking-tight text-balance">

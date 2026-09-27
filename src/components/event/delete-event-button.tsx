@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { deleteEventAction } from "@/actions/event.actions";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,8 @@ export function DeleteEventButton({
   eventTitle: string;
   className?: string;
 }) {
+  const t = useTranslations("event");
+  const tc = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -44,12 +47,12 @@ export function DeleteEventButton({
           <Button variant="destructive" size="sm" className={className} />
         }
       >
-        Удалить
+        {tc("delete")}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Удалить «{eventTitle}»?</DialogTitle>
-          <DialogDescription>Это действие нельзя отменить.</DialogDescription>
+          <DialogTitle>{t("deleteTitle", { title: eventTitle })}</DialogTitle>
+          <DialogDescription>{tc("cannotUndo")}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
@@ -57,7 +60,7 @@ export function DeleteEventButton({
             onClick={() => setOpen(false)}
             disabled={isPending}
           >
-            Отмена
+            {tc("cancel")}
           </Button>
           <Button
             variant="destructive"
@@ -65,7 +68,7 @@ export function DeleteEventButton({
             disabled={isPending}
             aria-busy={isPending}
           >
-            {isPending ? "Удаляем…" : "Удалить"}
+            {isPending ? tc("deleting") : tc("delete")}
           </Button>
         </DialogFooter>
       </DialogContent>

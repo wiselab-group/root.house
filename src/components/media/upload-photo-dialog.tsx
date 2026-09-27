@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,8 @@ export function UploadPhotoDialog({
   albums: { id: string; name: string }[];
   defaultAlbums: { id: string; name: string }[];
 }) {
+  const t = useTranslations("media");
+  const tc = useTranslations("common");
   const [open, setOpen] = useState(false);
 
   return (
@@ -40,13 +43,13 @@ export function UploadPhotoDialog({
         render={
           <Button type="button" className="shrink-0">
             <PlusIcon data-icon="inline-start" />
-            Добавить
+            {tc("add")}
           </Button>
         }
       />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Добавить фото</DialogTitle>
+          <DialogTitle>{t("addPhoto")}</DialogTitle>
         </DialogHeader>
         <PhotoUploadPanel
           familyId={familyId}

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Combobox } from "@base-ui/react/combobox";
 import { cn } from "@/lib/utils";
 import { PersonMultiComboboxItem } from "./person-multi-combobox-item";
@@ -11,6 +12,7 @@ export function PersonMultiComboboxPopup({
   isPending: boolean;
   query: string;
 }) {
+  const tc = useTranslations("common");
   return (
     <Combobox.Portal>
       <Combobox.Positioner className="isolate z-50 outline-none" sideOffset={4}>
@@ -23,13 +25,13 @@ export function PersonMultiComboboxPopup({
         >
           <div className="max-h-72 overflow-y-auto overscroll-contain p-1 scroll-pt-1 scroll-pb-1">
             <Combobox.Status className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
-              {isPending ? "Ищем…" : null}
+              {isPending ? tc("searching") : null}
             </Combobox.Status>
             <Combobox.Empty className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
               {!isPending
                 ? query.trim().length > 0
-                  ? "Ничего не найдено."
-                  : "В семье пока никого нет."
+                  ? tc("nothingFound")
+                  : tc("noPeople")
                 : null}
             </Combobox.Empty>
             <Combobox.List>

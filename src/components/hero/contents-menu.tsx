@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { ListIcon } from "lucide-react";
 import { glassPill, glassSurface } from "./glass";
@@ -22,13 +23,15 @@ export function ContentsMenu({
   items,
   menuId,
   menuLabel,
-  buttonLabel = "Содержание",
+  buttonLabel,
 }: {
   items: ContentsMenuItem[];
   menuId: string;
   menuLabel: string;
   buttonLabel?: string;
 }) {
+  const tDefault = useTranslations("common");
+  const buttonText = buttonLabel ?? tDefault("contents");
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -59,7 +62,7 @@ export function ContentsMenu({
         onClick={() => setOpen((value) => !value)}
       >
         <ListIcon aria-hidden="true" />
-        <span className="truncate">{buttonLabel}</span>
+        <span className="truncate">{buttonText}</span>
       </button>
       <nav
         id={menuId}

@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { MapLoading } from "./map-loading";
 import type { PlaceMarker } from "@/domain/place/place-marker.service";
 
 // `ssr: false` is only allowed inside a Client Component as of Next.js 16
@@ -12,11 +13,7 @@ const FamilyMapCanvas = dynamic(
   () => import("./family-map-canvas").then((mod) => mod.FamilyMapCanvas),
   {
     ssr: false,
-    loading: () => (
-      <div className="flex h-full w-full items-center justify-center rounded-2xl border border-border bg-muted/30 text-sm text-muted-foreground">
-        Загружаем карту…
-      </div>
-    ),
+    loading: () => <MapLoading />,
   },
 );
 

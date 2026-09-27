@@ -36,14 +36,14 @@ export async function setPhotoTagPositionAction(
   radiusPercent?: number,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
   await requireFamilyAccess(familyId, session.user.id, "contributor");
 
   const mediaRecord = await getMedia(mediaId, familyId);
-  if (!mediaRecord) throw new Error("Фото не найдено.");
+  if (!mediaRecord) throw new Error("Photo not found.");
 
   const person = await getPerson(personId, familyId);
-  if (!person) throw new Error("Человек не найден.");
+  if (!person) throw new Error("Person not found.");
 
   const point = validatePhotoTagPoint({ xPercent, yPercent });
   await upsertPhotoTagPosition({
@@ -71,11 +71,11 @@ export async function untagPhotoPointAction(
   personId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
   await requireFamilyAccess(familyId, session.user.id, "contributor");
 
   const person = await getPerson(personId, familyId);
-  if (!person) throw new Error("Человек не найден.");
+  if (!person) throw new Error("Person not found.");
 
   await clearPhotoTagPosition(mediaId, personId, familyId);
 
@@ -91,11 +91,11 @@ export async function removePhotoTagAction(
   personId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
   await requireFamilyAccess(familyId, session.user.id, "contributor");
 
   const person = await getPerson(personId, familyId);
-  if (!person) throw new Error("Человек не найден.");
+  if (!person) throw new Error("Person not found.");
 
   await removePersonFromMedia(mediaId, personId, familyId);
 

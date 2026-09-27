@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVerticalIcon } from "lucide-react";
@@ -42,6 +43,8 @@ export function PhotoGridTile({
   onOpen: () => void;
   onDeleted: () => void;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("media");
   const {
     attributes,
     listeners,
@@ -59,7 +62,7 @@ export function PhotoGridTile({
         transition,
       }}
       {...(isArranging ? { ...attributes, ...listeners } : {})}
-      aria-label={isArranging ? "Переместить фото" : undefined}
+      aria-label={isArranging ? t("movePhoto") : undefined}
       className={cn(
         "group relative aspect-square overflow-hidden rounded-md border border-border bg-muted",
         isArranging &&
@@ -77,7 +80,7 @@ export function PhotoGridTile({
       >
         <ArchiveImage
           src={mediaUrl(photo.media.id, familyId, "thumb")}
-          alt={photo.media.title ?? "Семейное фото"}
+          alt={photo.media.title ?? tc("familyPhoto")}
           fill
           sizes="(max-width: 640px) 50vw, 33vw"
           className={cn(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { XIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,7 @@ export function PlaceLocationField({
   defaultPoint?: LatLng | null;
   error?: string;
 }) {
+  const locale = useLocale();
   const t = useTranslations("placeForm");
   const [point, setPoint] = useState<LatLng | null>(defaultPoint);
   const [flyToken, setFlyToken] = useState(0);
@@ -45,11 +46,14 @@ export function PlaceLocationField({
     lookupRef.current?.abort();
     const controller = new AbortController();
     lookupRef.current = controller;
-    void reverseGeocode(at.latitude, at.longitude, controller.signal).then(
-      (address) => {
-        if (address && !controller.signal.aborted) showLabel(address);
-      },
-    );
+    void reverseGeocode(
+      at.latitude,
+      at.longitude,
+      locale,
+      controller.signal,
+    ).then((address) => {
+      if (address && !controller.signal.aborted) showLabel(address);
+    });
   }
 
   // An already-saved point shows its address, not bare coordinates.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Combobox } from "@base-ui/react/combobox";
 import { MapPinIcon } from "lucide-react";
@@ -27,6 +27,7 @@ export function PlaceGeocodeCombobox({
   defaultLabel?: string;
   className?: string;
 }) {
+  const locale = useLocale();
   const tc = useTranslations("common");
   const t = useTranslations("placeForm");
   const [results, setResults] = useState<GeocodeResult[]>([]);
@@ -47,9 +48,11 @@ export function PlaceGeocodeCombobox({
     abortControllerRef.current = controller;
 
     startTransition(async () => {
-      const found = await geocodePlace(trimmed, controller.signal).catch(
-        () => [],
-      );
+      const found = await geocodePlace(
+        trimmed,
+        locale,
+        controller.signal,
+      ).catch(() => []);
       if (controller.signal.aborted) return;
       setResults(found);
     });

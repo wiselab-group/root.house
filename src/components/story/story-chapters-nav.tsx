@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { ContentsMenu } from "@/components/hero/contents-menu";
 
@@ -19,6 +20,8 @@ export function StoryChaptersNav({
 }: {
   chapters: { id: string; number: number; title: string }[];
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("stories");
   const [currentId, setCurrentId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -41,9 +44,11 @@ export function StoryChaptersNav({
     <div className="sticky top-[calc(var(--app-header-h,0px)-0.75rem)] z-30 flex justify-center px-4 pt-6">
       <ContentsMenu
         menuId="story-chapters"
-        menuLabel="Главы истории"
+        menuLabel={t("chapters")}
         buttonLabel={
-          current ? `${roman(current.number)} · ${current.title}` : "Содержание"
+          current
+            ? `${roman(current.number)} · ${current.title}`
+            : tc("contents")
         }
         items={chapters.map((chapter) => ({
           id: chapter.id,

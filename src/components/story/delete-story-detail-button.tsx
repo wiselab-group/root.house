@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { deleteStoryFromStoriesPageAction } from "@/actions/story.actions";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,8 @@ export function DeleteStoryDetailButton({
   onOpenChange?: (open: boolean) => void;
   trigger?: boolean;
 }) {
+  const t = useTranslations("stories");
+  const tc = useTranslations("common");
   const [ownOpen, setOwnOpen] = useState(false);
   const open = controlledOpen ?? ownOpen;
   const setOpen = onOpenChange ?? setOwnOpen;
@@ -58,13 +61,13 @@ export function DeleteStoryDetailButton({
             <Button variant="destructive" size="sm" className={className} />
           }
         >
-          Удалить
+          {tc("delete")}
         </DialogTrigger>
       )}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Удалить «{storyTitle}»?</DialogTitle>
-          <DialogDescription>Это действие нельзя отменить.</DialogDescription>
+          <DialogTitle>{t("deleteTitle", { title: storyTitle })}</DialogTitle>
+          <DialogDescription>{tc("cannotUndo")}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
@@ -72,7 +75,7 @@ export function DeleteStoryDetailButton({
             onClick={() => setOpen(false)}
             disabled={isPending}
           >
-            Отмена
+            {tc("cancel")}
           </Button>
           <Button
             variant="destructive"
@@ -80,7 +83,7 @@ export function DeleteStoryDetailButton({
             disabled={isPending}
             aria-busy={isPending}
           >
-            {isPending ? "Удаляем…" : "Удалить"}
+            {isPending ? tc("deleting") : tc("delete")}
           </Button>
         </DialogFooter>
       </DialogContent>

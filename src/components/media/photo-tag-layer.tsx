@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   useOptimistic,
@@ -223,6 +223,7 @@ export function PhotoTagLayer({
    *  visibility logic below. */
   highlightedPersonId?: string | null;
 }) {
+  const t = useTranslations("media");
   const locale = useLocale();
   const containerRef = useRef<HTMLDivElement>(null);
   // A freshly tapped point: its spotlight circle is already out to size,
@@ -419,7 +420,7 @@ export function PhotoTagLayer({
           onPointChange={(point) => setPending({ ...pending, point })}
           radius={pending.radius}
           onRadiusChange={(radius) => setPending({ ...pending, radius })}
-          label="Размер области вокруг лица"
+          label={t("tagRadius")}
           onEscape={() => setPending(null)}
         >
           <div className="w-64 rounded-xl bg-popover p-2 whitespace-normal text-popover-foreground shadow-lg ring-1 ring-foreground/10">
@@ -472,6 +473,7 @@ function PhotoTagMarker({
   onUntag: () => void;
   onRemove: () => void;
 }) {
+  const t = useTranslations("media");
   const locale = useLocale();
   const name = personDisplayName(person, locale);
 
@@ -514,23 +516,23 @@ function PhotoTagMarker({
           }
         >
           <ExternalLinkIcon />
-          Открыть профиль
+          {t("openProfile")}
         </DropdownMenuItem>
         <DropdownMenuItem disabled className="text-muted-foreground">
           <MoveIcon />
-          Перетащите метку, чтобы переместить
+          {t("dragTag")}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onEditRadius}>
           <CircleDashedIcon />
-          Изменить область
+          {t("editArea")}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onUntag}>
           <XIcon />
-          Снять точку
+          {t("removePoint")}
         </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" onClick={onRemove}>
           <XIcon />
-          Убрать из фото
+          {t("untag")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

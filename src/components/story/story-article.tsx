@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import type { StoryLayout } from "@/domain/story/story-layout";
 
 /**
@@ -6,6 +7,7 @@ import type { StoryLayout } from "@/domain/story/story-layout";
  * comfortable 18px/1.7. Line breaks typed inside one paragraph are kept.
  */
 export function StoryArticle({ layout }: { layout: StoryLayout }) {
+  const tStories = useTranslations("stories");
   return (
     <article className="mx-auto flex max-w-[44rem] flex-col gap-7 px-4 pt-12 pb-10 sm:px-8 sm:pt-16">
       {layout.lead && (
@@ -21,7 +23,7 @@ export function StoryArticle({ layout }: { layout: StoryLayout }) {
             className="mt-6 flex scroll-mt-[calc(var(--app-header-h,0px)+4.5rem)] flex-col gap-1.5 font-heading text-heading font-normal text-balance"
           >
             <span className="text-xs tracking-[0.12em] text-foreground/45 uppercase">
-              Глава {block.number}
+              {tStories("chapter", { number: block.number })}
             </span>
             {block.title}
           </h2>

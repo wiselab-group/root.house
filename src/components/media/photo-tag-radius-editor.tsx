@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRef, useState, type ReactNode, type RefObject } from "react";
 import { CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -315,6 +316,8 @@ export function PhotoTagRadiusEditor({
   onCommit: () => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("media");
+  const tc = useTranslations("common");
   return (
     <PhotoTagCircle
       containerRef={containerRef}
@@ -322,7 +325,7 @@ export function PhotoTagRadiusEditor({
       onPointChange={onPointChange}
       radius={radius}
       onRadiusChange={onRadiusChange}
-      label={`Размер области: ${name}`}
+      label={t("tagRadiusFor", { name })}
       autoFocus
       onEnter={onCommit}
       onEscape={onCancel}
@@ -338,7 +341,7 @@ export function PhotoTagRadiusEditor({
         onClick={onCommit}
       >
         <CheckIcon />
-        Готово
+        {tc("done")}
       </Button>
     </PhotoTagCircle>
   );

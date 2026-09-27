@@ -1,5 +1,7 @@
 "use server";
 
+import { getErrorMessage } from "@/i18n/errors";
+import { getValidationMessage } from "@/i18n/validation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -23,7 +25,8 @@ export async function createAlbumAction(
   formData: FormData,
 ): Promise<AlbumFormState> {
   const session = await auth();
-  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
 
@@ -33,9 +36,10 @@ export async function createAlbumAction(
   });
 
   if (!parsed.success) {
+    const message = await getValidationMessage();
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
-      fieldErrors[String(issue.path[0])] = issue.message;
+      fieldErrors[String(issue.path[0])] = message(issue);
     }
     return { fieldErrors };
   }
@@ -61,7 +65,8 @@ export async function updateAlbumAction(
   formData: FormData,
 ): Promise<AlbumFormState> {
   const session = await auth();
-  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
 
@@ -71,9 +76,10 @@ export async function updateAlbumAction(
   });
 
   if (!parsed.success) {
+    const message = await getValidationMessage();
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
-      fieldErrors[String(issue.path[0])] = issue.message;
+      fieldErrors[String(issue.path[0])] = message(issue);
     }
     return { fieldErrors };
   }
@@ -82,7 +88,7 @@ export async function updateAlbumAction(
     name: parsed.data.name,
     description: parsed.data.description || undefined,
   });
-  if (!updated) return { error: "Альбом не найден." };
+  if (!updated) return { error: (await getErrorMessage())("albumNotFound") };
 
   const slug = await getFamilySlugById(familyId);
   revalidatePath(`/families/${slug}/photos`);
@@ -100,7 +106,7 @@ export async function deleteAlbumAction(
   albumId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
   await removeAlbum(albumId, familyId, session.user.id);
@@ -122,7 +128,7 @@ export async function setAlbumCoverAction(
   mediaId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
   await setAlbumCoverPhoto(albumId, familyId, mediaId);

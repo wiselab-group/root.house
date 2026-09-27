@@ -1,5 +1,7 @@
 "use server";
 
+import { getErrorMessage } from "@/i18n/errors";
+import { getValidationMessage } from "@/i18n/validation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -18,7 +20,8 @@ export async function createPlaceAction(
   formData: FormData,
 ): Promise<PlaceFormState> {
   const session = await auth();
-  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
 
@@ -32,9 +35,10 @@ export async function createPlaceAction(
   });
 
   if (!parsed.success) {
+    const message = await getValidationMessage();
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
-      fieldErrors[String(issue.path[0])] = issue.message;
+      fieldErrors[String(issue.path[0])] = message(issue);
     }
     return { fieldErrors };
   }
@@ -68,7 +72,8 @@ export async function updatePlaceAction(
   formData: FormData,
 ): Promise<PlaceFormState> {
   const session = await auth();
-  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
 
@@ -82,9 +87,10 @@ export async function updatePlaceAction(
   });
 
   if (!parsed.success) {
+    const message = await getValidationMessage();
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
-      fieldErrors[String(issue.path[0])] = issue.message;
+      fieldErrors[String(issue.path[0])] = message(issue);
     }
     return { fieldErrors };
   }
@@ -102,7 +108,7 @@ export async function updatePlaceAction(
         : null,
   });
 
-  if (!updated) return { error: "Место не найдено." };
+  if (!updated) return { error: (await getErrorMessage())("placeNotFound") };
 
   const slug = await getFamilySlugById(familyId);
   revalidatePath(`/families/${slug}/places`);
@@ -115,7 +121,7 @@ export async function deletePlaceAction(
   placeId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
   await removePlace(placeId, familyId);

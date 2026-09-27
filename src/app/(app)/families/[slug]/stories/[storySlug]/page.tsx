@@ -43,6 +43,7 @@ export async function generateMetadata({
 export default async function StoryDetailPage({
   params,
 }: PageProps<"/families/[slug]/stories/[storySlug]">) {
+  const t = await getTranslations("stories");
   const tn = await getTranslations("familyNav");
   const { slug, storySlug } = await params;
   const session = await auth();
@@ -82,7 +83,7 @@ export default async function StoryDetailPage({
         items={[
           { label: tn("myFamilies"), href: "/families" },
           { label: family?.name ?? slug, href: `/families/${slug}` },
-          { label: "Истории", href: `/families/${slug}/stories` },
+          { label: t("title"), href: `/families/${slug}/stories` },
           { label: story.title },
         ]}
       />

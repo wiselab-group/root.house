@@ -1,6 +1,6 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   useEffect,
   useId,
@@ -43,6 +43,7 @@ export function PersonMultiCombobox({
   onChange: (people: { id: string; name: string }[]) => void;
   className?: string;
 }) {
+  const tc = useTranslations("common");
   const locale = useLocale();
   const inputId = useId();
   const [results, setResults] = useState<PersonSearchResult[]>([]);
@@ -141,12 +142,12 @@ export function PersonMultiCombobox({
           <SearchIcon className="pointer-events-none absolute left-3.5 size-4 text-muted-foreground" />
           <Combobox.Input
             id={inputId}
-            placeholder="Иванов, Анна, 1924…"
+            placeholder={tc("personSearchPlaceholder")}
             className="h-full w-full min-w-0 rounded-lg bg-transparent py-1 pr-9 pl-10 text-base text-foreground outline-none placeholder:text-muted-foreground md:text-sm"
           />
           <Combobox.Clear
             className="absolute right-2 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label="Очистить поиск"
+            aria-label={tc("clearSearch")}
           >
             <XIcon className="size-4" />
           </Combobox.Clear>

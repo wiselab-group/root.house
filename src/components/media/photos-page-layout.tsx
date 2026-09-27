@@ -60,6 +60,7 @@ export function PhotosPageLayout({
   activeAlbumDescription: string | null;
   photos: GalleryPhotoView[];
 }) {
+  const t = useTranslations("media");
   const tn = useTranslations("familyNav");
   // Uploading from an album's own page («Добавить» on
   // /photos/[albumId]) should default to tagging the new photo into THIS
@@ -85,13 +86,16 @@ export function PhotosPageLayout({
               ? [
                   { label: tn("myFamilies"), href: "/families" },
                   { label: familyName, href: `/families/${familySlug}` },
-                  { label: "Архив", href: `/families/${familySlug}/photos` },
+                  {
+                    label: t("archive"),
+                    href: `/families/${familySlug}/photos`,
+                  },
                   { label: activeAlbumName },
                 ]
               : [
                   { label: tn("myFamilies"), href: "/families" },
                   { label: familyName, href: `/families/${familySlug}` },
-                  { label: "Архив" },
+                  { label: t("archive") },
                 ]
           }
         />

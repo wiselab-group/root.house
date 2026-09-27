@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 import {
   KeyboardSensor,
@@ -33,6 +34,7 @@ export function usePhotoGridReorder(
   photos: GalleryPhotoView[],
   familyId: string,
 ) {
+  const t = useTranslations("media");
   const pathname = usePathname();
   // On/off lives in PhotoArrangeProvider (the button sits in the section
   // heading); the draft order lives here, next to the photos.
@@ -117,7 +119,7 @@ export function usePhotoGridReorder(
         );
       } catch {
         setOrder(previous);
-        toast.error("Не удалось сохранить порядок фото");
+        toast.error(t("reorderFailed"));
       }
     });
   }

@@ -1,4 +1,4 @@
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { ChevronRightIcon } from "lucide-react";
 import { personDisplayName } from "@/domain/person/display-name";
@@ -21,13 +21,14 @@ export function StoryPeople({
   familyId: string;
   familySlug: string;
 }) {
+  const t = useTranslations("stories");
   const locale = useLocale();
   if (people.length === 0) return null;
 
   return (
     <section className="flex flex-col gap-4" aria-labelledby="story-people">
       <h2 id="story-people" className="font-heading text-xl font-normal">
-        Люди в этой истории
+        {t("people")}
       </h2>
       <ul className="grid gap-2 sm:grid-cols-2">
         {people.map((person) => {

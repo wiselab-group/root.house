@@ -1,11 +1,11 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeftIcon, ImagesIcon } from "lucide-react";
 import { AlbumTitleEditor } from "@/components/forms/album-title-editor";
 import { AlbumActionsMenu } from "./album-actions-menu";
-import { photoCountLabel } from "@/domain/shared/pluralize-ru";
 
 /**
  * Title row for /families/[slug]/photos and .../photos/[albumId] — plain
@@ -74,6 +74,8 @@ export function AlbumPageHeader({
   activeAlbumPhotoCount: number;
   headerActions?: React.ReactNode;
 }) {
+  const tCount = useTranslations("counts");
+  const t = useTranslations("media");
   const [editing, setEditing] = useState(false);
 
   if (!activeAlbumId || !activeAlbumName) {
@@ -81,14 +83,11 @@ export function AlbumPageHeader({
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-4">
           <h1 className="font-heading text-display font-medium tracking-tight text-balance">
-            Архив
+            {t("archive")}
           </h1>
           {headerActions}
         </div>
-        <p className="max-w-md text-muted-foreground">
-          Все фотографии семьи в одном месте — те же снимки видны и в профилях
-          отмеченных на них людей.
-        </p>
+        <p className="max-w-md text-muted-foreground">{t("archiveLead")}</p>
       </div>
     );
   }
@@ -101,7 +100,7 @@ export function AlbumPageHeader({
           className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeftIcon className="size-3.5" />
-          Все альбомы
+          {t("allAlbums")}
         </Link>
         {headerActions}
       </div>
@@ -121,7 +120,11 @@ export function AlbumPageHeader({
       </div>
       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
         <ImagesIcon className="size-3.5" />
-        <span>Альбом · {photoCountLabel(activeAlbumPhotoCount)}</span>
+        <span>
+          {t("albumCount", {
+            photos: tCount("photos", { count: activeAlbumPhotoCount }),
+          })}
+        </span>
       </div>
       {activeAlbumDescription && (
         <p className="text-muted-foreground">{activeAlbumDescription}</p>

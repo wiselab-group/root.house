@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { PhotoGrid } from "./photo-grid";
 import { EmptyPhotosState } from "./empty-photos-state";
 import { PhotoArrangeHeaderButton } from "./photo-arrange-context";
@@ -37,6 +38,7 @@ export function PhotosFeedSection({
   /** Present only on an album's own page — lets a photo tile offer "make cover" for THIS album. */
   activeAlbumId?: string | null;
 }) {
+  const t = useTranslations("media");
   if (!scoped) {
     return photos.length === 0 ? (
       <EmptyPhotosState canUpload={canUpload} />
@@ -57,7 +59,7 @@ export function PhotosFeedSection({
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3 pt-2">
         <h2 className="font-heading text-xl font-medium whitespace-nowrap">
-          Без альбома
+          {t("noAlbum")}
         </h2>
         <div aria-hidden="true" className="h-px flex-1 bg-border" />
         {/* The page heading's «Упорядочить» moves here when this heading
