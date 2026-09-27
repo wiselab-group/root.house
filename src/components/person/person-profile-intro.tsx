@@ -36,16 +36,15 @@ export function PersonProfileIntro({
       )}
       {filledFacts.length > 0 && (
         <dl
-          className={`${glassSurface} grid grid-cols-2 overflow-hidden rounded-2xl sm:grid-cols-3`}
+          className={`${glassSurface} grid grid-cols-2 overflow-hidden rounded-2xl sm:grid-cols-12`}
         >
           {filledFacts.map((fact, index) => (
             <div
               key={fact.label}
-              className={`-mt-px -ml-px flex min-w-0 flex-col gap-0.5 border-t border-l border-glass-edge px-4 py-3.5 ${
-                index === filledFacts.length - 1
-                  ? lastCellSpan(filledFacts.length)
-                  : ""
-              }`}
+              className={`-mt-px -ml-px flex min-w-0 flex-col gap-0.5 border-t border-l border-glass-edge px-4 py-3.5 ${cellSpan(
+                index,
+                filledFacts.length,
+              )}`}
             >
               <dt className="text-xs text-muted-foreground">{fact.label}</dt>
               <dd className="text-[0.95rem] wrap-break-word text-foreground">
@@ -60,14 +59,41 @@ export function PersonProfileIntro({
 }
 
 /**
- * Every cell draws only its own top/left hairline, so a short last row
- * (4 facts on 3 columns) left the lines stopping mid-card — a stair-step.
- * The last cell stretches over the row's empty columns instead, so every
- * line runs the full width. Literal class names, for Tailwind's scanner.
+ * Every cell draws only its own top/left hairline, so every row has to be
+ * full — a short last row leaves the lines stopping mid-card. Rows are
+ * balanced instead of filled left to right: up to 4 facts sit in one row;
+ * more go in rows of 3, and a remainder is never a lone cell (4 facts on 3
+ * columns used to read as "3 on top, 1 stretched below" — user report):
+ * 5 → 3+2, 7 → 3+2+2. Desktop uses a 12-column grid so any of those row
+ * sizes divides evenly; phones keep 2 columns, an odd last cell spanning
+ * both. Literal class names, for Tailwind's scanner.
  */
-function lastCellSpan(count: number): string {
-  const phone = count % 2 === 1 ? "col-span-2" : "";
-  const emptyWide = (3 - (count % 3)) % 3;
-  const wide = ["sm:col-span-1", "sm:col-span-2", "sm:col-span-3"][emptyWide];
+const SPAN_BY_ROW_SIZE: Record<number, string> = {
+  1: "sm:col-span-12",
+  2: "sm:col-span-6",
+  3: "sm:col-span-4",
+  4: "sm:col-span-3",
+};
+
+function rowSizes(count: number): number[] {
+  if (count <= 4) return [count];
+  const rows = Array<number>(Math.floor(count / 3)).fill(3);
+  const rest = count % 3;
+  if (rest === 2) rows.push(2);
+  if (rest === 1) rows.splice(-1, 1, 2, 2);
+  return rows;
+}
+
+function cellSpan(index: number, count: number): string {
+  let start = 0;
+  let wide = "";
+  for (const size of rowSizes(count)) {
+    if (index < start + size) {
+      wide = SPAN_BY_ROW_SIZE[size];
+      break;
+    }
+    start += size;
+  }
+  const phone = count % 2 === 1 && index === count - 1 ? "col-span-2" : "";
   return `${phone} ${wide}`;
 }
