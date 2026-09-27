@@ -1,5 +1,5 @@
 import type { InvitationRecord } from "@/domain/invitation/invitation.service";
-import { ROLE_LABELS } from "@/domain/family/role-labels";
+import { useFormatter, useTranslations } from "next-intl";
 import { InvitationRowActions } from "./invitation-row-actions";
 
 /** Server Component receiving already-fetched pending invitations as props
@@ -12,6 +12,9 @@ export function PendingInvitationsList({
   familyId: string;
   invitations: InvitationRecord[];
 }) {
+  const t = useTranslations("members");
+  const tr = useTranslations("roles");
+  const format = useFormatter();
   return (
     <div className="flex flex-col gap-2">
       {invitations.map((invitation) => (
@@ -22,12 +25,10 @@ export function PendingInvitationsList({
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-medium">{invitation.email}</span>
             <span className="text-xs text-muted-foreground">
-              Роль: {ROLE_LABELS[invitation.role]} · истекает{" "}
-              {new Intl.DateTimeFormat("ru-RU", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              }).format(invitation.expiresAt)}
+              {t("invitationMeta", {
+                role: tr(invitation.role),
+                date: format.dateTime(invitation.expiresAt, "long"),
+              })}
             </span>
           </div>
           <InvitationRowActions

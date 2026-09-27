@@ -24,7 +24,7 @@ export function validatePhotoTagPoint(input: {
   for (const [key, value] of Object.entries(input)) {
     if (!Number.isFinite(value) || value < 0 || value > 100) {
       throw new InvalidPhotoTagPointError(
-        `${key} должен быть числом от 0 до 100, получено: ${value}`,
+        `${key} must be a number from 0 to 100, got: ${value}`,
       );
     }
   }
@@ -57,7 +57,7 @@ export function validatePhotoTagRadius(radiusPercent: number): number {
     radiusPercent > PHOTO_TAG_RADIUS_MAX
   ) {
     throw new InvalidPhotoTagRadiusError(
-      `radiusPercent должен быть числом от ${PHOTO_TAG_RADIUS_MIN} до ${PHOTO_TAG_RADIUS_MAX}, получено: ${radiusPercent}`,
+      `radiusPercent must be a number from ${PHOTO_TAG_RADIUS_MIN} to ${PHOTO_TAG_RADIUS_MAX}, got: ${radiusPercent}`,
     );
   }
   return Math.round(radiusPercent * 100) / 100;

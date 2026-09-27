@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRef } from "react";
 import { UploadCloudIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ export function PhotoDropzone({
   disabled?: boolean;
   onFiles: (files: File[]) => void;
 }) {
+  const t = useTranslations("media");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { isDragging, error, handleFiles, dragHandlers } = useMultiImageDrop({
@@ -62,10 +64,8 @@ export function PhotoDropzone({
           id="family-photo-upload-input"
         />
         <UploadCloudIcon className="size-6 text-muted-foreground" />
-        <p className="text-sm font-medium">Перетащите фото сюда или нажмите</p>
-        <p className="text-xs text-muted-foreground">
-          Можно выбрать сразу несколько — JPEG, PNG, HEIC
-        </p>
+        <p className="text-sm font-medium">{t("dropHint")}</p>
+        <p className="text-xs text-muted-foreground">{t("dropFormats")}</p>
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}

@@ -139,26 +139,42 @@ async function main() {
 
     const img = await page.locator('[role="dialog"] img[alt]').first().boundingBox();
     if (!img) throw new Error("no lightbox image box");
-    await page.mouse.click(img.x + img.width * 0.4, img.y + img.height * 0.35);
+    // Tap → a default-size circle with the person search under it.
+    const cx = img.x + img.width * 0.4;
+    const cy = img.y + img.height * 0.35;
+    await page.mouse.click(cx, cy);
     const handle = page.getByRole("slider");
     await handle.waitFor({ timeout: 10000 });
     await page.getByPlaceholder("Кто это?").waitFor({ timeout: 10000 });
-    console.log("slider value on tap:", await handle.getAttribute("aria-valuenow"));
-    await shot("01-tapped-circle-and-search");
-
-    const hb = await handle.boundingBox();
-    await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+    console.log("tap → radius:", await handle.getAttribute("aria-valuenow"));
     const ring = page.locator('[role="dialog"] .rounded-full.border-dashed').first();
-    const before = (await ring.boundingBox()).width;
+    await shot("01-tapped");
+
+    // Drag the circle's middle → it moves, from the very first move.
+    const r0 = await ring.boundingBox();
+    await page.mouse.move(cx, cy);
     await page.mouse.down();
-    await page.mouse.move(hb.x + hb.width / 2 + 10, hb.y + hb.height / 2 + 10);
-    const afterFirstMove = (await ring.boundingBox()).width;
-    console.log("ring width before / after FIRST move:", before, afterFirstMove);
-    await page.mouse.move(hb.x + hb.width / 2 + 60, hb.y + hb.height / 2 + 60, { steps: 8 });
-    console.log("ring width mid-drag:", (await ring.boundingBox()).width);
+    await page.mouse.move(cx + 30, cy + 20);
+    const r1 = await ring.boundingBox();
+    await page.mouse.move(cx + 90, cy + 50, { steps: 6 });
     await page.mouse.up();
-    console.log("slider value after drag:", await handle.getAttribute("aria-valuenow"));
-    await shot("02-resized");
+    const r2 = await ring.boundingBox();
+    console.log("move: ring x", r0.x.toFixed(0), "→ 1st move", r1.x.toFixed(0), "→ end", r2.x.toFixed(0));
+    await shot("02-moved");
+
+    // Drag the handle → it resizes, from the very first move.
+    const hb = await handle.boundingBox();
+    const hx = hb.x + hb.width / 2;
+    const hy = hb.y + hb.height / 2;
+    await page.mouse.move(hx, hy);
+    await page.mouse.down();
+    await page.mouse.move(hx + 15, hy + 15);
+    const w1 = (await ring.boundingBox()).width;
+    await page.mouse.move(hx + 50, hy + 50, { steps: 6 });
+    await page.mouse.up();
+    console.log("resize: ring width", r2.width.toFixed(0), "→ 1st move", w1.toFixed(0), "→ end", (await ring.boundingBox()).width.toFixed(0));
+    console.log("radius after resize:", await handle.getAttribute("aria-valuenow"));
+    await shot("03-resized");
 
     await page.getByPlaceholder("Кто это?").pressSequentially(PERSON_FIRST_NAME, { delay: 60 });
     const option = page.getByRole("option", { name: `${PERSON_FIRST_NAME} ${PERSON_LAST_NAME}` });
@@ -166,14 +182,14 @@ async function main() {
     await option.first().click();
     await page.locator(`button[aria-label="${PERSON_FIRST_NAME} ${PERSON_LAST_NAME}"]`).waitFor({ timeout: 15000 });
     console.log("circle gone after pick:", (await page.getByRole("slider").count()) === 0);
-    await shot("03-tag-placed");
+    await shot("04-tag-placed");
 
     await page.getByRole("button", { name: "Готово" }).first().click();
     await page.waitForTimeout(800);
     const chip = page.getByText(`${PERSON_FIRST_NAME} ${PERSON_LAST_NAME}`).last();
     await chip.hover();
     await page.waitForTimeout(900);
-    await shot("04-hover-spotlight");
+    await shot("05-hover-spotlight");
 
     // Reload: the radius must come back from the DB, not just local state.
     await page.reload({ waitUntil: "networkidle" });
@@ -182,7 +198,7 @@ async function main() {
     await page.waitForTimeout(900);
     const vars = await page.locator(".photo-tag-spotlight").first().getAttribute("style");
     console.log("spotlight style after reload:", vars);
-    await shot("05-hover-after-reload");
+    await shot("06-hover-after-reload");
 
     // Phone: a tap on the name lights the person up and shows ↗ to the
     // profile, but doesn't navigate by itself.

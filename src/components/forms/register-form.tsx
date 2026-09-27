@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { useTranslations } from "next-intl";
 import { registerAction, type RegisterFormState } from "@/actions/auth.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ const initialState: RegisterFormState = {};
 
 function SubmitButton() {
   const { pending } = useFormStatus();
+  const t = useTranslations("auth");
   return (
     <Button
       type="submit"
@@ -19,12 +21,13 @@ function SubmitButton() {
       disabled={pending}
       aria-busy={pending}
     >
-      {pending ? "Создаём аккаунт…" : "Создать аккаунт"}
+      {pending ? t("creatingAccount") : t("createAccount")}
     </Button>
   );
 }
 
 export function RegisterForm({ callbackUrl }: { callbackUrl?: string } = {}) {
+  const t = useTranslations("auth");
   const [state, formAction] = useActionState(registerAction, initialState);
 
   return (
@@ -33,7 +36,7 @@ export function RegisterForm({ callbackUrl }: { callbackUrl?: string } = {}) {
         <input type="hidden" name="callbackUrl" value={callbackUrl} />
       )}
       <div className="flex flex-col gap-2">
-        <Label htmlFor="name">Имя</Label>
+        <Label htmlFor="name">{t("name")}</Label>
         <Input id="name" name="name" type="text" autoComplete="name" required />
         {state.fieldErrors?.name && (
           <p className="text-sm text-destructive">{state.fieldErrors.name}</p>
@@ -41,7 +44,7 @@ export function RegisterForm({ callbackUrl }: { callbackUrl?: string } = {}) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">{t("email")}</Label>
         <Input
           id="email"
           name="email"
@@ -55,7 +58,7 @@ export function RegisterForm({ callbackUrl }: { callbackUrl?: string } = {}) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="password">Пароль</Label>
+        <Label htmlFor="password">{t("password")}</Label>
         <PasswordInput
           id="password"
           name="password"

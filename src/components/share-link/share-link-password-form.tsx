@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
+import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 import {
   verifyShareLinkPasswordAction,
@@ -16,6 +17,7 @@ const initialState: VerifyShareLinkPasswordFormState = {};
 
 function SubmitButton() {
   const { pending } = useFormStatus();
+  const t = useTranslations("share");
   return (
     <Button
       type="submit"
@@ -23,7 +25,7 @@ function SubmitButton() {
       aria-busy={pending}
       className="w-full"
     >
-      {pending ? "Проверяем…" : "Открыть"}
+      {pending ? t("checking") : t("open")}
     </Button>
   );
 }
@@ -35,6 +37,7 @@ function SubmitButton() {
  * resolveShareLinkAccess, which now finds the cookie and returns "granted".
  */
 export function ShareLinkPasswordForm({ token }: { token: string }) {
+  const t = useTranslations("share");
   const [state, formAction] = useActionState(
     verifyShareLinkPasswordAction,
     initialState,
@@ -53,7 +56,7 @@ export function ShareLinkPasswordForm({ token }: { token: string }) {
           htmlFor="share-password"
           className="text-xs text-muted-foreground"
         >
-          Пароль
+          {t("password")}
         </Label>
         <PasswordInput id="share-password" name="password" required />
       </div>

@@ -1,5 +1,9 @@
 import type { PersonRecord } from "@/domain/person/person.repository";
-import type { GenealogyGraph } from "./genealogy-graph";
+import type {
+  GenealogyGraph,
+  PathGraph,
+  PathParentChildEdge,
+} from "./genealogy-graph";
 import { deriveSiblings } from "./sibling-derivation";
 import {
   computeRelationshipPath,
@@ -128,7 +132,7 @@ export function getSiblings(
  * shouldn't round-trip to the database on every UI interaction.
  */
 function ancestorDepths(
-  graph: GenealogyGraph,
+  graph: PathGraph,
   personId: string,
   maxGenerations: number,
 ): Map<string, number> {
@@ -150,7 +154,7 @@ function ancestorDepths(
 }
 
 function descendantDepths(
-  graph: GenealogyGraph,
+  graph: PathGraph,
   personId: string,
   maxGenerations: number,
 ): Map<string, number> {
@@ -335,7 +339,7 @@ export type RelationshipPathOutcome =
  * other path that uses at least one partnership hop).
  */
 export function findRelationshipPath(
-  graph: GenealogyGraph,
+  graph: PathGraph,
   personAId: string,
   personBId: string,
   options: AncestorDescendantOptions = {},
@@ -465,7 +469,7 @@ export function findRelationshipPath(
  * there isn't one by the time this runs.
  */
 function shortestMixedPath(
-  graph: GenealogyGraph,
+  graph: PathGraph,
   fromId: string,
   toId: string,
 ): string[] | null {
@@ -509,7 +513,7 @@ function shortestMixedPath(
 
 /** Converts a mixed BFS path (person ids) into typed steps, tagging each hop's edge kind/direction. */
 function mixedPathSteps(
-  graph: GenealogyGraph,
+  graph: PathGraph,
   personIds: string[],
 ): RelationshipPathStep[] {
   const steps: RelationshipPathStep[] = [];
@@ -553,7 +557,7 @@ function mixedPathSteps(
  * "in_law" label in that case rather than a wrong specific one.
  */
 function classifyInLaw(
-  graph: GenealogyGraph,
+  graph: PathGraph,
   personAId: string,
   personBId: string,
   mixedPath: string[],
@@ -625,10 +629,10 @@ function asInLawBlood(
 
 /** Direct parent_child edge from `parentId` to `childId`, if one exists. */
 function findParentEdge(
-  graph: GenealogyGraph,
+  graph: PathGraph,
   parentId: string,
   childId: string,
-): ParentChildRecord | undefined {
+): PathParentChildEdge | undefined {
   return (graph.childEdgesOf.get(parentId) ?? []).find(
     (e) => e.childId === childId,
   );
@@ -645,7 +649,7 @@ function findParentEdge(
  * inconsistent data instead of throwing).
  */
 function ancestorChain(
-  graph: GenealogyGraph,
+  graph: PathGraph,
   personId: string,
   ancestorId: string,
 ): string[] {
@@ -658,22 +662,24 @@ function ancestorChain(
   const chain = [personId];
   let currentId = personId;
   for (let depth = 1; depth <= targetDepth; depth++) {
-    const parents = getParents(graph, currentId);
+    const parentIds = (graph.parentEdgesOf.get(currentId) ?? []).map(
+      (edge) => edge.parentId,
+    );
     // Prefer the parent that is itself on the way to ancestorId (i.e. whose
     // own ancestor-depth to ancestorId is exactly one less than remaining).
     const remaining = targetDepth - depth;
-    const next = parents.find((p) => {
-      if (p.person.id === ancestorId) return remaining === 0;
+    const next = parentIds.find((parentId) => {
+      if (parentId === ancestorId) return remaining === 0;
       const parentDepths = ancestorDepths(
         graph,
-        p.person.id,
+        parentId,
         DEFAULT_MAX_GENERATIONS,
       );
       return parentDepths.get(ancestorId) === remaining;
     });
     if (!next) return chain; // inconsistent data — return what we have rather than throwing
-    chain.push(next.person.id);
-    currentId = next.person.id;
+    chain.push(next);
+    currentId = next;
   }
   return chain;
 }

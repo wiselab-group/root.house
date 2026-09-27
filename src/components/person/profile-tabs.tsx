@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   useEffect,
   useRef,
@@ -7,8 +8,8 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { glassSurface } from "@/components/hero/glass";
 import { ContentsMenu } from "@/components/hero/contents-menu";
+import { ProfileTabList } from "./profile-tab-list";
 
 export interface ProfilePanel {
   id: string;
@@ -30,6 +31,7 @@ export interface ProfilePanel {
  * history entry) so a link to #stories opens that tab.
  */
 export function ProfileTabs({ panels }: { panels: ProfilePanel[] }) {
+  const t = useTranslations("profile");
   const hash = useSyncExternalStore(subscribeToHash, readHash, () => "");
   // A tab clicked in this session wins; until then the URL hash (a shared
   // link to #stories) picks the tab, falling back to the first panel.
@@ -77,52 +79,19 @@ export function ProfileTabs({ panels }: { panels: ProfilePanel[] }) {
       {/* -mt-9: tabs and content ride ~36px up over the hero's faded
           bottom (user request 2026-09-26). */}
       <div className="sticky top-[calc(var(--app-header-h,0px)-0.75rem)] z-30 -mt-9 flex justify-center px-4 pt-6 md:pt-8">
-        <div
-          role="tablist"
-          aria-label="Разделы профиля"
+        <ProfileTabList
+          panels={panels}
+          active={active}
+          label={t("sections")}
+          onSelect={select}
           onKeyDown={onKeyDown}
-          // Air between the pills (user: tabs touching read unprofessional —
-          // a hovered tab's fill butted right against the active one).
-          className={`${glassSurface} hidden gap-1.5 rounded-full p-1.5 md:flex`}
-        >
-          {panels.map((panel) => {
-            const selected = panel.id === active;
-            return (
-              <button
-                key={panel.id}
-                ref={(el) => {
-                  if (el) tabRefs.current.set(panel.id, el);
-                }}
-                type="button"
-                role="tab"
-                id={`tab-${panel.id}`}
-                aria-selected={selected}
-                aria-controls={panel.id}
-                tabIndex={selected ? 0 : -1}
-                onClick={() => select(panel.id)}
-                className={`inline-flex h-10 cursor-pointer items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors duration-300 ease-(--ease-reveal) focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
-                  selected
-                    ? "bg-foreground text-background"
-                    : "text-foreground/65 hover:bg-foreground/8 hover:text-foreground"
-                }`}
-              >
-                {panel.label}
-                {Boolean(panel.count) && (
-                  <span
-                    className={`text-xs tabular-nums ${selected ? "text-background/60" : "text-foreground/40"}`}
-                  >
-                    {panel.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+          tabRefs={tabRefs}
+        />
 
         <div className="md:hidden">
           <ContentsMenu
             menuId="profile-contents"
-            menuLabel="Разделы профиля"
+            menuLabel={t("sections")}
             items={panels.map((panel) => ({
               id: panel.id,
               label: panel.label,

@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import {
@@ -18,6 +19,7 @@ import {
   yearRange,
 } from "./person-node-parts";
 import { PersonNodePopoverActions } from "./person-node-popover-actions";
+import { useKinshipContext } from "./kinship/kinship-context";
 
 /**
  * Custom XYFlow node rendering a person card. States per DESIGN.md § Person
@@ -63,8 +65,10 @@ import { PersonNodePopoverActions } from "./person-node-popover-actions";
  * ONE badge on their partnership line, never one per card.
  */
 export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
+  const locale = useLocale();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const name = personLabel(data);
+  const kinship = useKinshipContext();
+  const name = personLabel(data, locale);
   const years = yearRange(data);
   const initials = personInitials(data);
 
@@ -133,7 +137,18 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
       {cardBody}
     </div>
   ) : (
-    <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+    <Popover
+      open={isPopoverOpen}
+      onOpenChange={(open) => {
+        // Relationship Trace panel waiting for a person: the click picks
+        // this card instead of opening its menu (kinship-context.tsx).
+        if (open && kinship?.isPicking) {
+          kinship.pick(data.personId);
+          return;
+        }
+        setIsPopoverOpen(open);
+      }}
+    >
       <PopoverTrigger
         nativeButton={false}
         render={<div className={cardFrameClassName} style={cardFrameStyle} />}

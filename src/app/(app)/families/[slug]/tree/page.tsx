@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -7,9 +8,6 @@ import {
   getFocusTreeLayout,
   getRawTreeGraph,
 } from "@/domain/tree/tree.service";
-import { applyRelationshipTrace } from "@/domain/tree/tree-trace";
-import { findRelationshipPathFor } from "@/domain/relationship/relationship.service";
-import { personDisplayName } from "@/domain/person/display-name";
 import { isEmptyFilter, type PersonFilter } from "@/domain/tree/tree-filter";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { TreeToolbar } from "@/components/tree/tree-toolbar";
@@ -24,9 +22,10 @@ import { LinkButton } from "@/components/ui/link-button";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 
-export const metadata: Metadata = {
-  title: "Дерево",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("tree");
+  return { title: t("metaTitle") };
+}
 
 // KNOWN GAP: the tree visualization does not yet filter PRIVATE persons out
 // of the graph (unlike the /people list, profile pages, and photo/story/
@@ -56,8 +55,10 @@ export default async function FamilyTreePage({
   params,
   searchParams,
 }: PageProps<"/families/[slug]/tree">) {
+  const t = await getTranslations("tree");
+  const tn = await getTranslations("familyNav");
   const { slug } = await params;
-  const { focus, traceA, traceB, filter: filterParam } = await searchParams;
+  const { focus, filter: filterParam } = await searchParams;
   const session = await auth();
   if (!session?.user) return null;
 
@@ -68,9 +69,9 @@ export default async function FamilyTreePage({
     getFamilySummary(familyId),
   ]);
   const breadcrumbItems = [
-    { label: "Мои семьи", href: "/families" },
+    { label: tn("myFamilies"), href: "/families" },
     { label: family?.name ?? slug, href: `/families/${slug}` },
-    { label: "Семейное дерево" },
+    { label: t("title") },
   ];
 
   if (people.length === 0) {
@@ -79,14 +80,12 @@ export default async function FamilyTreePage({
         <SetBreadcrumbs items={breadcrumbItems} />
         <Card>
           <CardHeader>
-            <CardTitle>Дерево пока пустое</CardTitle>
-            <CardDescription>
-              Добавьте хотя бы одного человека, чтобы увидеть дерево.
-            </CardDescription>
+            <CardTitle>{t("emptyTitle")}</CardTitle>
+            <CardDescription>{t("emptyBody")}</CardDescription>
           </CardHeader>
           <CardContent>
             <LinkButton href={`/families/${slug}/people/new`}>
-              Добавить человека
+              {t("addPerson")}
             </LinkButton>
           </CardContent>
         </Card>
@@ -112,26 +111,14 @@ export default async function FamilyTreePage({
   const filter = parseFilterParam(
     typeof filterParam === "string" ? filterParam : undefined,
   );
-  const traceAId =
-    typeof traceA === "string" && people.some((p) => p.id === traceA)
-      ? traceA
-      : null;
-  const traceBId =
-    typeof traceB === "string" && people.some((p) => p.id === traceB)
-      ? traceB
-      : null;
-
   // Fetched ONCE (persons/relationships/archive-summary) and handed to both
   // getFocusTreeLayout and getRawTreeGraph below — each used to fetch these
   // same rows independently, which silently doubled every underlying query
   // (archive-summary's 3 aggregates included) every page load. See
   // tree.service.ts::fetchTreeRows's own doc comment.
-  const [rows, traceOutcome] = await Promise.all([
-    fetchTreeRows(familyId, member),
-    traceAId && traceBId
-      ? findRelationshipPathFor(traceAId, traceBId, familyId)
-      : Promise.resolve(null),
-  ]);
+  // ?traceA=/?traceB= (Relationship Trace) are read and resolved entirely
+  // client-side — see components/tree/kinship/use-kinship-trace.ts.
+  const rows = await fetchTreeRows(familyId, member);
   const layoutGraph = getFocusTreeLayout(rows, focusPersonId, {
     // Show the whole connected family, not just a 2-generation window
     // around the focus person — this app's family archives are small
@@ -145,9 +132,6 @@ export default async function FamilyTreePage({
   // client-side when the user switches focus, instead of a full page reload
   // — see getRawTreeGraph's own doc comment.
   const rawGraph = getRawTreeGraph(rows);
-
-  const tracedGraph = applyRelationshipTrace(layoutGraph, traceOutcome);
-  const peopleById = new Map(people.map((p) => [p.id, p]));
 
   return (
     // The canvas is the only thing on this page, full-bleed on every
@@ -163,39 +147,12 @@ export default async function FamilyTreePage({
       <TreeToolbar
         familyId={familyId}
         familySlug={slug}
-        graph={tracedGraph}
+        graph={layoutGraph}
         rawGraph={rawGraph}
         highlight={{
           filterMatchedIds:
             "matchedIds" in layoutGraph ? layoutGraph.matchedIds : undefined,
-          // Only pass trace sets when a trace is actually active (both A and B
-          // picked) — an always-present-but-empty Set would make every node
-          // read as "trace active, just not on it" and dim the whole tree by
-          // default. See xyflow-adapter.ts's toFlowNode: isOnTracePath is only
-          // computed when highlight.tracePersonIds is present at all.
-          tracePersonIds: traceOutcome ? tracedGraph.tracePersonIds : undefined,
-          traceEdgeIds: traceOutcome ? tracedGraph.traceEdgeIds : undefined,
-          traceEdgeDirections: traceOutcome
-            ? tracedGraph.traceEdgeDirections
-            : undefined,
         }}
-        traceA={
-          traceAId
-            ? {
-                id: traceAId,
-                name: personDisplayName(peopleById.get(traceAId)!),
-              }
-            : null
-        }
-        traceB={
-          traceBId
-            ? {
-                id: traceBId,
-                name: personDisplayName(peopleById.get(traceBId)!),
-              }
-            : null
-        }
-        traceOutcome={traceOutcome}
         filter={filter}
       />
     </main>

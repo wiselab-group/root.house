@@ -1,21 +1,25 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 import { ArrowRight, TreeDeciduous } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { LinkButton } from "@/components/ui/link-button";
 import { glassSurface } from "@/components/hero/glass";
 import { listFamiliesForUser } from "@/domain/family/family.service";
-import { personCountLabel } from "@/domain/shared/pluralize-ru";
 
-export const metadata: Metadata = {
-  title: "Мои семьи",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("families");
+  return { title: t("title") };
+}
 
 export default async function FamiliesPage() {
   const session = await auth();
   const families = session?.user
     ? await listFamiliesForUser(session.user.id)
     : [];
+  const t = await getTranslations("families");
+  const tc = await getTranslations("counts");
 
   return (
     // Same dark archive style as Family Home (user request) — see
@@ -24,18 +28,18 @@ export default async function FamiliesPage() {
       <div className="mx-auto flex max-w-3xl flex-col gap-12 px-4 pt-14 pb-20 sm:px-8 sm:pt-20">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex flex-col gap-4">
-            <h1 className="font-heading text-5xl leading-[1.05] font-medium tracking-tight text-balance sm:text-6xl">
-              Ваши семьи
+            <h1 className="font-heading text-display-lg leading-[1.05] font-medium tracking-tight text-balance">
+              {t("heading")}
             </h1>
             <p className="max-w-prose text-lg text-foreground/70">
-              Каждый архив хранит свою родословную, людей и историю отдельно.
+              {t("lead")}
             </p>
           </div>
           <LinkButton
             href="/families/new"
             className="w-full shrink-0 sm:w-auto"
           >
-            Создать семью
+            {t("create")}
           </LinkButton>
         </div>
 
@@ -51,7 +55,7 @@ export default async function FamiliesPage() {
               >
                 <Link
                   href={`/families/${family.slug}`}
-                  className={`${glassSurface} group/row flex cursor-pointer items-center justify-between gap-6 rounded-2xl px-6 py-5 transition-[background-color,transform] duration-200 ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
+                  className={`${glassSurface} group/row flex cursor-pointer items-center justify-between gap-6 rounded-2xl px-6 py-5 transition-[background-color,transform] duration-base ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
                 >
                   <div className="flex min-w-0 flex-col gap-1">
                     <span className="truncate font-heading text-xl font-medium transition-colors group-hover/row:text-primary">
@@ -63,18 +67,20 @@ export default async function FamiliesPage() {
                       </span>
                     ) : (
                       <span className="text-sm text-muted-foreground">
-                        {personCountLabel(family.personCount)} в архиве
+                        {t("inArchive", {
+                          people: tc("people", { count: family.personCount }),
+                        })}
                       </span>
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-4">
                     {family.description && (
                       <span className="hidden text-sm text-muted-foreground sm:inline">
-                        {personCountLabel(family.personCount)}
+                        {tc("people", { count: family.personCount })}
                       </span>
                     )}
                     <ArrowRight
-                      className="size-5 text-muted-foreground/60 transition-all duration-200 ease-(--ease-tree-focus) group-hover/row:translate-x-1 group-hover/row:text-primary"
+                      className="size-5 text-muted-foreground/60 transition-all duration-base ease-(--ease-tree-focus) group-hover/row:translate-x-1 group-hover/row:text-primary"
                       strokeWidth={1.75}
                       aria-hidden="true"
                     />
@@ -93,6 +99,7 @@ export default async function FamiliesPage() {
  *  concrete next step, framed around what the archive becomes rather than
  *  the CRUD action of creating a row. */
 function EmptyFamiliesState() {
+  const t = useTranslations("families");
   return (
     <div className="flex flex-col items-center gap-6 rounded-2xl border border-dashed border-border px-6 py-16 text-center">
       <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -103,13 +110,10 @@ function EmptyFamiliesState() {
         />
       </span>
       <div className="flex max-w-sm flex-col gap-2">
-        <h2 className="font-heading text-xl font-medium">Начните с себя</h2>
-        <p className="text-muted-foreground">
-          Создайте архив, добавьте себя, родителей и близких — дерево выстроится
-          само по мере того, как вы будете вспоминать родных.
-        </p>
+        <h2 className="font-heading text-xl font-medium">{t("emptyTitle")}</h2>
+        <p className="text-muted-foreground">{t("emptyBody")}</p>
       </div>
-      <LinkButton href="/families/new">Создать первую семью</LinkButton>
+      <LinkButton href="/families/new">{t("createFirst")}</LinkButton>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { BrandMark } from "@/components/brand-mark";
 
 /**
@@ -11,12 +12,11 @@ import { BrandMark } from "@/components/brand-mark";
  * has a visitor's full attention with nothing else on screen.
  */
 export function AuthBrand() {
+  const t = useTranslations("auth");
   return (
     <div className="mb-10 flex animate-content-enter flex-col items-center gap-3 text-center">
       <BrandMark className="scale-150" />
-      <p className="text-sm text-muted-foreground">
-        Семейный архив, который остаётся с вами
-      </p>
+      <p className="text-sm text-muted-foreground">{t("brandTagline")}</p>
     </div>
   );
 }

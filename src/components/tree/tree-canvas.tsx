@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
@@ -29,10 +30,10 @@ import {
 import { PersonNode } from "./person-node";
 import { RelationshipEdge } from "./relationship-edge";
 import { UnionChildEdge } from "./union-child-edge";
-import { useCoarsePointer } from "@/hooks/use-coarse-pointer";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useHasMounted } from "./use-has-mounted";
-import { TreeToolsMenu } from "./tree-tools-menu";
+import { TreeDock } from "./dock/tree-dock";
+import type { DockKinship } from "./dock/kinship-dock-item";
 import { useCollapsedBranches } from "./use-collapsed-branches";
 import {
   pruneCollapsedDescendants,
@@ -42,6 +43,8 @@ import {
 } from "./prune-collapsed";
 import { TreeLayoutPositionsProvider } from "./tree-layout-positions-context";
 import { TreeJustExpandedEdgesProvider } from "./tree-just-expanded-edges-context";
+import { nameFallback } from "@/domain/person/display-name";
+import type { Locale } from "@/domain/shared/locale";
 
 const nodeTypes = { person: PersonNode };
 const edgeTypes = {
@@ -58,11 +61,11 @@ const edgeTypes = {
  * shapes carry the same fields under the same names, so the logic itself
  * must stay identical, just typed against a different input.
  */
-function layoutPersonLabel(person: LayoutPersonNode): string {
+function layoutPersonLabel(person: LayoutPersonNode, locale: Locale): string {
   const parts = [person.firstName, person.lastName].filter(Boolean);
   if (parts.length > 0) return parts.join(" ");
   if (person.nickname) return person.nickname;
-  return person.isPlaceholder ? "Неизвестный родственник" : "Без имени";
+  return nameFallback(person.isPlaceholder, locale);
 }
 
 /**
@@ -147,10 +150,10 @@ export function TreeCanvas({
   highlight,
   readOnly = false,
   shareToken,
-  onOpenTrace,
   onOpenFilter,
-  isTraceActive,
   isFilterActive,
+  kinship,
+  overlay,
 }: {
   graph: TreeLayoutGraph;
   /**
@@ -167,46 +170,33 @@ export function TreeCanvas({
   familySlug: string;
   /** Filter/Focus (tree-filter.ts) + Relationship Trace (tree-trace.ts) state to render — see xyflow-adapter.ts's TreeHighlightState. Omit when neither is active. Reused as-is across a client-side re-focus (rewrite plan §7 Stage 7): filterMatchedIds/tracePersonIds/traceEdgeIds are person/edge ID sets, not position-dependent, and buildTreeLayout always lays out the SAME full connected family regardless of which person is the root — so a re-focus never changes who's in these sets, only where they're drawn. */
   highlight?: TreeHighlightState;
-  /** Anonymous Share Link view (see app/share/[token]/page.tsx) — forces
-   *  dragging off, never wires focus-switching (no updateDefaultFocusPersonAction
-   *  call, no URL ?focus= navigation — the link shows exactly the tree its
-   *  owner configured), and hides the drag-lock control entirely since
-   *  there's nothing left for it to toggle. */
+  /** Anonymous Share Link view (see app/share/[token]/page.tsx) — never
+   *  wires focus-switching (no updateDefaultFocusPersonAction call, no URL
+   *  ?focus= navigation — the link shows exactly the tree its owner
+   *  configured). */
   readOnly?: boolean;
   /** The Share Link's own token — required when readOnly, used to build
    *  each card's avatar URL against /api/share/[token]/media/[mediaId]
    *  instead of the auth-gated /api/media/[mediaId] (see
    *  xyflow-adapter.ts::buildPhotoUrl). */
   shareToken?: string;
-  /** Opens TreeToolbar's own TreeTracePanel/TreeFilterPanel — passed through
-   *  so the "Инструменты" menu inside TreeCanvas (tree-tools-menu.tsx) can
-   *  trigger them without TreeCanvas owning any of that dialog state itself.
-   *  Omitted by TreeToolbar's read-only rendering path (there isn't one —
-   *  TreeToolbar itself is never rendered for the Share Link surface, only
-   *  a plain TreeCanvas), so these stay undefined there and the menu hides
-   *  both rows entirely. */
-  onOpenTrace?: () => void;
+  /** Opens TreeToolbar's own TreeFilterPanel — passed through so the
+   *  dock inside TreeCanvas (dock/tree-dock.tsx) can trigger it without
+   *  TreeCanvas owning that dialog state itself. Undefined on the Share
+   *  Link surface (TreeToolbar isn't rendered there), which hides it. */
   onOpenFilter?: () => void;
-  isTraceActive?: boolean;
   isFilterActive?: boolean;
+  /** The dock's "Родство" item — TreeToolbar's Relationship Trace state. */
+  kinship?: DockKinship;
+  /** Floating UI rendered INSIDE <ReactFlow>, so it can move the viewport
+   *  via useReactFlow (TreeToolbar's Relationship Trace panel). */
+  overlay?: React.ReactNode;
 }) {
+  const tTree = useTranslations("tree");
+  const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const isCoarsePointer = useCoarsePointer();
-  // Global drag lock — starts LOCKED (false): cards are meant to stay put at
-  // their computed layout position, dragging is an opt-in "let me nudge this
-  // one card" mode the lock row in TreeToolsMenu toggles. Plain
-  // session state (not persisted) — every visit re-opens
-  // locked, matching the layout the server just computed. Deliberately does
-  // NOT also gate elementsSelectable: a card's click-to-open-popover
-  // ("Посмотреть профиль"/"Сделать фокус-персоной", see person-node.tsx) is
-  // a plain PopoverTrigger, not XYFlow's own node-selection UI — locking
-  // elementsSelectable to this same state was blocking that click,
-  // silently disabling the popover while drag was locked, which had no
-  // relation to dragging at all.
-  const [nodesDraggable, setNodesDraggable] = useState(false);
-
   // XYFlow's own <MiniMap> picks its shapeRendering attribute from
   // `typeof window === 'undefined' || !!window.chrome` at render time (see
   // @xyflow/react's MiniMap source) — on the server that's always
@@ -311,22 +301,22 @@ export function TreeCanvas({
       applyFocus(personId);
 
       toast(
-        `Дерево теперь открывается с фокусом на ${
-          newFocusNode
-            ? layoutPersonLabel(newFocusNode.person)
-            : "этого человека"
-        }`,
+        tTree("focusToast", {
+          name: newFocusNode
+            ? layoutPersonLabel(newFocusNode.person, locale)
+            : tTree("thisPerson"),
+        }),
         previousFocusNode
           ? {
               action: {
-                label: "Отменить",
+                label: tTree("undo"),
                 onClick: () => applyFocus(previousFocusId),
               },
             }
           : undefined,
       );
     },
-    [applyFocus, effectiveGraph],
+    [applyFocus, effectiveGraph, locale, tTree],
   );
 
   // Collapse/expand (rewrite plan §7 Stage 5) — purely client-side, ephemeral
@@ -573,8 +563,13 @@ export function TreeCanvas({
             onEdgesChange={onEdgesChange}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
-            nodesDraggable={!readOnly && nodesDraggable}
-            nodesConnectable={!readOnly && nodesDraggable}
+            // Cards always stay at their computed layout position — the
+            // opt-in "Разрешить перетаскивание" toggle was removed per user
+            // request (2026-09-27). elementsSelectable is deliberately left
+            // on: a card's click popover is a plain PopoverTrigger, and
+            // turning selection off once silently blocked that click.
+            nodesDraggable={false}
+            nodesConnectable={false}
             proOptions={{ hideAttribution: true }}
             // No fitView here — FocusViewport below centers on the focus
             // person at a fixed 85% zoom instead (per the family's "opens with
@@ -612,22 +607,17 @@ export function TreeCanvas({
               isInitialLoad={isInitialLoad}
             />
             {readOnly ? (
-              // No drag-lock toggle to show (dragging is force-disabled
-              // above), and no Trace/Filter rows either (TreeToolbar itself
-              // isn't rendered on the read-only Share Link surface, so
-              // onOpenTrace/onOpenFilter are never passed down there).
-              <TreeToolsMenu showZoom={!isCoarsePointer} />
+              // No Filter/Родство (TreeToolbar itself isn't rendered on
+              // the read-only Share Link surface).
+              <TreeDock />
             ) : (
-              <TreeToolsMenu
-                draggable={nodesDraggable}
-                setDraggable={setNodesDraggable}
-                showZoom={!isCoarsePointer}
-                onOpenTrace={onOpenTrace}
+              <TreeDock
                 onOpenFilter={onOpenFilter}
-                isTraceActive={isTraceActive}
                 isFilterActive={isFilterActive}
+                kinship={kinship}
               />
             )}
+            {overlay}
             {/* Minimap needs room to read as a map, not a smudge — skip it below
             md where the canvas itself is already cramped (plan §6/§13), and
             skip it on any touch/coarse-pointer device regardless of width:

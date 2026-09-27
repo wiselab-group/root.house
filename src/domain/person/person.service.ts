@@ -9,6 +9,7 @@ import {
 import { reconcileLivingStatus } from "@/domain/person/reconcile-living-status";
 import { canView, type ActingMember } from "@/domain/family/permissions";
 import { logActivity } from "@/domain/activity-log/activity-log.service";
+import type { Locale } from "@/domain/shared/locale";
 import { personDisplayName } from "@/domain/person/display-name";
 import {
   createPerson,
@@ -76,6 +77,7 @@ export async function addPerson(
   familyId: string,
   createdBy: string,
   rawInput: CreatePersonInput,
+  locale: Locale,
 ): Promise<{ id: string; slug: string }> {
   const input = reconcileLivingStatus(rawInput);
 
@@ -99,12 +101,15 @@ export async function addPerson(
     action: "create",
     entityType: "person",
     entityId: id,
-    entityLabel: personDisplayName({
-      firstName: input.firstName ?? null,
-      lastName: input.lastName ?? null,
-      nickname: input.nickname ?? null,
-      isPlaceholder: false,
-    }),
+    entityLabel: personDisplayName(
+      {
+        firstName: input.firstName ?? null,
+        lastName: input.lastName ?? null,
+        nickname: input.nickname ?? null,
+        isPlaceholder: false,
+      },
+      locale,
+    ),
   });
 
   return { id, slug };
@@ -220,6 +225,7 @@ export async function editPerson(
   familyId: string,
   actorId: string,
   rawPatch: UpdatePersonData,
+  locale: Locale,
 ): Promise<boolean> {
   const updated = await updatePerson(
     personId,
@@ -235,7 +241,11 @@ export async function editPerson(
       action: "update",
       entityType: "person",
       entityId: personId,
-      entityLabel: person ? personDisplayName(person) : "Человек",
+      entityLabel: person
+        ? personDisplayName(person, locale)
+        : locale === "ru"
+          ? "Человек"
+          : "Person",
     });
   }
 
@@ -256,16 +266,12 @@ export async function renamePersonSlug(
   newSlug: string,
 ): Promise<void> {
   if (!isValidPersonSlugFormat(newSlug)) {
-    throw new PersonSlugTakenError(
-      "Ссылка может содержать только латинские буквы, цифры и дефис (2-64 символа).",
-    );
+    throw new PersonSlugTakenError("slugInvalid");
   }
 
   const taken = await isPersonSlugTaken(newSlug, familyId, personId);
   if (taken) {
-    throw new PersonSlugTakenError(
-      "Эта ссылка уже занята другим человеком в этой семье.",
-    );
+    throw new PersonSlugTakenError("personSlugTaken");
   }
 
   await updatePersonSlug(personId, familyId, newSlug);
@@ -275,6 +281,7 @@ export async function removePerson(
   personId: string,
   familyId: string,
   actorId: string,
+  locale: Locale,
 ): Promise<boolean> {
   const person = await getPersonById(personId, familyId);
   const deleted = await deletePerson(personId, familyId);
@@ -286,7 +293,11 @@ export async function removePerson(
       action: "delete",
       entityType: "person",
       entityId: personId,
-      entityLabel: person ? personDisplayName(person) : "Человек",
+      entityLabel: person
+        ? personDisplayName(person, locale)
+        : locale === "ru"
+          ? "Человек"
+          : "Person",
     });
   }
 

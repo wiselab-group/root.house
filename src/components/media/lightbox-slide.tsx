@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { ArchiveImage } from "@/components/media/archive-image";
 import { mediaUrl } from "@/lib/media-url";
@@ -36,6 +37,7 @@ export function LightboxSlide({
   canTag: boolean;
   highlightedPersonId: string | null;
 }) {
+  const tc = useTranslations("common");
   const [measured, setMeasured] = useState<{
     id: string;
     ratio: number;
@@ -62,7 +64,7 @@ export function LightboxSlide({
       >
         <ArchiveImage
           src={mediaUrl(photo.media.id, familyId, "display")}
-          alt={photo.media.title ?? "Семейное фото"}
+          alt={photo.media.title ?? tc("familyPhoto")}
           fill
           sizes="100vw"
           // Same corner as the app's photo cards (user request 2026-09-26).

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { XIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -9,6 +10,7 @@ export function RemovableChipList({
   items: { id: string; name: string }[];
   onRemove: (id: string) => void;
 }) {
+  const t = useTranslations("media");
   if (items.length === 0) return null;
 
   return (
@@ -18,7 +20,7 @@ export function RemovableChipList({
           {item.name}
           <button
             type="button"
-            aria-label={`Убрать ${item.name}`}
+            aria-label={t("removeFile", { name: item.name })}
             onClick={() => onRemove(item.id)}
             className="ml-0.5 rounded-full p-0.5 hover:bg-foreground/10"
           >

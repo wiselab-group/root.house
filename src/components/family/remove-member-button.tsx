@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { removeMemberAction } from "@/actions/family.actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +31,8 @@ export function RemoveMemberButton({
   memberLabel: string;
   disabled?: boolean;
 }) {
+  const t = useTranslations("members");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -55,19 +58,19 @@ export function RemoveMemberButton({
           <Button type="button" variant="ghost" size="sm" disabled={disabled} />
         }
       >
-        Удалить
+        {tc("delete")}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Удалить участника «{memberLabel}»?</DialogTitle>
+          <DialogTitle>{t("removeTitle", { name: memberLabel })}</DialogTitle>
           <DialogDescription>
-            {memberLabel} потеряет доступ ко всем данным этой семьи немедленно.
+            {t("removeBody", { name: memberLabel })}
           </DialogDescription>
         </DialogHeader>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-            Отмена
+            {tc("cancel")}
           </Button>
           <Button
             type="button"
@@ -76,7 +79,7 @@ export function RemoveMemberButton({
             aria-busy={isPending}
             onClick={confirmRemove}
           >
-            {isPending ? "Удаляем…" : "Удалить"}
+            {isPending ? tc("deleting") : tc("delete")}
           </Button>
         </DialogFooter>
       </DialogContent>

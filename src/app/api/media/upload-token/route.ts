@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@/i18n/errors";
 import { NextResponse } from "next/server";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { auth } from "@/lib/auth";
@@ -46,10 +47,10 @@ export async function POST(request: Request): Promise<Response> {
           isAvatar ? "editor" : "contributor",
         );
         if (!isAvatar && !canCreate(member.role, "media")) {
-          throw new ForbiddenError("У вас нет прав на добавление медиа.");
+          throw new ForbiddenError("noMediaPermission");
         }
         if (!isUploadKey(pathname, familyId)) {
-          throw new UploadRejectedError("Недопустимый путь файла");
+          throw new UploadRejectedError("invalidUploadPath");
         }
 
         return {
@@ -62,11 +63,20 @@ export async function POST(request: Request): Promise<Response> {
     });
     return NextResponse.json(result);
   } catch (error) {
+    // Messages are errors.* codes; unknown ones (e.g. requireFamilyAccess's
+    // internal English text) degrade to a generic line.
+    const message = await getErrorMessage();
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ error: error.message }, { status: 403 });
+      return NextResponse.json(
+        { error: message(error.message) },
+        { status: 403 },
+      );
     }
     if (error instanceof UploadRejectedError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json(
+        { error: message(error.message) },
+        { status: 400 },
+      );
     }
     throw error;
   }
@@ -99,5 +109,5 @@ function parsePayload(clientPayload: string | null): {
         kind === "photo" && "isAvatar" in parsed && parsed.isAvatar === true,
     };
   }
-  throw new UploadRejectedError("Не указана семья");
+  throw new UploadRejectedError("missingFamily");
 }

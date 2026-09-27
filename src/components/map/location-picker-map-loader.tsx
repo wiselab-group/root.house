@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { MapLoading } from "./map-loading";
 
 /**
  * Lazy, client-only LocationPickerMap — MapLibre touches window/canvas at
@@ -11,10 +12,6 @@ export const LocationPickerMapLoader = dynamic(
   () => import("./location-picker-map").then((mod) => mod.LocationPickerMap),
   {
     ssr: false,
-    loading: () => (
-      <div className="flex h-56 items-center justify-center rounded-lg border border-input bg-muted/30 text-sm text-muted-foreground">
-        Загружаем карту…
-      </div>
-    ),
+    loading: () => <MapLoading />,
   },
 );

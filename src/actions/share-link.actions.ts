@@ -1,5 +1,8 @@
 "use server";
 
+import { getErrorMessage } from "@/i18n/errors";
+import { getValidationMessage } from "@/i18n/validation";
+
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -42,7 +45,8 @@ export async function createShareLinkAction(
   formData: FormData,
 ): Promise<CreateShareLinkFormState> {
   const session = await auth();
-  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
 
   await requireFamilyAccess(familyId, session.user.id, "owner");
 
@@ -54,11 +58,12 @@ export async function createShareLinkAction(
   });
 
   if (!parsed.success) {
+    const message = await getValidationMessage();
     const fieldErrors: CreateShareLinkFormState["fieldErrors"] = {};
     for (const issue of parsed.error.issues) {
       const key = issue.path[0];
       if (key === "focusPersonId" || key === "password") {
-        fieldErrors[key] = issue.message;
+        fieldErrors[key] = message(issue);
       }
     }
     return { fieldErrors };
@@ -79,7 +84,11 @@ export async function createShareLinkAction(
     return { shareUrl };
   } catch (error) {
     if (error instanceof ShareLinkInvalidError) {
-      return { fieldErrors: { focusPersonId: error.message } };
+      return {
+        fieldErrors: {
+          focusPersonId: (await getErrorMessage())(error.message),
+        },
+      };
     }
     throw error;
   }
@@ -90,7 +99,8 @@ export async function revokeShareLinkAction(
   shareLinkId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user)
+    throw new Error((await getErrorMessage())("sessionExpired"));
 
   await requireFamilyAccess(familyId, session.user.id, "owner");
   await revokeShareLink(shareLinkId, familyId);

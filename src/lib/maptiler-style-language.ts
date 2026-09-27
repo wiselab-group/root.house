@@ -1,4 +1,5 @@
 import type { StyleSpecification } from "maplibre-gl";
+import type { Locale } from "@/domain/shared/locale";
 
 /**
  * MapTiler's hosted Cloud styles (streets-v2 included) hardcode every label
@@ -14,6 +15,7 @@ import type { StyleSpecification } from "maplibre-gl";
  * `name:<lang>` OSM tagging convention MapTiler's own tiles already use
  * (confirmed against tiles.json's tilestats), just pointed at "ru" with a
  * fallback to the untranslated `name` for anything with no Russian tag.
+ * English needs no rewrite — it's what the styles already ship with.
  */
 const TARGET_LANGUAGE = "ru";
 const SOURCE_LANGUAGE = "en";
@@ -46,7 +48,9 @@ function rewriteExpression(value: unknown): unknown {
 
 export function localizeStyleLabels(
   style: StyleSpecification,
+  locale: Locale,
 ): StyleSpecification {
+  if (locale === SOURCE_LANGUAGE) return style;
   const layers = style.layers.map((layer) => {
     if (!("layout" in layer) || !layer.layout) return layer;
     const layout = layer.layout as Record<string, unknown>;

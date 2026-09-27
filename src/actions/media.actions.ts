@@ -1,5 +1,7 @@
 "use server";
 
+import { getLocale } from "next-intl/server";
+
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -42,7 +44,7 @@ export async function deleteMediaAction(
   mediaId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   const member = await requireFamilyAccess(
     familyId,
@@ -61,7 +63,7 @@ export async function deleteMediaAction(
       },
     )
   ) {
-    throw new ForbiddenError("У вас нет прав на удаление этого файла.");
+    throw new ForbiddenError("You may not delete this file.");
   }
 
   // Fetched before removeMedia — media_person/media_album rows cascade-
@@ -77,7 +79,7 @@ export async function deleteMediaAction(
   // photoMediaId has no DB-level FK (db/schema/person.ts).
   const portraitOf = await clearProfilePhotoForMedia(mediaId, familyId);
 
-  await removeMedia(mediaId, familyId, session.user.id);
+  await removeMedia(mediaId, familyId, session.user.id, await getLocale());
 
   for (const slug of new Set([
     ...taggedPeople.map((person) => person.slug),
@@ -108,7 +110,7 @@ export async function removePersonAvatarAction(
   personId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
 
@@ -117,7 +119,12 @@ export async function removePersonAvatarAction(
 
   await setPersonAvatar(personId, familyId, null);
   if (avatarMediaId) {
-    await removeMediaIfUnlinked(avatarMediaId, familyId, session.user.id);
+    await removeMediaIfUnlinked(
+      avatarMediaId,
+      familyId,
+      session.user.id,
+      await getLocale(),
+    );
   }
 
   const familySlug = await getFamilySlugById(familyId);
@@ -150,7 +157,7 @@ export async function reorderMediaAction(
   revalidateOnPath: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   await requireFamilyAccess(familyId, session.user.id, "contributor");
 
@@ -172,7 +179,7 @@ export async function setPersonPortraitAction(
   mediaId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
 
@@ -181,13 +188,18 @@ export async function setPersonPortraitAction(
     getMedia(mediaId, familyId),
   ]);
   if (!person || !record || record.kind !== "photo") {
-    throw new Error("Фото не найдено.");
+    throw new Error("Photo not found.");
   }
   if (person.photoMediaId === mediaId) return;
 
   await setPersonAvatar(personId, familyId, mediaId);
   if (person.photoMediaId) {
-    await removeMediaIfUnlinked(person.photoMediaId, familyId, session.user.id);
+    await removeMediaIfUnlinked(
+      person.photoMediaId,
+      familyId,
+      session.user.id,
+      await getLocale(),
+    );
   }
 
   revalidatePath(`/families/${familySlug}/people/${person.slug}`);

@@ -1,4 +1,4 @@
-import { pluralizeRu } from "@/domain/shared/pluralize-ru";
+import { useFormatter, useTranslations } from "next-intl";
 import { batchProgress, type BatchItem } from "./batch-upload-progress";
 import { UploadProgressBar } from "./upload-progress-bar";
 
@@ -11,16 +11,20 @@ import { UploadProgressBar } from "./upload-progress-bar";
  */
 export function BatchUploadSummary({
   items,
-  forms,
+  noun: nounKey,
 }: {
   items: BatchItem[];
-  /** The noun's three Russian plural forms — e.g. фото/фото/фото. */
-  forms: [one: string, few: string, many: string];
+  /** Which counted noun the batch is made of (messages `counts.*`). */
+  noun: "photos" | "documents";
 }) {
+  const t = useTranslations("media");
+  const tCount = useTranslations("counts");
+  const tc = useTranslations("common");
+  const format = useFormatter();
   const { fraction, done, failed, started, isActive } = batchProgress(items);
   if (started === 0) return null;
 
-  const noun = (count: number) => `${count} ${pluralizeRu(count, ...forms)}`;
+  const noun = (count: number) => tCount(nounKey, { count });
   const totalMb =
     items
       .filter((item) => item.status !== "queued")
@@ -29,8 +33,14 @@ export function BatchUploadSummary({
   const percent = Math.round(fraction * 100);
 
   const label = isActive
-    ? `Загружаем ${noun(started - failed)}${totalMb >= 1 ? ` · ${totalMb.toFixed(1).replace(".", ",")} МБ` : ""}`
-    : `Загружено ${done} из ${started}${failed > 0 ? `, ${failed} с ошибкой` : ""}`;
+    ? t("batchUploading", { items: noun(started - failed) }) +
+      (totalMb >= 1
+        ? t("batchSize", {
+            size: format.number(totalMb, { maximumFractionDigits: 1 }),
+          })
+        : "")
+    : t("batchDone", { done, started }) +
+      (failed > 0 ? t("batchFailed", { failed }) : "");
 
   return (
     <div className="flex flex-col gap-2" aria-live="polite">
@@ -38,14 +48,14 @@ export function BatchUploadSummary({
         <span className="text-foreground/80">{label}</span>
         {isActive && (
           <span className="text-muted-foreground tabular-nums">
-            {fraction < 0.9 ? `${percent}%` : "Сохраняем…"}
+            {fraction < 0.9 ? `${percent}%` : tc("saving")}
           </span>
         )}
       </div>
       {isActive && (
         <UploadProgressBar
           value={fraction}
-          label="Загрузка всех файлов"
+          label={t("uploadingAll")}
           className="h-1.5"
         />
       )}

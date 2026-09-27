@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useId, useRef } from "react";
 import { Camera, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,7 +26,7 @@ export function PersonPhotoUpload({
   fallback,
   onFileSelect,
   onRemove,
-  removeLabel = "Удалить фото",
+  removeLabel,
   disabled = false,
   isBusy = false,
   progress = null,
@@ -45,6 +46,8 @@ export function PersonPhotoUpload({
   size?: "default" | "compact";
   className?: string;
 }) {
+  const t = useTranslations("personForm");
+  const removeButtonLabel = removeLabel ?? t("removePhoto");
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const isDisabled = disabled || isBusy;
@@ -130,7 +133,7 @@ export function PersonPhotoUpload({
               "absolute end-0 top-0 z-10 rounded-full bg-background",
               styles.remove,
             )}
-            aria-label={removeLabel}
+            aria-label={removeButtonLabel}
           >
             <X />
           </Button>

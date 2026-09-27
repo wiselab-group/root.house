@@ -72,7 +72,7 @@ describe("validateParentChild", () => {
           isAncestorOf: fakeIsAncestorOf(ancestorMap),
         },
       ),
-    ).rejects.toThrow(/цикл/);
+    ).rejects.toThrow("cycle");
   });
 
   it("accepts a valid, acyclic parent-child edge", async () => {

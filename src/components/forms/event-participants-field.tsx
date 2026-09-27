@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { personDisplayName } from "@/domain/person/display-name";
 import { EVENT_ROLES } from "@/domain/event/event-roles";
 import type { EventType } from "@/domain/event/event.repository";
@@ -34,6 +35,7 @@ export function EventParticipantsField({
   value: EventParticipantValue[];
   onChange: (value: EventParticipantValue[]) => void;
 }) {
+  const locale = useLocale();
   const roleOptions = EVENT_ROLES[eventType];
 
   function removePerson(personId: string) {
@@ -54,7 +56,7 @@ export function EventParticipantsField({
             ...value,
             {
               personId: person.id,
-              name: personDisplayName(person),
+              name: personDisplayName(person, locale),
               role: roleOptions[0],
             },
           ])

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -19,25 +20,26 @@ export function PhotoArrangeBar({
   onCancel: () => void;
   onSave: () => void;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("media");
   return (
     <>
       {/* Room under the grid so the pinned bar never covers its last row. */}
       <div aria-hidden="true" className="h-36 sm:h-20" />
       <div
         role="region"
-        aria-label="Упорядочить фото"
-        className="fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-40 mx-auto flex max-w-xl animate-in flex-col gap-3 rounded-2xl border border-border bg-popover p-3 pl-4 text-popover-foreground shadow-lg duration-300 ease-(--ease-reveal) fade-in-0 slide-in-from-bottom-4 sm:flex-row sm:items-center"
+        aria-label={t("arrangePhotos")}
+        className="fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-40 mx-auto flex max-w-xl animate-in flex-col gap-3 rounded-2xl border border-border bg-popover p-3 pl-4 text-popover-foreground shadow-lg duration-slow ease-(--ease-reveal) fade-in-0 slide-in-from-bottom-4 sm:flex-row sm:items-center"
       >
         <p className="flex-1 text-sm leading-snug">
-          Перетащите фото, чтобы поменять порядок. Действия с фото — в меню ⋯
+          {t("arrangeHint")}
           <span className="block text-xs text-muted-foreground">
-            Порядок общий для всех альбомов и профилей. «Отмена» вернёт только
-            порядок.
+            {t("arrangeNote")}
           </span>
         </p>
         <div className="flex shrink-0 gap-2 self-end sm:self-auto">
           <Button type="button" variant="ghost" onClick={onCancel}>
-            Отмена
+            {tc("cancel")}
           </Button>
           <Button
             type="button"
@@ -45,7 +47,7 @@ export function PhotoArrangeBar({
             className="bg-confirm text-confirm-foreground hover:bg-confirm/85"
           >
             <CheckIcon />
-            Готово
+            {tc("done")}
           </Button>
         </div>
       </div>

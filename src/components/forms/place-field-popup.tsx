@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Combobox } from "@base-ui/react/combobox";
 import { GlobeIcon, MapPinIcon, PlusIcon, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -23,12 +24,14 @@ export function PlaceFieldPopup({
   isSearching: boolean;
   showEmpty: boolean;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("placeForm");
   return (
     <Combobox.Portal>
       <Combobox.Positioner className="isolate z-50 outline-none" sideOffset={4}>
         <Combobox.Popup
           className={cn(
-            "w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none",
+            "w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-instant outline-none",
             "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           )}
           aria-busy={isSearching || undefined}
@@ -36,10 +39,10 @@ export function PlaceFieldPopup({
           <div className="max-h-72 overflow-y-auto overscroll-contain p-1 scroll-pt-1 scroll-pb-1">
             <Combobox.Empty className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
               {isSearching
-                ? "Ищем на карте…"
+                ? t("searchingMap")
                 : showEmpty
-                  ? "Ничего не найдено."
-                  : "Начните вводить название места."}
+                  ? tc("nothingFound")
+                  : t("startTyping")}
             </Combobox.Empty>
             <Combobox.List>
               {(group: PlaceOptionGroup) => (
@@ -48,10 +51,12 @@ export function PlaceFieldPopup({
                   items={group.items}
                   className="not-first:mt-1 not-first:border-t not-first:border-border not-first:pt-1"
                 >
-                  {group.label && (
+                  {group.value !== "typed" && (
                     <Combobox.GroupLabel className="px-2 pt-1.5 pb-1 text-xs font-medium text-muted-foreground">
-                      {group.label}
-                      {group.value === "map" && isSearching ? " · ищем…" : ""}
+                      {t(group.value === "saved" ? "groupSaved" : "groupMap")}
+                      {group.value === "map" && isSearching
+                        ? t("searchingShort")
+                        : ""}
                     </Combobox.GroupLabel>
                   )}
                   <Combobox.Collection>
@@ -70,14 +75,16 @@ export function PlaceFieldPopup({
 }
 
 function PlaceFieldOption({ option }: { option: PlaceOption }) {
+  const t = useTranslations("placeForm");
   const Icon = OPTION_ICONS[option.kind];
-  const detail = placeOptionDetail(option);
+  const detail =
+    option.kind === "typed" ? t("typedHint") : placeOptionDetail(option);
   const title =
     option.kind === "saved"
       ? option.place.name
       : option.kind === "map"
         ? option.result.name
-        : `Добавить «${option.name}»`;
+        : t("addNamed", { name: option.name });
   return (
     <Combobox.Item
       value={option}

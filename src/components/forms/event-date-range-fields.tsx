@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PersonDateFields } from "./person-date-fields";
 import type { PartialDate } from "@/domain/shared/partial-date";
@@ -15,18 +16,19 @@ export function EventDateRangeFields({
   showRange: boolean;
   onShowRangeChange: (checked: boolean) => void;
 }) {
+  const t = useTranslations("eventForm");
   return (
     <>
-      <PersonDateFields prefix="date" legend="Дата" date={date} />
+      <PersonDateFields prefix="date" legend={t("date")} date={date} />
 
       <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Checkbox checked={showRange} onCheckedChange={onShowRangeChange} />
-        Есть дата окончания (например, военная служба)
+        {t("hasEnd")}
       </label>
       {showRange && (
         <PersonDateFields
           prefix="endDate"
-          legend="Дата окончания"
+          legend={t("endDate")}
           date={endDate}
         />
       )}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useUploadErrorMessage } from "@/hooks/use-upload-error-message";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { uploadPhoto } from "@/lib/upload-photo";
@@ -40,6 +41,7 @@ export function usePhotoBatchUpload(
   autoUpload = false,
 ) {
   const router = useRouter();
+  const uploadErrorMessage = useUploadErrorMessage();
   const [photos, setPhotos] = useState<QueuedPhoto[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -96,7 +98,7 @@ export function usePhotoBatchUpload(
         } catch (err) {
           patchPhoto(photo.id, {
             status: "error",
-            error: err instanceof Error ? err.message : "Ошибка загрузки",
+            error: uploadErrorMessage(err),
           });
         }
       }),

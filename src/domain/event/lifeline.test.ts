@@ -80,33 +80,31 @@ function date(
 }
 
 describe("ageAt", () => {
-  it("speaks about the person by gender", () => {
-    expect(ageAt(date(2019), date(1988), "male")).toBe("ему 31");
-    expect(ageAt(date(2019), date(1988), "female")).toBe("ей 31");
-    expect(ageAt(date(2009), date(1988), "unknown")).toBe("21 год");
-    expect(ageAt(date(2000), date(1988), "unknown")).toBe("12 лет");
-    expect(ageAt(date(1990), date(1988), "unknown")).toBe("2 года");
+  it("counts whole years", () => {
+    expect(ageAt(date(2019), date(1988))).toBe(31);
+    expect(ageAt(date(2019), date(1988))).toBe(31);
+    expect(ageAt(date(2009), date(1988))).toBe(21);
+    expect(ageAt(date(2000), date(1988))).toBe(12);
+    expect(ageAt(date(1990), date(1988))).toBe(2);
   });
 
   it("is exact when the dates are complete", () => {
     const birth = date(1938, 5, 20);
-    expect(ageAt(date(2011, 3, 12), birth, "female")).toBe("ей 72");
-    expect(ageAt(date(2011, 5, 19), birth, "female")).toBe("ей 72");
-    expect(ageAt(date(2011, 5, 20), birth, "female")).toBe("ей 73");
-    expect(ageAt(date(2011, 8), birth, "female")).toBe("ей 73");
+    expect(ageAt(date(2011, 3, 12), birth)).toBe(72);
+    expect(ageAt(date(2011, 5, 19), birth)).toBe(72);
+    expect(ageAt(date(2011, 5, 20), birth)).toBe(73);
+    expect(ageAt(date(2011, 8), birth)).toBe(73);
   });
 
   it("falls back to the year difference when it can't tell", () => {
-    expect(ageAt(date(2011, 5), date(1938, 5, 20), "male")).toBe("ему 73");
-    expect(ageAt(date(2011, 3, 12), date(1938), "male")).toBe("ему 73");
-    expect(ageAt(date(2011, 3, 12), date(1938, 5, 20, true), "male")).toBe(
-      "ему 73",
-    );
+    expect(ageAt(date(2011, 5), date(1938, 5, 20))).toBe(73);
+    expect(ageAt(date(2011, 3, 12), date(1938))).toBe(73);
+    expect(ageAt(date(2011, 3, 12), date(1938, 5, 20, true))).toBe(73);
   });
 
   it("has no age at or before birth", () => {
-    expect(ageAt(date(1988), date(1988), "male")).toBeNull();
-    expect(ageAt(date(1988, 12, 1), date(1988, 1, 1), "male")).toBeNull();
-    expect(ageAt(date(2000), null, "male")).toBeNull();
+    expect(ageAt(date(1988), date(1988))).toBeNull();
+    expect(ageAt(date(1988, 12, 1), date(1988, 1, 1))).toBeNull();
+    expect(ageAt(date(2000), null)).toBeNull();
   });
 });

@@ -344,10 +344,30 @@ describe("buildClientTreeLayout (rewrite plan §7 Stage 7 — client-side focus 
         archive: EMPTY_ARCHIVE_SUMMARY,
       })),
       parentChildEdges: [
-        { id: "pc-1", parentId: "grandpa", childId: "parent" },
-        { id: "pc-2", parentId: "grandma", childId: "parent" },
-        { id: "pc-3", parentId: "parent", childId: "child" },
-        { id: "pc-4", parentId: "spouse", childId: "child" },
+        {
+          id: "pc-1",
+          parentId: "grandpa",
+          childId: "parent",
+          parentRole: "biological",
+        },
+        {
+          id: "pc-2",
+          parentId: "grandma",
+          childId: "parent",
+          parentRole: "biological",
+        },
+        {
+          id: "pc-3",
+          parentId: "parent",
+          childId: "child",
+          parentRole: "biological",
+        },
+        {
+          id: "pc-4",
+          parentId: "spouse",
+          childId: "child",
+          parentRole: "biological",
+        },
       ],
       partnershipEdges: [
         {

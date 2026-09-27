@@ -1,3 +1,4 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 import { MapPin } from "lucide-react";
 import { auth } from "@/lib/auth";
@@ -16,13 +17,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export const metadata: Metadata = {
-  title: "Карта",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("map");
+  return { title: t("title") };
+}
 
 export default async function FamilyMapPage({
   params,
 }: PageProps<"/families/[slug]/map">) {
+  const t = await getTranslations("map");
+  const tn = await getTranslations("familyNav");
   const { slug } = await params;
   const session = await auth();
   if (!session?.user) return null;
@@ -30,17 +34,21 @@ export default async function FamilyMapPage({
   const familyId = await resolveFamilyIdBySlug(slug);
   const member = await requireFamilyAccess(familyId, session.user.id, "viewer");
   const [markers, family] = await Promise.all([
-    getFamilyMapMarkers(familyId, {
-      userId: session.user.id,
-      role: member.role,
-    }),
+    getFamilyMapMarkers(
+      familyId,
+      {
+        userId: session.user.id,
+        role: member.role,
+      },
+      await getLocale(),
+    ),
     getFamilySummary(familyId),
   ]);
 
   const breadcrumbItems = [
-    { label: "Мои семьи", href: "/families" },
+    { label: tn("myFamilies"), href: "/families" },
     { label: family?.name ?? slug, href: `/families/${slug}` },
-    { label: "Карта" },
+    { label: t("title") },
   ];
 
   if (markers.length === 0) {
@@ -56,15 +64,12 @@ export default async function FamilyMapPage({
                 aria-hidden="true"
               />
             </span>
-            <CardTitle className="mt-4">На карте пока пусто</CardTitle>
-            <CardDescription>
-              Добавьте место с точкой на карте — например, город, где кто-то из
-              семьи родился, — и оно появится здесь.
-            </CardDescription>
+            <CardTitle className="mt-4">{t("emptyTitle")}</CardTitle>
+            <CardDescription>{t("emptyBody")}</CardDescription>
           </CardHeader>
           <CardContent>
             <LinkButton href={`/families/${slug}/places`}>
-              Управлять местами
+              {t("managePlaces")}
             </LinkButton>
           </CardContent>
         </Card>
@@ -76,17 +81,17 @@ export default async function FamilyMapPage({
     <main className="mx-auto flex h-[calc(100dvh-var(--header-height,64px))] w-full max-w-6xl flex-col gap-4 px-6 py-6">
       <SetBreadcrumbs items={breadcrumbItems} />
       <div className="flex flex-col gap-2">
-        <h1 className="font-heading text-3xl font-medium tracking-tight text-balance sm:text-4xl">
-          Карта
+        <h1 className="font-heading text-title font-medium tracking-tight text-balance">
+          {t("title")}
         </h1>
         <p className="text-muted-foreground">
-          Места, связанные с рождением, жизнью и событиями семьи.{" "}
+          {t("lead")}{" "}
           <LinkButton
             href={`/families/${slug}/places`}
             variant="link"
             className="h-auto p-0"
           >
-            Управлять списком мест
+            {t("managePlacesList")}
           </LinkButton>
         </p>
       </div>

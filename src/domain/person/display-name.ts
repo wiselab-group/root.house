@@ -1,4 +1,10 @@
 import type { PersonRecord } from "./person.repository";
+import type { Locale } from "@/domain/shared/locale";
+
+const FALLBACK = {
+  ru: { placeholder: "Неизвестный родственник", unnamed: "Без имени" },
+  en: { placeholder: "Unknown relative", unnamed: "Unnamed" },
+} as const;
 
 /**
  * Consistent human-readable name across Person cards, tree nodes, search
@@ -10,6 +16,7 @@ export function personDisplayName(
     PersonRecord,
     "firstName" | "lastName" | "nickname" | "isPlaceholder"
   >,
+  locale: Locale,
 ): string {
   const parts = [person.firstName, person.lastName].filter(Boolean);
   if (parts.length > 0) {
@@ -18,7 +25,12 @@ export function personDisplayName(
       : parts.join(" ");
   }
   if (person.nickname) return person.nickname;
-  return person.isPlaceholder ? "Неизвестный родственник" : "Без имени";
+  return nameFallback(person.isPlaceholder, locale);
+}
+
+/** «Неизвестный родственник» / «Без имени» for a person with no name at all. */
+export function nameFallback(isPlaceholder: boolean, locale: Locale): string {
+  return FALLBACK[locale][isPlaceholder ? "placeholder" : "unnamed"];
 }
 
 /**

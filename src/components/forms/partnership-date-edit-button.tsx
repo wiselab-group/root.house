@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,8 +31,9 @@ export function PartnershipDateEditButton({
   startDate?: PartialDate | null;
   relativeName: string;
 }) {
+  const t = useTranslations("relationships");
   const [open, setOpen] = useState(false);
-  const label = `Дата свадьбы с ${relativeName}`;
+  const label = t("weddingDateWith", { name: relativeName });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

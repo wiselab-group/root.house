@@ -89,7 +89,7 @@ export async function editAlbum(
       action: "update",
       entityType: "album",
       entityId: albumId,
-      entityLabel: album?.name ?? "Альбом",
+      entityLabel: album?.name ?? "—",
     });
   }
 

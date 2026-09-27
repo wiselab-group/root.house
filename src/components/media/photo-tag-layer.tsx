@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   useOptimistic,
@@ -16,7 +17,6 @@ import {
 } from "lucide-react";
 import {
   setPhotoTagPositionAction,
-  setPhotoTagRadiusAction,
   untagPhotoPointAction,
   removePhotoTagAction,
 } from "@/actions/photo-tag.actions";
@@ -185,6 +185,7 @@ function useTagDrag(
     draggingPersonId,
     dragPoint,
     droppedPoints,
+    setDroppedPoint,
     onDragStart,
     onDragMove,
     onDragEnd,
@@ -222,6 +223,8 @@ export function PhotoTagLayer({
    *  visibility logic below. */
   highlightedPersonId?: string | null;
 }) {
+  const t = useTranslations("media");
+  const locale = useLocale();
   const containerRef = useRef<HTMLDivElement>(null);
   // A freshly tapped point: its spotlight circle is already out to size,
   // with the person search under it — both picked in one step.
@@ -282,8 +285,6 @@ export function PhotoTagLayer({
     ...pointOf(highlighted),
     radiusPercent: radiusOf(highlighted),
   };
-  const editedPerson =
-    editing && positioned.find((person) => person.id === editing.personId);
 
   function handleTapToPlace(event: React.MouseEvent) {
     // Popover/DropdownMenu content is rendered via a portal, but React's
@@ -314,15 +315,20 @@ export function PhotoTagLayer({
 
   function commitRadius() {
     if (!editing) return;
-    const { personId, radius } = editing;
+    const { personId, radius, point } = editing;
     setEditing(null);
+    // The circle may have been moved as well as resized — one upsert saves
+    // both.
     startTransition(async () => {
       setSavedRadius({ personId, radius });
-      await setPhotoTagRadiusAction(
+      drag.setDroppedPoint({ personId, point });
+      await setPhotoTagPositionAction(
         familyId,
         familySlug,
         mediaId,
         personId,
+        point.xPercent,
+        point.yPercent,
         radius,
       );
     });
@@ -379,7 +385,7 @@ export function PhotoTagLayer({
             setEditing({
               personId: person.id,
               point: pointOf(person),
-              name: personDisplayName(person),
+              name: personDisplayName(person, locale),
               radius:
                 radiusOf(person) ??
                 startingRadius(
@@ -397,7 +403,8 @@ export function PhotoTagLayer({
       {editing && (
         <PhotoTagRadiusEditor
           containerRef={containerRef}
-          point={editedPerson ? pointOf(editedPerson) : editing.point}
+          point={editing.point}
+          onPointChange={(point) => setEditing({ ...editing, point })}
           radius={editing.radius}
           onRadiusChange={(radius) => setEditing({ ...editing, radius })}
           name={editing.name}
@@ -410,9 +417,10 @@ export function PhotoTagLayer({
         <PhotoTagCircle
           containerRef={containerRef}
           point={pending.point}
+          onPointChange={(point) => setPending({ ...pending, point })}
           radius={pending.radius}
           onRadiusChange={(radius) => setPending({ ...pending, radius })}
-          label="Размер области вокруг лица"
+          label={t("tagRadius")}
           onEscape={() => setPending(null)}
         >
           <div className="w-64 rounded-xl bg-popover p-2 whitespace-normal text-popover-foreground shadow-lg ring-1 ring-foreground/10">
@@ -465,7 +473,9 @@ function PhotoTagMarker({
   onUntag: () => void;
   onRemove: () => void;
 }) {
-  const name = personDisplayName(person);
+  const t = useTranslations("media");
+  const locale = useLocale();
+  const name = personDisplayName(person, locale);
 
   const marker = (
     <button
@@ -506,23 +516,23 @@ function PhotoTagMarker({
           }
         >
           <ExternalLinkIcon />
-          Открыть профиль
+          {t("openProfile")}
         </DropdownMenuItem>
         <DropdownMenuItem disabled className="text-muted-foreground">
           <MoveIcon />
-          Перетащите метку, чтобы переместить
+          {t("dragTag")}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onEditRadius}>
           <CircleDashedIcon />
-          Изменить область
+          {t("editArea")}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onUntag}>
           <XIcon />
-          Снять точку
+          {t("removePoint")}
         </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" onClick={onRemove}>
           <XIcon />
-          Убрать из фото
+          {t("untag")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

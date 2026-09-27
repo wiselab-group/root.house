@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { Trash2Icon } from "lucide-react";
 import { deleteMediaAction } from "@/actions/media.actions";
@@ -28,6 +29,8 @@ export function DeleteDocumentButton({
   mediaId: string;
   onDeleted: () => void;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("documents");
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -48,7 +51,7 @@ export function DeleteDocumentButton({
             variant="ghost"
             size="icon-sm"
             className="text-muted-foreground hover:text-destructive"
-            aria-label="Удалить документ"
+            aria-label={t("delete")}
           />
         }
       >
@@ -56,8 +59,8 @@ export function DeleteDocumentButton({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Удалить этот документ?</DialogTitle>
-          <DialogDescription>Это действие нельзя отменить.</DialogDescription>
+          <DialogTitle>{t("deleteTitle")}</DialogTitle>
+          <DialogDescription>{t("cannotUndo")}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
@@ -65,7 +68,7 @@ export function DeleteDocumentButton({
             onClick={() => setOpen(false)}
             disabled={isPending}
           >
-            Отмена
+            {tc("cancel")}
           </Button>
           <Button
             variant="destructive"
@@ -73,7 +76,7 @@ export function DeleteDocumentButton({
             disabled={isPending}
             aria-busy={isPending}
           >
-            {isPending ? "Удаляем…" : "Удалить"}
+            {isPending ? tc("deleting") : tc("delete")}
           </Button>
         </DialogFooter>
       </DialogContent>

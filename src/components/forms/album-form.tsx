@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -14,10 +15,11 @@ import { Textarea } from "@/components/ui/textarea";
 const initialState: AlbumFormState = {};
 
 function SubmitButton() {
+  const t = useTranslations("albumForm");
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} aria-busy={pending}>
-      {pending ? "Создаём…" : "Создать альбом"}
+      {pending ? t("creating") : t("create")}
     </Button>
   );
 }
@@ -42,6 +44,8 @@ export function AlbumForm({
   onSuccess?: () => void;
   onCancel?: () => void;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("albumForm");
   const boundAction = createAlbumAction.bind(null, familyId);
   const [state, formAction] = useActionState(boundAction, initialState);
   // Skips the very first render (initialState is also `{}` with no error) —
@@ -63,15 +67,20 @@ export function AlbumForm({
       className="flex flex-col gap-4"
     >
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="name">Название</Label>
-        <Input id="name" name="name" placeholder="Свадьба 1978" required />
+        <Label htmlFor="name">{tc("name")}</Label>
+        <Input
+          id="name"
+          name="name"
+          placeholder={t("namePlaceholder")}
+          required
+        />
         {state.fieldErrors?.name && (
           <p className="text-sm text-destructive">{state.fieldErrors.name}</p>
         )}
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="description">Описание (необязательно)</Label>
+        <Label htmlFor="description">{tc("descriptionOptional")}</Label>
         <Textarea id="description" name="description" rows={2} />
       </div>
 
@@ -79,7 +88,7 @@ export function AlbumForm({
 
       <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="ghost" onClick={onCancel}>
-          Отмена
+          {tc("cancel")}
         </Button>
         <SubmitButton />
       </div>

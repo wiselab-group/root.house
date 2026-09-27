@@ -64,10 +64,10 @@ export async function updateMemberRole(
   });
 
   const target = members.find((m) => m.userId === memberUserId);
-  if (!target) return { ok: false, error: "Участник не найден." };
+  if (!target) return { ok: false, error: "memberNotFound" };
 
   if (isLastOwnerDemotion(members, memberUserId, newRole)) {
-    return { ok: false, error: "В семье должен быть хотя бы один владелец." };
+    return { ok: false, error: "lastOwner" };
   }
 
   await defaultDb

@@ -74,9 +74,7 @@ export async function createInvitation(
     .where(eq(users.email, input.email))
     .limit(1);
   if (existingMember.length > 0) {
-    throw new InvitationInvalidError(
-      "Этот email уже принадлежит участнику семьи.",
-    );
+    throw new InvitationInvalidError("alreadyMember");
   }
 
   const { token, tokenHash } = generateToken();
@@ -139,7 +137,7 @@ export async function resendInvitation(
   familyName: string,
 ): Promise<{ invitation: InvitationRecord; inviteUrl: string }> {
   const existing = await findInvitationById(invitationId, familyId);
-  if (!existing) throw new NotFoundError("Приглашение не найдено.");
+  if (!existing) throw new NotFoundError("invitationNotFound");
 
   await markRevoked(invitationId, familyId);
 

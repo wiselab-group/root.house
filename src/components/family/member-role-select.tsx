@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateMemberRoleAction } from "@/actions/family.actions";
 import { NativeSelect } from "@/components/ui/native-select";
-import { ROLE_LABELS } from "@/domain/family/role-labels";
+import { useTranslations } from "next-intl";
 import type { FamilyRole } from "@/domain/family/roles";
 
 const ROLE_OPTIONS: FamilyRole[] = ["owner", "editor", "contributor", "viewer"];
@@ -27,6 +27,8 @@ export function MemberRoleSelect({
   role: FamilyRole;
   disabled?: boolean;
 }) {
+  const t = useTranslations("members");
+  const tr = useTranslations("roles");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -53,11 +55,11 @@ export function MemberRoleSelect({
         value={role}
         disabled={disabled || isPending}
         onChange={(e) => handleChange(e.target.value as FamilyRole)}
-        aria-label="Роль участника"
+        aria-label={t("memberRole")}
       >
         {ROLE_OPTIONS.map((option) => (
           <option key={option} value={option}>
-            {ROLE_LABELS[option]}
+            {tr(option)}
           </option>
         ))}
       </NativeSelect>

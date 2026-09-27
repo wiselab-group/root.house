@@ -3,6 +3,7 @@ import { comparePartialDates } from "@/domain/shared/partial-date";
 import { getPersonById } from "@/domain/person/person.repository";
 import type { PersonRecord } from "@/domain/person/person.repository";
 import { personDisplayName } from "@/domain/person/display-name";
+import type { Locale } from "@/domain/shared/locale";
 import { canView, type ActingMember } from "@/domain/family/permissions";
 import { logActivity } from "@/domain/activity-log/activity-log.service";
 import {
@@ -10,7 +11,6 @@ import {
   getPartnershipsOf,
 } from "@/domain/relationship/relationship.repository";
 import type { PartnershipRecord } from "@/domain/relationship/relationship.repository";
-import { EVENT_ROLE_LABELS, EVENT_TYPE_LABELS } from "./event-roles";
 import {
   createEvent,
   deleteEvent,
@@ -30,10 +30,11 @@ export type { EventRecord };
 /** A Person's timeline entry. `relatedPerson` is set only on the synthetic
  *  «birth of a child» entries (see synthesizeChildBirths) — the child the
  *  entry is about, so the UI can name them and link to their profile.
- *  `facts` are extra «what's known» lines a synthetic entry carries from
- *  the record it's derived from (the cause on a death). */
+ *  `deathCause` is carried from the Person onto their synthetic death entry.
+ *  Synthetic entries have an empty `title` — the UI names them from `type`
+ *  (and `relatedPerson`) in the viewer's language. */
 export type TimelineEvent = EventRecord & {
-  facts?: string[];
+  deathCause?: string;
   relatedPerson?: {
     id: string;
     slug: string;
@@ -48,16 +49,15 @@ export interface EventParticipantWithName {
   slug: string | null;
   name: string;
   /** Raw role key (e.g. "spouse"), as stored in event_participants.role —
-   *  needed by EditEventForm to preselect the right <option value>, distinct
-   *  from roleLabel below (which is display-only, already localized). */
+   *  the UI translates it (messages `eventRoles.*`). */
   role: string;
-  roleLabel: string;
 }
 
 /** Participants of an Event, joined with each Person's display name/slug — the shape event details pages need. */
 export async function getParticipantsWithNames(
   eventId: string,
   familyId: string,
+  locale: Locale,
 ): Promise<EventParticipantWithName[]> {
   const participants = await getParticipantsOf(eventId, familyId);
   const results = await Promise.all(
@@ -66,9 +66,12 @@ export async function getParticipantsWithNames(
       return {
         personId: p.personId,
         slug: person?.slug ?? null,
-        name: person ? personDisplayName(person) : "Неизвестно",
+        name: person
+          ? personDisplayName(person, locale)
+          : locale === "ru"
+            ? "Неизвестно"
+            : "Unknown",
         role: p.role,
-        roleLabel: EVENT_ROLE_LABELS[p.role] ?? p.role,
       };
     }),
   );
@@ -235,7 +238,7 @@ function synthesizeDerivedEvents(
       id: `${SYNTHETIC_PREFIX}birth:${person.id}`,
       familyId: person.familyId,
       type: "birth",
-      title: EVENT_TYPE_LABELS.birth,
+      title: "",
       description: null,
       date: person.birthDate,
       endDate: null,
@@ -250,16 +253,14 @@ function synthesizeDerivedEvents(
       id: `${SYNTHETIC_PREFIX}death:${person.id}`,
       familyId: person.familyId,
       type: "death",
-      title: EVENT_TYPE_LABELS.death,
+      title: "",
       description: null,
       date: person.deathDate,
       endDate: null,
       placeId: person.deathPlaceId,
       privacyLevel: person.privacyLevel,
       createdBy: person.createdBy,
-      facts: person.deathCause?.trim()
-        ? [`Причина: ${person.deathCause.trim()}`]
-        : undefined,
+      deathCause: person.deathCause?.trim() || undefined,
     });
   }
 
@@ -269,7 +270,7 @@ function synthesizeDerivedEvents(
       id: `${SYNTHETIC_PREFIX}marriage:${partnership.id}`,
       familyId: partnership.familyId,
       type: "marriage",
-      title: EVENT_TYPE_LABELS.marriage,
+      title: "",
       description: null,
       date: partnership.startDate,
       endDate: null,
@@ -293,18 +294,13 @@ function synthesizeChildBirths(children: PersonRecord[]): TimelineEvent[] {
   return children
     .filter((child) => child.birthDate?.year != null)
     .map((child) => {
-      const firstName = child.firstName ?? personDisplayName(child);
-      const verb =
-        child.gender === "female"
-          ? "Родилась дочь"
-          : child.gender === "male"
-            ? "Родился сын"
-            : "Родился ребёнок";
+      // Empty for a nameless child — the UI supplies the localized fallback.
+      const firstName = child.firstName ?? child.nickname ?? "";
       return {
         id: `${SYNTHETIC_PREFIX}child-birth:${child.id}`,
         familyId: child.familyId,
         type: "birth",
-        title: `${verb} ${firstName}`,
+        title: "",
         description: null,
         date: child.birthDate,
         endDate: null,

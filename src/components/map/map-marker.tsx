@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Marker } from "react-map-gl/maplibre";
 import { MapPinIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ export function MapMarker({
   isSelected: boolean;
   onClick: () => void;
 }) {
+  const t = useTranslations("map");
   return (
     <Marker
       longitude={longitude}
@@ -47,7 +49,7 @@ export function MapMarker({
           hasContent ? "size-9" : "size-6 opacity-80",
           isSelected && "scale-110 ring-3 ring-ring/50",
         )}
-        aria-label="Показать место"
+        aria-label={t("showPlace")}
       >
         <MapPinIcon
           className={hasContent ? "size-4" : "size-3"}

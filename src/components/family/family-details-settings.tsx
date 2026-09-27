@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -16,9 +18,10 @@ const initialState: UpdateFamilyDetailsFormState = {};
 
 function SaveButton() {
   const { pending } = useFormStatus();
+  const t = useTranslations("common");
   return (
     <Button type="submit" size="sm" disabled={pending} aria-busy={pending}>
-      {pending ? "Сохраняем…" : "Сохранить"}
+      {pending ? t("saving") : t("save")}
     </Button>
   );
 }
@@ -39,6 +42,8 @@ function DetailsEditForm({
   onSaved: (name: string, description: string) => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("families");
+  const tc = useTranslations("common");
   const boundAction = updateFamilyDetailsAction.bind(null, familyId);
   const [state, formAction] = useActionState(boundAction, initialState);
   const [nameValue, setNameValue] = useState(name);
@@ -55,7 +60,7 @@ function DetailsEditForm({
     <form action={formAction} className="flex flex-col gap-3">
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="family-name" className="text-xs text-muted-foreground">
-          Название семьи
+          {t("nameLabel")}
         </Label>
         <Input
           id="family-name"
@@ -73,7 +78,7 @@ function DetailsEditForm({
           htmlFor="family-description"
           className="text-xs text-muted-foreground"
         >
-          Описание (необязательно)
+          {t("descriptionLabel")}
         </Label>
         <Textarea
           id="family-description"
@@ -81,7 +86,7 @@ function DetailsEditForm({
           rows={3}
           value={descriptionValue}
           onChange={(e) => setDescriptionValue(e.target.value)}
-          placeholder="Пара слов об архиве"
+          placeholder={t("descriptionPlaceholder")}
         />
         {state.fieldErrors?.description && (
           <p className="text-sm text-destructive">
@@ -92,7 +97,7 @@ function DetailsEditForm({
       <div className="flex items-center gap-2">
         <SaveButton />
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Отмена
+          {tc("cancel")}
         </Button>
       </div>
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
@@ -115,6 +120,7 @@ export function FamilyDetailsSettings({
   description: string;
   role: FamilyRole;
 }) {
+  const tc = useTranslations("common");
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
@@ -147,7 +153,7 @@ export function FamilyDetailsSettings({
             size="sm"
             onClick={() => setEditing(true)}
           >
-            Изменить
+            {tc("change")}
           </Button>
         )}
       </div>

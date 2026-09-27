@@ -23,7 +23,7 @@ const glassOverPhoto =
  *  utilities by stylesheet order, not class order, so the icon variant can't
  *  "override" px-4/h-10 by appending px-0/size-12 (it lost: a 40px circle
  *  kept 32px of padding and squeezed its icon to 6px wide). */
-const glassPillBase = `${glassOverPhoto} inline-flex shrink-0 items-center justify-center rounded-full text-sm font-medium text-foreground transition-[background-color,transform] duration-200 ease-(--ease-reveal) hover:bg-background/70 active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`;
+const glassPillBase = `${glassOverPhoto} inline-flex shrink-0 items-center justify-center rounded-full text-sm font-medium text-foreground transition-[background-color,transform] duration-base ease-(--ease-reveal) hover:bg-background/70 active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`;
 
 export const glassPill = `${glassPillBase} h-10 gap-2 px-4 [&_svg]:size-4`;
 

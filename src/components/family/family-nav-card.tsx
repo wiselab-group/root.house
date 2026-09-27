@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { ArrowRight, TreeDeciduous } from "lucide-react";
@@ -25,10 +26,11 @@ export function FamilyTreeLaunchCard({
   href: string;
   description: string;
 }) {
+  const t = useTranslations("familyNav");
   return (
     <Link
       href={href}
-      className={`${glassSurface} group flex cursor-pointer items-center gap-4 rounded-3xl px-6 py-7 ring-1 ring-primary/35 transition-[background-color,transform,box-shadow] duration-200 ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong hover:ring-primary/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:px-8`}
+      className={`${glassSurface} group flex cursor-pointer items-center gap-4 rounded-3xl px-6 py-7 ring-1 ring-primary/35 transition-[background-color,transform,box-shadow] duration-base ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong hover:ring-primary/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:px-8`}
     >
       <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
         <TreeDeciduous
@@ -39,12 +41,12 @@ export function FamilyTreeLaunchCard({
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className="font-heading text-2xl font-medium tracking-tight">
-          Семейное дерево
+          {t("tree")}
         </span>
         <span className="max-w-md text-foreground/60">{description}</span>
       </div>
       <ArrowRight
-        className="size-5 shrink-0 text-primary transition-transform duration-200 ease-(--ease-tree-focus) group-hover:translate-x-1"
+        className="size-5 shrink-0 text-primary transition-transform duration-base ease-(--ease-tree-focus) group-hover:translate-x-1"
         strokeWidth={2}
         aria-hidden="true"
       />
@@ -79,7 +81,7 @@ export function FamilyNavCard({
   return (
     <Link
       href={href}
-      className={`${glassSurface} group flex h-full cursor-pointer items-center gap-4 rounded-2xl px-5 py-4 transition-[background-color,transform] duration-200 ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
+      className={`${glassSurface} group flex h-full cursor-pointer items-center gap-4 rounded-2xl px-5 py-4 transition-[background-color,transform] duration-base ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
     >
       <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-glass-strong text-foreground/80 transition-colors group-hover:text-primary">
         <Icon className="size-5" strokeWidth={1.75} aria-hidden="true" />

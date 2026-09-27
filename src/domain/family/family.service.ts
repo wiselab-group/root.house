@@ -153,9 +153,7 @@ export async function updateFamilySlug(
   newSlug: string,
 ): Promise<void> {
   if (!isValidSlugFormat(newSlug)) {
-    throw new SlugTakenError(
-      "Ссылка может содержать только латинские буквы, цифры и дефис (2-64 символа).",
-    );
+    throw new SlugTakenError("slugInvalid");
   }
 
   const existing = await db.query.families.findFirst({
@@ -164,7 +162,7 @@ export async function updateFamilySlug(
   });
 
   if (existing && existing.id !== familyId) {
-    throw new SlugTakenError("Эта ссылка уже занята другой семьёй.");
+    throw new SlugTakenError("slugTaken");
   }
 
   await db
@@ -221,7 +219,7 @@ export async function updateDefaultFocusPerson(
   if (personId !== null) {
     const person = await getPerson(personId, familyId);
     if (!person) {
-      return { ok: false, error: "Этот человек не найден в этой семье." };
+      return { ok: false, error: "personNotInFamily" };
     }
   }
 
@@ -261,7 +259,7 @@ export async function removeFamilyMember(
   if (!target) return; // already not a member — nothing to do
 
   if (isLastOwnerDemotion(members, memberUserId, null)) {
-    throw new ForbiddenError("A family must always have at least one owner.");
+    throw new ForbiddenError("lastOwner");
   }
 
   await db

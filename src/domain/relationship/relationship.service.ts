@@ -2,6 +2,7 @@ import {
   getPersonById,
   listPersonsByFamily,
 } from "@/domain/person/person.repository";
+import type { Locale } from "@/domain/shared/locale";
 import { personDisplayName } from "@/domain/person/display-name";
 import { logActivity } from "@/domain/activity-log/activity-log.service";
 import { getAncestorDepths, isAncestorOf } from "./graph.service";
@@ -70,9 +71,7 @@ export async function validateParentChild(
   deps: { personExists: PersonExistsFn; isAncestorOf: IsAncestorOfFn },
 ): Promise<void> {
   if (input.parentId === input.childId) {
-    throw new RelationshipValidationError(
-      "Человек не может быть своим собственным родителем.",
-    );
+    throw new RelationshipValidationError("selfParent");
   }
 
   const [parent, child] = await Promise.all([
@@ -80,9 +79,7 @@ export async function validateParentChild(
     deps.personExists(input.childId, familyId),
   ]);
   if (!parent || !child) {
-    throw new RelationshipValidationError(
-      "Один из людей не найден в этой семье.",
-    );
+    throw new RelationshipValidationError("personMissing");
   }
 
   // Would inserting parent->child make `parentId` a descendant of `childId`?
@@ -93,9 +90,7 @@ export async function validateParentChild(
     familyId,
   );
   if (wouldCreateCycle) {
-    throw new RelationshipValidationError(
-      "Эта связь создала бы цикл в родословной (человек не может быть предком самого себя).",
-    );
+    throw new RelationshipValidationError("cycle");
   }
 }
 
@@ -105,13 +100,22 @@ async function relationshipPairLabel(
   aId: string,
   bId: string,
   separator: string,
+  locale: Locale,
 ): Promise<string> {
   const [a, b] = await Promise.all([
     getPersonById(aId, familyId),
     getPersonById(bId, familyId),
   ]);
-  const aName = a ? personDisplayName(a) : "Человек";
-  const bName = b ? personDisplayName(b) : "Человек";
+  const aName = a
+    ? personDisplayName(a, locale)
+    : locale === "ru"
+      ? "Человек"
+      : "Person";
+  const bName = b
+    ? personDisplayName(b, locale)
+    : locale === "ru"
+      ? "Человек"
+      : "Person";
   return `${aName} ${separator} ${bName}`;
 }
 
@@ -125,6 +129,7 @@ export async function addParentChild(
   familyId: string,
   actorId: string,
   input: { parentId: string; childId: string; parentRole?: ParentRole },
+  locale: Locale,
 ): Promise<{ id: string }> {
   await validateParentChild(familyId, input, {
     personExists: getPersonById,
@@ -149,6 +154,7 @@ export async function addParentChild(
       input.parentId,
       input.childId,
       "→",
+      locale,
     ),
   });
 
@@ -174,9 +180,7 @@ export async function validatePartnership(
   deps: { personExists: PersonExistsFn },
 ): Promise<void> {
   if (input.person1Id === input.person2Id) {
-    throw new RelationshipValidationError(
-      "Человек не может состоять в партнёрстве сам с собой.",
-    );
+    throw new RelationshipValidationError("selfPartner");
   }
 
   const [person1, person2] = await Promise.all([
@@ -184,9 +188,7 @@ export async function validatePartnership(
     deps.personExists(input.person2Id, familyId),
   ]);
   if (!person1 || !person2) {
-    throw new RelationshipValidationError(
-      "Один из людей не найден в этой семье.",
-    );
+    throw new RelationshipValidationError("personMissing");
   }
 }
 
@@ -199,6 +201,7 @@ export async function addPartnership(
   familyId: string,
   actorId: string,
   input: AddPartnershipInput,
+  locale: Locale,
 ): Promise<{ id: string }> {
   await validatePartnership(familyId, input, { personExists: getPersonById });
   const result = await insertPartnership({ familyId, ...input });
@@ -214,6 +217,7 @@ export async function addPartnership(
       input.person1Id,
       input.person2Id,
       "—",
+      locale,
     ),
   });
 
@@ -224,6 +228,7 @@ export async function removeParentChild(
   id: string,
   familyId: string,
   actorId: string,
+  locale: Locale,
 ): Promise<boolean> {
   const edge = await getParentChildById(id, familyId);
   const deleted = await deleteParentChild(id, familyId);
@@ -240,6 +245,7 @@ export async function removeParentChild(
         edge.parentId,
         edge.childId,
         "→",
+        locale,
       ),
     });
   }
@@ -251,6 +257,7 @@ export async function removePartnership(
   id: string,
   familyId: string,
   actorId: string,
+  locale: Locale,
 ): Promise<boolean> {
   const edge = await getPartnershipById(id, familyId);
   const deleted = await deletePartnership(id, familyId);
@@ -267,6 +274,7 @@ export async function removePartnership(
         edge.person1Id,
         edge.person2Id,
         "—",
+        locale,
       ),
     });
   }

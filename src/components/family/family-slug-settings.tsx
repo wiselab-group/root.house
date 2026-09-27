@@ -7,6 +7,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useFormStatus } from "react-dom";
+import { useTranslations } from "next-intl";
 import {
   updateFamilySlugAction,
   type UpdateFamilySlugFormState,
@@ -20,9 +21,10 @@ const initialState: UpdateFamilySlugFormState = {};
 
 function SaveButton() {
   const { pending } = useFormStatus();
+  const t = useTranslations("common");
   return (
     <Button type="submit" size="sm" disabled={pending} aria-busy={pending}>
-      {pending ? "Сохраняем…" : "Сохранить"}
+      {pending ? t("saving") : t("save")}
     </Button>
   );
 }
@@ -40,13 +42,15 @@ function SlugEditForm({
   slug: string;
   onCancel: () => void;
 }) {
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const boundAction = updateFamilySlugAction.bind(null, familyId);
   const [state, formAction] = useActionState(boundAction, initialState);
 
   return (
     <form action={formAction} className="flex flex-col gap-2">
       <Label htmlFor="slug" className="text-xs text-muted-foreground">
-        Короткая ссылка на семью
+        {t("slugLabel")}
       </Label>
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted-foreground">/families/</span>
@@ -59,13 +63,10 @@ function SlugEditForm({
         />
         <SaveButton />
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Отмена
+          {tc("cancel")}
         </Button>
       </div>
-      <p className="text-xs text-destructive">
-        Старая ссылка перестанет работать для всех участников семьи — включая
-        уже сохранённые закладки.
-      </p>
+      <p className="text-xs text-destructive">{t("slugWarning")}</p>
       {state.fieldErrors?.slug && (
         <p className="text-sm text-destructive">{state.fieldErrors.slug}</p>
       )}
@@ -87,6 +88,7 @@ export function FamilySlugSettings({
   slug: string;
   role: FamilyRole;
 }) {
+  const tc = useTranslations("common");
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
 
@@ -127,7 +129,7 @@ export function FamilySlugSettings({
     <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
       <span className="font-mono">{shortUrl}</span>
       <Button type="button" variant="ghost" size="sm" onClick={handleCopy}>
-        {copied ? "Скопировано" : "Копировать"}
+        {copied ? tc("copied") : tc("copy")}
       </Button>
       {role === "owner" && (
         <Button
@@ -136,7 +138,7 @@ export function FamilySlugSettings({
           size="sm"
           onClick={() => setEditing(true)}
         >
-          Изменить
+          {tc("change")}
         </Button>
       )}
     </div>

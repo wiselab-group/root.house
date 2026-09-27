@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -20,10 +21,11 @@ import {
 const initialState: AlbumFormState = {};
 
 function SaveButton() {
+  const tc = useTranslations("common");
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} aria-busy={pending}>
-      {pending ? "Сохраняем…" : "Сохранить"}
+      {pending ? tc("saving") : tc("save")}
     </Button>
   );
 }
@@ -59,6 +61,8 @@ export function AlbumTitleEditor({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("albumForm");
+  const tc = useTranslations("common");
   const boundAction = updateAlbumAction.bind(null, familyId, albumId);
   const [state, formAction] = useActionState(boundAction, initialState);
   // Skips the very first render (initialState is also `{}` with no error) —
@@ -75,7 +79,7 @@ export function AlbumTitleEditor({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Переименовать альбом</DialogTitle>
+          <DialogTitle>{t("rename")}</DialogTitle>
         </DialogHeader>
         <form
           action={(formData) => {
@@ -85,7 +89,7 @@ export function AlbumTitleEditor({
           className="flex flex-col gap-4"
         >
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="album-title-name">Название</Label>
+            <Label htmlFor="album-title-name">{tc("name")}</Label>
             <Input
               id="album-title-name"
               name="name"
@@ -102,7 +106,7 @@ export function AlbumTitleEditor({
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="album-title-description">
-              Описание (необязательно)
+              {tc("descriptionOptional")}
             </Label>
             <Textarea
               id="album-title-description"
@@ -122,7 +126,7 @@ export function AlbumTitleEditor({
               variant="ghost"
               onClick={() => onOpenChange(false)}
             >
-              Отмена
+              {tc("cancel")}
             </Button>
             <SaveButton />
           </div>

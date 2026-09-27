@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { useTranslations } from "next-intl";
 import {
   createFamilyAction,
   type CreateFamilyFormState,
@@ -16,6 +17,7 @@ const initialState: CreateFamilyFormState = {};
 
 function SubmitButton() {
   const { pending } = useFormStatus();
+  const t = useTranslations("families");
   return (
     <Button
       type="submit"
@@ -23,23 +25,25 @@ function SubmitButton() {
       disabled={pending}
       aria-busy={pending}
     >
-      {pending ? "Создаём…" : "Создать семью"}
+      {pending ? t("creating") : t("create")}
     </Button>
   );
 }
 
 export function CreateFamilyForm() {
+  const t = useTranslations("families");
+  const tc = useTranslations("common");
   const [state, formAction] = useActionState(createFamilyAction, initialState);
 
   return (
     <form action={formAction} className="flex flex-col gap-4" noValidate>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="name">Название семьи</Label>
+        <Label htmlFor="name">{t("nameLabel")}</Label>
         <Input
           id="name"
           name="name"
           type="text"
-          placeholder="Например, Ивановы"
+          placeholder={t("namePlaceholder")}
           required
         />
         {state.fieldErrors?.name && (
@@ -48,12 +52,12 @@ export function CreateFamilyForm() {
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="description">Описание (необязательно)</Label>
+        <Label htmlFor="description">{t("descriptionLabel")}</Label>
         <Textarea
           id="description"
           name="description"
           rows={3}
-          placeholder="Пара слов об архиве"
+          placeholder={t("descriptionPlaceholder")}
         />
         {state.fieldErrors?.description && (
           <p className="text-sm text-destructive">
@@ -70,7 +74,7 @@ export function CreateFamilyForm() {
           href="/families"
           className={buttonVariants({ variant: "outline" })}
         >
-          Отмена
+          {tc("cancel")}
         </Link>
       </div>
     </form>

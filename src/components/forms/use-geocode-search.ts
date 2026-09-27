@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useLocale } from "next-intl";
 import { geocodePlace, type GeocodeResult } from "@/lib/maptiler-geocode";
 
 /** Wait for a pause in typing before hitting MapTiler — one request per word, not per key. */
@@ -12,6 +13,7 @@ const SEARCH_DEBOUNCE_MS = 250;
  * overwrite a later one's results.
  */
 export function useGeocodeSearch() {
+  const locale = useLocale();
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -34,7 +36,7 @@ export function useGeocodeSearch() {
     timerRef.current = setTimeout(() => {
       const controller = new AbortController();
       controllerRef.current = controller;
-      void geocodePlace(trimmed, controller.signal)
+      void geocodePlace(trimmed, locale, controller.signal)
         .catch(() => [])
         .then((found) => {
           if (controller.signal.aborted) return;

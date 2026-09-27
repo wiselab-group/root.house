@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { Trash2Icon } from "lucide-react";
 import { deleteMediaAction } from "@/actions/media.actions";
@@ -33,6 +34,8 @@ export function DeleteMediaButton({
   mediaId: string;
   className?: string;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("media");
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -51,7 +54,7 @@ export function DeleteMediaButton({
             type="button"
             variant="destructive"
             size="icon-sm"
-            aria-label="Удалить фото"
+            aria-label={t("deletePhoto")}
             className={cn("rounded-full shadow-sm [&_svg]:size-4.5", className)}
           />
         }
@@ -60,11 +63,8 @@ export function DeleteMediaButton({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Удалить фото?</DialogTitle>
-          <DialogDescription>
-            Это действие нельзя отменить. Фото будет удалено из всех альбомов и
-            профилей, к которым оно привязано.
-          </DialogDescription>
+          <DialogTitle>{t("deletePhotoTitle")}</DialogTitle>
+          <DialogDescription>{t("deletePhotoBody")}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
@@ -72,7 +72,7 @@ export function DeleteMediaButton({
             onClick={() => setOpen(false)}
             disabled={isPending}
           >
-            Отмена
+            {tc("cancel")}
           </Button>
           <Button
             variant="destructive"
@@ -80,7 +80,7 @@ export function DeleteMediaButton({
             disabled={isPending}
             aria-busy={isPending}
           >
-            {isPending ? "Удаляем…" : "Удалить"}
+            {isPending ? tc("deleting") : tc("delete")}
           </Button>
         </DialogFooter>
       </DialogContent>

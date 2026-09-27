@@ -1,9 +1,9 @@
-import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 import { ageAt, buildLifeline } from "@/domain/event/lifeline";
 import { layoutLifelineScale } from "@/domain/event/lifeline-scale";
 import { formatPartialDate } from "@/domain/shared/partial-date";
 import type { TimelineEvent } from "@/domain/event/event.service";
 import type { TimelineRowTarget } from "./timeline-target";
+import type { EventWording } from "./event-wording";
 
 export interface LifelineEventView {
   id: string;
@@ -45,6 +45,7 @@ export function lifelineView(
   person: { isLiving: boolean; gender: "male" | "female" | "unknown" },
   placeNameById: Map<string, string>,
   targetFor: (event: TimelineEvent) => TimelineRowTarget,
+  wording: EventWording,
   /** Facts that needed other people's names — see resolveTimelineFacts. */
   factsById: Map<string, string[]> = new Map(),
 ): {
@@ -66,8 +67,17 @@ export function lifelineView(
     timeline.find((event) => event.type === "birth" && !event.relatedPerson)
       ?.date ?? null;
 
+  const ageLabel = (event: TimelineEvent, birth: typeof birthDate) => {
+    const age = ageAt(event.date, birth);
+    return age === null
+      ? null
+      : wording.t("age", { age, gender: person.gender });
+  };
+
   const labels = lifeline.points.map((point, index) => {
-    const caption = point.events.map(captionFor).join(", ");
+    const caption = point.events
+      .map((event) => captionFor(event, wording))
+      .join(", ");
     return {
       year: point.year,
       side: point.side,
@@ -100,26 +110,28 @@ export function lifelineView(
       side: point.side,
       align: labels[index].align,
       caption: labels[index].caption,
-      kicker: [
-        String(point.year),
-        ageAt(point.events[0].date, birthDate, person.gender),
-      ]
+      kicker: [String(point.year), ageLabel(point.events[0], birthDate)]
         .filter(Boolean)
         .join(" · "),
       events: point.events.map((event) => ({
         id: event.id,
-        title: eventTitle(event),
+        title: wording.title(event),
         details: [
-          eventTitle(event) !== EVENT_TYPE_LABELS[event.type] &&
+          wording.title(event) !== wording.typeLabel(event.type) &&
           !event.relatedPerson
-            ? EVENT_TYPE_LABELS[event.type]
+            ? wording.typeLabel(event.type)
             : null,
-          periodLabel(event),
+          periodLabel(event, wording),
           event.placeId ? placeNameById.get(event.placeId) : null,
         ]
           .filter(Boolean)
           .join(" · "),
-        facts: [...(event.facts ?? []), ...(factsById.get(event.id) ?? [])],
+        facts: [
+          ...(event.deathCause
+            ? [wording.t("cause", { cause: event.deathCause })]
+            : []),
+          ...(factsById.get(event.id) ?? []),
+        ],
         text: event.description,
         target: targetFor(event),
       })),
@@ -128,17 +140,17 @@ export function lifelineView(
 }
 
 /** «12 марта 1960 г.», or «1960 г. — 1975 г.» for an event that lasted. */
-function periodLabel(event: TimelineEvent): string {
-  const start = formatPartialDate(event.date);
+function periodLabel(event: TimelineEvent, { locale }: EventWording): string {
+  const start = formatPartialDate(event.date, locale);
   return event.endDate?.year != null
-    ? `${start} — ${formatPartialDate(event.endDate)}`
+    ? `${start} — ${formatPartialDate(event.endDate, locale)}`
     : start;
 }
 
 /**
  * A server-side guess at the label's rendered width (no DOM here, and
  * measuring on the client would shift the dots after hydration): the
- * caption in text-xs Geist runs ~6.6px per Cyrillic character, the 4-digit
+ * caption in text-xs Geist runs ~6.6px per character (Cyrillic or Latin), the 4-digit
  * year in text-sm ~34px, plus the label's px-1.5 padding. Errs wide — a
  * few px of extra air is invisible, an underestimate is an overlap.
  */
@@ -148,12 +160,6 @@ function estimateLabelWidth(caption: string): number {
 
 /** Under the dot a child's birth is just their name («Мария, Иван» in the
  *  mock) — the full «Родилась дочь …» sentence is for the card. */
-function captionFor(event: TimelineEvent): string {
-  return event.relatedPerson?.firstName ?? eventTitle(event);
-}
-
-/** Manual events carry free-text titles; synthetic birth/death/marriage use
- *  the type label itself as the title (see synthesizeDerivedEvents). */
-function eventTitle(event: TimelineEvent): string {
-  return event.title.trim() || EVENT_TYPE_LABELS[event.type];
+function captionFor(event: TimelineEvent, wording: EventWording): string {
+  return event.relatedPerson?.firstName || wording.title(event);
 }

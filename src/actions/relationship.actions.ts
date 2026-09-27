@@ -1,5 +1,8 @@
 "use server";
 
+import { getErrorMessage } from "@/i18n/errors";
+import { getLocale } from "next-intl/server";
+
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -47,7 +50,7 @@ async function resolveOtherPersonId(
   // a brand-new nameless Person below — the picker is a search box now, not
   // a `required` <select>, so an empty submit can actually reach here.
   if (formData.get("mode") === "existing") {
-    throw new RelationshipValidationError("Выберите человека из семьи.");
+    throw new RelationshipValidationError("pickFamilyMember");
   }
 
   const isPlaceholder = formData.get("isPlaceholder") === "on";
@@ -65,7 +68,12 @@ async function resolveOtherPersonId(
     return placeholder.id;
   }
 
-  const created = await addPerson(familyId, userId, { firstName, lastName });
+  const created = await addPerson(
+    familyId,
+    userId,
+    { firstName, lastName },
+    await getLocale(),
+  );
   return created.id;
 }
 
@@ -100,7 +108,7 @@ function parsePartnershipStartDate(formData: FormData): PartialDate | null {
 
   if (!parsed.success) {
     throw new RelationshipValidationError(
-      parsed.error.issues[0]?.message ?? "Некорректная дата.",
+      parsed.error.issues[0]?.message ?? "dateInvalid",
     );
   }
 
@@ -124,7 +132,8 @@ export async function addRelativeAction(
   formData: FormData,
 ): Promise<RelationshipFormState> {
   const session = await auth();
-  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
 
@@ -138,28 +147,43 @@ export async function addRelativeAction(
       (formData.get("parentRole") as ParentRole | null) ?? undefined;
 
     if (kind === "parent") {
-      await addParentChild(familyId, session.user.id, {
-        parentId: otherPersonId,
-        childId: personId,
-        parentRole,
-      });
+      await addParentChild(
+        familyId,
+        session.user.id,
+        {
+          parentId: otherPersonId,
+          childId: personId,
+          parentRole,
+        },
+        await getLocale(),
+      );
     } else if (kind === "child") {
-      await addParentChild(familyId, session.user.id, {
-        parentId: personId,
-        childId: otherPersonId,
-        parentRole,
-      });
+      await addParentChild(
+        familyId,
+        session.user.id,
+        {
+          parentId: personId,
+          childId: otherPersonId,
+          parentRole,
+        },
+        await getLocale(),
+      );
     } else {
       const startDate = parsePartnershipStartDate(formData);
-      await addPartnership(familyId, session.user.id, {
-        person1Id: personId,
-        person2Id: otherPersonId,
-        startDate,
-      });
+      await addPartnership(
+        familyId,
+        session.user.id,
+        {
+          person1Id: personId,
+          person2Id: otherPersonId,
+          startDate,
+        },
+        await getLocale(),
+      );
     }
   } catch (error) {
     if (error instanceof RelationshipValidationError) {
-      return { error: error.message };
+      return { error: (await getErrorMessage())(error.message) };
     }
     throw error;
   }
@@ -176,10 +200,15 @@ export async function removeParentChildAction(
   relationshipId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
-  await removeParentChild(relationshipId, familyId, session.user.id);
+  await removeParentChild(
+    relationshipId,
+    familyId,
+    session.user.id,
+    await getLocale(),
+  );
   const familySlug = await getFamilySlugById(familyId);
   const personSlug = await getPersonSlugById(personId, familyId);
   revalidatePath(`/families/${familySlug}/people/${personSlug}`);
@@ -191,10 +220,15 @@ export async function removePartnershipAction(
   relationshipId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
-  await removePartnership(relationshipId, familyId, session.user.id);
+  await removePartnership(
+    relationshipId,
+    familyId,
+    session.user.id,
+    await getLocale(),
+  );
   const familySlug = await getFamilySlugById(familyId);
   const personSlug = await getPersonSlugById(personId, familyId);
   revalidatePath(`/families/${familySlug}/people/${personSlug}`);
@@ -215,7 +249,7 @@ export async function setPartnershipStatusAction(
   isCurrent: boolean,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
   await setPartnershipStatus(relationshipId, familyId, isCurrent);
@@ -249,7 +283,8 @@ export async function updatePartnershipDateAction(
   formData: FormData,
 ): Promise<UpdatePartnershipDateFormState> {
   const session = await auth();
-  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
 
@@ -258,7 +293,7 @@ export async function updatePartnershipDateAction(
     startDate = parsePartnershipStartDate(formData);
   } catch (error) {
     if (error instanceof RelationshipValidationError) {
-      return { error: error.message };
+      return { error: (await getErrorMessage())(error.message) };
     }
     throw error;
   }

@@ -31,7 +31,7 @@ export function DocumentUploadPanel({
           progress: doc.progress,
           status: doc.status,
         }))}
-        forms={["документ", "документа", "документов"]}
+        noun="documents"
       />
     </div>
   );

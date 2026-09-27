@@ -11,6 +11,8 @@
  * must go through here rather than touching those columns directly.
  */
 
+import type { Locale } from "./locale";
+
 export type DatePrecision = "exact" | "year_only" | "decade" | "unknown";
 
 export interface PartialDate {
@@ -68,7 +70,7 @@ export function toColumns(date: PartialDate | null): PartialDateColumns {
   };
 }
 
-const MONTH_NAMES = [
+const RU_MONTHS_GENITIVE = [
   "января",
   "февраля",
   "марта",
@@ -83,29 +85,56 @@ const MONTH_NAMES = [
   "декабря",
 ];
 
-/** Human-readable Russian formatting used across Person/Event UI. */
+const EN_MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+/**
+ * Human-readable formatting used across Person/Event UI — «около 1950 г.» /
+ * "c. 1950". Hand-rolled rather than Intl.DateTimeFormat: a partial date
+ * (decade, month-and-year, approximate) has no Intl equivalent, and the
+ * Russian month must be genitive («12 марта»).
+ */
 export function formatPartialDate(
   date: PartialDate | null | undefined,
+  locale: Locale,
 ): string {
+  const ru = locale === "ru";
   if (!date || date.precision === "unknown" || date.year === null)
-    return "неизвестно";
+    return ru ? "неизвестно" : "unknown";
 
-  const approxPrefix = date.isApproximate ? "около " : "";
+  const approx = date.isApproximate ? (ru ? "около " : "c. ") : "";
 
   if (date.precision === "decade") {
     const decadeStart = Math.floor(date.year / 10) * 10;
-    return `${approxPrefix}${decadeStart}-е гг.`;
+    return ru ? `${approx}${decadeStart}-е гг.` : `${approx}${decadeStart}s`;
   }
 
   if (date.precision === "year_only" || date.month === null) {
-    return `${approxPrefix}${date.year} г.`;
+    return ru ? `${approx}${date.year} г.` : `${approx}${date.year}`;
   }
 
+  const month = (ru ? RU_MONTHS_GENITIVE : EN_MONTHS)[date.month - 1];
   if (date.day === null) {
-    return `${approxPrefix}${MONTH_NAMES[date.month - 1]} ${date.year} г.`;
+    return ru
+      ? `${approx}${month} ${date.year} г.`
+      : `${approx}${month} ${date.year}`;
   }
 
-  return `${approxPrefix}${date.day} ${MONTH_NAMES[date.month - 1]} ${date.year} г.`;
+  return ru
+    ? `${approx}${date.day} ${month} ${date.year} г.`
+    : `${approx}${date.day} ${month} ${date.year}`;
 }
 
 /**

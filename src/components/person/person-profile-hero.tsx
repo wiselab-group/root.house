@@ -1,3 +1,4 @@
+import { useLocale, useTranslations } from "next-intl";
 import { ArchiveImage } from "@/components/media/archive-image";
 import { mediaUrl } from "@/lib/media-url";
 import Link from "next/link";
@@ -51,11 +52,19 @@ export function PersonProfileHero({
   place: ProfilePlace | null;
   role: FamilyRole;
 }) {
+  const locale = useLocale();
+  const t = useTranslations("profile");
+  const tNav = useTranslations("familyNav");
+  const tPrivacy = useTranslations("privacy");
   const canEdit = role === "owner" || role === "editor";
-  const name = personDisplayName(person);
+  const name = personDisplayName(person, locale);
   const editHref = `/families/${familySlug}/people/${person.slug}/edit`;
 
-  const meta = personHeroMeta(person, place);
+  const meta = personHeroMeta(person, place, locale, {
+    birthPlace: t("birthPlace"),
+    livesNow: t("livesNow"),
+    birthAndHome: t("birthAndHome"),
+  });
 
   return (
     <header className="relative isolate h-[clamp(440px,50vw,620px)] overflow-hidden">
@@ -83,7 +92,7 @@ export function PersonProfileHero({
               href={editHref}
               className="absolute -bottom-9 text-sm font-medium whitespace-nowrap text-primary hover:opacity-80"
             >
-              + Загрузить портрет
+              {t("uploadPortrait")}
             </Link>
           )}
         </div>
@@ -91,7 +100,7 @@ export function PersonProfileHero({
 
       <HeroTopBar
         backHref={`/families/${familySlug}/people`}
-        backLabel="Люди"
+        backLabel={tNav("people")}
         actions={
           canEdit && (
             <HeroMoreMenu
@@ -112,19 +121,19 @@ export function PersonProfileHero({
         <div className="flex flex-wrap gap-1.5">
           <span className={glassChip}>
             <UserRoundIcon aria-hidden="true" />
-            Профиль
+            {t("pill")}
           </span>
           {person.isPlaceholder && (
-            <span className={glassChip}>Запись-заглушка</span>
+            <span className={glassChip}>{t("placeholder")}</span>
           )}
           {person.privacyLevel === "private" && (
             <span className={glassChip}>
               <LockIcon aria-hidden="true" />
-              Только я
+              {tPrivacy("private")}
             </span>
           )}
         </div>
-        <h1 className="font-heading text-4xl leading-[1.05] font-normal tracking-tight text-balance sm:text-5xl lg:text-6xl">
+        <h1 className="font-heading text-display leading-[1.05] font-normal tracking-tight text-balance">
           {name}
         </h1>
         <HeroMeta items={meta} />

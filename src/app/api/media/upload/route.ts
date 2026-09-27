@@ -1,3 +1,5 @@
+import { getErrorMessage } from "@/i18n/errors";
+import { getLocale } from "next-intl/server";
 import { after, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -82,13 +84,16 @@ export async function POST(request: Request): Promise<Response> {
     );
     if (!isAvatar && !canCreate(member.role, "media")) {
       return NextResponse.json(
-        { error: "У вас нет прав на добавление медиа." },
+        { error: (await getErrorMessage())("noMediaPermission") },
         { status: 403 },
       );
     }
   } catch (error) {
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ error: error.message }, { status: 403 });
+      return NextResponse.json(
+        { error: (await getErrorMessage())(error.message) },
+        { status: 403 },
+      );
     }
     throw error;
   }
@@ -103,12 +108,15 @@ export async function POST(request: Request): Promise<Response> {
       const previousPerson = await getPerson(avatarPersonId, familyId);
       const previousAvatarMediaId = previousPerson?.photoMediaId ?? null;
 
-      const avatarMedia = await uploadPersonAvatar({
-        personId: avatarPersonId,
-        familyId,
-        uploadedBy: session.user.id,
-        storageKey,
-      });
+      const avatarMedia = await uploadPersonAvatar(
+        {
+          personId: avatarPersonId,
+          familyId,
+          uploadedBy: session.user.id,
+          storageKey,
+        },
+        await getLocale(),
+      );
       await setPersonAvatar(avatarPersonId, familyId, avatarMedia.id);
       after(() => makePhotoVariants(avatarMedia.id, familyId));
 
@@ -119,25 +127,33 @@ export async function POST(request: Request): Promise<Response> {
           previousAvatarMediaId,
           familyId,
           session.user.id,
+          await getLocale(),
         );
       }
 
       return NextResponse.json({ id: avatarMedia.id }, { status: 201 });
     }
 
-    const media = await uploadPersonPhoto({
-      familyId,
-      personIds,
-      albumIds,
-      uploadedBy: session.user.id,
-      storageKey,
-      privacyLevel,
-    });
+    const media = await uploadPersonPhoto(
+      {
+        familyId,
+        personIds,
+        albumIds,
+        uploadedBy: session.user.id,
+        storageKey,
+        privacyLevel,
+      },
+      await getLocale(),
+    );
     after(() => makePhotoVariants(media.id, familyId));
     return NextResponse.json({ id: media.id }, { status: 201 });
   } catch (error) {
     if (error instanceof UploadRejectedError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      const message = await getErrorMessage();
+      return NextResponse.json(
+        { error: message(error.message, error.values) },
+        { status: 400 },
+      );
     }
     throw error;
   }

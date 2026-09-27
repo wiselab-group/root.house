@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AlbumMultiCombobox } from "./album-multi-combobox";
@@ -25,7 +26,6 @@ import { usePhotoBatchUpload } from "./use-photo-batch-upload";
  * checkmarks) until the panel is closed, so a person can see everything
  * that made it in before dismissing.
  */
-const PHOTO_FORMS: [string, string, string] = ["фото", "фото", "фото"];
 
 export function PhotoUploadPanel({
   familyId,
@@ -40,6 +40,8 @@ export function PhotoUploadPanel({
   defaultAlbums?: { id: string; name: string }[];
   onCancel: () => void;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("media");
   const isInsideAlbum = defaultAlbums.length > 0;
   const [taggedAlbums, setTaggedAlbums] =
     useState<{ id: string; name: string }[]>(defaultAlbums);
@@ -57,7 +59,7 @@ export function PhotoUploadPanel({
     <div className="flex flex-col gap-3">
       {isInsideAlbum ? (
         <p className="text-sm text-muted-foreground">
-          Фото добавятся в альбом «{defaultAlbums[0]?.name}»
+          {t("addToAlbum", { name: defaultAlbums[0]?.name ?? "" })}
         </p>
       ) : (
         <AlbumMultiCombobox
@@ -72,12 +74,10 @@ export function PhotoUploadPanel({
       <PhotoUploadGrid photos={photos} onRemove={removePhoto} />
 
       {photos.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          Кто на фото и видимость можно настроить позже, прямо на фото.
-        </p>
+        <p className="text-xs text-muted-foreground">{t("uploadHint")}</p>
       )}
 
-      <BatchUploadSummary items={toBatchItems(photos)} forms={PHOTO_FORMS} />
+      <BatchUploadSummary items={toBatchItems(photos)} noun="photos" />
 
       <div className="flex items-center justify-end gap-2">
         <Button
@@ -86,7 +86,9 @@ export function PhotoUploadPanel({
           onClick={onCancel}
           disabled={isUploading}
         >
-          {doneCount > 0 && !hasPending && !isUploading ? "Готово" : "Отмена"}
+          {doneCount > 0 && !hasPending && !isUploading
+            ? tc("done")
+            : tc("cancel")}
         </Button>
         {hasPending && (
           <Button
@@ -95,7 +97,7 @@ export function PhotoUploadPanel({
             disabled={isUploading}
             aria-busy={isUploading}
           >
-            {isUploading ? "Загружаем…" : "Загрузить"}
+            {isUploading ? t("uploading") : t("upload")}
           </Button>
         )}
       </div>

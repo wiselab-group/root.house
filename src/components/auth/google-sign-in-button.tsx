@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { signInWithGoogleAction } from "@/actions/auth.actions";
 import { Button } from "@/components/ui/button";
 
@@ -33,6 +34,7 @@ function GoogleIcon() {
 }
 
 export function GoogleSignInButton({ callbackUrl }: { callbackUrl?: string }) {
+  const t = useTranslations("auth");
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -45,7 +47,7 @@ export function GoogleSignInButton({ callbackUrl }: { callbackUrl?: string }) {
       onClick={() => startTransition(() => signInWithGoogleAction(callbackUrl))}
     >
       <GoogleIcon />
-      {isPending ? "Открываем Google…" : "Продолжить с Google"}
+      {isPending ? t("openingGoogle") : t("continueWithGoogle")}
     </Button>
   );
 }

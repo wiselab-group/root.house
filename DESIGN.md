@@ -9,7 +9,7 @@
 ## Typography
 
 - **Body/UI**: Geist Sans (`--font-geist-sans`, subsets `latin`+`cyrillic` —
-  весь интерфейс на русском, это обязательно), через Tailwind `font-sans`.
+  интерфейс двуязычный RU/EN, а семейные имена — кириллица в любом языке, это обязательно), через Tailwind `font-sans`.
 - **Заголовки** (Person Profile, Story, карточные `CardTitle`, страничные
   `<h1>`): Lora (`--font-lora`) через утилиту `.font-heading` — тёплый,
   «архивный» serif. DESIGN.md изначально называл Fraunces/DM Serif Display —
@@ -23,13 +23,32 @@
 гуманистическом sans, serif — акцент на «архивных» экранах (профиль, история,
 карточные заголовки), не на каждом UI-элементе.
 
+### Fluid-шкала заголовков
+
+Заголовки не прыгают на брейкпоинтах (`text-3xl sm:text-4xl`), а плавно
+растут с шириной экрана — токены в `@theme` (`src/app/globals.css`),
+Tailwind-утилиты `text-<name>`. Минимум = прежний мобильный размер, максимум =
+самый крупный десктопный шаг этой роли:
+
+| Утилита           | clamp()                                    | line-height | Где                                                         |
+| ----------------- | ------------------------------------------ | ----------- | ----------------------------------------------------------- |
+| `text-hero`       | `clamp(1.875rem, 1rem + 4.2vw, 4.25rem)`   | 1.08        | только hero лендинга (сменяющееся слово ≤343px на телефоне) |
+| `text-display-lg` | `clamp(3rem, 2.55rem + 1.9vw, 3.75rem)`    | 1.05        | Family Home, список семей                                   |
+| `text-display`    | `clamp(2.25rem, 1.5rem + 3vw, 3.75rem)`    | 1.05        | hero профиля/истории/альбома, лендинг                       |
+| `text-title`      | `clamp(1.875rem, 1.6rem + 1vw, 2.25rem)`   | 1.15        | `<h1>` обычных страниц, `<h2>` секций лендинга              |
+| `text-heading`    | `clamp(1.5rem, 1.3rem + 0.75vw, 1.875rem)` | 1.25        | подзаголовки внутри истории                                 |
+
+Body/UI-текст остаётся на фиксированной шкале Tailwind (`text-xs`…`text-xl`).
+Новый заголовок — всегда одна из этих утилит, не пара `text-Nxl sm:text-Mxl`.
+
 ## Color Tokens
 
 Три hue, каждый со своей ролью, никогда не смешиваемые в одном элементе:
 
 - Терракота (`hue 45`, `--primary`) — цвет ДЕЙСТВИЯ: кнопки, badges, фокус-
   кольца форм, brand mark ВЕЗДЕ, и внутри дерева — ИСКЛЮЧИТЕЛЬНО
-  focus-person/Relationship Trace/keyboard-selected карточка. Никогда не
+  Relationship Trace/keyboard-selected карточка (focus-person остаётся sage,
+  см. CLAUDE.md § DESIGN TOKENS). Никогда не
   используется как состояние покоя внутри дерева.
 - Приглушённый оливково-шалфейный (`hue 126`, `--tree-accent`) — цвет
   ИДЕНТИЧНОСТИ внутри дерева: постоянная обводка/ring каждой карточки, видна
@@ -135,6 +154,13 @@ identity-цвета и от коричневого `--branch`.
 --space-20: 160px
 --spacing-section-y: clamp(64px, 10vw, 120px)
 
+Заведены как CSS-переменные в `:root` (`src/app/globals.css`);
+`--spacing-section-y` доступен утилитой `py-section` — вертикальный ритм
+крупных секций (лендинг, Family Home). Внутри компонентов шаг Tailwind
+(`p-2` = 8px, `p-4` = 16px…) уже лежит на той же 8px-сетке.
+
+Контейнер: max-width 1440px, padding clamp(16px, 5vw, 80px).
+
 ## Motion Principles
 
 ### Универсальные правила
@@ -142,12 +168,27 @@ identity-цвета и от коричневого `--branch`.
 - Page/section transitions: укладываться в 600-800ms максимум
 - Именованные easing-алиасы — реализованы как CSS custom properties в
   `:root` (`src/app/globals.css`), использовать по имени, не как magic-числа:
-  - `--ease-reveal`: cubic-bezier(0.16, 1, 0.3, 1) — спокойное появление
-    (используется в `.animate-tree-node-enter`)
-  - `--ease-transition`: cubic-bezier(0.76, 0, 0.24, 1) — переходы между экранами
-  - `--ease-tree-focus`: cubic-bezier(0.25, 0.1, 0.25, 1) — hover/переходы
+  - `--ease-reveal` (алиас `--ease-premium-out`): cubic-bezier(0.16, 1, 0.3, 1)
+    — спокойное появление (используется в `.animate-tree-node-enter`)
+  - `--ease-transition` (алиас `--ease-expressive`): cubic-bezier(0.76, 0, 0.24, 1)
+    — переходы между экранами
+  - `--ease-tree-focus`: = `--ease-reveal` (до 2026-09-27 был
+    cubic-bezier(0.25, 0.1, 0.25, 1) — это ровно дефолтный CSS `ease`,
+    запрещённый правилами выше; не возвращать) — hover/переходы
     внутри дерева (используется в `person-node.tsx` через Tailwind
     `ease-(--ease-tree-focus)`)
+- Именованные длительности — `--duration-*` в `:root` + одноимённые утилиты
+  (`duration-fast` и т.д.), числовые `duration-200` не использовать:
+
+  | Токен       | Значение | Для чего                                         |
+  | ----------- | -------- | ------------------------------------------------ |
+  | `instant`   | 100ms    | открытие поповеров/меню, scroll-driven transform |
+  | `fast`      | 150ms    | мелкий feedback (иконка, цвет кнопки)            |
+  | `base`      | 200ms    | hover карточек и строк — основной ритм           |
+  | `slow`      | 300ms    | панели, раскрытие секций                         |
+  | `reveal`    | 500ms    | проявление фото (`ArchiveImage`), spotlight      |
+  | `cinematic` | 1000ms   | медленные кросс-фейды слайдов                    |
+
 - Hardware acceleration: `will-change: transform, opacity` — только на активно
   анимирующихся узлах
 - НИКОГДА default CSS `ease`/`linear`
@@ -155,35 +196,50 @@ identity-цвета и от коричневого `--branch`.
 
 ### Family Tree specific
 
-- **Смена focus-person — entrance stagger, не FLIP-переход между позициями.**
-  Фокус-переход — это полная навигация страницы (`?focus=` в URL, сервер
-  пересчитывает layout) — старый и новый набор nodes не имеют общего React
-  identity между рендерами, поэтому "проехать" узел от старой позиции к новой
-  физически нечем. Честная реализация spec'а: каждый `PersonNode` появляется
-  через `.animate-tree-node-enter` (`opacity`+`scale`, `--ease-reveal`) с
-  `animation-delay`, пропорциональным `|generation|` (расстоянию от нового
-  focus) — узлы дальних поколений появляются позже, создавая ощущение волны
-  от центра, а не мгновенный релейаут всех nodes одновременно.
-- Generation color-coding: тонкая цветная полоса сверху карточки
-  (`h-1`, `background: var(--chart-N)`), не заливка всей карточки —
-  раскраска не должна мешать читаемости имени/дат.
+- **Смена focus-person — клиентская** (`tree-canvas.tsx::setFocus` →
+  `buildClientTreeLayout`, `router.replace`): позиции карточек меняются
+  мгновенно, анимируется только viewport (плавный pan/zoom через XYFlow's
+  `setCenter` с `duration`, с `prefers-reduced-motion` fallback). При первом
+  появлении дерева каждый `PersonNode` входит через `.animate-tree-node-enter`
+  (`opacity`+`scale`, `--ease-reveal`) с `animation-delay`, пропорциональным
+  `|generation|` — волна от центра, а не мгновенное появление всех nodes.
+- Никакого generation color-coding — все карточки одного `--tree-accent`
+  (см. § Color Tokens).
 - Person Node states: `default` / `hover` (подъём `-translate-y-0.5` + тень,
-  `--ease-tree-focus`) / `selected` (кольцо `ring-ring`) / `focus` (акцентная
-  рамка + `ring-primary/30`) / placeholder (пунктирная рамка, `opacity-70`,
+  `--ease-tree-focus`) / `selected` и traced (терракотовое двойное кольцо:
+  3px solid + 6px translucent, `compact-card-body.tsx`) / `focus` (sage-рамка,
+  акцентированная вторым ring) / placeholder (пунктирная рамка, `opacity-70`,
   курсив на имени).
 
 ## Component States
 
-Buttons:
+Каждый интерактивный элемент: default / hover / active / focus / disabled, и
+loading — если действие асинхронное.
 
-- Default / Hover / Active / Focus / Disabled (opacity 0.4, cursor not-allowed, pointer-events none) —
-  уже реализовано в `src/components/ui/button.tsx` через `focus-visible:ring`,
-  `active:translate-y-px`, `disabled:opacity-50`
+Buttons (`src/components/ui/button.tsx`):
+
+- Hover — смена фона; Active — `translate-y-px`; Focus — `focus-visible:ring`
+- Disabled: `opacity: 0.4`, `cursor: not-allowed`, `pointer-events: none` —
+  то же 0.4 во всех `ui/`-контролах (input, select, checkbox, switch, tabs,
+  menu items, label)
+- Loading: кнопка получает `disabled` + `aria-busy`, подпись меняется на
+  глагол в процессе с многоточием («Удаляем…», «Сохраняем…»). Занятая кнопка
+  НЕ гаснет до 0.4 (`disabled:not-aria-busy:opacity-40`) — она работает, а не
+  недоступна.
 
 Cards / интерактивные поверхности:
 
 - Hover: едва заметный подъём (translateY(-2px)) + мягкая тень
 - Focus: `outline: 2px solid var(--ring)`, `outline-offset: 2px`
+
+Loading страниц и блоков: route-level `loading.tsx` со `Skeleton`
+(`bg-muted` + `animate-pulse`), повторяющим форму будущего контента — не
+спиннер по центру пустой страницы. Фото проявляются по opacity на фоне
+`bg-muted` (`ArchiveImage`), без blur-заглушек.
+
+Изображения внутри анимированных/parallax-контейнеров — всегда в обёртке с
+классом `overflow-hidden` (не inline style), чтобы transform/scale не
+вылезал за скругления карточки.
 
 ## Responsive Breakpoints
 
@@ -192,8 +248,6 @@ Cards / интерактивные поверхности:
 - lg: 1024px
 - xl: 1280px
 - 2xl: 1536px
-
-Container: max-width 1440px, padding clamp(16px, 5vw, 80px)
 
 ## Accessibility (обязательно, не подлежит удалению)
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
@@ -48,10 +49,12 @@ export function PersonForm({
   places?: PlaceRecord[];
   submitLabel: string;
   submitPendingLabel: string;
-  /** Where "Отмена" navigates back to — omitted entirely (no button) when
+  /** Where tc("cancel") navigates back to — omitted entirely (no button) when
    *  the caller has no natural "back" page to name. */
   cancelHref?: string;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("personForm");
   const [state, formAction] = useActionState(action, {} as PersonFormState);
   useScrollToHash(); // «Редактировать» on a Линия жизни card → #birth/#death
 
@@ -75,13 +78,13 @@ export function PersonForm({
 
       <PersonDateFields
         prefix="birth"
-        legend="Дата рождения"
+        legend={t("birthDate")}
         anchorId="birth"
         date={person?.birthDate}
       />
       <PlaceField
         name="birthPlaceId"
-        label="Место рождения"
+        label={t("birthPlace")}
         places={places}
         defaultValue={person?.birthPlaceId}
       />
@@ -90,7 +93,7 @@ export function PersonForm({
       {isLiving && (
         <PlaceField
           name="residencePlaceId"
-          label="Где живёт сейчас"
+          label={t("residence")}
           places={places}
           defaultValue={person?.residencePlaceId}
         />
@@ -103,23 +106,23 @@ export function PersonForm({
         <>
           <PersonDateFields
             prefix="death"
-            legend="Дата смерти"
+            legend={t("deathDate")}
             anchorId="death"
             date={person?.deathDate}
           />
           <PlaceField
             name="deathPlaceId"
-            label="Место смерти"
+            label={t("deathPlace")}
             places={places}
             defaultValue={person?.deathPlaceId}
           />
           <div className="flex flex-col gap-2">
-            <Label htmlFor="deathCause">Причина смерти</Label>
+            <Label htmlFor="deathCause">{t("deathCause")}</Label>
             <Input
               id="deathCause"
               name="deathCause"
               defaultValue={person?.deathCause ?? ""}
-              placeholder="Например, болезнь"
+              placeholder={t("deathCausePlaceholder")}
             />
           </div>
         </>
@@ -141,7 +144,7 @@ export function PersonForm({
         <SubmitButton label={submitLabel} pendingLabel={submitPendingLabel} />
         {cancelHref && (
           <LinkButton href={cancelHref} variant="ghost">
-            Отмена
+            {tc("cancel")}
           </LinkButton>
         )}
       </div>

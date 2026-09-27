@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ArrowRightIcon, PencilIcon } from "lucide-react";
 import { glassSurface } from "@/components/hero/glass";
 import { TimelineRow } from "./timeline-row";
@@ -7,7 +8,7 @@ import type { LifelinePointView } from "./lifeline-view";
 import type { TimelineRowTarget } from "./timeline-target";
 
 const ACTION =
-  "inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-glass-edge bg-glass px-3.5 text-sm text-foreground transition-[background-color,transform] duration-200 ease-(--ease-reveal) hover:bg-glass-strong active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&_svg]:size-3.5";
+  "inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-glass-edge bg-glass px-3.5 text-sm text-foreground transition-[background-color,transform] duration-base ease-(--ease-reveal) hover:bg-glass-strong active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&_svg]:size-3.5";
 
 /**
  * The selected dot's card under the «Линия жизни» scale. Not in the mock,
@@ -61,10 +62,11 @@ export function LifelineEventCard({ point }: { point: LifelinePointView }) {
 }
 
 function EventAction({ target }: { target: TimelineRowTarget }) {
+  const t = useTranslations("timeline");
   if (target.kind === "none") return null;
   const isEdit = target.kind !== "link" || target.intent === "edit";
   const label =
-    target.kind === "link" ? (target.label ?? "Подробнее") : "Редактировать";
+    target.kind === "link" ? (target.label ?? t("details")) : t("edit");
   return (
     <TimelineRow target={target} className={ACTION}>
       {!isEdit ? (

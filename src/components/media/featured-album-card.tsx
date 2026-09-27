@@ -1,8 +1,8 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ArchiveImage } from "@/components/media/archive-image";
 import { mediaUrl } from "@/lib/media-url";
 import { ImagesIcon } from "lucide-react";
-import { photoCountLabel } from "@/domain/shared/pluralize-ru";
 import type { AlbumWithCoverRecord } from "@/domain/album/album.service";
 
 /**
@@ -21,6 +21,7 @@ export function FeaturedAlbumCard({
   familySlug: string;
   familyId: string;
 }) {
+  const tCount = useTranslations("counts");
   return (
     <Link
       href={`/families/${familySlug}/photos/${album.id}`}
@@ -32,7 +33,7 @@ export function FeaturedAlbumCard({
           alt=""
           fill
           sizes="(max-width: 640px) 100vw, 672px"
-          className="object-cover transition-transform duration-300 ease-(--ease-reveal) group-hover:scale-[1.03]"
+          className="object-cover transition-transform duration-slow ease-(--ease-reveal) group-hover:scale-[1.03]"
           priority
         />
       ) : (
@@ -49,7 +50,7 @@ export function FeaturedAlbumCard({
           {album.name}
         </span>
         <span className="text-sm text-white/80">
-          {photoCountLabel(album.photoCount)}
+          {tCount("photos", { count: album.photoCount })}
         </span>
       </div>
     </Link>

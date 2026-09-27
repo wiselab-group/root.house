@@ -1,5 +1,7 @@
 "use server";
 
+import { getErrorMessage } from "@/i18n/errors";
+import { getValidationMessage } from "@/i18n/validation";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -33,7 +35,8 @@ export async function createStoryAction(
   formData: FormData,
 ): Promise<StoryFormState> {
   const session = await auth();
-  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
 
   const member = await requireFamilyAccess(
     familyId,
@@ -41,7 +44,7 @@ export async function createStoryAction(
     "contributor",
   );
   if (!canCreate(member.role, "story")) {
-    return { error: "У вас нет прав на добавление историй." };
+    return { error: (await getErrorMessage())("noStoryCreate") };
   }
 
   const parsed = createStorySchema.safeParse({
@@ -51,9 +54,10 @@ export async function createStoryAction(
   });
 
   if (!parsed.success) {
+    const message = await getValidationMessage();
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
-      fieldErrors[String(issue.path[0])] = issue.message;
+      fieldErrors[String(issue.path[0])] = message(issue);
     }
     return { fieldErrors };
   }
@@ -79,7 +83,7 @@ export async function deleteStoryAction(
   storyId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   const member = await requireFamilyAccess(
     familyId,
@@ -95,7 +99,7 @@ export async function deleteStoryAction(
       { privacyLevel: story.privacyLevel, createdBy: story.authorId },
     )
   ) {
-    throw new ForbiddenError("У вас нет прав на удаление этой истории.");
+    throw new ForbiddenError("You may not delete this story.");
   }
 
   await removeStory(storyId, familyId, session.user.id);
@@ -118,7 +122,8 @@ export async function createStoryFromStoriesPageAction(
   formData: FormData,
 ): Promise<StoryFormState> {
   const session = await auth();
-  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
 
   const member = await requireFamilyAccess(
     familyId,
@@ -126,7 +131,7 @@ export async function createStoryFromStoriesPageAction(
     "contributor",
   );
   if (!canCreate(member.role, "story")) {
-    return { error: "У вас нет прав на добавление историй." };
+    return { error: (await getErrorMessage())("noStoryCreate") };
   }
 
   const parsed = createStorySchema.safeParse({
@@ -136,9 +141,10 @@ export async function createStoryFromStoriesPageAction(
   });
 
   if (!parsed.success) {
+    const message = await getValidationMessage();
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
-      fieldErrors[String(issue.path[0])] = issue.message;
+      fieldErrors[String(issue.path[0])] = message(issue);
     }
     return { fieldErrors };
   }
@@ -174,7 +180,8 @@ export async function updateStoryAction(
   formData: FormData,
 ): Promise<StoryFormState> {
   const session = await auth();
-  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
 
   const member = await requireFamilyAccess(
     familyId,
@@ -183,14 +190,14 @@ export async function updateStoryAction(
   );
 
   const existing = await getStory(storyId, familyId);
-  if (!existing) return { error: "История не найдена." };
+  if (!existing) return { error: (await getErrorMessage())("storyNotFound") };
   if (
     !canEdit(
       { userId: session.user.id, role: member.role },
       { privacyLevel: existing.privacyLevel, createdBy: existing.authorId },
     )
   ) {
-    return { error: "У вас нет прав на редактирование этой истории." };
+    return { error: (await getErrorMessage())("noStoryEdit") };
   }
 
   const parsed = createStorySchema.safeParse({
@@ -200,9 +207,10 @@ export async function updateStoryAction(
   });
 
   if (!parsed.success) {
+    const message = await getValidationMessage();
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
-      fieldErrors[String(issue.path[0])] = issue.message;
+      fieldErrors[String(issue.path[0])] = message(issue);
     }
     return { fieldErrors };
   }
@@ -232,7 +240,7 @@ export async function deleteStoryFromStoriesPageAction(
   storyId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   const member = await requireFamilyAccess(
     familyId,
@@ -248,7 +256,7 @@ export async function deleteStoryFromStoriesPageAction(
       { privacyLevel: story.privacyLevel, createdBy: story.authorId },
     )
   ) {
-    throw new ForbiddenError("У вас нет прав на удаление этой истории.");
+    throw new ForbiddenError("You may not delete this story.");
   }
 
   await removeStory(storyId, familyId, session.user.id);

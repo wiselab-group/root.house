@@ -1,5 +1,7 @@
 "use server";
 
+import { getErrorMessage } from "@/i18n/errors";
+import { getValidationMessage } from "@/i18n/validation";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -36,7 +38,8 @@ export async function createEventAction(
   formData: FormData,
 ): Promise<EventFormState> {
   const session = await auth();
-  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
 
   const member = await requireFamilyAccess(
     familyId,
@@ -44,7 +47,7 @@ export async function createEventAction(
     "contributor",
   );
   if (!canCreate(member.role, "event")) {
-    return { error: "У вас нет прав на добавление событий." };
+    return { error: (await getErrorMessage())("noEventCreate") };
   }
 
   const parsed = createEventSchema.safeParse({
@@ -55,9 +58,10 @@ export async function createEventAction(
   });
 
   if (!parsed.success) {
+    const message = await getValidationMessage();
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
-      fieldErrors[String(issue.path[0])] = issue.message;
+      fieldErrors[String(issue.path[0])] = message(issue);
     }
     return { fieldErrors };
   }
@@ -93,7 +97,7 @@ export async function deleteEventAction(
   if (eventId.startsWith("synthetic:")) return;
 
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   const member = await requireFamilyAccess(
     familyId,
@@ -109,7 +113,7 @@ export async function deleteEventAction(
       { privacyLevel: event.privacyLevel, createdBy: event.createdBy ?? "" },
     )
   ) {
-    throw new ForbiddenError("У вас нет прав на удаление этого события.");
+    throw new ForbiddenError("You may not delete this event.");
   }
 
   await removeEvent(eventId, familyId, session.user.id);
@@ -139,7 +143,8 @@ export async function updateEventAction(
   formData: FormData,
 ): Promise<EventFormState> {
   const session = await auth();
-  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
 
   const member = await requireFamilyAccess(
     familyId,
@@ -148,7 +153,7 @@ export async function updateEventAction(
   );
 
   const existing = await getEvent(eventId, familyId);
-  if (!existing) return { error: "Событие не найдено." };
+  if (!existing) return { error: (await getErrorMessage())("eventNotFound") };
   if (
     !canEdit(
       { userId: session.user.id, role: member.role },
@@ -158,7 +163,7 @@ export async function updateEventAction(
       },
     )
   ) {
-    return { error: "У вас нет прав на редактирование этого события." };
+    return { error: (await getErrorMessage())("noEventEdit") };
   }
 
   const parsed = createEventSchema.safeParse({
@@ -169,9 +174,10 @@ export async function updateEventAction(
   });
 
   if (!parsed.success) {
+    const message = await getValidationMessage();
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
-      fieldErrors[String(issue.path[0])] = issue.message;
+      fieldErrors[String(issue.path[0])] = message(issue);
     }
     return { fieldErrors };
   }
@@ -195,7 +201,7 @@ export async function updateEventAction(
     participants,
   });
 
-  if (!updated) return { error: "Событие не найдено." };
+  if (!updated) return { error: (await getErrorMessage())("eventNotFound") };
 
   const familySlug = await getFamilySlugById(familyId);
   if (places.createdAny) revalidatePlacePages(familySlug);

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { ProfileSection } from "@/components/person/profile-section";
 import { FamilySettingsDetailsRow } from "@/components/family/family-settings-details-row";
 import { FamilySettingsSlugRow } from "@/components/family/family-settings-slug-row";
@@ -20,9 +21,10 @@ import { listShareLinksForFamilyWithStatus } from "@/domain/share-link/share-lin
 import { listActivityLog } from "@/domain/activity-log/activity-log.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 
-export const metadata: Metadata = {
-  title: "Настройки",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("settings");
+  return { title: t("title") };
+}
 
 export default async function FamilySettingsPage({
   params,
@@ -49,29 +51,29 @@ export default async function FamilySettingsPage({
         : Promise.resolve([]),
       isOwner ? listActivityLog(familyId, { limit: 10 }) : Promise.resolve([]),
     ]);
+  const t = await getTranslations("settings");
+  const tf = await getTranslations("families");
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12 sm:py-16">
       <ScrollToHash />
       <SetBreadcrumbs
         items={[
-          { label: "Мои семьи", href: "/families" },
+          { label: tf("title"), href: "/families" },
           { label: family?.name ?? slug, href: `/families/${slug}` },
-          { label: "Настройки" },
+          { label: t("title") },
         ]}
       />
       <div className="flex flex-col gap-2">
-        <h1 className="font-heading text-3xl font-medium tracking-tight text-balance sm:text-4xl">
-          Настройки
+        <h1 className="font-heading text-title font-medium tracking-tight text-balance">
+          {t("title")}
         </h1>
-        <p className="text-muted-foreground">
-          Название, ссылка и описание архива.
-        </p>
+        <p className="text-muted-foreground">{t("lead")}</p>
       </div>
 
       <ProfileSection
-        title="Об архиве"
-        description="Видно всем участникам семьи."
+        title={t("aboutTitle")}
+        description={t("aboutDescription")}
       >
         <div className="flex flex-col gap-6">
           <FamilySettingsDetailsRow />
@@ -79,17 +81,14 @@ export default async function FamilySettingsPage({
         </div>
       </ProfileSection>
 
-      <ProfileSection
-        title="Семейное дерево"
-        description="Личная настройка — видна только вам."
-      >
+      <ProfileSection title={t("treeTitle")} description={t("treeDescription")}>
         <FamilySettingsFocusRow />
       </ProfileSection>
 
       {isOwner && member && (
         <ProfileSection
-          title="Участники"
-          description="Управление доступом к семейному архиву."
+          title={t("membersTitle")}
+          description={t("membersDescription")}
         >
           <FamilyMembersSection
             familyId={familyId}
@@ -102,8 +101,8 @@ export default async function FamilySettingsPage({
 
       {isOwner && member && (
         <ProfileSection
-          title="Ссылки для общего доступа"
-          description="Анонимный доступ только для чтения к публичным данным семьи — без регистрации и без прав редактирования."
+          title={t("shareTitle")}
+          description={t("shareDescription")}
         >
           <ShareLinkSection familyId={familyId} shareLinks={shareLinks} />
         </ProfileSection>
@@ -112,16 +111,16 @@ export default async function FamilySettingsPage({
       {isOwner && member && (
         <ProfileSection
           id="activity"
-          title="Активность семьи"
-          description="Кто и что изменил в архиве — видно только владельцу. Последние 10 записей."
+          title={t("activityTitle")}
+          description={t("activityDescription")}
         >
           <ActivityLogSection entries={activityEntries} />
         </ProfileSection>
       )}
 
       <ProfileSection
-        title="Опасная зона"
-        description="Необратимые действия — доступны только владельцу."
+        title={t("dangerTitle")}
+        description={t("dangerDescription")}
         tone="danger"
       >
         <FamilySettingsDeleteRow />

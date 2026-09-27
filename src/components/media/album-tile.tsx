@@ -1,8 +1,8 @@
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ArchiveImage } from "@/components/media/archive-image";
 import { mediaUrl } from "@/lib/media-url";
 import { ImagesIcon } from "lucide-react";
-import { photoCountLabel } from "@/domain/shared/pluralize-ru";
 import type { AlbumWithCoverRecord } from "@/domain/album/album.service";
 
 /** One compact folder-style tile in AlbumGrid's grid row (cover + name +
@@ -20,6 +20,7 @@ export function AlbumTile({
   familySlug: string;
   familyId: string;
 }) {
+  const tCount = useTranslations("counts");
   return (
     <Link
       href={`/families/${familySlug}/photos/${album.id}`}
@@ -31,7 +32,7 @@ export function AlbumTile({
           alt=""
           fill
           sizes="(max-width: 640px) 50vw, 33vw"
-          className="object-cover transition-transform duration-200 group-hover:scale-105"
+          className="object-cover transition-transform duration-base group-hover:scale-105"
         />
       ) : (
         <div className="flex size-full items-center justify-center">
@@ -47,7 +48,7 @@ export function AlbumTile({
           {album.name}
         </span>
         <span className="text-xs text-white/80">
-          {photoCountLabel(album.photoCount)}
+          {tCount("photos", { count: album.photoCount })}
         </span>
       </div>
     </Link>

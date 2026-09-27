@@ -1,3 +1,4 @@
+import { useFormatter, useTranslations } from "next-intl";
 import type { ShareLinkWithStatus } from "@/domain/share-link/share-link.service";
 import { ShareLinkRowActions } from "./share-link-row-actions";
 
@@ -18,6 +19,8 @@ export function ShareLinksList({
    *  the parent Server Component so this stays a plain render pass. */
   focusPersonNames: Record<string, string>;
 }) {
+  const t = useTranslations("shareLinks");
+  const format = useFormatter();
   return (
     <div className="flex flex-col gap-2">
       {shareLinks.map((link) => (
@@ -27,17 +30,17 @@ export function ShareLinksList({
         >
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-medium">
-              Фокус: {focusPersonNames[link.focusPersonId] ?? "—"}
+              {t("focusLine", {
+                name: focusPersonNames[link.focusPersonId] ?? "—",
+              })}
             </span>
             <span className="text-xs text-muted-foreground">
-              {link.passwordHash ? "Защищена паролем" : "Без пароля"} ·{" "}
+              {link.passwordHash ? t("protected") : t("noPassword")} ·{" "}
               {link.expiresAt
-                ? `истекает ${new Intl.DateTimeFormat("ru-RU", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  }).format(link.expiresAt)}`
-                : "не истекает"}
+                ? t("expires", {
+                    date: format.dateTime(link.expiresAt, "long"),
+                  })
+                : t("noExpiry")}
             </span>
           </div>
           <ShareLinkRowActions

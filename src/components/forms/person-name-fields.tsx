@@ -1,13 +1,15 @@
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { PersonRecord } from "@/domain/person/person.service";
 
 /** Name fields — split out to keep PersonForm under the 150-line limit. */
 export function PersonNameFields({ person }: { person?: PersonRecord | null }) {
+  const t = useTranslations("personForm");
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="firstName">Имя</Label>
+        <Label htmlFor="firstName">{t("firstName")}</Label>
         <Input
           id="firstName"
           name="firstName"
@@ -15,7 +17,7 @@ export function PersonNameFields({ person }: { person?: PersonRecord | null }) {
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="lastName">Фамилия</Label>
+        <Label htmlFor="lastName">{t("lastName")}</Label>
         <Input
           id="lastName"
           name="lastName"
@@ -23,7 +25,7 @@ export function PersonNameFields({ person }: { person?: PersonRecord | null }) {
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="middleName">Отчество</Label>
+        <Label htmlFor="middleName">{t("middleName")}</Label>
         <Input
           id="middleName"
           name="middleName"
@@ -31,7 +33,7 @@ export function PersonNameFields({ person }: { person?: PersonRecord | null }) {
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="maidenName">Девичья фамилия</Label>
+        <Label htmlFor="maidenName">{t("maidenName")}</Label>
         <Input
           id="maidenName"
           name="maidenName"

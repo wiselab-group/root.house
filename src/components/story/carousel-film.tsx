@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ArchiveImage } from "@/components/media/archive-image";
 import { LayoutGridIcon, PauseIcon, PlayIcon } from "lucide-react";
 import { glassIconButtonLarge } from "@/components/hero/glass";
@@ -28,6 +29,8 @@ export function CarouselFilm({
   onAdvance: () => void;
   onOpenGrid: () => void;
 }) {
+  const tStories = useTranslations("stories");
+  const t = useTranslations("stories");
   const caption = slides[current]?.caption;
 
   return (
@@ -41,7 +44,7 @@ export function CarouselFilm({
         </p>
         <div
           role="group"
-          aria-label="Фото истории"
+          aria-label={t("photos")}
           className="flex max-w-full gap-1.5 overflow-x-auto p-1 [scrollbar-width:none]"
         >
           {slides.map((slide, index) => (
@@ -49,9 +52,9 @@ export function CarouselFilm({
               key={slide.id}
               type="button"
               aria-pressed={index === current}
-              aria-label={slide.caption ?? `Фото ${index + 1}`}
+              aria-label={slide.caption ?? tStories("photoN", { n: index + 1 })}
               onClick={() => onSelect(index)}
-              className="h-14 shrink-0 overflow-hidden rounded-md bg-muted opacity-55 transition-[opacity,transform] duration-200 ease-(--ease-reveal) hover:-translate-y-0.5 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-pressed:-translate-y-1 aria-pressed:opacity-100 aria-pressed:ring-2 aria-pressed:ring-foreground"
+              className="h-14 shrink-0 overflow-hidden rounded-md bg-muted opacity-55 transition-[opacity,transform] duration-base ease-(--ease-reveal) hover:-translate-y-0.5 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-pressed:-translate-y-1 aria-pressed:opacity-100 aria-pressed:ring-2 aria-pressed:ring-foreground"
             >
               <ArchiveImage
                 src={slide.thumbSrc}
@@ -70,7 +73,7 @@ export function CarouselFilm({
           type="button"
           className={`${glassIconButtonLarge} relative`}
           aria-pressed={playing}
-          aria-label={playing ? "Остановить слайдшоу" : "Слайдшоу"}
+          aria-label={playing ? t("stopSlideshow") : t("slideshow")}
           onClick={onTogglePlay}
         >
           {playing && (
@@ -102,7 +105,7 @@ export function CarouselFilm({
         <button
           type="button"
           className={glassIconButtonLarge}
-          aria-label="Все фото истории"
+          aria-label={t("allPhotos")}
           onClick={onOpenGrid}
         >
           <LayoutGridIcon aria-hidden="true" />

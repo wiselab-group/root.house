@@ -199,5 +199,6 @@ export async function listPublicPersonOptions(
 
 function toOption(p: PersonRecord): PublicPersonOption {
   const name = [p.firstName, p.lastName].filter(Boolean).join(" ").trim();
-  return { id: p.id, name: name || "Без имени" };
+  // Empty for a nameless person — the UI supplies the localized fallback.
+  return { id: p.id, name };
 }

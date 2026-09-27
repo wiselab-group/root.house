@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,15 +24,14 @@ export function DeletePhotoDialog({
   onConfirm: () => void;
   isPending: boolean;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("media");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Удалить фото?</DialogTitle>
-          <DialogDescription>
-            Это действие нельзя отменить. Фото будет удалено из всех альбомов и
-            профилей, к которым оно привязано.
-          </DialogDescription>
+          <DialogTitle>{t("deletePhotoTitle")}</DialogTitle>
+          <DialogDescription>{t("deletePhotoBody")}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
@@ -39,7 +39,7 @@ export function DeletePhotoDialog({
             onClick={() => onOpenChange(false)}
             disabled={isPending}
           >
-            Отмена
+            {tc("cancel")}
           </Button>
           <Button
             variant="destructive"
@@ -47,7 +47,7 @@ export function DeletePhotoDialog({
             disabled={isPending}
             aria-busy={isPending}
           >
-            {isPending ? "Удаляем…" : "Удалить"}
+            {isPending ? tc("deleting") : tc("delete")}
           </Button>
         </DialogFooter>
       </DialogContent>

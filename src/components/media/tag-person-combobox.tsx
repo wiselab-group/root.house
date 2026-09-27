@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Combobox } from "@base-ui/react/combobox";
 import { SearchIcon } from "lucide-react";
@@ -27,6 +28,9 @@ export function TagPersonCombobox({
   autoFocus?: boolean;
   className?: string;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("media");
+  const locale = useLocale();
   const [results, setResults] = useState<PersonSearchResult[]>([]);
   const [query, setQuery] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -58,10 +62,10 @@ export function TagPersonCombobox({
       filter={null}
       value={null}
       inputValue={query}
-      itemToStringLabel={(person) => personDisplayName(person)}
+      itemToStringLabel={(person) => personDisplayName(person, locale)}
       onValueChange={(person) => {
         if (!person) return;
-        onSelect({ id: person.id, name: personDisplayName(person) });
+        onSelect({ id: person.id, name: personDisplayName(person, locale) });
       }}
       onInputValueChange={(nextValue, { reason }) => {
         if (reason === "item-press") return;
@@ -74,7 +78,7 @@ export function TagPersonCombobox({
           <SearchIcon className="pointer-events-none absolute left-3 size-4 text-muted-foreground" />
           <Combobox.Input
             autoFocus={autoFocus}
-            placeholder="Кто это?"
+            placeholder={t("whoIsThis")}
             className="h-full w-full min-w-0 rounded-lg bg-transparent py-1 pr-3 pl-9 text-sm text-foreground outline-none placeholder:text-muted-foreground"
           />
         </Combobox.InputGroup>
@@ -87,20 +91,20 @@ export function TagPersonCombobox({
         >
           <Combobox.Popup
             className={cn(
-              "w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none",
+              "w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-instant outline-none",
               "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
             )}
             aria-busy={isPending || undefined}
           >
             <div className="max-h-60 overflow-y-auto overscroll-contain p-1 scroll-pt-1 scroll-pb-1">
               <Combobox.Status className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
-                {isPending ? "Ищем…" : null}
+                {isPending ? tc("searching") : null}
               </Combobox.Status>
               <Combobox.Empty className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
                 {!isPending
                   ? query.trim().length > 0
-                    ? "Ничего не найдено."
-                    : "В семье пока никого нет."
+                    ? tc("nothingFound")
+                    : tc("noPeople")
                   : null}
               </Combobox.Empty>
               <Combobox.List>
@@ -110,7 +114,7 @@ export function TagPersonCombobox({
                     value={person}
                     className="flex cursor-default items-center rounded-md px-2 py-2 text-left text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
                   >
-                    {personDisplayName(person)}
+                    {personDisplayName(person, locale)}
                   </Combobox.Item>
                 )}
               </Combobox.List>

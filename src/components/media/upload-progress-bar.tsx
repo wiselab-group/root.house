@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 /**
@@ -11,7 +12,7 @@ import { cn } from "@/lib/utils";
  */
 export function UploadProgressBar({
   value,
-  label = "Загрузка фото",
+  label,
   className,
 }: {
   /** 0–1. */
@@ -19,11 +20,13 @@ export function UploadProgressBar({
   label?: string;
   className?: string;
 }) {
+  const tDefault = useTranslations("media");
+  const ariaLabel = label ?? tDefault("uploadingPhotoGeneric");
   const fraction = Math.min(Math.max(value, 0), 1);
   return (
     <div
       role="progressbar"
-      aria-label={label}
+      aria-label={ariaLabel}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(fraction * 100)}
@@ -33,7 +36,7 @@ export function UploadProgressBar({
       )}
     >
       <div
-        className="h-full origin-left rounded-full bg-upload-progress transition-transform duration-300 ease-(--ease-reveal) motion-reduce:transition-none"
+        className="h-full origin-left rounded-full bg-upload-progress transition-transform duration-slow ease-(--ease-reveal) motion-reduce:transition-none"
         style={{ transform: `scaleX(${fraction})` }}
       />
     </div>

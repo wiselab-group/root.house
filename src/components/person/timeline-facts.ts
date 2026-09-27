@@ -3,7 +3,6 @@ import {
   type TimelineEvent,
 } from "@/domain/event/event.service";
 import { getParticipantsOf } from "@/domain/event/event.repository";
-import { EVENT_ROLE_LABELS } from "@/domain/event/event-roles";
 import { getPersonById } from "@/domain/person/person.repository";
 import type { PersonRecord } from "@/domain/person/person.repository";
 import { personDisplayName } from "@/domain/person/display-name";
@@ -13,6 +12,7 @@ import {
   type PartnershipRecord,
 } from "@/domain/relationship/relationship.repository";
 import { formatPartialDate } from "@/domain/shared/partial-date";
+import { getEventWording, type EventWording } from "./event-wording";
 
 /**
  * The «what else is known» lines under a Линия жизни card, for the facts
@@ -34,6 +34,7 @@ export async function resolveTimelineFacts({
   partnerships: PartnershipRecord[];
   member: ActingMember;
 }): Promise<Map<string, string[]>> {
+  const wording = await getEventWording();
   const visiblePerson = async (id: string) => {
     const person = await getPersonById(id, familyId);
     return person && canView(member, person) ? person : null;
@@ -44,11 +45,20 @@ export async function resolveTimelineFacts({
       if (!isSyntheticEventId(event.id)) {
         return [
           event.id,
-          await participantFacts(event, personId, familyId, visiblePerson),
+          await participantFacts(
+            event,
+            personId,
+            familyId,
+            visiblePerson,
+            wording,
+          ),
         ];
       }
       if (event.type === "birth" && !event.relatedPerson) {
-        return [event.id, await parentFacts(personId, familyId, visiblePerson)];
+        return [
+          event.id,
+          await parentFacts(personId, familyId, visiblePerson, wording),
+        ];
       }
       if (event.type === "marriage") {
         const partnership = partnerships.find(
@@ -57,7 +67,7 @@ export async function resolveTimelineFacts({
         return [
           event.id,
           partnership
-            ? await marriageFacts(partnership, personId, visiblePerson)
+            ? await marriageFacts(partnership, personId, visiblePerson, wording)
             : [],
         ];
       }
@@ -74,6 +84,7 @@ async function participantFacts(
   personId: string,
   familyId: string,
   visiblePerson: VisiblePerson,
+  { locale, t, roleLabel }: EventWording,
 ): Promise<string[]> {
   const participants = (await getParticipantsOf(event.id, familyId)).filter(
     (participant) => participant.personId !== personId,
@@ -86,20 +97,23 @@ async function participantFacts(
       const role =
         participant.role === "subject" || participant.role === "participant"
           ? null
-          : (EVENT_ROLE_LABELS[participant.role] ?? participant.role);
+          : roleLabel(participant.role);
       return role
-        ? `${personDisplayName(person)} (${role})`
-        : personDisplayName(person);
+        ? `${personDisplayName(person, locale)} (${role})`
+        : personDisplayName(person, locale);
     }),
   );
   const visible = names.filter((name): name is string => name !== null);
-  return visible.length > 0 ? [`Участники: ${visible.join(", ")}`] : [];
+  return visible.length > 0
+    ? [t("participants", { names: visible.join(", ") })]
+    : [];
 }
 
 async function parentFacts(
   personId: string,
   familyId: string,
   visiblePerson: VisiblePerson,
+  { locale, t }: EventWording,
 ): Promise<string[]> {
   const edges = await getParentsOf(personId, familyId);
   const parents = (
@@ -107,22 +121,23 @@ async function parentFacts(
   ).filter((parent): parent is PersonRecord => parent !== null);
   if (parents.length === 0) return [];
   if (parents.length > 1) {
-    return [`Родители: ${parents.map(personDisplayName).join(", ")}`];
+    const names = parents.map((parent) => personDisplayName(parent, locale));
+    return [t("parents", { names: names.join(", ") })];
   }
   const [parent] = parents;
-  const label =
-    parent.gender === "female"
-      ? "Мать"
-      : parent.gender === "male"
-        ? "Отец"
-        : "Родитель";
-  return [`${label}: ${personDisplayName(parent)}`];
+  return [
+    t("parent", {
+      gender: parent.gender,
+      name: personDisplayName(parent, locale),
+    }),
+  ];
 }
 
 async function marriageFacts(
   partnership: PartnershipRecord,
   personId: string,
   visiblePerson: VisiblePerson,
+  { locale, t }: EventWording,
 ): Promise<string[]> {
   const facts: string[] = [];
   const spouse = await visiblePerson(
@@ -131,19 +146,25 @@ async function marriageFacts(
       : partnership.person1Id,
   );
   if (spouse) {
-    const label =
-      spouse.gender === "female"
-        ? "Супруга"
-        : spouse.gender === "male"
-          ? "Супруг"
-          : "Супруг(а)";
-    facts.push(`${label}: ${personDisplayName(spouse)}`);
+    facts.push(
+      t("spouse", {
+        gender: spouse.gender,
+        name: personDisplayName(spouse, locale),
+      }),
+    );
   }
-  const ending = MARRIAGE_ENDINGS[partnership.status];
-  if (ending) {
+  const endingKey =
+    partnership.status in MARRIAGE_ENDINGS
+      ? MARRIAGE_ENDINGS[partnership.status as keyof typeof MARRIAGE_ENDINGS]
+      : null;
+  if (endingKey) {
+    const ending = t(endingKey);
     facts.push(
       partnership.endDate?.year != null
-        ? `${ending}: ${formatPartialDate(partnership.endDate)}`
+        ? t("endedOn", {
+            ending,
+            date: formatPartialDate(partnership.endDate, locale),
+          })
         : ending,
     );
   }
@@ -151,8 +172,8 @@ async function marriageFacts(
 }
 
 /** How a marriage ended, when it did — a still-current one says nothing. */
-const MARRIAGE_ENDINGS: Partial<Record<PartnershipRecord["status"], string>> = {
-  divorced: "Развод",
-  separated: "Расставание",
-  widowed: "Брак прервала смерть",
-};
+const MARRIAGE_ENDINGS = {
+  divorced: "divorced",
+  separated: "separated",
+  widowed: "widowed",
+} as const satisfies Partial<Record<PartnershipRecord["status"], string>>;

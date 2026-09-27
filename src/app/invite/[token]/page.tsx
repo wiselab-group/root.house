@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { getInvitationPreview } from "@/domain/invitation/invitation.service";
 import { AuthShell } from "@/components/auth/auth-shell";
@@ -11,11 +12,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/link-button";
-import { ROLE_LABELS } from "@/domain/family/role-labels";
 
-export const metadata: Metadata = {
-  title: "Приглашение в семью",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("invite");
+  return { title: t("title") };
+}
 
 /**
  * Entry point to Family membership — deliberately outside (app)'s layout
@@ -33,6 +34,9 @@ export default async function InvitePage({
     auth(),
     getInvitationPreview(token),
   ]);
+  const t = await getTranslations("invite");
+  const ta = await getTranslations("auth");
+  const tr = await getTranslations("roles");
 
   return (
     <AuthShell>
@@ -44,31 +48,29 @@ export default async function InvitePage({
           <>
             <CardHeader>
               <CardTitle className="font-heading text-xl">
-                Приглашение не найдено
+                {t("notFoundTitle")}
               </CardTitle>
-              <CardDescription>
-                Эта ссылка недействительна или уже была использована.
-              </CardDescription>
+              <CardDescription>{t("notFoundBody")}</CardDescription>
             </CardHeader>
           </>
         ) : preview.status !== "pending" ? (
           <>
             <CardHeader>
               <CardTitle className="font-heading text-xl">
-                {preview.status === "expired" && "Срок приглашения истёк"}
-                {preview.status === "revoked" && "Приглашение отозвано"}
-                {preview.status === "accepted" && "Приглашение уже принято"}
+                {preview.status === "expired" && t("expiredTitle")}
+                {preview.status === "revoked" && t("revokedTitle")}
+                {preview.status === "accepted" && t("acceptedTitle")}
               </CardTitle>
               <CardDescription>
                 {preview.status === "accepted"
-                  ? "Если это были вы — просто войдите в свой аккаунт."
-                  : "Попросите владельца семьи отправить приглашение заново."}
+                  ? t("acceptedBody")
+                  : t("askResend")}
               </CardDescription>
             </CardHeader>
             {preview.status === "accepted" && (
               <CardContent>
                 <LinkButton href="/login" className="w-full">
-                  Войти
+                  {ta("signIn")}
                 </LinkButton>
               </CardContent>
             )}
@@ -77,23 +79,24 @@ export default async function InvitePage({
           <>
             <CardHeader>
               <CardTitle className="font-heading text-xl">
-                Приглашение в семью «{preview.familyName}»
+                {t("heading", { family: preview.familyName })}
               </CardTitle>
               <CardDescription>
-                {preview.inviterName || "Владелец семьи"} приглашает вас
-                присоединиться в роли «{ROLE_LABELS[preview.role]}». Войдите или
-                зарегистрируйтесь, чтобы принять приглашение.
+                {t("bodyGuest", {
+                  inviter: preview.inviterName || t("familyOwner"),
+                  role: tr(preview.role),
+                })}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               <LinkButton href={`/login?callbackUrl=/invite/${token}`}>
-                Войти
+                {ta("signIn")}
               </LinkButton>
               <LinkButton
                 href={`/register?callbackUrl=/invite/${token}`}
                 variant="outline"
               >
-                Зарегистрироваться
+                {ta("signUp")}
               </LinkButton>
             </CardContent>
           </>

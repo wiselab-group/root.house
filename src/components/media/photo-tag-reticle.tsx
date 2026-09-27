@@ -16,7 +16,7 @@ export function TagReticle({ shown }: { shown: boolean }) {
     <span
       aria-hidden
       className={cn(
-        "size-2 rounded-full bg-white/75 shadow-[0_0_6px_color-mix(in_oklch,black_35%,transparent)] transition-[transform,opacity] duration-300 ease-(--ease-reveal)",
+        "size-2 rounded-full bg-white/75 shadow-[0_0_6px_color-mix(in_oklch,black_35%,transparent)] transition-[transform,opacity] duration-slow ease-(--ease-reveal)",
         shown
           ? "scale-100 opacity-100 group-hover:scale-150 group-focus-visible:scale-150"
           : "scale-50 opacity-0",

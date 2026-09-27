@@ -98,12 +98,10 @@ export async function createShareLink(
 ): Promise<{ shareLink: ShareLinkRecord; shareUrl: string }> {
   const focusPerson = await getPersonById(input.focusPersonId, input.familyId);
   if (!focusPerson) {
-    throw new ShareLinkInvalidError("Выбранный человек не найден.");
+    throw new ShareLinkInvalidError("focusPersonNotFound");
   }
   if (!canViewViaShareLink(focusPerson, input.visibilityScope)) {
-    throw new ShareLinkInvalidError(
-      "Фокус-персона ссылки должна быть видна в выбранном режиме доступа.",
-    );
+    throw new ShareLinkInvalidError("focusPersonHidden");
   }
 
   const { token, tokenHash } = generateToken();

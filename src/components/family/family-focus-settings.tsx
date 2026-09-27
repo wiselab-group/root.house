@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { updateDefaultFocusPersonAction } from "@/actions/family.actions";
 import { PersonCombobox } from "@/components/tree/person-combobox";
 
@@ -19,6 +20,8 @@ export function FamilyFocusSettings({
   familyId: string;
   defaultFocusPerson: { id: string; name: string } | null;
 }) {
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const [value, setValue] = useState(defaultFocusPerson);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -45,16 +48,12 @@ export function FamilyFocusSettings({
     <div className="flex flex-col gap-1.5">
       <PersonCombobox
         familyId={familyId}
-        label="Дерево открывается с фокусом на"
+        label={t("focusLabel")}
         value={value}
         onChange={handleChange}
       />
       <p className="text-xs text-muted-foreground" aria-live="polite">
-        {isPending
-          ? "Сохраняем…"
-          : error
-            ? error
-            : "Только для вас — остальные участники семьи видят своё дерево от своей точки."}
+        {isPending ? tc("saving") : error ? error : t("focusHint")}
       </p>
     </div>
   );

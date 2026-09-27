@@ -87,7 +87,7 @@ export function CompactCardBody({
           // edge.tsx/union-child-edge.tsx) — no built-in Tailwind utility
           // lands on a non-integer px value, per direct user request that the
           // frame border read as the same thickness as the tree's lines.
-          "relative shrink-0 rounded-4xl border p-1 transition-colors duration-200",
+          "relative shrink-0 rounded-4xl border p-1 transition-colors duration-base",
         )}
         style={{
           backgroundColor: frameColor,

@@ -1,3 +1,4 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { ArrowRightIcon } from "lucide-react";
 import { getFamilyOf } from "@/domain/relationship/relationship.service";
@@ -35,6 +36,8 @@ export async function PersonFamilyPanel({
   personId: string;
   canEdit: boolean;
 }) {
+  const t = await getTranslations("profile");
+  const locale = await getLocale();
   const [family, allPeople] = await Promise.all([
     getFamilyOf(personId, familyId),
     listPeople(familyId),
@@ -65,7 +68,7 @@ export async function PersonFamilyPanel({
       photoMediaId: person.photoMediaId,
       relationKind: kind,
       gender: person.gender,
-      lifeSpan: shortLifeSpan(person),
+      lifeSpan: shortLifeSpan(person, locale),
       relationshipKind: relationship?.kind,
       relationshipId: relationship?.id,
       isCurrent: relationship?.isCurrent,
@@ -95,7 +98,7 @@ export async function PersonFamilyPanel({
   return (
     <ProfileSection
       id="family"
-      title="Семья"
+      title={t("family")}
       className="min-w-0 scroll-mt-[calc(var(--app-header-h,0px)+4.5rem)]"
       action={
         // A «go somewhere» link, styled exactly like Family Home's «Весь
@@ -105,7 +108,7 @@ export async function PersonFamilyPanel({
           href={`/families/${familySlug}/tree?focus=${personId}`}
           className="group flex shrink-0 items-center gap-1 rounded-sm text-sm text-foreground/60 transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
-          Открыть в дереве
+          {t("openInTree")}
           <ArrowRightIcon
             className="size-3.5 transition-transform group-hover:translate-x-0.5"
             aria-hidden="true"
@@ -115,10 +118,7 @@ export async function PersonFamilyPanel({
     >
       <div className="flex min-w-0 flex-col gap-2">
         {relatives.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            Родственники пока не указаны. Добавленные люди появятся здесь и в
-            семейном дереве.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("noRelatives")}</p>
         )}
         <RelativeGroup
           familyId={familyId}

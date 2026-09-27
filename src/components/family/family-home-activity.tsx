@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ArrowRight } from "lucide-react";
 import { ProfileSection } from "@/components/person/profile-section";
 import { ActivityLogSection } from "./activity-log-section";
@@ -16,16 +17,18 @@ export function FamilyHomeActivity({
   entries: ActivityLogEntry[];
   hasMore: boolean;
 }) {
+  const t = useTranslations("familyHome");
+  const tc = useTranslations("common");
   return (
     <ProfileSection
-      title="Активность семьи"
+      title={t("activity")}
       action={
         hasMore && (
           <Link
             href={`/families/${familySlug}/settings#activity`}
             className="group flex shrink-0 items-center gap-1 text-sm text-foreground/60 transition-colors hover:text-foreground"
           >
-            Ещё
+            {tc("more")}
             <ArrowRight
               className="size-3.5 transition-transform group-hover:translate-x-0.5"
               aria-hidden="true"

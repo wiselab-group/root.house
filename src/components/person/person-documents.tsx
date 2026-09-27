@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import {
   getPersonDocuments,
   filterVisibleMedia,
@@ -29,15 +30,17 @@ export async function PersonDocuments({
   canContribute: boolean;
   member: ActingMember;
 }) {
+  const tc = await getTranslations("common");
+  const t = await getTranslations("profile");
   const allDocuments = await getPersonDocuments(personId, familyId);
   const documents = filterVisibleMedia(allDocuments, member);
 
   return (
     <ProfileSectionWithAdd
-      title="Документы"
+      title={t("tabDocuments")}
       count={documents.length}
-      addLabel="Добавить"
-      closeLabel="Закрыть"
+      addLabel={tc("add")}
+      closeLabel={tc("close")}
       form={
         canContribute && (
           <DocumentUploadPanel familyId={familyId} personId={personId} />
@@ -46,7 +49,7 @@ export async function PersonDocuments({
     >
       <div className="flex flex-col gap-4">
         {documents.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Документов пока нет.</p>
+          <p className="text-sm text-muted-foreground">{t("noDocuments")}</p>
         ) : (
           <DocumentList
             familyId={familyId}

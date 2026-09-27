@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { MoreVerticalIcon, PencilIcon, Trash2Icon } from "lucide-react";
@@ -47,6 +48,8 @@ export function AlbumActionsMenu({
   albumName: string;
   onRename: () => void;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("media");
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -68,7 +71,7 @@ export function AlbumActionsMenu({
               type="button"
               variant="ghost"
               size="icon-sm"
-              aria-label="Действия с альбомом"
+              aria-label={t("albumActions")}
               className="rounded-full text-muted-foreground hover:text-foreground"
             />
           }
@@ -78,14 +81,14 @@ export function AlbumActionsMenu({
         <DropdownMenuContent align="start" className="w-56 min-w-56">
           <DropdownMenuItem onClick={onRename}>
             <PencilIcon />
-            Переименовать
+            {t("rename")}
           </DropdownMenuItem>
           <DropdownMenuItem
             variant="destructive"
             onClick={() => setConfirmOpen(true)}
           >
             <Trash2Icon />
-            Удалить альбом
+            {t("deleteAlbum")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -93,11 +96,10 @@ export function AlbumActionsMenu({
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Удалить альбом «{albumName}»?</DialogTitle>
-            <DialogDescription>
-              Это действие нельзя отменить. Сами фото останутся в семейной
-              галерее — удаляется только альбом.
-            </DialogDescription>
+            <DialogTitle>
+              {t("deleteAlbumTitle", { name: albumName })}
+            </DialogTitle>
+            <DialogDescription>{t("deleteAlbumBody")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button
@@ -105,7 +107,7 @@ export function AlbumActionsMenu({
               onClick={() => setConfirmOpen(false)}
               disabled={isPending}
             >
-              Отмена
+              {tc("cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -113,7 +115,7 @@ export function AlbumActionsMenu({
               disabled={isPending}
               aria-busy={isPending}
             >
-              {isPending ? "Удаляем…" : "Удалить альбом"}
+              {isPending ? tc("deleting") : t("deleteAlbum")}
             </Button>
           </DialogFooter>
         </DialogContent>

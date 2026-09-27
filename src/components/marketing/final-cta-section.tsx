@@ -1,21 +1,25 @@
+import { useTranslations } from "next-intl";
 import { LinkButton } from "@/components/ui/link-button";
 
+/** Closing appeal — the "ask them while you still can" feeling the whole
+ *  page builds towards, answered with the same first step as the hero. */
 export function FinalCtaSection() {
+  const t = useTranslations("landing");
   return (
-    <section className="bg-primary/5 px-6 py-20 sm:py-28">
-      <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 text-center">
-        <h2 className="font-heading text-3xl font-medium text-balance sm:text-4xl">
-          Someone in your family remembers the story. Give that story a place to
-          live.
+    <section aria-labelledby="final-cta-title" className="px-6 py-section">
+      <div className="mx-auto flex max-w-3xl flex-col items-center gap-6 text-center">
+        <h2
+          id="final-cta-title"
+          className="font-heading text-display font-medium text-balance"
+        >
+          {t("ctaTitle")}
         </h2>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <LinkButton href="/register" size="lg">
-            Start your family story →
-          </LinkButton>
-          <LinkButton href="/register" variant="ghost" size="lg">
-            Explore the family tree
-          </LinkButton>
-        </div>
+        <p className="max-w-xl text-balance text-muted-foreground sm:text-lg">
+          {t("ctaBody")}
+        </p>
+        <LinkButton href="/register" size="lg">
+          {t("ctaButton")}
+        </LinkButton>
       </div>
     </section>
   );

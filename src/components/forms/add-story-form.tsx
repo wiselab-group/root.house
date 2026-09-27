@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -16,10 +17,12 @@ import { PrivacyLevelSelect } from "./privacy-level-select";
 const initialState: StoryFormState = {};
 
 function SubmitButton() {
+  const t = useTranslations("storyForm");
+  const tc = useTranslations("common");
   const { pending } = useFormStatus();
   return (
     <Button type="submit" size="sm" disabled={pending} aria-busy={pending}>
-      {pending ? "Сохраняем…" : "Добавить историю"}
+      {pending ? tc("saving") : t("add")}
     </Button>
   );
 }
@@ -31,6 +34,8 @@ export function AddStoryForm({
   familyId: string;
   personId: string;
 }) {
+  const t = useTranslations("storyForm");
+  const tc = useTranslations("common");
   const close = useCollapsibleFormClose();
   const boundAction = createStoryAction.bind(null, familyId, personId);
   const [state, formAction] = useActionState(boundAction, initialState);
@@ -52,11 +57,11 @@ export function AddStoryForm({
       }}
       className="flex flex-col gap-3 rounded-md border border-border p-3"
     >
-      <p className="text-sm font-medium">Добавить историю</p>
+      <p className="text-sm font-medium">{t("add")}</p>
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="title" className="text-xs text-muted-foreground">
-          Название
+          {tc("name")}
         </Label>
         <Input id="title" name="title" required />
         {state.fieldErrors?.title && (
@@ -66,7 +71,7 @@ export function AddStoryForm({
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="body" className="text-xs text-muted-foreground">
-          История
+          {t("body")}
         </Label>
         <Textarea id="body" name="body" rows={5} required />
         {state.fieldErrors?.body && (
@@ -81,7 +86,7 @@ export function AddStoryForm({
       <div className="flex gap-2">
         <SubmitButton />
         <Button type="button" variant="ghost" size="sm" onClick={close}>
-          Отмена
+          {tc("cancel")}
         </Button>
       </div>
     </form>

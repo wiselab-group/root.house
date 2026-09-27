@@ -1,13 +1,11 @@
 import type { ActivityLogEntry } from "@/domain/activity-log/activity-log.service";
-import { ACTIVITY_ACTION_VERBS } from "@/domain/activity-log/activity-log-labels";
+import { useFormatter, useTranslations } from "next-intl";
 
-const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-});
+const ACTION_KEY = {
+  create: "activityCreate",
+  update: "activityUpdate",
+  delete: "activityDelete",
+} as const;
 
 /**
  * Owner-only "История действий" list — server component, fed a pre-fetched
@@ -21,12 +19,11 @@ export function ActivityLogSection({
 }: {
   entries: ActivityLogEntry[];
 }) {
+  const t = useTranslations("familyHome");
+  const format = useFormatter();
   if (entries.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        Пока нет действий — здесь появятся изменения, которые вносят участники
-        семьи.
-      </p>
+      <p className="text-sm text-muted-foreground">{t("activityEmpty")}</p>
     );
   }
 
@@ -38,11 +35,11 @@ export function ActivityLogSection({
             <span className="font-medium">
               {entry.actorName ?? entry.actorEmail}
             </span>{" "}
-            {ACTIVITY_ACTION_VERBS[entry.action]}{" "}
+            {t(ACTION_KEY[entry.action])}{" "}
             <span className="font-medium">{entry.entityLabel}</span>
           </span>
           <span className="text-xs text-muted-foreground">
-            {dateFormatter.format(entry.createdAt)}
+            {format.dateTime(entry.createdAt, "longWithTime")}
           </span>
         </li>
       ))}

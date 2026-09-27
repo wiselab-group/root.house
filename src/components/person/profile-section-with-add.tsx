@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, type ReactNode } from "react";
 import { PlusIcon, XIcon } from "lucide-react";
 import { CollapsibleFormCloseProvider } from "@/components/forms/collapsible-form";
@@ -48,6 +49,7 @@ export function ProfileSectionWithAdd({
   extraAction?: ReactNode;
   children: ReactNode;
 }) {
+  const tc = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [everOpened, setEverOpened] = useState(false);
   const keepMounted = Boolean(closeLabel);
@@ -68,7 +70,7 @@ export function ProfileSectionWithAdd({
         className={`${ICON} transition-transform group-hover:rotate-90`}
         aria-hidden="true"
       />
-      <span className="sm:hidden">Добавить</span>
+      <span className="sm:hidden">{tc("add")}</span>
       <span className="max-sm:hidden">{addLabel}</span>
     </button>
   ) : (

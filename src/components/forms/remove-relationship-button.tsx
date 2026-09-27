@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { XIcon } from "lucide-react";
 import {
@@ -39,6 +40,8 @@ export function RemoveRelationshipButton({
   /** Called inside the same transition as the remove action, before it resolves — lets RelativeGroup drop the pill from its optimistic list immediately instead of waiting for the action's revalidatePath. */
   onRemoved: () => void;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("relationships");
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -61,7 +64,7 @@ export function RemoveRelationshipButton({
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label={`Убрать связь с ${relativeName}`}
+            aria-label={t("removeLabel", { name: relativeName })}
             className="cursor-pointer rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
           />
         }
@@ -70,11 +73,8 @@ export function RemoveRelationshipButton({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Убрать связь с {relativeName}?</DialogTitle>
-          <DialogDescription>
-            Сам человек останется в семье — удаляется только эта связь. Действие
-            можно повторить в обратную сторону, добавив связь заново.
-          </DialogDescription>
+          <DialogTitle>{t("removeTitle", { name: relativeName })}</DialogTitle>
+          <DialogDescription>{t("removeBody")}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
@@ -82,7 +82,7 @@ export function RemoveRelationshipButton({
             onClick={() => setOpen(false)}
             disabled={isPending}
           >
-            Отмена
+            {tc("cancel")}
           </Button>
           <Button
             variant="destructive"
@@ -90,7 +90,7 @@ export function RemoveRelationshipButton({
             disabled={isPending}
             aria-busy={isPending}
           >
-            {isPending ? "Убираем…" : "Убрать связь"}
+            {isPending ? t("removing") : t("remove")}
           </Button>
         </DialogFooter>
       </DialogContent>

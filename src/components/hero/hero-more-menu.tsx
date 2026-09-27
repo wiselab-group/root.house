@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState } from "react";
 import { MoreVerticalIcon, PencilIcon, Trash2Icon } from "lucide-react";
@@ -32,6 +33,8 @@ export function HeroMoreMenu({
   editHref?: string | null;
   deleteTarget?: DeleteTarget | null;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("hero");
   const [confirmOpen, setConfirmOpen] = useState(false);
   if (!editHref && !deleteTarget) return null;
 
@@ -43,7 +46,7 @@ export function HeroMoreMenu({
             <button
               type="button"
               className={glassIconButton}
-              aria-label="Действия"
+              aria-label={t("actions")}
             />
           }
         >
@@ -53,7 +56,7 @@ export function HeroMoreMenu({
           {editHref && (
             <DropdownMenuItem render={<Link href={editHref} />}>
               <PencilIcon />
-              Редактировать
+              {tc("edit")}
             </DropdownMenuItem>
           )}
           {deleteTarget && (
@@ -63,8 +66,8 @@ export function HeroMoreMenu({
             >
               <Trash2Icon />
               {deleteTarget.kind === "person"
-                ? "Удалить человека"
-                : "Удалить историю"}
+                ? t("deletePerson")
+                : t("deleteStory")}
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>

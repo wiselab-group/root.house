@@ -100,8 +100,7 @@ export function validateGenealogyGraph(
       issues.push({
         kind: "self_parent_cycle",
         severity: "error",
-        message:
-          "Обнаружен цикл в родословной: человек является собственным предком.",
+        message: "Cycle detected: a person is their own ancestor.",
         personIds: cycle,
       });
     } else {
@@ -117,8 +116,7 @@ export function validateGenealogyGraph(
         issues.push({
           kind: "duplicate_parent_child",
           severity: "error",
-          message:
-            "Найдена дублирующаяся родительская связь между двумя людьми.",
+          message: "Duplicate parent relationship between two people.",
           personIds: [edge.parentId, edge.childId],
         });
       }
@@ -133,7 +131,7 @@ export function validateGenealogyGraph(
         issues.push({
           kind: "self_partnership",
           severity: "error",
-          message: "Человек не может состоять в партнёрстве сам с собой.",
+          message: "A person can't be in a partnership with themselves.",
           personIds: [edge.person1Id],
         });
         continue;
@@ -160,14 +158,14 @@ export function validateGenealogyGraph(
           kind: "child_older_than_parent",
           severity: "warning",
           message:
-            "Дата рождения ребёнка не позже даты рождения родителя — стоит перепроверить даты.",
+            "The child's birth date isn't after the parent's — worth double-checking the dates.",
           personIds: [parent.id, childId],
         });
       } else if (childBirthYear - parentBirthYear < MIN_PLAUSIBLE_PARENT_AGE) {
         issues.push({
           kind: "parent_too_young",
           severity: "warning",
-          message: `Родителю было менее ${MIN_PLAUSIBLE_PARENT_AGE} лет на момент рождения ребёнка — возможна ошибка в датах.`,
+          message: `The parent was younger than ${MIN_PLAUSIBLE_PARENT_AGE} at the child's birth — the dates may be wrong.`,
           personIds: [parent.id, childId],
         });
       }
@@ -181,7 +179,8 @@ export function validateGenealogyGraph(
       issues.push({
         kind: "death_before_birth",
         severity: "warning",
-        message: "Дата смерти раньше даты рождения — стоит перепроверить даты.",
+        message:
+          "The death date is before the birth date — worth double-checking the dates.",
         personIds: [personId],
       });
     }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { createStoryFromStoriesPageAction } from "@/actions/story.actions";
@@ -15,10 +16,12 @@ import { useCollapsibleFormClose } from "./collapsible-form";
 const initialState: StoryFormState = {};
 
 function SubmitButton() {
+  const t = useTranslations("storyForm");
+  const tc = useTranslations("common");
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} aria-busy={pending}>
-      {pending ? "Сохраняем…" : "Добавить историю"}
+      {pending ? tc("saving") : t("add")}
     </Button>
   );
 }
@@ -33,6 +36,8 @@ function SubmitButton() {
  * way AddStoryForm has — a redirect already leaves this form behind.
  */
 export function AddStoryFullForm({ familyId }: { familyId: string }) {
+  const t = useTranslations("storyForm");
+  const tc = useTranslations("common");
   const close = useCollapsibleFormClose();
   const boundAction = createStoryFromStoriesPageAction.bind(null, familyId);
   const [state, formAction] = useActionState(boundAction, initialState);
@@ -43,11 +48,11 @@ export function AddStoryFullForm({ familyId }: { familyId: string }) {
       action={formAction}
       className="flex flex-col gap-4 rounded-md border border-border p-4"
     >
-      <p className="text-sm font-medium">Новая история</p>
+      <p className="text-sm font-medium">{t("new")}</p>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="title" className="text-xs text-muted-foreground">
-          Название
+          {tc("name")}
         </Label>
         <Input id="title" name="title" required />
         {state.fieldErrors?.title && (
@@ -57,7 +62,7 @@ export function AddStoryFullForm({ familyId }: { familyId: string }) {
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="body" className="text-xs text-muted-foreground">
-          История
+          {t("body")}
         </Label>
         <Textarea id="body" name="body" rows={8} required />
         {state.fieldErrors?.body && (
@@ -67,7 +72,7 @@ export function AddStoryFullForm({ familyId }: { familyId: string }) {
 
       <PersonMultiCombobox
         familyId={familyId}
-        label="Кто в этой истории?"
+        label={t("people")}
         value={people}
         onChange={setPeople}
       />
@@ -87,7 +92,7 @@ export function AddStoryFullForm({ familyId }: { familyId: string }) {
       <div className="flex gap-2">
         <SubmitButton />
         <Button type="button" variant="ghost" onClick={close}>
-          Отмена
+          {tc("cancel")}
         </Button>
       </div>
     </form>

@@ -18,7 +18,7 @@ export const partnershipStatusSchema = z.enum([
 
 /** "Add existing person as parent/child/spouse" — picks an existing Person by id. */
 export const linkExistingPersonSchema = z.object({
-  personId: z.string().uuid("Выберите человека из списка"),
+  personId: z.string().uuid("personRequired"),
 });
 
 /** "Add a new person as parent/child" — creates a Person inline, minimal required fields. */

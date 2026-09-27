@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { ListIcon } from "lucide-react";
 import { glassPill, glassSurface } from "./glass";
@@ -22,13 +23,15 @@ export function ContentsMenu({
   items,
   menuId,
   menuLabel,
-  buttonLabel = "Содержание",
+  buttonLabel,
 }: {
   items: ContentsMenuItem[];
   menuId: string;
   menuLabel: string;
   buttonLabel?: string;
 }) {
+  const tDefault = useTranslations("common");
+  const buttonText = buttonLabel ?? tDefault("contents");
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -59,12 +62,12 @@ export function ContentsMenu({
         onClick={() => setOpen((value) => !value)}
       >
         <ListIcon aria-hidden="true" />
-        <span className="truncate">{buttonLabel}</span>
+        <span className="truncate">{buttonText}</span>
       </button>
       <nav
         id={menuId}
         aria-label={menuLabel}
-        className={`${glassSurface} absolute top-12 left-1/2 grid w-72 max-w-[86vw] -translate-x-1/2 rounded-2xl bg-popover/85 p-1.5 transition-[opacity,transform] duration-200 ease-(--ease-reveal) ${
+        className={`${glassSurface} absolute top-12 left-1/2 grid w-72 max-w-[86vw] -translate-x-1/2 rounded-2xl bg-popover/85 p-1.5 transition-[opacity,transform] duration-base ease-(--ease-reveal) ${
           open
             ? "translate-y-0 opacity-100"
             : "pointer-events-none -translate-y-1 opacity-0"

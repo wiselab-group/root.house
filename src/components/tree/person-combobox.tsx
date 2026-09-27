@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import {
   useEffect,
   useId,
@@ -19,17 +20,16 @@ import type { PersonSearchResult } from "@/domain/search/search.service";
 /**
  * Inline search-as-you-type picker for a single Person — input and results
  * list are the same control (no separate picker dialog hop), so picking
- * Person A/B for Relationship Trace stays inside TreeTracePanel. Selection
- * is a controlled { id, name } pair so the caller (TreeToolbar) still owns
- * the URL param as the source of truth.
+ * Person A/B for Relationship Trace stays inside KinshipPanel. Selection
+ * is a controlled { id, name } pair so the caller (useKinshipTrace) still
+ * owns the URL param as the source of truth.
  *
  * `excludeId` drops one person (typically whoever is already selected in
  * the other slot) from the results — comparing A to itself isn't a
  * meaningful trace, so Person B's list must not offer whoever is Person A.
  *
  * `value` is owned by the caller (the URL param), but writing it goes
- * through router.push — a real navigation that lands one render tick later
- * — so mirroring `value` straight into Combobox.Root's `value` would make
+ * through the URL and lands one render tick later — so mirroring `value` straight into Combobox.Root's `value` would make
  * the input visibly lag behind every pick/clear. Combobox.Root's value is
  * driven off local `localValue` instead, set immediately on
  * pick/clear and resynced from the prop only when it actually changes, so
@@ -51,6 +51,8 @@ export function PersonCombobox({
   excludeId?: string;
   className?: string;
 }) {
+  const t = useTranslations("tree");
+  const locale = useLocale();
   const inputId = useId();
   const [results, setResults] = useState<PersonSearchResult[]>([]);
   const [query, setQuery] = useState(value?.name ?? "");
@@ -149,10 +151,10 @@ export function PersonCombobox({
       // state) so the displayed text is driven only by `query`, never by
       // base-ui's own selected-value resync.
       inputValue={query}
-      itemToStringLabel={(person) => personDisplayName(person)}
+      itemToStringLabel={(person) => personDisplayName(person, locale)}
       onValueChange={(person) => {
         const next = person
-          ? { id: person.id, name: personDisplayName(person) }
+          ? { id: person.id, name: personDisplayName(person, locale) }
           : null;
         setLocalValue(next);
         onChange(next);
@@ -184,12 +186,12 @@ export function PersonCombobox({
           <SearchIcon className="pointer-events-none absolute left-3.5 size-4 text-muted-foreground" />
           <Combobox.Input
             id={inputId}
-            placeholder="Иванов, Анна, 1924…"
+            placeholder={t("searchPlaceholder")}
             className="h-full w-full min-w-0 rounded-lg bg-transparent py-1 pr-9 pl-10 text-base text-foreground outline-none placeholder:text-muted-foreground md:text-sm"
           />
           <Combobox.Clear
             className="absolute right-2 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label={`Сбросить ${label.toLowerCase()}`}
+            aria-label={t("resetField", { label: label.toLowerCase() })}
           >
             <XIcon className="size-4" />
           </Combobox.Clear>
@@ -203,20 +205,20 @@ export function PersonCombobox({
         >
           <Combobox.Popup
             className={cn(
-              "w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none",
+              "w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-instant outline-none",
               "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
             )}
             aria-busy={isPending || undefined}
           >
             <div className="max-h-72 overflow-y-auto overscroll-contain p-1 scroll-pt-1 scroll-pb-1">
               <Combobox.Status className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
-                {isPending ? "Ищем…" : null}
+                {isPending ? t("searching") : null}
               </Combobox.Status>
               <Combobox.Empty className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
                 {!isPending
                   ? query.trim().length > 0
-                    ? "Ничего не найдено."
-                    : "В семье пока никого нет."
+                    ? t("nothingFound")
+                    : t("noPeople")
                   : null}
               </Combobox.Empty>
               <Combobox.List>
@@ -227,7 +229,7 @@ export function PersonCombobox({
                     className="flex cursor-default flex-col items-start gap-0.5 rounded-md px-2 py-2 text-left text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
                   >
                     <span className="font-medium">
-                      {personDisplayName(person)}
+                      {personDisplayName(person, locale)}
                       {person.maidenName &&
                         person.maidenName !== person.lastName && (
                           // Search matches on maidenName too (see searchPersonsByNameSubstring) —
@@ -241,9 +243,9 @@ export function PersonCombobox({
                     </span>
                     {(person.birthDate || person.deathDate) && (
                       <span className="text-xs text-muted-foreground">
-                        {formatPartialDate(person.birthDate)}
+                        {formatPartialDate(person.birthDate, locale)}
                         {person.deathDate &&
-                          ` — ${formatPartialDate(person.deathDate)}`}
+                          ` — ${formatPartialDate(person.deathDate, locale)}`}
                       </span>
                     )}
                   </Combobox.Item>

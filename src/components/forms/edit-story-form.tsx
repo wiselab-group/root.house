@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { updateStoryAction } from "@/actions/story.actions";
@@ -16,10 +17,11 @@ import type { PrivacyLevel } from "@/db/schema";
 const initialState: StoryFormState = {};
 
 function SubmitButton() {
+  const tc = useTranslations("common");
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} aria-busy={pending}>
-      {pending ? "Сохраняем…" : "Сохранить"}
+      {pending ? tc("saving") : tc("save")}
     </Button>
   );
 }
@@ -47,6 +49,8 @@ export function EditStoryForm({
   people: { id: string; name: string }[];
   cancelHref: string;
 }) {
+  const t = useTranslations("storyForm");
+  const tc = useTranslations("common");
   const boundAction = updateStoryAction.bind(null, familyId, storyId);
   const [state, formAction] = useActionState(boundAction, initialState);
   const [selectedPeople, setSelectedPeople] = useState(people);
@@ -55,7 +59,7 @@ export function EditStoryForm({
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="title" className="text-xs text-muted-foreground">
-          Название
+          {tc("name")}
         </Label>
         <Input id="title" name="title" defaultValue={title} required />
         {state.fieldErrors?.title && (
@@ -65,7 +69,7 @@ export function EditStoryForm({
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="body" className="text-xs text-muted-foreground">
-          История
+          {t("body")}
         </Label>
         <Textarea id="body" name="body" rows={8} defaultValue={body} required />
         {state.fieldErrors?.body && (
@@ -75,7 +79,7 @@ export function EditStoryForm({
 
       <PersonMultiCombobox
         familyId={familyId}
-        label="Кто в этой истории?"
+        label={t("people")}
         value={selectedPeople}
         onChange={setSelectedPeople}
       />
@@ -95,7 +99,7 @@ export function EditStoryForm({
       <div className="flex gap-2">
         <SubmitButton />
         <LinkButton href={cancelHref} variant="ghost">
-          Отмена
+          {tc("cancel")}
         </LinkButton>
       </div>
     </form>

@@ -1,9 +1,5 @@
 import { CalendarIcon, ImagesIcon, MapPinIcon, UsersIcon } from "lucide-react";
-import {
-  personCountLabel,
-  photoCountLabel,
-  placeCountLabel,
-} from "@/domain/shared/pluralize-ru";
+import { getTranslations } from "next-intl/server";
 import type { HeroMetaItem } from "@/components/hero/hero-meta";
 import type { PersonRecord } from "@/domain/person/person.service";
 
@@ -16,7 +12,7 @@ import type { PersonRecord } from "@/domain/person/person.service";
  * run from a focus person, and the brief forbids fabricated statistics
  * (docs/PRODUCT-REFACTOR.md §46). Zero counts are omitted, never «0 фото».
  */
-export function familyHomeMeta({
+export async function familyHomeMeta({
   personCount,
   placeCount,
   photoCount,
@@ -26,16 +22,30 @@ export function familyHomeMeta({
   placeCount: number;
   photoCount: number;
   earliestYear: number | null;
-}): HeroMetaItem[] {
+}): Promise<HeroMetaItem[]> {
+  const tc = await getTranslations("counts");
+  const t = await getTranslations("familyHome");
   const items: HeroMetaItem[] = [];
   if (personCount > 0)
-    items.push({ Icon: UsersIcon, label: personCountLabel(personCount) });
+    items.push({
+      Icon: UsersIcon,
+      label: tc("people", { count: personCount }),
+    });
   if (earliestYear != null)
-    items.push({ Icon: CalendarIcon, label: `с ${earliestYear} г.` });
+    items.push({
+      Icon: CalendarIcon,
+      label: t("since", { year: earliestYear }),
+    });
   if (placeCount > 0)
-    items.push({ Icon: MapPinIcon, label: placeCountLabel(placeCount) });
+    items.push({
+      Icon: MapPinIcon,
+      label: tc("places", { count: placeCount }),
+    });
   if (photoCount > 0)
-    items.push({ Icon: ImagesIcon, label: photoCountLabel(photoCount) });
+    items.push({
+      Icon: ImagesIcon,
+      label: tc("photos", { count: photoCount }),
+    });
   return items;
 }
 

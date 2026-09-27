@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations, useLocale } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { XIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,8 @@ export function PlaceLocationField({
   defaultPoint?: LatLng | null;
   error?: string;
 }) {
+  const locale = useLocale();
+  const t = useTranslations("placeForm");
   const [point, setPoint] = useState<LatLng | null>(defaultPoint);
   const [flyToken, setFlyToken] = useState(0);
   // The search box keeps its own text; bumping this remounts it with a new
@@ -43,11 +46,14 @@ export function PlaceLocationField({
     lookupRef.current?.abort();
     const controller = new AbortController();
     lookupRef.current = controller;
-    void reverseGeocode(at.latitude, at.longitude, controller.signal).then(
-      (address) => {
-        if (address && !controller.signal.aborted) showLabel(address);
-      },
-    );
+    void reverseGeocode(
+      at.latitude,
+      at.longitude,
+      locale,
+      controller.signal,
+    ).then((address) => {
+      if (address && !controller.signal.aborted) showLabel(address);
+    });
   }
 
   // An already-saved point shows its address, not bare coordinates.
@@ -81,9 +87,7 @@ export function PlaceLocationField({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <Label className="text-xs text-muted-foreground">
-        Точка на карте (необязательно)
-      </Label>
+      <Label className="text-xs text-muted-foreground">{t("mapPoint")}</Label>
       <PlaceGeocodeCombobox
         key={labelKey}
         defaultLabel={label}
@@ -103,7 +107,7 @@ export function PlaceLocationField({
             className="inline-flex cursor-pointer items-center gap-1 rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             <XIcon className="size-3.5" aria-hidden="true" />
-            Убрать точку
+            {t("removePoint")}
           </button>
         </div>
       )}

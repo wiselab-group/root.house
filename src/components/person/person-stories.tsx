@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import {
   getPersonStories,
   filterVisibleStories,
@@ -28,14 +29,15 @@ export async function PersonStories({
   canContribute?: boolean;
   member: ActingMember;
 }) {
+  const t = await getTranslations("profile");
   const allStories = await getPersonStories(personId, familyId);
   const stories = filterVisibleStories(allStories, member);
 
   return (
     <ProfileSectionWithAdd
-      title="Истории"
+      title={t("tabStories")}
       count={stories.length}
-      addLabel="Добавить историю"
+      addLabel={t("addStory")}
       form={
         canContribute && (
           <AddStoryForm familyId={familyId} personId={personId} />
@@ -44,7 +46,7 @@ export async function PersonStories({
     >
       <div className="flex flex-col gap-4">
         {stories.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Историй пока нет.</p>
+          <p className="text-sm text-muted-foreground">{t("noStories")}</p>
         ) : (
           <PersonStoriesList
             familyId={familyId}

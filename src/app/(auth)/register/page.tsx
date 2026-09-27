@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { RegisterForm } from "@/components/forms/register-form";
@@ -12,9 +13,10 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
-export const metadata: Metadata = {
-  title: "Регистрация",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("auth");
+  return { title: t("registerTitle") };
+}
 
 export default async function RegisterPage({
   searchParams,
@@ -23,6 +25,7 @@ export default async function RegisterPage({
   const callbackUrlValue = Array.isArray(callbackUrl)
     ? callbackUrl[0]
     : callbackUrl;
+  const t = await getTranslations("auth");
 
   return (
     <AuthShell>
@@ -32,30 +35,28 @@ export default async function RegisterPage({
       >
         <CardHeader>
           <CardTitle className="font-heading text-xl">
-            Начать семейный архив
+            {t("registerHeading")}
           </CardTitle>
-          <CardDescription>
-            Создайте аккаунт, чтобы завести своё первое семейное дерево.
-          </CardDescription>
+          <CardDescription>{t("registerDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
           <GoogleSignInButton callbackUrl={callbackUrlValue} />
 
           <div className="flex items-center gap-3">
             <Separator className="flex-1" />
-            <span className="text-xs text-muted-foreground">или</span>
+            <span className="text-xs text-muted-foreground">{t("or")}</span>
             <Separator className="flex-1" />
           </div>
 
           <RegisterForm callbackUrl={callbackUrlValue} />
 
           <p className="text-center text-sm text-muted-foreground">
-            Уже есть аккаунт?{" "}
+            {t("haveAccount")}{" "}
             <Link
               href="/login"
               className="font-medium text-foreground underline underline-offset-4"
             >
-              Войти
+              {t("signIn")}
             </Link>
           </p>
         </CardContent>

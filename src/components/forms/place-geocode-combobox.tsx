@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations, useLocale } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Combobox } from "@base-ui/react/combobox";
 import { MapPinIcon } from "lucide-react";
@@ -26,6 +27,9 @@ export function PlaceGeocodeCombobox({
   defaultLabel?: string;
   className?: string;
 }) {
+  const locale = useLocale();
+  const tc = useTranslations("common");
+  const t = useTranslations("placeForm");
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [query, setQuery] = useState(defaultLabel ?? "");
   const [isPending, startTransition] = useTransition();
@@ -44,9 +48,11 @@ export function PlaceGeocodeCombobox({
     abortControllerRef.current = controller;
 
     startTransition(async () => {
-      const found = await geocodePlace(trimmed, controller.signal).catch(
-        () => [],
-      );
+      const found = await geocodePlace(
+        trimmed,
+        locale,
+        controller.signal,
+      ).catch(() => []);
       if (controller.signal.aborted) return;
       setResults(found);
     });
@@ -78,7 +84,7 @@ export function PlaceGeocodeCombobox({
         <Combobox.InputGroup className="relative flex h-10 items-center rounded-lg border border-input bg-transparent transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
           <MapPinIcon className="pointer-events-none absolute left-3 size-4 text-muted-foreground" />
           <Combobox.Input
-            placeholder="Найти на карте…"
+            placeholder={t("findOnMap")}
             className="h-full w-full min-w-0 rounded-lg bg-transparent py-1 pr-3 pl-9 text-sm text-foreground outline-none placeholder:text-muted-foreground"
           />
         </Combobox.InputGroup>
@@ -91,18 +97,18 @@ export function PlaceGeocodeCombobox({
         >
           <Combobox.Popup
             className={cn(
-              "w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none",
+              "w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-instant outline-none",
               "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
             )}
             aria-busy={isPending || undefined}
           >
             <div className="max-h-60 overflow-y-auto overscroll-contain p-1 scroll-pt-1 scroll-pb-1">
               <Combobox.Status className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
-                {isPending ? "Ищем…" : null}
+                {isPending ? t("searching") : null}
               </Combobox.Status>
               <Combobox.Empty className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
                 {!isPending && query.trim().length >= 2
-                  ? "Ничего не найдено."
+                  ? tc("nothingFound")
                   : null}
               </Combobox.Empty>
               <Combobox.List>

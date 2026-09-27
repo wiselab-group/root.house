@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { deletePlaceAction } from "@/actions/place.actions";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,8 @@ export function DeletePlaceButton({
   /** Called inside the same transition as the delete action, before it resolves — lets PlacesList remove the row from its optimistic list immediately instead of waiting for deletePlaceAction's revalidatePath. */
   onDeleted: () => void;
 }) {
+  const t = useTranslations("placeForm");
+  const tc = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -46,12 +49,12 @@ export function DeletePlaceButton({
           />
         }
       >
-        Удалить
+        {tc("delete")}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Удалить это место?</DialogTitle>
-          <DialogDescription>Это действие нельзя отменить.</DialogDescription>
+          <DialogTitle>{t("deleteTitle")}</DialogTitle>
+          <DialogDescription>{tc("cannotUndo")}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
@@ -59,7 +62,7 @@ export function DeletePlaceButton({
             onClick={() => setOpen(false)}
             disabled={isPending}
           >
-            Отмена
+            {tc("cancel")}
           </Button>
           <Button
             variant="destructive"
@@ -67,7 +70,7 @@ export function DeletePlaceButton({
             disabled={isPending}
             aria-busy={isPending}
           >
-            {isPending ? "Удаляем…" : "Удалить"}
+            {isPending ? tc("deleting") : tc("delete")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { getTranslations, getLocale } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { ForbiddenError } from "@/domain/family/errors";
@@ -18,6 +19,7 @@ export default async function FamilyLayout({
   children,
   params,
 }: LayoutProps<"/families/[slug]">) {
+  const locale = await getLocale();
   const session = await auth();
   if (!session?.user) {
     redirect("/login");
@@ -56,6 +58,7 @@ export default async function FamilyLayout({
     ? await getPerson(member.defaultFocusPersonId, familyId)
     : null;
 
+  const t = await getTranslations("familyNav");
   return (
     <FamilyProvider
       value={{
@@ -67,7 +70,7 @@ export default async function FamilyLayout({
         defaultFocusPerson: defaultFocusPerson
           ? {
               id: defaultFocusPerson.id,
-              name: personDisplayName(defaultFocusPerson),
+              name: personDisplayName(defaultFocusPerson, locale),
             }
           : null,
       }}
@@ -86,20 +89,28 @@ export default async function FamilyLayout({
           {
             href: `/families/${slug}/tree`,
             icon: "tree",
-            label: "Семейное дерево",
+            label: t("tree"),
           },
-          { href: `/families/${slug}/people`, icon: "people", label: "Люди" },
+          {
+            href: `/families/${slug}/people`,
+            icon: "people",
+            label: t("people"),
+          },
           {
             href: `/families/${slug}/stories`,
             icon: "stories",
-            label: "Истории",
+            label: t("stories"),
           },
-          { href: `/families/${slug}/photos`, icon: "photos", label: "Архив" },
-          { href: `/families/${slug}/map`, icon: "places", label: "Карта" },
+          {
+            href: `/families/${slug}/photos`,
+            icon: "photos",
+            label: t("photos"),
+          },
+          { href: `/families/${slug}/map`, icon: "places", label: t("map") },
           {
             href: `/families/${slug}/settings`,
             icon: "settings",
-            label: "Настройки",
+            label: t("settings"),
           },
         ]}
       />

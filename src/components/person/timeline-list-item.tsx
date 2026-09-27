@@ -1,4 +1,4 @@
-import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
+import { useLocale, useTranslations } from "next-intl";
 import { formatPartialDate } from "@/domain/shared/partial-date";
 import type { EventRecord } from "@/domain/event/event.service";
 import { TimelineRow } from "./timeline-row";
@@ -24,12 +24,14 @@ export function TimelineListItem({
   isLast: boolean;
   placeName: string | undefined;
 }) {
+  const locale = useLocale();
+  const tTypes = useTranslations("eventTypes");
+  const typeLabel = tTypes(event.type);
   // Synthetic events (birth/death/marriage, derived from Person/Partnership
-  // fields — see synthesizeDerivedEvents) have no user-authored title:
-  // `event.title` is literally EVENT_TYPE_LABELS[event.type], same string
-  // as the type label. A manually-created event's title is independent
-  // free text, so only skip the redundant title there.
-  const titleDuplicatesType = event.title === EVENT_TYPE_LABELS[event.type];
+  // fields — see synthesizeDerivedEvents) have no user-authored title, so
+  // the type label stands in for it. A manually-created event's title is
+  // independent free text, so only skip the redundant type line there.
+  const titleDuplicatesType = !event.title.trim() || event.title === typeLabel;
   const isInteractive = isTimelineRowInteractive(target);
   // Repeat the year on every row rather than only on change — the rail's
   // year is the row's primary scan anchor (users reading top-to-bottom
@@ -47,13 +49,13 @@ export function TimelineListItem({
               : "text-sm font-medium text-foreground"
           }
         >
-          {titleDuplicatesType ? EVENT_TYPE_LABELS[event.type] : event.title}
+          {titleDuplicatesType ? typeLabel : event.title}
         </span>
         <PrivacyBadge privacyLevel={event.privacyLevel} compact />
       </span>
       <span className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground">
-        {!titleDuplicatesType && <span>{EVENT_TYPE_LABELS[event.type]}</span>}
-        <span>{formatPartialDate(event.date)}</span>
+        {!titleDuplicatesType && <span>{typeLabel}</span>}
+        <span>{formatPartialDate(event.date, locale)}</span>
         {placeName && <span>{placeName}</span>}
       </span>
     </>

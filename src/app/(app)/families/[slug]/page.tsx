@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { FamilyTreeLaunchCard } from "@/components/family/family-nav-card";
 import { FamilySectionLinks } from "@/components/family/family-section-links";
 import { FamilyHomeHeader } from "@/components/family/family-home-header";
@@ -69,12 +70,13 @@ export default async function FamilyDashboardPage({
   const photos = visiblePhotos.slice(0, RECENT_MEMORIES_LIMIT);
   const hasMoreActivity = activityEntries.length > RECENT_ACTIVITY_LIMIT;
   const recentActivity = activityEntries.slice(0, RECENT_ACTIVITY_LIMIT);
+  const t = await getTranslations();
 
   return (
     <main className="dark photo-backdrop min-h-svh">
       <SetBreadcrumbs
         items={[
-          { label: "Мои семьи", href: "/families" },
+          { label: t("families.title"), href: "/families" },
           { label: family?.name ?? slug },
         ]}
       />
@@ -82,7 +84,7 @@ export default async function FamilyDashboardPage({
         <FamilyHomeHeader
           name={family?.name ?? slug}
           description={family?.description ?? null}
-          meta={familyHomeMeta({
+          meta={await familyHomeMeta({
             personCount: people.length,
             placeCount: places.length,
             photoCount: visiblePhotos.length,
@@ -92,7 +94,7 @@ export default async function FamilyDashboardPage({
         <div className="animate-content-enter">
           <FamilyTreeLaunchCard
             href={`/families/${slug}/tree`}
-            description="Интерактивная схема родственных связей"
+            description={t("familyNav.treeDescription")}
           />
         </div>
 

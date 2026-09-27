@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import {
   DownloadIcon,
@@ -46,6 +47,8 @@ export function PhotoTileMenu({
   /** Called inside the same transition as the delete action, before it resolves — lets PhotoGrid remove the tile from its optimistic list immediately instead of waiting for deleteMediaAction's revalidatePath. */
   onDeleted: () => void;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("media");
   const downloadHref = mediaDownloadUrl(mediaId, familyId);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -74,7 +77,7 @@ export function PhotoTileMenu({
               type="button"
               variant="secondary"
               size="icon-sm"
-              aria-label="Действия с фото"
+              aria-label={t("photoActions")}
               className="rounded-full shadow-sm [&_svg]:size-4.5"
             />
           }
@@ -93,12 +96,12 @@ export function PhotoTileMenu({
           )}
           <DropdownMenuItem render={<a href={downloadHref} download />}>
             <DownloadIcon />
-            Скачать
+            {tc("download")}
           </DropdownMenuItem>
           {albumId && (
             <DropdownMenuItem onClick={handleSetCover} disabled={isPending}>
               <ImageIcon />
-              Сделать обложкой альбома
+              {t("makeCover")}
             </DropdownMenuItem>
           )}
           <DropdownMenuItem
@@ -106,7 +109,7 @@ export function PhotoTileMenu({
             onClick={() => setConfirmOpen(true)}
           >
             <Trash2Icon />
-            Удалить фото
+            {t("deletePhoto")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

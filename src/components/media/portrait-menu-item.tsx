@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useTransition } from "react";
 import { CheckIcon, UserRoundIcon } from "lucide-react";
 import { setPersonPortraitAction } from "@/actions/media.actions";
@@ -23,13 +24,14 @@ export function PortraitMenuItem({
   personId: string;
   isCurrent: boolean;
 }) {
+  const t = useTranslations("media");
   const [isPending, startTransition] = useTransition();
 
   if (isCurrent) {
     return (
       <DropdownMenuItem disabled>
         <CheckIcon />
-        Это портрет
+        {t("isPortrait")}
       </DropdownMenuItem>
     );
   }
@@ -49,7 +51,7 @@ export function PortraitMenuItem({
       }
     >
       <UserRoundIcon />
-      Сделать портретом
+      {t("makePortrait")}
     </DropdownMenuItem>
   );
 }

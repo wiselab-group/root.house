@@ -23,6 +23,8 @@ import {
 import { updateMemberRole } from "@/domain/family/family.repository";
 import { SlugTakenError, ForbiddenError } from "@/domain/family/errors";
 import type { FamilyRole } from "@/domain/family/roles";
+import { getErrorMessage } from "@/i18n/errors";
+import { getValidationMessage } from "@/i18n/validation";
 
 export interface CreateFamilyFormState {
   error?: string;
@@ -35,7 +37,7 @@ export async function createFamilyAction(
 ): Promise<CreateFamilyFormState> {
   const session = await auth();
   if (!session?.user) {
-    return { error: "Сессия истекла — войдите заново." };
+    return { error: (await getErrorMessage())("sessionExpired") };
   }
 
   const parsed = createFamilySchema.safeParse({
@@ -44,11 +46,12 @@ export async function createFamilyAction(
   });
 
   if (!parsed.success) {
+    const message = await getValidationMessage();
     const fieldErrors: CreateFamilyFormState["fieldErrors"] = {};
     for (const issue of parsed.error.issues) {
       const key = issue.path[0];
       if (key === "name" || key === "description") {
-        fieldErrors[key] = issue.message;
+        fieldErrors[key] = message(issue);
       }
     }
     return { fieldErrors };
@@ -75,7 +78,7 @@ export async function updateFamilyDetailsAction(
 ): Promise<UpdateFamilyDetailsFormState> {
   const session = await auth();
   if (!session?.user) {
-    return { error: "Сессия истекла — войдите заново." };
+    return { error: (await getErrorMessage())("sessionExpired") };
   }
 
   // The family's name is its identity, not cosmetic decoration — changing
@@ -89,11 +92,12 @@ export async function updateFamilyDetailsAction(
   });
 
   if (!parsed.success) {
+    const message = await getValidationMessage();
     const fieldErrors: UpdateFamilyDetailsFormState["fieldErrors"] = {};
     for (const issue of parsed.error.issues) {
       const key = issue.path[0];
       if (key === "name" || key === "description") {
-        fieldErrors[key] = issue.message;
+        fieldErrors[key] = message(issue);
       }
     }
     return { fieldErrors };
@@ -122,7 +126,7 @@ export async function updateFamilySlugAction(
 ): Promise<UpdateFamilySlugFormState> {
   const session = await auth();
   if (!session?.user) {
-    return { error: "Сессия истекла — войдите заново." };
+    return { error: (await getErrorMessage())("sessionExpired") };
   }
 
   // Only an owner may change the family's public URL — an editor/viewer
@@ -136,9 +140,10 @@ export async function updateFamilySlugAction(
   });
 
   if (!parsed.success) {
+    const message = await getValidationMessage();
     const fieldErrors: UpdateFamilySlugFormState["fieldErrors"] = {};
     for (const issue of parsed.error.issues) {
-      if (issue.path[0] === "slug") fieldErrors.slug = issue.message;
+      if (issue.path[0] === "slug") fieldErrors.slug = message(issue);
     }
     return { fieldErrors };
   }
@@ -147,7 +152,9 @@ export async function updateFamilySlugAction(
     await updateFamilySlug(familyId, parsed.data.slug);
   } catch (error) {
     if (error instanceof SlugTakenError) {
-      return { fieldErrors: { slug: error.message } };
+      return {
+        fieldErrors: { slug: (await getErrorMessage())(error.message) },
+      };
     }
     throw error;
   }
@@ -180,7 +187,7 @@ export async function deleteFamilyAction(
 ): Promise<DeleteFamilyFormState> {
   const session = await auth();
   if (!session?.user) {
-    return { error: "Сессия истекла — войдите заново." };
+    return { error: (await getErrorMessage())("sessionExpired") };
   }
 
   await requireFamilyAccess(familyId, session.user.id, "owner");
@@ -190,7 +197,9 @@ export async function deleteFamilyAction(
   });
 
   if (!parsed.success) {
-    return { fieldErrors: { confirmName: parsed.error.issues[0]?.message } };
+    const message = await getValidationMessage();
+    const issue = parsed.error.issues[0];
+    return { fieldErrors: { confirmName: issue && message(issue) } };
   }
 
   const family = await getFamilySummary(familyId);
@@ -202,7 +211,7 @@ export async function deleteFamilyAction(
   if (parsed.data.confirmName !== family.name) {
     return {
       fieldErrors: {
-        confirmName: "Название не совпадает — введите его точно как показано.",
+        confirmName: (await getErrorMessage())("familyNameMismatch"),
       },
     };
   }
@@ -228,7 +237,7 @@ export async function updateDefaultFocusPersonAction(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await auth();
   if (!session?.user) {
-    return { ok: false, error: "Сессия истекла — войдите заново." };
+    return { ok: false, error: (await getErrorMessage())("sessionExpired") };
   }
 
   await requireFamilyAccess(familyId, session.user.id, "viewer");
@@ -238,7 +247,9 @@ export async function updateDefaultFocusPersonAction(
     session.user.id,
     personId,
   );
-  if (!result.ok) return result;
+  if (!result.ok) {
+    return { ok: false, error: (await getErrorMessage())(result.error) };
+  }
 
   revalidatePath(`/families`, "layout");
   return { ok: true };
@@ -256,12 +267,14 @@ export async function updateMemberRoleAction(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await auth();
   if (!session?.user)
-    return { ok: false, error: "Сессия истекла — войдите заново." };
+    return { ok: false, error: (await getErrorMessage())("sessionExpired") };
 
   await requireFamilyAccess(familyId, session.user.id, "owner");
 
   const result = await updateMemberRole(familyId, memberUserId, newRole);
-  if (!result.ok) return result;
+  if (!result.ok) {
+    return { ok: false, error: (await getErrorMessage())(result.error) };
+  }
 
   const slug = await getFamilySlugById(familyId);
   if (slug) revalidatePath(`/families/${slug}/settings`);
@@ -279,7 +292,7 @@ export async function removeMemberAction(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await auth();
   if (!session?.user)
-    return { ok: false, error: "Сессия истекла — войдите заново." };
+    return { ok: false, error: (await getErrorMessage())("sessionExpired") };
 
   await requireFamilyAccess(familyId, session.user.id, "owner");
 
@@ -287,7 +300,7 @@ export async function removeMemberAction(
     await removeFamilyMember(familyId, memberUserId);
   } catch (error) {
     if (error instanceof ForbiddenError) {
-      return { ok: false, error: error.message };
+      return { ok: false, error: (await getErrorMessage())(error.message) };
     }
     throw error;
   }

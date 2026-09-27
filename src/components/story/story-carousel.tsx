@@ -52,7 +52,7 @@ export function StoryCarousel({ slides }: { slides: CarouselSlide[] }) {
           <div
             key={slide.id}
             aria-hidden={!on}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-(--ease-reveal) motion-reduce:transition-none ${on ? "opacity-100" : "opacity-0"}`}
+            className={`absolute inset-0 transition-opacity duration-cinematic ease-(--ease-reveal) motion-reduce:transition-none ${on ? "opacity-100" : "opacity-0"}`}
           >
             <div
               className={

@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
@@ -59,6 +60,8 @@ export function PhotoLightbox({
   /** Contributor+ may place/move/remove point-tags — see photo-tag-layer.tsx. */
   canTag?: boolean;
 }) {
+  const t = useTranslations("media");
+  const tc = useTranslations("common");
   const photo = photos[index];
   const [taggingMode, setTaggingMode] = useState(false);
   const [highlightedPersonId, setHighlightedPersonId] = useState<string | null>(
@@ -78,9 +81,9 @@ export function PhotoLightbox({
       }}
     >
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/90 duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
+        <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/90 duration-fast data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
         <DialogPrimitive.Popup
-          className="fixed inset-0 z-50 flex flex-col outline-none duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+          className="fixed inset-0 z-50 flex flex-col outline-none duration-fast data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
           onKeyDown={(event) => {
             const step = arrowStep(event);
             if (!step) return;
@@ -90,7 +93,7 @@ export function PhotoLightbox({
           }}
         >
           <DialogPrimitive.Title className="sr-only">
-            {photo.media.title ?? "Семейное фото"}
+            {photo.media.title ?? tc("familyPhoto")}
           </DialogPrimitive.Title>
 
           <div className="flex items-center justify-end gap-2 p-3">
@@ -110,14 +113,14 @@ export function PhotoLightbox({
                 onClick={() => setTaggingMode((v) => !v)}
               >
                 {taggingMode ? <CheckIcon /> : <UserPlusIcon />}
-                {taggingMode ? "Готово" : "Отметить людей"}
+                {taggingMode ? tc("done") : t("tagPeople")}
               </Button>
             )}
             <Button
               variant="secondary"
               size="icon-sm"
               className="rounded-full shadow-sm"
-              aria-label="Скачать фото"
+              aria-label={t("downloadPhoto")}
               nativeButton={false}
               render={
                 <a href={mediaDownloadUrl(photo.media.id, familyId)} download />
@@ -131,7 +134,7 @@ export function PhotoLightbox({
                   variant="secondary"
                   size="icon-sm"
                   className="rounded-full shadow-sm"
-                  aria-label="Закрыть"
+                  aria-label={tc("close")}
                 />
               }
             >
@@ -189,6 +192,8 @@ function TaggedPeopleStrip({
   highlightedPersonId: string | null;
   onHighlight: (personId: string | null) => void;
 }) {
+  const t = useTranslations("media");
+  const locale = useLocale();
   // Phones have no hover, so a tap on a name used to go straight to the
   // profile and the spotlight was never seen. There the name is a toggle
   // instead — tap to light the person up, tap again to clear — and the
@@ -206,7 +211,7 @@ function TaggedPeopleStrip({
           highlighted ? "bg-white/25" : "bg-white/10 hover:bg-white/20",
         );
         if (coarsePointer) {
-          const name = personDisplayName(person);
+          const name = personDisplayName(person, locale);
           return (
             <span
               key={person.id}
@@ -223,7 +228,7 @@ function TaggedPeopleStrip({
               {highlighted && (
                 <Link
                   href={`/families/${familySlug}/people/${person.slug}`}
-                  aria-label={`Открыть профиль: ${name}`}
+                  aria-label={t("openProfileOf", { name })}
                   className="mr-0.5 flex size-7 items-center justify-center rounded-full bg-white/15 transition-colors active:bg-white/30"
                 >
                   <ArrowUpRightIcon className="size-4" />
@@ -242,7 +247,7 @@ function TaggedPeopleStrip({
             onBlur={() => onHighlight(null)}
             className={className}
           >
-            {personDisplayName(person)}
+            {personDisplayName(person, locale)}
           </Link>
         );
       })}
@@ -257,11 +262,12 @@ function LightboxNavButton({
   direction: "prev" | "next";
   onClick: () => void;
 }) {
+  const t = useTranslations("media");
   const Icon = direction === "prev" ? ChevronLeftIcon : ChevronRightIcon;
   return (
     <button
       type="button"
-      aria-label={direction === "prev" ? "Предыдущее фото" : "Следующее фото"}
+      aria-label={direction === "prev" ? t("prevPhoto") : t("nextPhoto")}
       onClick={onClick}
       className={cn(
         "absolute top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60",

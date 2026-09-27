@@ -1,3 +1,4 @@
+import type { Locale } from "@/domain/shared/locale";
 /**
  * Thin client for MapTiler's Geocoding API (https://api.maptiler.com/geocoding)
  * — forward (address/place name → coordinates, PlaceGeocodeCombobox's
@@ -58,6 +59,7 @@ const PLACE_SEARCH_TYPES = [
 
 export async function geocodePlace(
   query: string,
+  locale: Locale,
   signal?: AbortSignal,
 ): Promise<GeocodeResult[]> {
   const trimmed = query.trim();
@@ -70,7 +72,7 @@ export async function geocodePlace(
     `https://api.maptiler.com/geocoding/${encodeURIComponent(trimmed)}.json`,
   );
   url.searchParams.set("key", apiKey);
-  url.searchParams.set("language", "ru");
+  url.searchParams.set("language", locale);
   url.searchParams.set("limit", "6");
   // Everything a family story can happen at — settlements, regions,
   // addresses, landmarks — minus roads and postcodes, which only crowd a
@@ -122,6 +124,7 @@ function toResult(feature: MapTilerFeature, query: string): GeocodeResult {
 export async function reverseGeocode(
   latitude: number,
   longitude: number,
+  locale: Locale,
   signal?: AbortSignal,
 ): Promise<string | null> {
   const apiKey = process.env.NEXT_PUBLIC_MAPTILER_API_KEY;
@@ -131,7 +134,7 @@ export async function reverseGeocode(
     `https://api.maptiler.com/geocoding/${longitude},${latitude}.json`,
   );
   url.searchParams.set("key", apiKey);
-  url.searchParams.set("language", "ru");
+  url.searchParams.set("language", locale);
   url.searchParams.set("limit", "1");
 
   const response = await fetch(url.toString(), { signal }).catch(() => null);

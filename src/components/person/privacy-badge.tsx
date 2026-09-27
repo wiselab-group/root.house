@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { LockIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { PrivacyLevel } from "@/db/schema";
@@ -30,13 +31,14 @@ export function PrivacyBadge({
   privacyLevel: PrivacyLevel;
   compact?: boolean;
 }) {
+  const t = useTranslations("privacy");
   if (privacyLevel !== "private") return null;
 
   if (compact) {
     return (
-      <span title="Только я" className="inline-flex shrink-0">
+      <span title={t("private")} className="inline-flex shrink-0">
         <LockIcon
-          aria-label="Только я"
+          aria-label={t("private")}
           className="size-3.5 text-muted-foreground"
         />
       </span>
@@ -46,7 +48,7 @@ export function PrivacyBadge({
   return (
     <Badge variant="outline" className="w-fit gap-1 text-muted-foreground">
       <LockIcon aria-hidden="true" />
-      Только я
+      {t("private")}
     </Badge>
   );
 }

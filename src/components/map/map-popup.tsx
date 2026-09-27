@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Popup } from "react-map-gl/maplibre";
 import {
@@ -34,6 +35,8 @@ export function MapPopup({
   familySlug: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("map");
+  const tTypes = useTranslations("eventTypes");
   const location = [marker.region, marker.country].filter(Boolean).join(", ");
 
   return (
@@ -82,7 +85,7 @@ export function MapPopup({
               >
                 <CalendarIcon className="size-3.5 shrink-0" />
                 <span>
-                  {event.typeLabel}
+                  {tTypes(event.type)}
                   {event.title ? ` · ${event.title}` : ""}
                 </span>
               </li>
@@ -91,9 +94,7 @@ export function MapPopup({
         )}
 
         {marker.people.length === 0 && marker.events.length === 0 && (
-          <p className="text-xs text-muted-foreground">
-            Пока ничего не привязано к этому месту.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("empty")}</p>
         )}
       </div>
     </Popup>

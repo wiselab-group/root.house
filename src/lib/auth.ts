@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { db, getDb } from "@/db/client";
 import { accounts, sessions, users, verificationTokens } from "@/db/schema";
 import { credentialsSchema } from "@/lib/validation/auth";
+import { syncLocaleOnSignIn } from "@/i18n/sync-locale";
 
 /**
  * Auth.js v5 configuration.
@@ -87,6 +88,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+  events: {
+    async signIn({ user }) {
+      if (user.id) await syncLocaleOnSignIn(user.id);
+    },
+  },
   callbacks: {
     // JWT strategy: carry the user id from authorize()'s return value into
     // the token on sign-in, then from the token into the session on every

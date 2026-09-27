@@ -87,7 +87,7 @@ function LifelineDot({
         : "text-center";
   const label = (
     <span
-      className={`${edge} rounded-lg px-1.5 py-0.5 leading-[1.3] whitespace-nowrap transition-colors duration-200 ease-(--ease-reveal) group-hover:bg-glass`}
+      className={`${edge} rounded-lg px-1.5 py-0.5 leading-[1.3] whitespace-nowrap transition-colors duration-base ease-(--ease-reveal) group-hover:bg-glass`}
     >
       <b
         className={`block text-sm font-medium tabular-nums ${pressed ? "text-primary" : ""}`}
@@ -100,7 +100,7 @@ function LifelineDot({
   const stem = <span className={`w-px bg-branch ${up ? "h-5" : "h-6"}`} />;
   const dot = (
     <span
-      className={`size-[11px] rounded-full border-2 transition-transform duration-200 ease-(--ease-reveal) group-hover:scale-125 ${
+      className={`size-[11px] rounded-full border-2 transition-transform duration-base ease-(--ease-reveal) group-hover:scale-125 ${
         pressed
           ? "border-primary bg-primary shadow-[0_0_0_5px_color-mix(in_oklch,var(--primary)_25%,transparent)]"
           : "border-tree-accent bg-card"
