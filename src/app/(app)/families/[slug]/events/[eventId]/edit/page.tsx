@@ -85,7 +85,7 @@ export default async function EditEventPage({
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12 sm:py-16">
       <SetBreadcrumbs items={breadcrumbItems} />
-      <h1 className="font-heading text-3xl font-medium tracking-tight text-balance">
+      <h1 className="font-heading text-title font-medium tracking-tight text-balance">
         {event.title}
       </h1>
 

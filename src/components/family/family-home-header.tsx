@@ -19,7 +19,7 @@ export function FamilyHomeHeader({
 }) {
   return (
     <header className="flex flex-col gap-4">
-      <h1 className="font-heading text-5xl leading-[1.05] font-medium tracking-tight text-balance sm:text-6xl">
+      <h1 className="font-heading text-display-lg leading-[1.05] font-medium tracking-tight text-balance">
         {name}
       </h1>
       {description && (

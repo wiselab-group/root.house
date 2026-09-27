@@ -18,7 +18,7 @@ export function HeroSection() {
           <span className="text-xs font-medium tracking-[0.14em] text-primary">
             ROOT HOUSE
           </span>
-          <h1 className="font-heading text-4xl font-medium text-balance sm:text-5xl">
+          <h1 className="font-heading text-display font-medium text-balance">
             Your family has a story. Give it a place to live.
           </h1>
           <p className="max-w-xl text-balance text-lg text-muted-foreground">

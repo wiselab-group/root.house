@@ -35,7 +35,7 @@ export function StoryPeople({
             <li key={person.id}>
               <Link
                 href={`/families/${familySlug}/people/${person.slug}`}
-                className="group/row flex items-center gap-3.5 rounded-2xl p-2.5 transition-colors duration-200 ease-(--ease-reveal) hover:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className="group/row flex items-center gap-3.5 rounded-2xl p-2.5 transition-colors duration-base ease-(--ease-reveal) hover:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <PersonThumb person={person} familyId={familyId} />
                 <span className="flex min-w-0 flex-1 flex-col">
@@ -49,7 +49,7 @@ export function StoryPeople({
                   )}
                 </span>
                 <ChevronRightIcon
-                  className="size-4 shrink-0 text-foreground/35 transition-transform duration-200 ease-(--ease-reveal) group-hover/row:translate-x-0.5 group-hover/row:text-foreground"
+                  className="size-4 shrink-0 text-foreground/35 transition-transform duration-base ease-(--ease-reveal) group-hover/row:translate-x-0.5 group-hover/row:text-foreground"
                   aria-hidden="true"
                 />
               </Link>

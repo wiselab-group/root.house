@@ -31,7 +31,7 @@ export function AlbumTile({
           alt=""
           fill
           sizes="(max-width: 640px) 50vw, 33vw"
-          className="object-cover transition-transform duration-200 group-hover:scale-105"
+          className="object-cover transition-transform duration-base group-hover:scale-105"
         />
       ) : (
         <div className="flex size-full items-center justify-center">

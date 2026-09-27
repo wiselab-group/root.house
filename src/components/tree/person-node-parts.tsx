@@ -100,7 +100,7 @@ export function CollapseToggleButton({
     <button
       type="button"
       className={cn(
-        "nodrag nopan relative z-10 flex h-5 min-w-5 cursor-pointer items-center justify-center gap-0.5 rounded-full border bg-card px-1.5 text-[0.65rem] font-medium shadow-sm transition-[color,border-color,scale] duration-200 ease-(--ease-reveal) outline-none active:scale-90 focus-visible:ring-2 focus-visible:ring-ring",
+        "nodrag nopan relative z-10 flex h-5 min-w-5 cursor-pointer items-center justify-center gap-0.5 rounded-full border bg-card px-1.5 text-[0.65rem] font-medium shadow-sm transition-[color,border-color,scale] duration-base ease-(--ease-reveal) outline-none active:scale-90 focus-visible:ring-2 focus-visible:ring-ring",
         "collapse-hit",
         // Sage (--tree-accent), not terracotta — "collapsed" is a standing
         // property of this branch (identity/state), not something the user
@@ -190,7 +190,7 @@ export function buildCardFrameClassName({
   return cn(
     "w-40 origin-center overflow-visible",
     isCollapsing ? "animate-tree-node-collapse" : "animate-tree-node-enter",
-    "transition-[opacity,box-shadow] duration-200 ease-(--ease-tree-focus)",
+    "transition-[opacity,box-shadow] duration-base ease-(--ease-tree-focus)",
     isDimmed && "opacity-35 hover:opacity-70",
     !readOnly && "cursor-pointer",
   );

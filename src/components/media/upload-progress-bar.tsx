@@ -33,7 +33,7 @@ export function UploadProgressBar({
       )}
     >
       <div
-        className="h-full origin-left rounded-full bg-upload-progress transition-transform duration-300 ease-(--ease-reveal) motion-reduce:transition-none"
+        className="h-full origin-left rounded-full bg-upload-progress transition-transform duration-slow ease-(--ease-reveal) motion-reduce:transition-none"
         style={{ transform: `scaleX(${fraction})` }}
       />
     </div>

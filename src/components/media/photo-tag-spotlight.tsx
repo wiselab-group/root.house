@@ -55,7 +55,7 @@ export function PhotoTagSpotlight({
   return (
     <div
       aria-hidden="true"
-      className={`photo-tag-spotlight pointer-events-none absolute inset-0 rounded-xl bg-background/65 transition-[opacity,--spot-x,--spot-y,--spot-cap] duration-500 ease-(--ease-reveal) ${
+      className={`photo-tag-spotlight pointer-events-none absolute inset-0 rounded-xl bg-background/65 transition-[opacity,--spot-x,--spot-y,--spot-cap] duration-reveal ease-(--ease-reveal) ${
         point ? "opacity-100" : "opacity-0"
       }`}
       style={

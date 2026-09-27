@@ -58,7 +58,7 @@ export function AddRelativePanel({
           type="button"
           aria-expanded={false}
           onClick={open}
-          className="group/add flex w-full cursor-pointer items-center sm:w-[calc(50%-0.25rem)] gap-3.5 rounded-2xl border border-dashed border-foreground/20 p-2.5 text-left duration-200 ease-(--ease-reveal) hover:border-primary/60 hover:bg-primary/5 pointer-coarse:border-primary/60 pointer-coarse:bg-primary/5 active:scale-[0.98] transition-[background-color,border-color,transform] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="group/add flex w-full cursor-pointer items-center sm:w-[calc(50%-0.25rem)] gap-3.5 rounded-2xl border border-dashed border-foreground/20 p-2.5 text-left duration-base ease-(--ease-reveal) hover:border-primary/60 hover:bg-primary/5 pointer-coarse:border-primary/60 pointer-coarse:bg-primary/5 active:scale-[0.98] transition-[background-color,border-color,transform] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-glass text-foreground/60 transition-colors group-hover/add:text-primary pointer-coarse:text-primary">
             <PlusIcon className="size-5" aria-hidden="true" />

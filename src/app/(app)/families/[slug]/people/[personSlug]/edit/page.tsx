@@ -67,7 +67,7 @@ export default async function EditPersonPage({
       />
       <div className="flex items-center gap-4">
         <AvatarEditor familyId={familyId} personId={personId} person={person} />
-        <h1 className="font-heading text-3xl font-medium tracking-tight text-balance">
+        <h1 className="font-heading text-title font-medium tracking-tight text-balance">
           {personDisplayName(person)}
         </h1>
       </div>

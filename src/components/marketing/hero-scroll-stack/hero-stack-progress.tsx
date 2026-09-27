@@ -18,7 +18,7 @@ export function HeroStackProgress({
           <span
             key={slide.id}
             className={cn(
-              "size-2.5 rounded-full transition-colors duration-200",
+              "size-2.5 rounded-full transition-colors duration-base",
               index === activeIndex ? "bg-primary" : "bg-muted-foreground/30",
             )}
           />

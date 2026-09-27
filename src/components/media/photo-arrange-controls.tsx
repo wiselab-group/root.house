@@ -26,7 +26,7 @@ export function PhotoArrangeBar({
       <div
         role="region"
         aria-label="Упорядочить фото"
-        className="fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-40 mx-auto flex max-w-xl animate-in flex-col gap-3 rounded-2xl border border-border bg-popover p-3 pl-4 text-popover-foreground shadow-lg duration-300 ease-(--ease-reveal) fade-in-0 slide-in-from-bottom-4 sm:flex-row sm:items-center"
+        className="fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-40 mx-auto flex max-w-xl animate-in flex-col gap-3 rounded-2xl border border-border bg-popover p-3 pl-4 text-popover-foreground shadow-lg duration-slow ease-(--ease-reveal) fade-in-0 slide-in-from-bottom-4 sm:flex-row sm:items-center"
       >
         <p className="flex-1 text-sm leading-snug">
           Перетащите фото, чтобы поменять порядок. Действия с фото — в меню ⋯

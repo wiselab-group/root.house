@@ -61,7 +61,7 @@ export function PersonStoriesList({
   return (
     <div className="flex flex-col gap-6">
       <article
-        className={`${glassSurface} group/story relative flex flex-col gap-3 rounded-3xl p-6 transition-colors duration-200 ease-(--ease-reveal) hover:bg-glass-strong sm:p-8`}
+        className={`${glassSurface} group/story relative flex flex-col gap-3 rounded-3xl p-6 transition-colors duration-base ease-(--ease-reveal) hover:bg-glass-strong sm:p-8`}
       >
         <Link
           href={href(featured)}
@@ -102,7 +102,7 @@ export function PersonStoriesList({
                 {minutes(story)}
               </span>
               <ChevronRightIcon
-                className="size-4 text-foreground/35 transition-transform duration-200 ease-(--ease-reveal) group-hover/story:translate-x-0.5"
+                className="size-4 text-foreground/35 transition-transform duration-base ease-(--ease-reveal) group-hover/story:translate-x-0.5"
                 aria-hidden="true"
               />
             </li>

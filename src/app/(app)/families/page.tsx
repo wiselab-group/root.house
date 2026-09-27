@@ -24,7 +24,7 @@ export default async function FamiliesPage() {
       <div className="mx-auto flex max-w-3xl flex-col gap-12 px-4 pt-14 pb-20 sm:px-8 sm:pt-20">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex flex-col gap-4">
-            <h1 className="font-heading text-5xl leading-[1.05] font-medium tracking-tight text-balance sm:text-6xl">
+            <h1 className="font-heading text-display-lg leading-[1.05] font-medium tracking-tight text-balance">
               Ваши семьи
             </h1>
             <p className="max-w-prose text-lg text-foreground/70">
@@ -51,7 +51,7 @@ export default async function FamiliesPage() {
               >
                 <Link
                   href={`/families/${family.slug}`}
-                  className={`${glassSurface} group/row flex cursor-pointer items-center justify-between gap-6 rounded-2xl px-6 py-5 transition-[background-color,transform] duration-200 ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
+                  className={`${glassSurface} group/row flex cursor-pointer items-center justify-between gap-6 rounded-2xl px-6 py-5 transition-[background-color,transform] duration-base ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
                 >
                   <div className="flex min-w-0 flex-col gap-1">
                     <span className="truncate font-heading text-xl font-medium transition-colors group-hover/row:text-primary">
@@ -74,7 +74,7 @@ export default async function FamiliesPage() {
                       </span>
                     )}
                     <ArrowRight
-                      className="size-5 text-muted-foreground/60 transition-all duration-200 ease-(--ease-tree-focus) group-hover/row:translate-x-1 group-hover/row:text-primary"
+                      className="size-5 text-muted-foreground/60 transition-all duration-base ease-(--ease-tree-focus) group-hover/row:translate-x-1 group-hover/row:text-primary"
                       strokeWidth={1.75}
                       aria-hidden="true"
                     />

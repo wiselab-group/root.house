@@ -83,7 +83,7 @@ export default async function EditStoryPage({
           { label: "Редактировать" },
         ]}
       />
-      <h1 className="font-heading text-3xl font-medium tracking-tight text-balance">
+      <h1 className="font-heading text-title font-medium tracking-tight text-balance">
         {story.title}
       </h1>
 

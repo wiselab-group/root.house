@@ -29,7 +29,7 @@ export default async function NewPersonPage({
           { label: "Добавить человека" },
         ]}
       />
-      <h1 className="font-heading text-3xl font-medium tracking-tight text-balance">
+      <h1 className="font-heading text-title font-medium tracking-tight text-balance">
         Добавить человека
       </h1>
       <PersonCreateForm familyId={familyId} familySlug={slug} places={places} />

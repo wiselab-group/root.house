@@ -38,7 +38,7 @@ export function HeroStackCard({
         zIndex,
       }}
       className={cn(
-        "mx-auto flex w-[92vw] max-w-3xl flex-col gap-6 rounded-2xl border border-border bg-card p-6 shadow-lg transition-[transform,opacity] duration-100 ease-out will-change-transform sm:flex-row sm:items-center sm:gap-10 sm:p-10",
+        "mx-auto flex w-[92vw] max-w-3xl flex-col gap-6 rounded-2xl border border-border bg-card p-6 shadow-lg transition-[transform,opacity] duration-instant ease-(--ease-premium-out) will-change-transform sm:flex-row sm:items-center sm:gap-10 sm:p-10",
         absolute && "absolute inset-x-0 top-0",
         opacity < 1 && "pointer-events-none",
       )}

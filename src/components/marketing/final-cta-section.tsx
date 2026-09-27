@@ -4,7 +4,7 @@ export function FinalCtaSection() {
   return (
     <section className="bg-primary/5 px-6 py-20 sm:py-28">
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 text-center">
-        <h2 className="font-heading text-3xl font-medium text-balance sm:text-4xl">
+        <h2 className="font-heading text-title font-medium text-balance">
           Someone in your family remembers the story. Give that story a place to
           live.
         </h2>

@@ -18,7 +18,7 @@ export function StoryArticle({ layout }: { layout: StoryLayout }) {
           <h2
             key={block.id}
             id={block.id}
-            className="mt-6 flex scroll-mt-[calc(var(--app-header-h,0px)+4.5rem)] flex-col gap-1.5 font-heading text-2xl font-normal text-balance sm:text-3xl"
+            className="mt-6 flex scroll-mt-[calc(var(--app-header-h,0px)+4.5rem)] flex-col gap-1.5 font-heading text-heading font-normal text-balance"
           >
             <span className="text-xs tracking-[0.12em] text-foreground/45 uppercase">
               Глава {block.number}

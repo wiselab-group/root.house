@@ -249,7 +249,7 @@ export function PhotoTagCircle({
         aria-valuemax={PHOTO_TAG_RADIUS_MAX}
         aria-valuenow={Math.round(radius)}
         autoFocus={autoFocus}
-        className={`pointer-events-auto absolute size-7 -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize touch-none rounded-full border-2 border-white bg-primary shadow-md outline-none transition-[scale] duration-200 ease-(--ease-reveal) hover:scale-110 focus-visible:ring-4 focus-visible:ring-ring/60 ${
+        className={`pointer-events-auto absolute size-7 -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize touch-none rounded-full border-2 border-white bg-primary shadow-md outline-none transition-[scale] duration-base ease-(--ease-reveal) hover:scale-110 focus-visible:ring-4 focus-visible:ring-ring/60 ${
           gesture === "resize" ? "scale-110" : ""
         }`}
         // On the ring at 45° down-right — clear of the face above the point

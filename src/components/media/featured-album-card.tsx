@@ -32,7 +32,7 @@ export function FeaturedAlbumCard({
           alt=""
           fill
           sizes="(max-width: 640px) 100vw, 672px"
-          className="object-cover transition-transform duration-300 ease-(--ease-reveal) group-hover:scale-[1.03]"
+          className="object-cover transition-transform duration-slow ease-(--ease-reveal) group-hover:scale-[1.03]"
           priority
         />
       ) : (

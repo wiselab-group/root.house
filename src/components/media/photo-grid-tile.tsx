@@ -81,7 +81,7 @@ export function PhotoGridTile({
           fill
           sizes="(max-width: 640px) 50vw, 33vw"
           className={cn(
-            "object-cover transition-transform duration-200",
+            "object-cover transition-transform duration-base",
             !isArranging && "group-hover:scale-105",
           )}
         />

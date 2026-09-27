@@ -50,7 +50,7 @@ export function RelativeListItem({
     .join(" · ");
 
   return (
-    <li className="group/row relative flex min-w-0 items-center gap-3.5 rounded-2xl p-2.5 transition-colors duration-200 ease-(--ease-reveal) hover:bg-glass-strong">
+    <li className="group/row relative flex min-w-0 items-center gap-3.5 rounded-2xl p-2.5 transition-colors duration-base ease-(--ease-reveal) hover:bg-glass-strong">
       <Link
         href={`/families/${familySlug}/people/${person.slug}`}
         className="absolute inset-0 rounded-2xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
@@ -66,7 +66,7 @@ export function RelativeListItem({
         </span>
       </span>
       {kind && relationshipId && (
-        <span className="relative z-10 flex items-center -space-x-1 transition-opacity duration-200 ease-(--ease-reveal) [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/row:opacity-100 [@media(hover:hover)]:focus-within:opacity-100">
+        <span className="relative z-10 flex items-center -space-x-1 transition-opacity duration-base ease-(--ease-reveal) [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/row:opacity-100 [@media(hover:hover)]:focus-within:opacity-100">
           {kind === "partnership" && (
             <>
               <PartnershipDateEditButton
@@ -99,7 +99,7 @@ export function RelativeListItem({
         </span>
       )}
       <ChevronRightIcon
-        className="pointer-events-none size-4 shrink-0 text-foreground/35 transition-transform duration-200 ease-(--ease-reveal) group-hover/row:translate-x-0.5 group-hover/row:text-foreground"
+        className="pointer-events-none size-4 shrink-0 text-foreground/35 transition-transform duration-base ease-(--ease-reveal) group-hover/row:translate-x-0.5 group-hover/row:text-foreground"
         aria-hidden="true"
       />
     </li>

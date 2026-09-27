@@ -51,7 +51,7 @@ export function CarouselFilm({
               aria-pressed={index === current}
               aria-label={slide.caption ?? `Фото ${index + 1}`}
               onClick={() => onSelect(index)}
-              className="h-14 shrink-0 overflow-hidden rounded-md bg-muted opacity-55 transition-[opacity,transform] duration-200 ease-(--ease-reveal) hover:-translate-y-0.5 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-pressed:-translate-y-1 aria-pressed:opacity-100 aria-pressed:ring-2 aria-pressed:ring-foreground"
+              className="h-14 shrink-0 overflow-hidden rounded-md bg-muted opacity-55 transition-[opacity,transform] duration-base ease-(--ease-reveal) hover:-translate-y-0.5 hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none aria-pressed:-translate-y-1 aria-pressed:opacity-100 aria-pressed:ring-2 aria-pressed:ring-foreground"
             >
               <ArchiveImage
                 src={slide.thumbSrc}

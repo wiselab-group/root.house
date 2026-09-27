@@ -61,7 +61,7 @@ export default async function FamilySettingsPage({
         ]}
       />
       <div className="flex flex-col gap-2">
-        <h1 className="font-heading text-3xl font-medium tracking-tight text-balance sm:text-4xl">
+        <h1 className="font-heading text-title font-medium tracking-tight text-balance">
           Настройки
         </h1>
         <p className="text-muted-foreground">

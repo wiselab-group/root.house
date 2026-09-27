@@ -76,7 +76,7 @@ export default async function FamilyMapPage({
     <main className="mx-auto flex h-[calc(100dvh-var(--header-height,64px))] w-full max-w-6xl flex-col gap-4 px-6 py-6">
       <SetBreadcrumbs items={breadcrumbItems} />
       <div className="flex flex-col gap-2">
-        <h1 className="font-heading text-3xl font-medium tracking-tight text-balance sm:text-4xl">
+        <h1 className="font-heading text-title font-medium tracking-tight text-balance">
           Карта
         </h1>
         <p className="text-muted-foreground">

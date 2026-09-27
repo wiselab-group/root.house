@@ -31,7 +31,7 @@ export function CarouselGrid({
       onKeyDown={(event) => {
         if (event.key === "Escape") onClose();
       }}
-      className={`absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 bg-background/90 px-4 py-20 backdrop-blur-md transition-opacity duration-300 ease-(--ease-reveal) sm:px-8 ${
+      className={`absolute inset-0 z-30 flex flex-col items-center justify-center gap-5 bg-background/90 px-4 py-20 backdrop-blur-md transition-opacity duration-slow ease-(--ease-reveal) sm:px-8 ${
         open ? "opacity-100" : "pointer-events-none opacity-0"
       }`}
     >
@@ -46,7 +46,7 @@ export function CarouselGrid({
             tabIndex={open ? 0 : -1}
             aria-label={slide.caption ?? `Фото ${index + 1}`}
             onClick={() => onSelect(index)}
-            className="aspect-4/3 overflow-hidden rounded-xl bg-muted transition-transform duration-300 ease-(--ease-reveal) hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="aspect-4/3 overflow-hidden rounded-xl bg-muted transition-transform duration-slow ease-(--ease-reveal) hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             <ArchiveImage
               src={slide.thumbSrc}

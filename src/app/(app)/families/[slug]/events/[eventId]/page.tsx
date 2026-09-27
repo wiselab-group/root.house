@@ -91,7 +91,7 @@ export default async function EventDetailsPage({
           <Badge variant="secondary" className="w-fit">
             {EVENT_TYPE_LABELS[event.type]}
           </Badge>
-          <h1 className="font-heading text-3xl font-medium tracking-tight text-balance">
+          <h1 className="font-heading text-title font-medium tracking-tight text-balance">
             {event.title}
           </h1>
           <p className="text-muted-foreground">

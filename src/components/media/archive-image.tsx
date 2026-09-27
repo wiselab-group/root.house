@@ -58,7 +58,7 @@ export function ArchiveImage({
       // The caller's own duration/transition may win (a hover zoom), but the
       // transition list always includes opacity so the fade still runs.
       className={cn(
-        "duration-500 ease-(--ease-reveal)",
+        "duration-reveal ease-(--ease-reveal)",
         className,
         "transition-[opacity,scale,translate,rotate] motion-reduce:transition-none",
         loaded ? "opacity-100" : "opacity-0",

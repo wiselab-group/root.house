@@ -31,7 +31,7 @@ export function MarketingSectionHeading({
           {eyebrow}
         </span>
       )}
-      <h2 className="font-heading text-3xl font-medium text-balance sm:text-4xl">
+      <h2 className="font-heading text-title font-medium text-balance">
         {title}
       </h2>
       {subcopy && (

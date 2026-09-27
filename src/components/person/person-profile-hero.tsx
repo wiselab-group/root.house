@@ -124,7 +124,7 @@ export function PersonProfileHero({
             </span>
           )}
         </div>
-        <h1 className="font-heading text-4xl leading-[1.05] font-normal tracking-tight text-balance sm:text-5xl lg:text-6xl">
+        <h1 className="font-heading text-display leading-[1.05] font-normal tracking-tight text-balance">
           {name}
         </h1>
         <HeroMeta items={meta} />

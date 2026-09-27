@@ -119,7 +119,7 @@ export function PeopleList({
                   </div>
                 </div>
                 <ArrowRight
-                  className="size-5 shrink-0 text-muted-foreground/60 transition-all duration-200 ease-(--ease-tree-focus) group-hover/row:translate-x-1 group-hover/row:text-primary"
+                  className="size-5 shrink-0 text-muted-foreground/60 transition-all duration-base ease-(--ease-tree-focus) group-hover/row:translate-x-1 group-hover/row:text-primary"
                   strokeWidth={1.75}
                   aria-hidden="true"
                 />
