@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale } from "next-intl";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import {
   Popover,
@@ -67,6 +67,7 @@ import { useKinshipContext } from "./kinship/kinship-context";
 export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
   const locale = useLocale();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const popupRef = useRef<HTMLDivElement>(null);
   const kinship = useKinshipContext();
   const name = personLabel(data, locale);
   const years = yearRange(data);
@@ -161,11 +162,21 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
           the card's own framed photo. Beside the card, not under it: with a
           photo the popover is taller than the gap to the next generation,
           so below/above it flipped over the page header — to the side it
-          sits level with the card (and flips left near the right edge). */}
+          sits level with the card (and flips left near the right edge).
+          Raised a step above the canvas (bg-muted, a firmer ring, a deep
+          shadow): at --popover it was nearly the canvas's own tone, and
+          over neighbouring cards and lines its edge got lost. Focus lands
+          on the first action only when opened from the keyboard — after a
+          click it went there too and lit that item's focus ring, reading
+          as a highlighted primary button. */}
       <PopoverContent
+        ref={popupRef}
         side="right"
         sideOffset={12}
-        className="max-h-(--available-height) overflow-y-auto p-1"
+        initialFocus={(openType) =>
+          openType === "keyboard" ? true : popupRef.current
+        }
+        className="max-h-(--available-height) overflow-y-auto bg-muted p-1 shadow-2xl ring-foreground/20 shadow-black/50"
       >
         <PersonNodePopoverActions data={data} />
       </PopoverContent>

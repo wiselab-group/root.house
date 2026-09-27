@@ -17,6 +17,11 @@ import { personLabel, yearRange } from "./person-node-parts";
  * in months, «(8 мес.)», «(1 год 4 мес.)»), the
  * birth place, and what the archive holds for them.
  *
+ * The name is text-xl, not the card's own text-sm: the card's text lives
+ * in canvas space and grows with the zoom (~22px on screen at 1.6x), while
+ * the popover is fixed screen UI — at a smaller size the popover, the
+ * thing being read, was out-titled by the card behind it.
+ *
  * Name and years come from the same personLabel/yearRange as the card, so
  * the two can never disagree. No kinship line («бабушка»): without naming
  * whose grandmother, the word alone can't be read (user decision).
@@ -50,9 +55,9 @@ export function PersonNodePopoverSummary({
       {data.photoUrl && (
         // 4:3 (192px) when there's room; on a phone, where the popover
         // can't sit beside the card and flips above it, the photo gives up
-        // height (down to a 96px strip) so the name and actions stay on
-        // screen — ~12rem is what the rest of the popover needs.
-        <div className="relative h-[clamp(6rem,calc(var(--available-height)-12rem),12rem)] overflow-hidden rounded-md bg-muted">
+        // height (down to an 80px strip) so the name and actions stay on
+        // screen — ~15rem is what the rest of the popover needs (a two-line name included).
+        <div className="relative h-[clamp(5rem,calc(var(--available-height)-15rem),12rem)] overflow-hidden rounded-md bg-accent">
           <ArchiveImage
             src={data.photoUrl}
             alt=""
@@ -63,8 +68,8 @@ export function PersonNodePopoverSummary({
           />
         </div>
       )}
-      <div className="flex flex-col gap-0.5 px-2 pt-2.5 pb-2">
-        <p className="font-heading text-[0.95rem] leading-snug font-medium text-balance">
+      <div className="flex flex-col gap-0.5 px-2 pt-3 pb-2">
+        <p className="font-heading text-xl leading-tight font-medium text-balance">
           {name}
           {maidenName && (
             <span className="font-normal text-muted-foreground">
@@ -74,7 +79,9 @@ export function PersonNodePopoverSummary({
           )}
         </p>
         {years && (
-          <p className="text-xs text-muted-foreground tabular-nums">
+          // Brighter than the place/archive lines below: after the name,
+          // the years are what's read first.
+          <p className="mt-0.5 text-sm text-foreground/80 tabular-nums">
             {years}
             {age && ` (${ageLabel(age)})`}
           </p>
