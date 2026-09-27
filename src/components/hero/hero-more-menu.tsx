@@ -8,6 +8,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DeletePersonButton } from "@/components/person/delete-person-button";
@@ -45,7 +46,9 @@ export function HeroMoreMenu({
           render={
             <button
               type="button"
-              className={glassIconButton}
+              // Stays lit while the menu is open, so the menu reads as this
+              // button's even after the pointer has moved into it.
+              className={`${glassIconButton} data-popup-open:bg-background/70`}
               aria-label={t("actions")}
             />
           }
@@ -59,6 +62,7 @@ export function HeroMoreMenu({
               {tc("edit")}
             </DropdownMenuItem>
           )}
+          {editHref && deleteTarget && <DropdownMenuSeparator />}
           {deleteTarget && (
             <DropdownMenuItem
               variant="destructive"
