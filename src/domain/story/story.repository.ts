@@ -2,6 +2,8 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { stories, storyPerson, type PrivacyLevel } from "@/db/schema";
 
+export type StoryStatus = (typeof stories.$inferSelect)["status"];
+
 export interface StoryRecord {
   id: string;
   familyId: string;
@@ -10,7 +12,11 @@ export interface StoryRecord {
   body: string;
   privacyLevel: PrivacyLevel;
   authorId: string;
+  /** `draft` — visible only to its author (see story.service.ts's
+   *  visibility helpers); `published` — the family archive. */
+  status: StoryStatus;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 function toRecord(row: typeof stories.$inferSelect): StoryRecord {
@@ -22,7 +28,9 @@ function toRecord(row: typeof stories.$inferSelect): StoryRecord {
     body: row.body,
     privacyLevel: row.privacyLevel,
     authorId: row.authorId,
+    status: row.status,
     createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
 }
 
@@ -91,6 +99,42 @@ export async function listStoriesByFamily(
   return rows.map(toRecord);
 }
 
+/** One author's own drafts in a family, most recently edited first — the
+ *  «Мои черновики» block on /stories. */
+export async function listDraftsByAuthor(
+  familyId: string,
+  authorId: string,
+): Promise<StoryRecord[]> {
+  const rows = await db.query.stories.findMany({
+    where: and(
+      eq(stories.familyId, familyId),
+      eq(stories.status, "draft"),
+      eq(stories.authorId, authorId),
+    ),
+    orderBy: [desc(stories.updatedAt)],
+  });
+  return rows.map(toRecord);
+}
+
+/** An author's untouched draft (no title, no text) in this family, if any —
+ *  «Новая история» reuses it instead of piling up empty drafts every time
+ *  the editor is opened and left without typing. */
+export async function findEmptyDraft(
+  familyId: string,
+  authorId: string,
+): Promise<StoryRecord | null> {
+  const row = await db.query.stories.findFirst({
+    where: and(
+      eq(stories.familyId, familyId),
+      eq(stories.status, "draft"),
+      eq(stories.authorId, authorId),
+      eq(stories.title, ""),
+      eq(stories.body, ""),
+    ),
+  });
+  return row ? toRecord(row) : null;
+}
+
 export interface CreateStoryData {
   familyId: string;
   slug: string;
@@ -98,6 +142,7 @@ export interface CreateStoryData {
   body: string;
   authorId: string;
   privacyLevel?: PrivacyLevel;
+  status?: StoryStatus;
   /** Person ids to link this Story to, created atomically with the row. */
   personIds: string[];
 }
@@ -114,6 +159,7 @@ export async function createStory(
       body: data.body,
       authorId: data.authorId,
       privacyLevel: data.privacyLevel ?? "family",
+      status: data.status ?? "published",
     })
     .returning({ id: stories.id });
 
@@ -132,6 +178,10 @@ export interface UpdateStoryData {
   title?: string;
   body?: string;
   privacyLevel?: PrivacyLevel;
+  /** Only ever `draft` → `published` (story.service.ts::publishStory). */
+  status?: StoryStatus;
+  /** Re-derived from the title on first publish — see publishStory. */
+  slug?: string;
 }
 
 export async function updateStory(
@@ -145,6 +195,8 @@ export async function updateStory(
   if (data.title !== undefined) patch.title = data.title;
   if (data.body !== undefined) patch.body = data.body;
   if (data.privacyLevel !== undefined) patch.privacyLevel = data.privacyLevel;
+  if (data.status !== undefined) patch.status = data.status;
+  if (data.slug !== undefined) patch.slug = data.slug;
 
   const result = await db
     .update(stories)

@@ -7,8 +7,7 @@ import type { StoryFormState } from "@/actions/story.actions";
 import { PersonMultiCombobox } from "@/components/media/person-multi-combobox";
 import { StoryEditorToolbar } from "@/components/story/story-editor-toolbar";
 import { StoryDraftBanner } from "@/components/story/story-draft-banner";
-import { useStoryDraft } from "@/components/story/use-story-draft";
-import { removeDraft } from "@/components/story/story-draft-store";
+import { useStoryAutosave } from "@/components/story/use-story-autosave";
 import { submitWithoutReset } from "@/lib/submit-without-reset";
 import { PrivacyLevelSelect } from "./privacy-level-select";
 import type { PrivacyLevel } from "@/db/schema";
@@ -20,10 +19,12 @@ const initialState: StoryFormState = {};
  * of the editing mock (user's pick 2026-09-27): a long text never goes in a
  * modal. One quiet pinned bar, a borderless title, and a writing column set
  * exactly like StoryArticle's reading column, so the text looks while
- * writing the way it will read. Edits autosave as a local draft on this
- * device (useStoryDraft) so a closed tab never loses them; people and
- * privacy sit below the text, out of the way. updateStoryAction redirects
- * back to the story on success.
+ * writing the way it will read. Title and text autosave to the server
+ * (useStoryAutosave), so a closed tab or another device never loses them;
+ * people and privacy sit below the text, out of the way and are saved with
+ * the submit. A draft story (status `draft`, only its author sees it)
+ * submits as «Опубликовать»; a published one as «Сохранить».
+ * updateStoryAction redirects to the story on success.
  */
 export function EditStoryForm({
   familyId,
@@ -32,6 +33,8 @@ export function EditStoryForm({
   body,
   privacyLevel,
   people,
+  isDraft,
+  serverDraft,
   cancelHref,
 }: {
   familyId: string;
@@ -40,6 +43,10 @@ export function EditStoryForm({
   body: string;
   privacyLevel: PrivacyLevel;
   people: { id: string; name: string }[];
+  isDraft: boolean;
+  /** This user's autosaved edits to a published story from an earlier
+   *  visit — see useStoryAutosave. */
+  serverDraft: { title: string; body: string } | null;
   cancelHref: string;
 }) {
   const t = useTranslations("storyForm");
@@ -50,24 +57,30 @@ export function EditStoryForm({
     initialState,
   );
   const [selectedPeople, setSelectedPeople] = useState(people);
-  const draft = useStoryDraft(storyId, { title, body });
+  const draft = useStoryAutosave({
+    familyId,
+    storyId,
+    saved: { title, body },
+    serverDraft,
+  });
 
   return (
     <form
-      // The submitted text is the draft's replacement; a failed save keeps
-      // it in the fields, and the next keystroke writes a fresh draft.
+      // A queued autosave must not land after the real save (it would
+      // re-create the draft the save just cleared).
       onSubmit={(event) => {
-        removeDraft(storyId);
+        draft.cancelPending();
         submitWithoutReset(formAction)(event);
       }}
       className="flex flex-col"
     >
       <StoryEditorToolbar
         backHref={cancelHref}
-        draftSaved={draft.draftSaved}
+        isDraft={isDraft}
+        status={draft.status}
         pending={pending}
         notice={
-          draft.leftoverDraft && (
+          draft.offeredDraft && (
             <StoryDraftBanner
               onRestore={draft.restore}
               onDiscard={draft.discard}

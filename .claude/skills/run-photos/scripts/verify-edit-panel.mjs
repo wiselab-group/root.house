@@ -149,11 +149,11 @@ async function main() {
     await page.locator("#body").click();
     await page.keyboard.press("End");
     await page.keyboard.type(" Мостотрест строил новый пролёт у Гродно.");
-    await page.getByText("Черновик сохранён на этом устройстве").waitFor({ timeout: 5000 });
+    await page.getByText("Черновик сохранён", { exact: true }).first().waitFor({ timeout: 10000 });
     check(true, "autosave shows «Черновик сохранён»");
     await shoot(page, "08-story-draft-saved");
     await page.reload({ waitUntil: "networkidle" });
-    await page.getByText("Есть несохранённый черновик").waitFor({ timeout: 5000 });
+    await page.getByText("Есть несохранённые правки этой истории.").waitFor({ timeout: 10000 });
     check(true, "reload offers the leftover draft");
     await shoot(page, "09-story-draft-banner");
     await page.getByRole("button", { name: "Восстановить" }).click();

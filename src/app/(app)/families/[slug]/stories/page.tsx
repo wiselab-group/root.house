@@ -7,6 +7,7 @@ import { requireFamilyAccess } from "@/domain/family/access";
 import { canCreate } from "@/domain/family/permissions";
 import {
   listStories,
+  listMyDrafts,
   filterVisibleStories,
   getStoryPersonIdsBatch,
 } from "@/domain/story/story.service";
@@ -14,8 +15,8 @@ import { listPeople } from "@/domain/person/person.service";
 import { getFamilySummary } from "@/domain/family/family.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { StoriesList } from "@/components/story/stories-list";
-import { AddStoryFullForm } from "@/components/forms/add-story-full-form";
-import { CollapsibleForm } from "@/components/forms/collapsible-form";
+import { NewStoryButton } from "@/components/story/new-story-button";
+import { MyDraftsList } from "@/components/story/my-drafts-list";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import type { PersonRecord } from "@/domain/person/person.repository";
 
@@ -39,11 +40,15 @@ export default async function StoriesPage({
   const viewer = { userId: session.user.id, role: member.role };
   const canAdd = canCreate(member.role, "story");
 
-  const [allStories, allPeople, family] = await Promise.all([
+  const [allStories, allPeople, family, myDrafts] = await Promise.all([
     listStories(familyId),
     listPeople(familyId),
     getFamilySummary(familyId),
+    listMyDrafts(familyId, session.user.id),
   ]);
+  // An untouched draft (opened, left without typing) isn't worth listing —
+  // «Новая история» reuses it anyway (story.service.ts::createDraftStory).
+  const drafts = myDrafts.filter((d) => d.title !== "" || d.body !== "");
   const stories = filterVisibleStories(allStories, viewer);
   const peopleById = new Map<string, PersonRecord>(
     allPeople.map((p) => [p.id, p]),
@@ -69,18 +74,23 @@ export default async function StoriesPage({
           { label: t("title") },
         ]}
       />
-      <div className="flex flex-col gap-2">
-        <h1 className="font-heading text-title font-medium tracking-tight text-balance">
-          {t("title")}
-        </h1>
-        <p className="text-muted-foreground">
-          {stories.length > 0
-            ? t("countLead", {
-                stories: tCount("stories", { count: stories.length }),
-              })
-            : t("lead")}
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <h1 className="font-heading text-title font-medium tracking-tight text-balance">
+            {t("title")}
+          </h1>
+          <p className="text-muted-foreground">
+            {stories.length > 0
+              ? t("countLead", {
+                  stories: tCount("stories", { count: stories.length }),
+                })
+              : t("lead")}
+          </p>
+        </div>
+        {canAdd && stories.length > 0 && <NewStoryButton familyId={familyId} />}
       </div>
+
+      {drafts.length > 0 && <MyDraftsList familySlug={slug} drafts={drafts} />}
 
       {stories.length === 0 ? (
         <EmptyStoriesState canAdd={canAdd} familyId={familyId} />
@@ -90,12 +100,6 @@ export default async function StoriesPage({
           stories={stories}
           peopleByStoryId={peopleByStoryId}
         />
-      )}
-
-      {stories.length > 0 && canAdd && (
-        <CollapsibleForm triggerLabel={t("add")}>
-          <AddStoryFullForm familyId={familyId} />
-        </CollapsibleForm>
       )}
     </main>
   );
@@ -121,11 +125,7 @@ function EmptyStoriesState({
         <h2 className="font-heading text-xl font-medium">{t("emptyTitle")}</h2>
         <p className="text-muted-foreground">{t("emptyBody")}</p>
       </div>
-      {canAdd && (
-        <CollapsibleForm triggerLabel={t("addFirst")}>
-          <AddStoryFullForm familyId={familyId} />
-        </CollapsibleForm>
-      )}
+      {canAdd && <NewStoryButton familyId={familyId} />}
     </div>
   );
 }

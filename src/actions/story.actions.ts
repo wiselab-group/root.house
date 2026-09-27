@@ -7,74 +7,27 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { ForbiddenError } from "@/domain/family/errors";
-import { canCreate, canDelete, canEdit } from "@/domain/family/permissions";
+import { canCreate, canDelete } from "@/domain/family/permissions";
 import { getFamilySlugById } from "@/domain/family/family.service";
 import { getPersonSlugById } from "@/domain/person/person.service";
-import { createStorySchema } from "@/lib/validation/story";
 import {
-  addStory,
+  createStorySchema,
+  storyDraftContentSchema,
+} from "@/lib/validation/story";
+import {
+  canEditStory,
+  createDraftStory,
+  discardMyStoryDraft,
   editStory,
   getStory,
+  publishStory,
   removeStory,
+  saveStoryDraftContent,
 } from "@/domain/story/story.service";
 
 export interface StoryFormState {
   error?: string;
   fieldErrors?: Record<string, string>;
-}
-
-/**
- * "Add a story from a Person's profile" — a story linked to exactly that
- * one Person. See createStoryFromStoriesPageAction below for the
- * multi-person form on the family-wide /stories page.
- */
-export async function createStoryAction(
-  familyId: string,
-  personId: string,
-  _prevState: StoryFormState,
-  formData: FormData,
-): Promise<StoryFormState> {
-  const session = await auth();
-  if (!session?.user)
-    return { error: (await getErrorMessage())("sessionExpired") };
-
-  const member = await requireFamilyAccess(
-    familyId,
-    session.user.id,
-    "contributor",
-  );
-  if (!canCreate(member.role, "story")) {
-    return { error: (await getErrorMessage())("noStoryCreate") };
-  }
-
-  const parsed = createStorySchema.safeParse({
-    title: formData.get("title"),
-    body: formData.get("body"),
-    privacyLevel: formData.get("privacyLevel") || undefined,
-  });
-
-  if (!parsed.success) {
-    const message = await getValidationMessage();
-    const fieldErrors: Record<string, string> = {};
-    for (const issue of parsed.error.issues) {
-      fieldErrors[String(issue.path[0])] = message(issue);
-    }
-    return { fieldErrors };
-  }
-
-  await addStory({
-    familyId,
-    authorId: session.user.id,
-    title: parsed.data.title,
-    body: parsed.data.body,
-    privacyLevel: parsed.data.privacyLevel,
-    personIds: [personId],
-  });
-
-  const familySlug = await getFamilySlugById(familyId);
-  const personSlug = await getPersonSlugById(personId, familyId);
-  revalidatePath(`/families/${familySlug}/people/${personSlug}`);
-  return {};
 }
 
 export async function deleteStoryAction(
@@ -94,6 +47,8 @@ export async function deleteStoryAction(
   const story = await getStory(storyId, familyId);
   if (!story) return;
   if (
+    // A draft is its author's alone — not even the owner's to delete.
+    (story.status === "draft" && story.authorId !== session.user.id) ||
     !canDelete(
       { userId: session.user.id, role: member.role },
       { privacyLevel: story.privacyLevel, createdBy: story.authorId },
@@ -106,63 +61,6 @@ export async function deleteStoryAction(
   const familySlug = await getFamilySlugById(familyId);
   const personSlug = await getPersonSlugById(personId, familyId);
   revalidatePath(`/families/${familySlug}/people/${personSlug}`);
-}
-
-/**
- * "Add a story" from the family-wide /stories page — unlike
- * createStoryAction (bound to one Person's profile), this accepts any
- * number of linked people (including zero — a story doesn't strictly need
- * a person attached) and redirects to the new story's own page on success
- * instead of returning to a form state, since there's no natural "stay on
- * this page" destination the way a profile page is for the person-scoped form.
- */
-export async function createStoryFromStoriesPageAction(
-  familyId: string,
-  _prevState: StoryFormState,
-  formData: FormData,
-): Promise<StoryFormState> {
-  const session = await auth();
-  if (!session?.user)
-    return { error: (await getErrorMessage())("sessionExpired") };
-
-  const member = await requireFamilyAccess(
-    familyId,
-    session.user.id,
-    "contributor",
-  );
-  if (!canCreate(member.role, "story")) {
-    return { error: (await getErrorMessage())("noStoryCreate") };
-  }
-
-  const parsed = createStorySchema.safeParse({
-    title: formData.get("title"),
-    body: formData.get("body"),
-    privacyLevel: formData.get("privacyLevel") || undefined,
-  });
-
-  if (!parsed.success) {
-    const message = await getValidationMessage();
-    const fieldErrors: Record<string, string> = {};
-    for (const issue of parsed.error.issues) {
-      fieldErrors[String(issue.path[0])] = message(issue);
-    }
-    return { fieldErrors };
-  }
-
-  const personIds = formData.getAll("personId").map(String).filter(Boolean);
-
-  const { slug } = await addStory({
-    familyId,
-    authorId: session.user.id,
-    title: parsed.data.title,
-    body: parsed.data.body,
-    privacyLevel: parsed.data.privacyLevel,
-    personIds,
-  });
-
-  const familySlug = await getFamilySlugById(familyId);
-  revalidatePath(`/families/${familySlug}/stories`);
-  redirect(`/families/${familySlug}/stories/${slug}`);
 }
 
 /**
@@ -191,12 +89,7 @@ export async function updateStoryAction(
 
   const existing = await getStory(storyId, familyId);
   if (!existing) return { error: (await getErrorMessage())("storyNotFound") };
-  if (
-    !canEdit(
-      { userId: session.user.id, role: member.role },
-      { privacyLevel: existing.privacyLevel, createdBy: existing.authorId },
-    )
-  ) {
+  if (!canEditStory({ userId: session.user.id, role: member.role }, existing)) {
     return { error: (await getErrorMessage())("noStoryEdit") };
   }
 
@@ -216,6 +109,22 @@ export async function updateStoryAction(
   }
 
   const personIds = formData.getAll("personId").map(String).filter(Boolean);
+
+  if (existing.status === "draft") {
+    const { slug } = await publishStory(existing, session.user.id, {
+      title: parsed.data.title,
+      body: parsed.data.body,
+      privacyLevel: parsed.data.privacyLevel,
+      personIds,
+    });
+    const familySlug = await getFamilySlugById(familyId);
+    revalidatePath(`/families/${familySlug}/stories`);
+    for (const personId of personIds) {
+      const personSlug = await getPersonSlugById(personId, familyId);
+      revalidatePath(`/families/${familySlug}/people/${personSlug}`);
+    }
+    redirect(`/families/${familySlug}/stories/${slug}`);
+  }
 
   await editStory(storyId, familyId, session.user.id, {
     title: parsed.data.title,
@@ -251,6 +160,8 @@ export async function deleteStoryFromStoriesPageAction(
   const story = await getStory(storyId, familyId);
   if (!story) return;
   if (
+    // A draft is its author's alone — not even the owner's to delete.
+    (story.status === "draft" && story.authorId !== session.user.id) ||
     !canDelete(
       { userId: session.user.id, role: member.role },
       { privacyLevel: story.privacyLevel, createdBy: story.authorId },
@@ -263,4 +174,85 @@ export async function deleteStoryFromStoriesPageAction(
   const familySlug = await getFamilySlugById(familyId);
   revalidatePath(`/families/${familySlug}/stories`);
   redirect(`/families/${familySlug}/stories`);
+}
+
+/**
+ * «Новая история» — from /stories (no people) or a Person's profile (that
+ * person, via a hidden personId field): creates the author's draft and
+ * opens the full-page editor on it, so the story is written where long
+ * text belongs and autosaved from the first keystroke.
+ */
+export async function createDraftStoryAction(
+  familyId: string,
+  formData: FormData,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Session expired.");
+
+  const member = await requireFamilyAccess(
+    familyId,
+    session.user.id,
+    "contributor",
+  );
+  if (!canCreate(member.role, "story")) {
+    throw new ForbiddenError("You may not create stories.");
+  }
+
+  const personIds = formData.getAll("personId").map(String).filter(Boolean);
+  const { slug } = await createDraftStory(familyId, session.user.id, personIds);
+  const familySlug = await getFamilySlugById(familyId);
+  redirect(`/families/${familySlug}/stories/${slug}/edit`);
+}
+
+export type AutosaveStoryResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * The story editor's autosave, called every few seconds while typing — see
+ * story.service.ts::saveStoryDraftContent for where it writes. Same
+ * auth → family access → canEditStory chain as a real save; lenient
+ * content rules (an unfinished draft may have no title yet), only the
+ * length limits. Doesn't revalidate: nothing anyone else sees changed.
+ */
+export async function autosaveStoryAction(
+  familyId: string,
+  storyId: string,
+  content: { title: string; body: string },
+): Promise<AutosaveStoryResult> {
+  const session = await auth();
+  if (!session?.user)
+    return { ok: false, error: (await getErrorMessage())("sessionExpired") };
+
+  const member = await requireFamilyAccess(
+    familyId,
+    session.user.id,
+    "contributor",
+  );
+  const story = await getStory(storyId, familyId);
+  if (
+    !story ||
+    !canEditStory({ userId: session.user.id, role: member.role }, story)
+  ) {
+    return { ok: false, error: (await getErrorMessage())("noStoryEdit") };
+  }
+
+  const parsed = storyDraftContentSchema.safeParse(content);
+  if (!parsed.success) {
+    const message = await getValidationMessage();
+    return { ok: false, error: message(parsed.error.issues[0]) };
+  }
+
+  await saveStoryDraftContent(story, session.user.id, parsed.data);
+  return { ok: true };
+}
+
+/** «Удалить черновик» for autosaved edits to a PUBLISHED story — drops
+ *  this user's story_drafts row; the published text is untouched. */
+export async function discardStoryDraftAction(
+  familyId: string,
+  storyId: string,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Session expired.");
+  await requireFamilyAccess(familyId, session.user.id, "contributor");
+  await discardMyStoryDraft(storyId, session.user.id, familyId);
 }

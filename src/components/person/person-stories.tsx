@@ -3,7 +3,7 @@ import {
   getPersonStories,
   filterVisibleStories,
 } from "@/domain/story/story.service";
-import { AddStoryForm } from "@/components/forms/add-story-form";
+import { NewStoryButton } from "@/components/story/new-story-button";
 import { PersonStoriesList } from "./person-stories-list";
 import { ProfileSectionWithAdd } from "./profile-section-with-add";
 import { canDelete, type ActingMember } from "@/domain/family/permissions";
@@ -38,9 +38,15 @@ export async function PersonStories({
       title={t("tabStories")}
       count={stories.length}
       addLabel={t("addStory")}
-      form={
+      // «Добавить историю» opens the full-page editor on a new draft linked
+      // to this person, not an inline form — see NewStoryButton.
+      extraAction={
         canContribute && (
-          <AddStoryForm familyId={familyId} personId={personId} />
+          <NewStoryButton
+            familyId={familyId}
+            personId={personId}
+            variant="section"
+          />
         )
       }
     >

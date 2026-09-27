@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { canDelete, canEdit } from "@/domain/family/permissions";
@@ -55,6 +55,11 @@ export default async function StoryDetailPage({
   const storyId = await resolveStoryIdBySlug(storySlug, familyId);
   const story = await getVisibleStory(storyId, familyId, viewer);
   if (!story) notFound();
+  // Only its author gets this far for a draft (getVisibleStory), and a
+  // draft has no reading view yet — it's still being written.
+  if (story.status === "draft") {
+    redirect(`/families/${slug}/stories/${storySlug}/edit`);
+  }
 
   const [personIds, allPeople, family, storyPhotos] = await Promise.all([
     getStoryPersonIds(storyId),

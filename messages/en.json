@@ -529,13 +529,20 @@
     "add": "Add a story",
     "emptyTitle": "No family stories told yet",
     "emptyBody": "How your grandparents met, a move to another city, summers with relatives — write down what's worth passing on.",
-    "addFirst": "Add the first story",
     "countLead": "{stories} — worth remembering and passing on.",
     "editTitle": "Edit — {title}",
     "chapter": "Chapter {number}",
     "photoN": "Photo {n}",
     "added": "Added {date}",
-    "deleteTitle": "Delete “{title}”?"
+    "deleteTitle": "Delete “{title}”?",
+    "untitled": "Untitled",
+    "draftTitle": "Draft — {title}",
+    "draftBadge": "Draft",
+    "myDrafts": "My drafts",
+    "myDraftsHint": "Only you can see them until you publish.",
+    "draftEdited": "Edited {date}",
+    "opening": "Opening…",
+    "deleteDraft": "Delete draft"
   },
   "documents": {
     "uploaded": "Uploaded",
@@ -615,17 +622,20 @@
   "storyForm": {
     "body": "Story",
     "people": "Who is in this story?",
-    "add": "Add story",
-    "new": "New story",
     "deleteTitle": "Delete this story?",
     "titlePlaceholder": "Story title",
     "bodyPlaceholder": "Start telling it…",
     "backToStory": "Back to story",
-    "draftSaved": "Draft saved on this device",
-    "draftFound": "There is an unsaved draft of this story.",
+    "draftSaved": "Draft saved",
+    "draftFound": "You have unsaved edits to this story.",
     "restoreDraft": "Restore",
     "discardDraft": "Discard draft",
-    "details": "People and access"
+    "details": "People and access",
+    "publish": "Publish",
+    "publishing": "Publishing…",
+    "backToStories": "Back to stories",
+    "draftSaving": "Saving draft…",
+    "draftSaveFailed": "Draft not saved, will retry on your next edit"
   },
   "placeForm": {
     "searchingMap": "Searching the map…",

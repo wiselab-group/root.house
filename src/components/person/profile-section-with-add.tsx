@@ -11,9 +11,11 @@ import { ProfileSection } from "./profile-section";
 // next to a large heading read as decoration, not an action (user request
 // 2026-09-26, reversing the earlier icon-only phone version). The row also
 // grows to a 36px tap target there.
-const ACTION =
+export const SECTION_ACTION_CLASS =
   "group flex shrink-0 cursor-pointer items-center gap-1 rounded-sm text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none max-sm:min-h-9";
-const ICON = "size-3.5";
+export const SECTION_ACTION_ICON_CLASS = "size-3.5";
+const ACTION = SECTION_ACTION_CLASS;
+const ICON = SECTION_ACTION_ICON_CLASS;
 
 /**
  * A ProfileSection whose «Добавить …» action sits on the heading row, right

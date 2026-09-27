@@ -29,6 +29,7 @@ export function DeleteStoryDetailButton({
   open: controlledOpen,
   onOpenChange,
   trigger = true,
+  triggerLabel,
 }: {
   familyId: string;
   storyId: string;
@@ -39,6 +40,8 @@ export function DeleteStoryDetailButton({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   trigger?: boolean;
+  /** The trigger button's text — «Удалить» by default. */
+  triggerLabel?: string;
 }) {
   const t = useTranslations("stories");
   const tc = useTranslations("common");
@@ -61,7 +64,7 @@ export function DeleteStoryDetailButton({
             <Button variant="destructive" size="sm" className={className} />
           }
         >
-          {tc("delete")}
+          {triggerLabel ?? tc("delete")}
         </DialogTrigger>
       )}
       <DialogContent>

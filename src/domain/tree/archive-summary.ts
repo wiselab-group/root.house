@@ -75,6 +75,9 @@ export function buildPersonStoryCountQuery(
     .where(
       and(
         eq(stories.familyId, familyId),
+        // Drafts are the author's unfinished writing, never part of the
+        // archive — see story.service.ts::filterVisibleStories.
+        eq(stories.status, "published"),
         visibleToViewerPredicate(
           viewer,
           stories.privacyLevel,
@@ -184,6 +187,9 @@ export function buildPersonStoryCountForPersonQuery(
       and(
         eq(storyPerson.personId, personId),
         eq(stories.familyId, familyId),
+        // Drafts are the author's unfinished writing, never part of the
+        // archive — see story.service.ts::filterVisibleStories.
+        eq(stories.status, "published"),
         visibleToViewerPredicate(
           viewer,
           stories.privacyLevel,

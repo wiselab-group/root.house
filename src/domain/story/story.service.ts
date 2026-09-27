@@ -1,9 +1,15 @@
-import { canView, type ActingMember } from "@/domain/family/permissions";
+import {
+  canEdit,
+  canView,
+  type ActingMember,
+} from "@/domain/family/permissions";
 import { logActivity } from "@/domain/activity-log/activity-log.service";
 import { ensureUniqueSlug, slugifyStory } from "./slug";
 import {
   createStory,
   deleteStory,
+  findEmptyDraft,
+  listDraftsByAuthor,
   getPersonIdsForStories,
   getPersonIdsForStory,
   getStoriesForPerson,
@@ -13,12 +19,18 @@ import {
   listStoriesByFamily,
   replaceStoryPeople,
   updateStory,
-  type CreateStoryData,
   type StoryRecord,
   type UpdateStoryData,
 } from "./story.repository";
 
-export type { StoryRecord };
+import {
+  deleteStoryDraft,
+  getStoryDraft,
+  upsertStoryDraft,
+  type StoryDraftRecord,
+} from "./story-draft.repository";
+
+export type { StoryRecord, StoryDraftRecord };
 
 function randomSeed(): string {
   return crypto.randomUUID();
@@ -32,24 +44,6 @@ async function generateUniqueStorySlug(
   return ensureUniqueSlug(base, (candidate) =>
     isStorySlugTaken(candidate, familyId),
   );
-}
-
-export async function addStory(
-  data: Omit<CreateStoryData, "slug">,
-): Promise<{ id: string; slug: string }> {
-  const slug = await generateUniqueStorySlug(data.familyId, data.title);
-  const result = await createStory({ ...data, slug });
-
-  await logActivity({
-    familyId: data.familyId,
-    actorId: data.authorId,
-    action: "create",
-    entityType: "story",
-    entityId: result.id,
-    entityLabel: data.title,
-  });
-
-  return { ...result, slug };
 }
 
 export async function getStory(
@@ -117,6 +111,8 @@ export async function editStory(
   if (personIds !== undefined) {
     await replaceStoryPeople(storyId, personIds);
   }
+  // Saved for real — the actor's autosaved edits are now the story itself.
+  await deleteStoryDraft(storyId, actorId, familyId);
 
   const story = await getStoryById(storyId, familyId);
   if (story) {
@@ -155,16 +151,44 @@ export async function removeStory(
   return deleted;
 }
 
-/** Filters a list of Stories down to what `member` may see per the PRIVATE
- *  visibility rule — see event.service.ts::filterVisibleEvents for the
- *  identical shape/rationale. */
+/** Filters a list of Stories down to what `member` may see in the family
+ *  archive: published only (drafts never appear in lists, profiles or
+ *  counts — not even the author's own; those live in «Мои черновики», see
+ *  listMyDrafts), then the PRIVATE visibility rule — see
+ *  event.service.ts::filterVisibleEvents for the identical shape. */
 export function filterVisibleStories(
   stories: StoryRecord[],
   member: ActingMember,
 ): StoryRecord[] {
-  return stories.filter((s) =>
-    canView(member, { privacyLevel: s.privacyLevel, createdBy: s.authorId }),
+  return stories.filter(
+    (s) =>
+      s.status === "published" &&
+      canView(member, { privacyLevel: s.privacyLevel, createdBy: s.authorId }),
   );
+}
+
+/** Whether `member` may open this single story at all: a draft only by its
+ *  author — not even the family owner, whose PRIVATE override is about
+ *  finished records, not someone's unfinished writing. */
+function canViewStory(member: ActingMember, story: StoryRecord): boolean {
+  if (story.status === "draft") return story.authorId === member.userId;
+  return canView(member, {
+    privacyLevel: story.privacyLevel,
+    createdBy: story.authorId,
+  });
+}
+
+/** Whether `member` may edit this story — same draft rule as canViewStory,
+ *  then the usual canEdit (author or owner/editor on non-private). */
+export function canEditStory(
+  member: ActingMember,
+  story: StoryRecord,
+): boolean {
+  if (story.status === "draft") return story.authorId === member.userId;
+  return canEdit(member, {
+    privacyLevel: story.privacyLevel,
+    createdBy: story.authorId,
+  });
 }
 
 /** Same IDOR-safe-preserving contract as getVisiblePerson: returns null both
@@ -177,10 +201,114 @@ export async function getVisibleStory(
 ): Promise<StoryRecord | null> {
   const story = await getStory(storyId, familyId);
   if (!story) return null;
-  return canView(member, {
-    privacyLevel: story.privacyLevel,
-    createdBy: story.authorId,
-  })
-    ? story
-    : null;
+  return canViewStory(member, story) ? story : null;
+}
+
+/** The author's own drafts in this family — «Мои черновики». */
+export async function listMyDrafts(
+  familyId: string,
+  authorId: string,
+): Promise<StoryRecord[]> {
+  return listDraftsByAuthor(familyId, authorId);
+}
+
+/**
+ * «Новая история»: a draft row the editor can autosave into from the first
+ * keystroke. An untouched draft of the same author is reused (its people
+ * replaced) rather than piling up empty drafts. Not activity-logged — the
+ * family hears about a story when it's published (publishStory).
+ */
+export async function createDraftStory(
+  familyId: string,
+  authorId: string,
+  personIds: string[],
+): Promise<{ id: string; slug: string }> {
+  const empty = await findEmptyDraft(familyId, authorId);
+  if (empty) {
+    await replaceStoryPeople(empty.id, personIds);
+    return { id: empty.id, slug: empty.slug };
+  }
+  const slug = await generateUniqueStorySlug(familyId, "");
+  const { id } = await createStory({
+    familyId,
+    authorId,
+    slug,
+    title: "",
+    body: "",
+    status: "draft",
+    personIds,
+  });
+  return { id, slug };
+}
+
+/**
+ * Autosave. A draft story's own row IS the draft (only its author sees
+ * it), so it's written directly; a published story's text stays what the
+ * family reads, and the edits go to this user's story_drafts row until
+ * «Сохранить». Never activity-logged — it fires every few seconds.
+ */
+export async function saveStoryDraftContent(
+  story: StoryRecord,
+  userId: string,
+  content: { title: string; body: string },
+): Promise<void> {
+  if (story.status === "draft") {
+    await updateStory(story.id, story.familyId, content);
+    return;
+  }
+  await upsertStoryDraft({
+    familyId: story.familyId,
+    storyId: story.id,
+    userId,
+    ...content,
+  });
+}
+
+/** This user's autosaved edits to a published story, if any. */
+export async function getMyStoryDraft(
+  storyId: string,
+  userId: string,
+  familyId: string,
+): Promise<StoryDraftRecord | null> {
+  return getStoryDraft(storyId, userId, familyId);
+}
+
+export async function discardMyStoryDraft(
+  storyId: string,
+  userId: string,
+  familyId: string,
+): Promise<void> {
+  await deleteStoryDraft(storyId, userId, familyId);
+}
+
+/**
+ * Draft → published: saves the final fields, flips the status and gives
+ * the story a real slug from its title (the draft's was a placeholder like
+ * «story-1a2b3c4d» — nobody but the author ever saw that URL). Logged as
+ * the story's creation, since that's when the family first sees it.
+ */
+export async function publishStory(
+  story: StoryRecord,
+  actorId: string,
+  data: EditStoryInput & { title: string },
+): Promise<{ slug: string }> {
+  const { personIds, ...patch } = data;
+  const slug = await generateUniqueStorySlug(story.familyId, data.title);
+  await updateStory(story.id, story.familyId, {
+    ...patch,
+    status: "published",
+    slug,
+  });
+  if (personIds !== undefined) {
+    await replaceStoryPeople(story.id, personIds);
+  }
+  await logActivity({
+    familyId: story.familyId,
+    actorId,
+    action: "create",
+    entityType: "story",
+    entityId: story.id,
+    entityLabel: data.title,
+  });
+  return { slug };
 }

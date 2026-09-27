@@ -64,6 +64,24 @@ describe("buildPersonStoryCountQuery", () => {
     expect(sql).toContain('"story_person"."person_id"');
   });
 
+  it("never counts drafts — even for the owner, even for the author", () => {
+    for (const viewer of [OWNER, VIEWER]) {
+      const { sql, params } = buildPersonStoryCountQuery(
+        FAMILY_ID,
+        viewer,
+      ).toSQL();
+      expect(sql).toContain('"stories"."status"');
+      expect(params).toContain("published");
+      const single = buildPersonStoryCountForPersonQuery(
+        PERSON_ID,
+        FAMILY_ID,
+        viewer,
+      ).toSQL();
+      expect(single.sql).toContain('"stories"."status"');
+      expect(single.params).toContain("published");
+    }
+  });
+
   it("non-owner viewer's predicate checks stories.author_id, not media/event columns", () => {
     const { sql, params } = buildPersonStoryCountQuery(
       FAMILY_ID,

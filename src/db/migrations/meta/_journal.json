@@ -169,6 +169,13 @@
       "when": 1790503994861,
       "tag": "0023_familiar_silver_surfer",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1790525933631,
+      "tag": "0024_magical_talon",
+      "breakpoints": true
     }
   ]
 }
