@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   media,
@@ -543,38 +543,6 @@ export async function clearPhotoTagPosition(
       and(
         eq(mediaPerson.mediaId, mediaId),
         eq(mediaPerson.personId, personId),
-        inArray(
-          mediaPerson.personId,
-          db
-            .select({ id: persons.id })
-            .from(persons)
-            .where(eq(persons.familyId, familyId)),
-        ),
-      ),
-    )
-    .returning({ id: mediaPerson.id });
-  return result.length > 0;
-}
-
-/**
- * Sets the hand-picked spotlight radius on an already-placed point-tag.
- * Only touches a row that has a point (a positionless tag has nothing to
- * light) and whose person is in `familyId`, in the same statement.
- */
-export async function setPhotoTagRadius(
-  mediaId: string,
-  personId: string,
-  familyId: string,
-  radiusPercent: number,
-): Promise<boolean> {
-  const result = await db
-    .update(mediaPerson)
-    .set({ radiusPercent: String(radiusPercent) })
-    .where(
-      and(
-        eq(mediaPerson.mediaId, mediaId),
-        eq(mediaPerson.personId, personId),
-        isNotNull(mediaPerson.xPercent),
         inArray(
           mediaPerson.personId,
           db

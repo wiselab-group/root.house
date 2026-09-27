@@ -8,7 +8,6 @@ import { getMedia } from "@/domain/media/media.service";
 import {
   upsertPhotoTagPosition,
   clearPhotoTagPosition,
-  setPhotoTagRadius,
   removePersonFromMedia,
 } from "@/domain/media/media.service";
 import {
@@ -56,33 +55,6 @@ export async function setPhotoTagPositionAction(
       radiusPercent: validatePhotoTagRadius(radiusPercent),
     }),
   });
-
-  revalidatePath(`/families/${familySlug}/photos`);
-  revalidatePath(`/families/${familySlug}/people/${person.slug}`);
-}
-
-/**
- * Sets the spotlight radius the tagger picked for `personId`'s point on
- * `mediaId` (the lightbox's «Изменить область» editor). Same access rule as
- * placing the point: contributor+.
- */
-export async function setPhotoTagRadiusAction(
-  familyId: string,
-  familySlug: string,
-  mediaId: string,
-  personId: string,
-  radiusPercent: number,
-): Promise<void> {
-  const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
-  await requireFamilyAccess(familyId, session.user.id, "contributor");
-
-  const person = await getPerson(personId, familyId);
-  if (!person) throw new Error("Человек не найден.");
-
-  const radius = validatePhotoTagRadius(radiusPercent);
-  const updated = await setPhotoTagRadius(mediaId, personId, familyId, radius);
-  if (!updated) throw new Error("Отметка не найдена.");
 
   revalidatePath(`/families/${familySlug}/photos`);
   revalidatePath(`/families/${familySlug}/people/${person.slug}`);
