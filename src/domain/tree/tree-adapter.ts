@@ -112,7 +112,12 @@ export type TreePersonClientPayload = Pick<
  */
 export interface TreeClientGraphPayload {
   persons: TreePersonClientPayload[];
-  parentChildEdges: Pick<ParentChildRecord, "id" | "parentId" | "childId">[];
+  /** parentRole rides along so the client can run findRelationshipPath
+   *  (Relationship Trace) over this same payload — see PathGraph. */
+  parentChildEdges: Pick<
+    ParentChildRecord,
+    "id" | "parentId" | "childId" | "parentRole"
+  >[];
   partnershipEdges: Pick<
     PartnershipRecord,
     "id" | "person1Id" | "person2Id" | "status" | "isCurrent"

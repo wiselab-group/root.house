@@ -19,17 +19,16 @@ import type { PersonSearchResult } from "@/domain/search/search.service";
 /**
  * Inline search-as-you-type picker for a single Person — input and results
  * list are the same control (no separate picker dialog hop), so picking
- * Person A/B for Relationship Trace stays inside TreeTracePanel. Selection
- * is a controlled { id, name } pair so the caller (TreeToolbar) still owns
- * the URL param as the source of truth.
+ * Person A/B for Relationship Trace stays inside KinshipPanel. Selection
+ * is a controlled { id, name } pair so the caller (useKinshipTrace) still
+ * owns the URL param as the source of truth.
  *
  * `excludeId` drops one person (typically whoever is already selected in
  * the other slot) from the results — comparing A to itself isn't a
  * meaningful trace, so Person B's list must not offer whoever is Person A.
  *
  * `value` is owned by the caller (the URL param), but writing it goes
- * through router.push — a real navigation that lands one render tick later
- * — so mirroring `value` straight into Combobox.Root's `value` would make
+ * through the URL and lands one render tick later — so mirroring `value` straight into Combobox.Root's `value` would make
  * the input visibly lag behind every pick/clear. Combobox.Root's value is
  * driven off local `localValue` instead, set immediately on
  * pick/clear and resynced from the prop only when it actually changes, so

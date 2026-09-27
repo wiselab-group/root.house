@@ -1,6 +1,6 @@
 "use client";
 
-import { Controls, useReactFlow } from "@xyflow/react";
+import { useReactFlow } from "@xyflow/react";
 import {
   ChevronUpIcon,
   FilterIcon,
@@ -8,7 +8,6 @@ import {
   LockOpenIcon,
   MaximizeIcon,
   NetworkIcon,
-  RouteIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,87 +18,62 @@ import {
 import { ToolRow } from "./tree-tool-row";
 
 /**
- * "Инструменты" — one bottom-center pill button (matching a reference
- * screenshot's "My view" pill: icon + label + chevron) that opens a popover
- * listing EVERY tree-viewing tool: Relationship Trace, Filter, drag-lock,
- * fit-view. Replaces 4 previously separate floating controls
- * (TreeToolbar's own Trace/Filter round buttons, plus the old desktop
- * <Controls> cluster and mobile settings FAB) per direct user request (2026-09-18) to collapse every
- * entry point into one. Named "Инструменты" rather than a literal
- * translation of "My view" — the set spans both search tools (Trace/
- * Filter) and view settings (lock/fit), and this word covers both.
+ * The canvas's bottom-center bar: the "Инструменты" pill (icon + label +
+ * chevron) opening a popover of tree-viewing tools — Filter, fit-view,
+ * drag-lock — plus whatever `children` the page puts beside it (the
+ * "Родство" button, see kinship/kinship-button.tsx).
  *
- * Desktop keeps XYFlow's own zoom in/out +/- buttons as a separate small
- * bottom-left cluster (native pan/zoom affordance, not an app-level tool);
- * coarse-pointer/touch skips that cluster (pinch-to-zoom covers it), making
- * this menu the only control surface there.
+ * Relationship Trace used to be a row in this popover; it moved to its own
+ * button and panel (2026-09-27, user request) since it answers a question
+ * rather than adjusting the view. XYFlow's zoom +/- cluster was removed at
+ * the same time, also per user request: wheel/trackpad/pinch already zoom,
+ * and "Показать всё дерево" here covers getting back to the whole family.
  *
- * Clicking Trace/Filter closes this popover (via ToolRow's own
- * PopoverClose) AND fires onOpenTrace/onOpenFilter, which TreeToolbar wires
- * to its own TreeTracePanel/TreeFilterPanel Dialog — unchanged inside,
- * this menu is just a new front door to them.
+ * Clicking Filter closes this popover (via ToolRow's own PopoverClose) AND
+ * fires onOpenFilter, which TreeToolbar wires to its TreeFilterPanel Dialog.
  */
 export function TreeToolsMenu({
   draggable,
   setDraggable,
-  showZoom,
-  onOpenTrace,
   onOpenFilter,
-  isTraceActive,
   isFilterActive,
+  children,
 }: {
   /** Omit both (read-only Share Link view, dragging is force-disabled
    *  upstream) to hide the drag-lock row entirely — nothing left for it
    *  to toggle. */
   draggable?: boolean;
   setDraggable?: (draggable: boolean) => void;
-  showZoom: boolean;
-  /** Omit both (read-only Share Link view — TreeToolbar itself isn't
-   *  rendered there at all) to hide the Trace/Filter rows entirely. */
-  onOpenTrace?: () => void;
+  /** Omitted on the read-only Share Link view (TreeToolbar itself isn't
+   *  rendered there at all), which hides the Filter row. */
   onOpenFilter?: () => void;
-  isTraceActive?: boolean;
   isFilterActive?: boolean;
+  children?: React.ReactNode;
 }) {
   const { fitView } = useReactFlow();
 
   return (
-    <>
-      {showZoom && (
-        // Native zoom buttons only — no ControlButton children, those all
-        // moved into the popover below. showFitView/showInteractive both
-        // suppressed (redundant with "Показать всё дерево" in the menu, and
-        // XYFlow's own default lock icon reads confusingly next to this
-        // app's own drag-lock row inside the popover).
-        <Controls
-          showZoom
-          showFitView={false}
-          showInteractive={false}
-          position="bottom-left"
-        />
-      )}
+    // Full-width row, centered with justify-center rather than left-1/2 +
+    // -translate-x-1/2: an absolutely positioned box at left:50% only gets
+    // half the canvas as its available width, which clipped the "Родство"
+    // chip on phones. Click-through outside the buttons themselves.
+    <div className="pointer-events-none absolute inset-x-0 bottom-3 z-10 flex items-center justify-center gap-2 px-4 *:pointer-events-auto">
       <Popover>
         <PopoverTrigger
           render={
+            // Icon-only below sm, so the "Родство" answer chip beside it
+            // keeps enough width on a phone.
             <Button
               variant="outline"
-              className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 gap-2 rounded-full pl-4 pr-3 shadow-md"
+              className="gap-2 rounded-full pr-3 pl-4 shadow-md max-sm:size-11 max-sm:px-0"
             />
           }
         >
           <NetworkIcon className="size-4 fill-none!" />
-          Инструменты
-          <ChevronUpIcon className="size-3.5 fill-none! text-muted-foreground" />
+          <span className="max-sm:sr-only">Инструменты</span>
+          <ChevronUpIcon className="size-3.5 fill-none! text-muted-foreground max-sm:hidden" />
         </PopoverTrigger>
         <PopoverContent side="top" align="center" className="w-72">
-          {onOpenTrace && (
-            <ToolRow
-              icon={<RouteIcon />}
-              label="Сравнить родство двух людей"
-              onClick={onOpenTrace}
-              pressed={isTraceActive}
-            />
-          )}
           {onOpenFilter && (
             <ToolRow
               icon={<FilterIcon />}
@@ -127,6 +101,7 @@ export function TreeToolsMenu({
           )}
         </PopoverContent>
       </Popover>
-    </>
+      {children}
+    </div>
   );
 }

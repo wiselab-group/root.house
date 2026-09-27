@@ -16,15 +16,41 @@ import type {
  * once findRelationshipPath/getAncestors/getDescendants are called repeatedly
  * (Focus Mode expand, Relationship Trace) within the same request.
  */
-export interface GenealogyGraph {
-  personsById: Map<string, PersonRecord>;
+export interface GenealogyGraph<
+  TPerson extends { id: string } = PersonRecord,
+  TParentChild extends PathParentChildEdge = ParentChildRecord,
+  TPartnership extends PathPartnershipEdge = PartnershipRecord,
+> {
+  personsById: Map<string, TPerson>;
   /** childId -> parent_child edges where this person is the child (i.e. their parents). */
-  parentEdgesOf: Map<string, ParentChildRecord[]>;
+  parentEdgesOf: Map<string, TParentChild[]>;
   /** parentId -> parent_child edges where this person is the parent (i.e. their children). */
-  childEdgesOf: Map<string, ParentChildRecord[]>;
+  childEdgesOf: Map<string, TParentChild[]>;
   /** personId -> partnership edges involving this person (either side). */
-  partnershipEdgesOf: Map<string, PartnershipRecord[]>;
+  partnershipEdgesOf: Map<string, TPartnership[]>;
 }
+
+export type PathParentChildEdge = Pick<
+  ParentChildRecord,
+  "parentId" | "childId" | "parentRole"
+>;
+export type PathPartnershipEdge = Pick<
+  PartnershipRecord,
+  "person1Id" | "person2Id"
+>;
+
+/**
+ * The narrowest graph findRelationshipPath needs — ids and edge endpoints
+ * only. Lets the tree page's client-safe payload (TreeClientGraphPayload,
+ * no full PersonRecord) run the same path search in the browser, so
+ * picking two people for Relationship Trace needs no server round-trip.
+ * A full GenealogyGraph is assignable to it.
+ */
+export type PathGraph = GenealogyGraph<
+  { id: string },
+  PathParentChildEdge,
+  PathPartnershipEdge
+>;
 
 function pushTo<K, V>(map: Map<K, V[]>, key: K, value: V): void {
   const list = map.get(key);
@@ -42,15 +68,19 @@ function pushTo<K, V>(map: Map<K, V[]>, key: K, value: V): void {
  * slice (e.g. Focus Mode's visible set) filter the *graph's output*, not
  * the input, so ancestor/descendant traversal always sees the complete graph.
  */
-export function buildGenealogyGraph(
-  persons: PersonRecord[],
-  parentChildEdges: ParentChildRecord[],
-  partnershipEdges: PartnershipRecord[],
-): GenealogyGraph {
+export function buildGenealogyGraph<
+  TPerson extends { id: string },
+  TParentChild extends PathParentChildEdge,
+  TPartnership extends PathPartnershipEdge,
+>(
+  persons: TPerson[],
+  parentChildEdges: TParentChild[],
+  partnershipEdges: TPartnership[],
+): GenealogyGraph<TPerson, TParentChild, TPartnership> {
   const personsById = new Map(persons.map((p) => [p.id, p]));
-  const parentEdgesOf = new Map<string, ParentChildRecord[]>();
-  const childEdgesOf = new Map<string, ParentChildRecord[]>();
-  const partnershipEdgesOf = new Map<string, PartnershipRecord[]>();
+  const parentEdgesOf = new Map<string, TParentChild[]>();
+  const childEdgesOf = new Map<string, TParentChild[]>();
+  const partnershipEdgesOf = new Map<string, TPartnership[]>();
 
   for (const edge of parentChildEdges) {
     pushTo(parentEdgesOf, edge.childId, edge);
@@ -65,9 +95,9 @@ export function buildGenealogyGraph(
   return { personsById, parentEdgesOf, childEdgesOf, partnershipEdgesOf };
 }
 
-export function getPerson(
-  graph: GenealogyGraph,
+export function getPerson<TPerson extends { id: string }>(
+  graph: GenealogyGraph<TPerson>,
   personId: string,
-): PersonRecord | null {
+): TPerson | null {
   return graph.personsById.get(personId) ?? null;
 }

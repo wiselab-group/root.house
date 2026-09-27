@@ -29,7 +29,6 @@ import {
 import { PersonNode } from "./person-node";
 import { RelationshipEdge } from "./relationship-edge";
 import { UnionChildEdge } from "./union-child-edge";
-import { useCoarsePointer } from "@/hooks/use-coarse-pointer";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useHasMounted } from "./use-has-mounted";
 import { TreeToolsMenu } from "./tree-tools-menu";
@@ -147,10 +146,10 @@ export function TreeCanvas({
   highlight,
   readOnly = false,
   shareToken,
-  onOpenTrace,
   onOpenFilter,
-  isTraceActive,
   isFilterActive,
+  toolbarExtra,
+  overlay,
 }: {
   graph: TreeLayoutGraph;
   /**
@@ -178,22 +177,23 @@ export function TreeCanvas({
    *  instead of the auth-gated /api/media/[mediaId] (see
    *  xyflow-adapter.ts::buildPhotoUrl). */
   shareToken?: string;
-  /** Opens TreeToolbar's own TreeTracePanel/TreeFilterPanel — passed through
-   *  so the "Инструменты" menu inside TreeCanvas (tree-tools-menu.tsx) can
-   *  trigger them without TreeCanvas owning any of that dialog state itself.
-   *  Omitted by TreeToolbar's read-only rendering path (there isn't one —
-   *  TreeToolbar itself is never rendered for the Share Link surface, only
-   *  a plain TreeCanvas), so these stay undefined there and the menu hides
-   *  both rows entirely. */
-  onOpenTrace?: () => void;
+  /** Opens TreeToolbar's own TreeFilterPanel — passed through so the
+   *  "Инструменты" menu inside TreeCanvas (tree-tools-menu.tsx) can trigger
+   *  it without TreeCanvas owning that dialog state itself. Undefined on the
+   *  Share Link surface (TreeToolbar isn't rendered there), which hides the
+   *  row. */
   onOpenFilter?: () => void;
-  isTraceActive?: boolean;
   isFilterActive?: boolean;
+  /** Extra controls for the bottom bar, beside "Инструменты" (TreeToolbar's
+   *  "Родство" button). */
+  toolbarExtra?: React.ReactNode;
+  /** Floating UI rendered INSIDE <ReactFlow>, so it can move the viewport
+   *  via useReactFlow (TreeToolbar's Relationship Trace panel). */
+  overlay?: React.ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const isCoarsePointer = useCoarsePointer();
   // Global drag lock — starts LOCKED (false): cards are meant to stay put at
   // their computed layout position, dragging is an opt-in "let me nudge this
   // one card" mode the lock row in TreeToolsMenu toggles. Plain
@@ -613,21 +613,21 @@ export function TreeCanvas({
             />
             {readOnly ? (
               // No drag-lock toggle to show (dragging is force-disabled
-              // above), and no Trace/Filter rows either (TreeToolbar itself
-              // isn't rendered on the read-only Share Link surface, so
-              // onOpenTrace/onOpenFilter are never passed down there).
-              <TreeToolsMenu showZoom={!isCoarsePointer} />
+              // above), and no Filter row either (TreeToolbar itself isn't
+              // rendered on the read-only Share Link surface, so
+              // onOpenFilter is never passed down there).
+              <TreeToolsMenu />
             ) : (
               <TreeToolsMenu
                 draggable={nodesDraggable}
                 setDraggable={setNodesDraggable}
-                showZoom={!isCoarsePointer}
-                onOpenTrace={onOpenTrace}
                 onOpenFilter={onOpenFilter}
-                isTraceActive={isTraceActive}
                 isFilterActive={isFilterActive}
-              />
+              >
+                {toolbarExtra}
+              </TreeToolsMenu>
             )}
+            {overlay}
             {/* Minimap needs room to read as a map, not a smudge — skip it below
             md where the canvas itself is already cramped (plan §6/§13), and
             skip it on any touch/coarse-pointer device regardless of width:
