@@ -1,3 +1,4 @@
+import type { Locale } from "@/domain/shared/locale";
 import {
   pgTable,
   text,
@@ -21,6 +22,10 @@ export const users = pgTable("users", {
   emailVerified: timestamp("email_verified", { mode: "date" }),
   image: text("image"),
   passwordHash: text("password_hash"), // set only for the Credentials provider
+  // Explicit UI language choice ("ru" | "en"); null = follow the browser.
+  // Copied into the NEXT_LOCALE cookie at sign-in so it follows the user
+  // across devices — see src/i18n/sync-locale.ts.
+  locale: text("locale").$type<Locale>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

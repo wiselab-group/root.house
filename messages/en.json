@@ -1,0 +1,17 @@
+{
+  "metadata": {
+    "description": "A family archive: lineage, tree, profiles, events and photos of one family."
+  },
+  "common": {
+    "signOut": "Sign out",
+    "signingOut": "Signing out…",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "familySections": "Family sections"
+  },
+  "locale": {
+    "label": "Interface language",
+    "ru": "Русский",
+    "en": "English"
+  }
+}

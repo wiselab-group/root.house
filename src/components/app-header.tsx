@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { BrandMark } from "@/components/brand-mark";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import {
   MobileHeaderToggle,
@@ -80,6 +81,7 @@ export function AppHeader({
           {userEmail && (
             <span className="text-sm text-muted-foreground">{userEmail}</span>
           )}
+          <LocaleSwitcher />
           <SignOutButton />
         </div>
         <MobileHeaderToggle open={menuOpen} onOpenChange={setMenuOpen} />

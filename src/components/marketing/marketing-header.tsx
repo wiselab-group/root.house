@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BrandMark } from "@/components/brand-mark";
 import { LinkButton } from "@/components/ui/link-button";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 
 /**
  * Top bar for the public marketing page — same brand-mark-plus-actions shape
@@ -16,6 +17,7 @@ export function MarketingHeader() {
           <BrandMark />
         </Link>
         <div className="flex shrink-0 items-center gap-2">
+          <LocaleSwitcher className="max-sm:hidden" />
           <LinkButton href="/login" variant="ghost">
             Log in
           </LinkButton>

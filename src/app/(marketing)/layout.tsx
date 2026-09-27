@@ -15,17 +15,9 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-/**
- * The app's default document language is Russian (`lang="ru"` on
- * `src/app/layout.tsx`), but the marketing page is the one deliberately
- * English surface. Rather than forking the root `<html>`, mark the English
- * content at the highest common ancestor of the marketing route group only
- * (WCAG 3.1.2 "Language of Parts") — everything else in the app keeps its
- * real `lang="ru"`.
- */
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
-    <div lang="en" className="flex min-h-svh flex-col">
+    <div className="flex min-h-svh flex-col">
       <MarketingHeader />
       <main className="flex-1">{children}</main>
       <MarketingFooter />

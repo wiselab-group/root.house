@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { MenuIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/ui/breadcrumbs";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 import {
   resolveFamilyNavIcon,
   type FamilyNavItem,
@@ -27,6 +29,7 @@ export function MobileHeaderToggle({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("common");
   return (
     <Button
       type="button"
@@ -35,7 +38,7 @@ export function MobileHeaderToggle({
       className="md:hidden"
       aria-expanded={open}
       aria-controls={PANEL_ID}
-      aria-label={open ? "Закрыть меню" : "Открыть меню"}
+      aria-label={open ? t("closeMenu") : t("openMenu")}
       onClick={() => onOpenChange(!open)}
     >
       {open ? <XIcon className="size-6" /> : <MenuIcon className="size-6" />}
@@ -68,6 +71,7 @@ export function MobileHeaderPanel({
   onNavigate: () => void;
 }) {
   const pathname = usePathname();
+  const t = useTranslations("common");
 
   return (
     <div
@@ -99,7 +103,10 @@ export function MobileHeaderPanel({
           )}
           {navItems.length > 0 && (
             <>
-              <nav aria-label="Разделы семьи" className="flex flex-col gap-1">
+              <nav
+                aria-label={t("familySections")}
+                className="flex flex-col gap-1"
+              >
                 {navItems.map(({ href, icon, label }) => {
                   const active = pathname === href;
                   const Icon = resolveFamilyNavIcon(icon);
@@ -135,7 +142,10 @@ export function MobileHeaderPanel({
                 {userEmail}
               </span>
             )}
-            <SignOutButton />
+            <div className="flex shrink-0 items-center gap-2">
+              <LocaleSwitcher />
+              <SignOutButton />
+            </div>
           </div>
         </div>
       </div>
