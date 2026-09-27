@@ -20,9 +20,13 @@ export interface LifelineScale {
 }
 
 /** How far the label box reaches past its dot for start/end-aligned labels
- *  (its own px-1.5 padding, pulled back by -ml-1.5/-mr-1.5) — and so how
- *  far the end dots sit in from the track edges. */
-export const LIFELINE_INSET = 6;
+ *  (its own px-1.5 padding, pulled back by -ml-1.5/-mr-1.5). */
+export const LIFELINE_LABEL_OVERHANG = 6;
+/** How far the end dots sit in from the track edges. The track's scroll box
+ *  clips everything past it, so this has to hold the selected dot's halo
+ *  (5.5px radius + 5px ring, ×1.25 on hover ≈ 13px) — at 6px the halo and
+ *  the end label's focus ring were cut off. */
+export const LIFELINE_INSET = 16;
 /** Two neighbouring dots (opposite sides) never touch — an 11px dot plus
  *  air. Their labels sit on opposite sides of the axis, and the label is
  *  the tap target, so the dots themselves can sit close. */
@@ -92,10 +96,10 @@ export function layoutLifelineScale({
 /** The label's horizontal reach relative to its dot, [left, right] in px. */
 function extent(label: LifelineScaleLabel): [number, number] {
   if (label.align === "start") {
-    return [-LIFELINE_INSET, label.width - LIFELINE_INSET];
+    return [-LIFELINE_LABEL_OVERHANG, label.width - LIFELINE_LABEL_OVERHANG];
   }
   if (label.align === "end") {
-    return [-(label.width - LIFELINE_INSET), LIFELINE_INSET];
+    return [-(label.width - LIFELINE_LABEL_OVERHANG), LIFELINE_LABEL_OVERHANG];
   }
   return [-label.width / 2, label.width / 2];
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   LIFELINE_INSET,
+  LIFELINE_LABEL_OVERHANG,
   layoutLifelineScale,
   type LifelineScaleLabel,
 } from "./lifeline-scale";
@@ -26,9 +27,15 @@ function labelBoxes(
     const x = LIFELINE_INSET + fractions[i] * (trackWidth - 2 * LIFELINE_INSET);
     const [left, right] =
       label.align === "start"
-        ? [x - LIFELINE_INSET, x - LIFELINE_INSET + label.width]
+        ? [
+            x - LIFELINE_LABEL_OVERHANG,
+            x - LIFELINE_LABEL_OVERHANG + label.width,
+          ]
         : label.align === "end"
-          ? [x + LIFELINE_INSET - label.width, x + LIFELINE_INSET]
+          ? [
+              x + LIFELINE_LABEL_OVERHANG - label.width,
+              x + LIFELINE_LABEL_OVERHANG,
+            ]
           : [x - label.width / 2, x + label.width / 2];
     return { side: label.side, x, left, right };
   });

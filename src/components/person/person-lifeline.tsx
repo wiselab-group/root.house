@@ -39,7 +39,9 @@ export function PersonLifeline({
         <div className="relative h-[250px]" style={{ minWidth }}>
           <div
             aria-hidden="true"
-            className="absolute inset-x-0 top-[122px] h-2.5 rounded-full bg-tree-accent/80"
+            className="absolute top-[122px] h-2.5 rounded-full bg-tree-accent/80"
+            // Rounded ends concentric with the end dots (h-2.5 → 5px radius).
+            style={{ left: LIFELINE_INSET - 5, right: LIFELINE_INSET - 5 }}
           />
           {points.map((point) => (
             <LifelineDot
