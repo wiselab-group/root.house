@@ -1,3 +1,4 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -24,6 +25,7 @@ import {
 export async function generateMetadata({
   params,
 }: PageProps<"/families/[slug]/people/[personSlug]">): Promise<Metadata> {
+  const locale = await getLocale();
   const { slug, personSlug } = await params;
   const session = await auth();
   if (!session?.user) return {};
@@ -41,12 +43,14 @@ export async function generateMetadata({
     role: member.role,
   });
   if (!person) notFound();
-  return { title: personDisplayName(person) };
+  return { title: personDisplayName(person, locale) };
 }
 
 export default async function PersonProfilePage({
   params,
 }: PageProps<"/families/[slug]/people/[personSlug]">) {
+  const tn = await getTranslations("familyNav");
+  const locale = await getLocale();
   const { slug, personSlug } = await params;
   const session = await auth();
   if (!session?.user) return null;
@@ -103,10 +107,10 @@ export default async function PersonProfilePage({
     <main className="dark photo-backdrop min-h-svh">
       <SetBreadcrumbs
         items={[
-          { label: "Мои семьи", href: "/families" },
+          { label: tn("myFamilies"), href: "/families" },
           { label: family?.name ?? slug, href: `/families/${slug}` },
-          { label: "Люди", href: `/families/${slug}/people` },
-          { label: personDisplayName(person) },
+          { label: tn("people"), href: `/families/${slug}/people` },
+          { label: personDisplayName(person, locale) },
         ]}
       />
       <PersonProfileHero

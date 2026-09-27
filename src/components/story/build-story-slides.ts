@@ -1,6 +1,7 @@
 import { getMedia, type MediaRecord } from "@/domain/media/media.service";
 import { personDisplayName } from "@/domain/person/display-name";
 import type { PersonRecord } from "@/domain/person/person.repository";
+import { getLocale } from "next-intl/server";
 import { mediaUrl } from "@/lib/media-url";
 import type { CarouselSlide } from "./story-carousel";
 
@@ -18,6 +19,7 @@ export async function buildStorySlides(
   people: PersonRecord[],
   familyId: string,
 ): Promise<CarouselSlide[]> {
+  const locale = await getLocale();
   const toSlide = (media: MediaRecord, caption: string | null) => ({
     id: media.id,
     src: mediaUrl(media.id, familyId, "display"),
@@ -45,7 +47,7 @@ export async function buildStorySlides(
     withPortrait.map(async (person) => {
       if (!person.photoMediaId) return null;
       const media = await getMedia(person.photoMediaId, familyId);
-      return media ? toSlide(media, personDisplayName(person)) : null;
+      return media ? toSlide(media, personDisplayName(person, locale)) : null;
     }),
   );
   return avatars.filter((slide) => slide !== null);

@@ -26,10 +26,7 @@ export type UpdateFamilyDetailsInput = z.infer<
  *  "non-empty" at the schema layer; the actual name match happens in the
  *  service where the real name is known. */
 export const deleteFamilySchema = z.object({
-  confirmName: z
-    .string()
-    .trim()
-    .min(1, "familyNameConfirm"),
+  confirmName: z.string().trim().min(1, "familyNameConfirm"),
 });
 
 export const updateFamilySlugSchema = z.object({

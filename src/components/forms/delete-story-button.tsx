@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { deleteStoryAction } from "@/actions/story.actions";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,8 @@ export function DeleteStoryButton({
   /** Called inside the same transition as the delete action, before it resolves — lets the caller remove the story from its optimistic list immediately instead of waiting for deleteStoryAction's revalidatePath. */
   onDeleted: () => void;
 }) {
+  const t = useTranslations("storyForm");
+  const tc = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -48,12 +51,12 @@ export function DeleteStoryButton({
           />
         }
       >
-        Удалить
+        {tc("delete")}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Удалить эту историю?</DialogTitle>
-          <DialogDescription>Это действие нельзя отменить.</DialogDescription>
+          <DialogTitle>{t("deleteTitle")}</DialogTitle>
+          <DialogDescription>{tc("cannotUndo")}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
@@ -61,7 +64,7 @@ export function DeleteStoryButton({
             onClick={() => setOpen(false)}
             disabled={isPending}
           >
-            Отмена
+            {tc("cancel")}
           </Button>
           <Button
             variant="destructive"
@@ -69,7 +72,7 @@ export function DeleteStoryButton({
             disabled={isPending}
             aria-busy={isPending}
           >
-            {isPending ? "Удаляем…" : "Удалить"}
+            {isPending ? tc("deleting") : tc("delete")}
           </Button>
         </DialogFooter>
       </DialogContent>

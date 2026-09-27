@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Combobox } from "@base-ui/react/combobox";
 import { MapPinIcon } from "lucide-react";
@@ -26,6 +27,8 @@ export function PlaceGeocodeCombobox({
   defaultLabel?: string;
   className?: string;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("placeForm");
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [query, setQuery] = useState(defaultLabel ?? "");
   const [isPending, startTransition] = useTransition();
@@ -78,7 +81,7 @@ export function PlaceGeocodeCombobox({
         <Combobox.InputGroup className="relative flex h-10 items-center rounded-lg border border-input bg-transparent transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
           <MapPinIcon className="pointer-events-none absolute left-3 size-4 text-muted-foreground" />
           <Combobox.Input
-            placeholder="Найти на карте…"
+            placeholder={t("findOnMap")}
             className="h-full w-full min-w-0 rounded-lg bg-transparent py-1 pr-3 pl-9 text-sm text-foreground outline-none placeholder:text-muted-foreground"
           />
         </Combobox.InputGroup>
@@ -98,11 +101,11 @@ export function PlaceGeocodeCombobox({
           >
             <div className="max-h-60 overflow-y-auto overscroll-contain p-1 scroll-pt-1 scroll-pb-1">
               <Combobox.Status className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
-                {isPending ? "Ищем…" : null}
+                {isPending ? t("searching") : null}
               </Combobox.Status>
               <Combobox.Empty className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
                 {!isPending && query.trim().length >= 2
-                  ? "Ничего не найдено."
+                  ? tc("nothingFound")
                   : null}
               </Combobox.Empty>
               <Combobox.List>

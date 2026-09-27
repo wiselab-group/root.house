@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { ForbiddenError } from "@/domain/family/errors";
@@ -19,6 +19,7 @@ export default async function FamilyLayout({
   children,
   params,
 }: LayoutProps<"/families/[slug]">) {
+  const locale = await getLocale();
   const session = await auth();
   if (!session?.user) {
     redirect("/login");
@@ -69,7 +70,7 @@ export default async function FamilyLayout({
         defaultFocusPerson: defaultFocusPerson
           ? {
               id: defaultFocusPerson.id,
-              name: personDisplayName(defaultFocusPerson),
+              name: personDisplayName(defaultFocusPerson, locale),
             }
           : null,
       }}

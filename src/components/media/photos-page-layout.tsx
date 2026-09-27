@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { AlbumGrid } from "./album-grid";
 import { AlbumPageHeader } from "./album-page-header";
 import { UploadPhotoDialog } from "./upload-photo-dialog";
@@ -59,6 +60,7 @@ export function PhotosPageLayout({
   activeAlbumDescription: string | null;
   photos: GalleryPhotoView[];
 }) {
+  const tn = useTranslations("familyNav");
   // Uploading from an album's own page («Добавить» on
   // /photos/[albumId]) should default to tagging the new photo into THIS
   // album — without this, a photo uploaded here silently ends up in no
@@ -81,13 +83,13 @@ export function PhotosPageLayout({
           items={
             activeAlbumName
               ? [
-                  { label: "Мои семьи", href: "/families" },
+                  { label: tn("myFamilies"), href: "/families" },
                   { label: familyName, href: `/families/${familySlug}` },
                   { label: "Архив", href: `/families/${familySlug}/photos` },
                   { label: activeAlbumName },
                 ]
               : [
-                  { label: "Мои семьи", href: "/families" },
+                  { label: tn("myFamilies"), href: "/families" },
                   { label: familyName, href: `/families/${familySlug}` },
                   { label: "Архив" },
                 ]

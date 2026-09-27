@@ -1,3 +1,4 @@
+import { useLocale } from "next-intl";
 import Link from "next/link";
 import { ChevronRightIcon } from "lucide-react";
 import { personDisplayName } from "@/domain/person/display-name";
@@ -39,11 +40,17 @@ export function RelativeListItem({
   onRemove: () => void;
   onToggleStatus: (isCurrent: boolean) => void;
 }) {
-  const name = personDisplayName(person);
+  const locale = useLocale();
+  const name = personDisplayName(person, locale);
   const kind = canEdit ? person.relationshipKind : undefined;
   const relationshipId = kind ? person.relationshipId : undefined;
   const subline = [
-    relationLabel(person.relationKind, person.gender, person.isCurrent ?? true),
+    relationLabel(
+      person.relationKind,
+      person.gender,
+      person.isCurrent ?? true,
+      locale,
+    ),
     person.lifeSpan,
   ]
     .filter(Boolean)

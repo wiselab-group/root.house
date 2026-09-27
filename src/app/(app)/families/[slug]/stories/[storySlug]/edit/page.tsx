@@ -1,3 +1,4 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -36,6 +37,8 @@ export async function generateMetadata({
 export default async function EditStoryPage({
   params,
 }: PageProps<"/families/[slug]/stories/[storySlug]/edit">) {
+  const tn = await getTranslations("familyNav");
+  const locale = await getLocale();
   const { slug, storySlug } = await params;
   const session = await auth();
   if (!session?.user) return null;
@@ -68,7 +71,7 @@ export default async function EditStoryPage({
   const people = personIds
     .map((id) => peopleById.get(id))
     .filter((p) => p != null)
-    .map((p) => ({ id: p.id, name: personDisplayName(p) }));
+    .map((p) => ({ id: p.id, name: personDisplayName(p, locale) }));
 
   const storyHref = `/families/${slug}/stories/${storySlug}`;
 
@@ -76,7 +79,7 @@ export default async function EditStoryPage({
     <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12 sm:py-16">
       <SetBreadcrumbs
         items={[
-          { label: "Мои семьи", href: "/families" },
+          { label: tn("myFamilies"), href: "/families" },
           { label: family?.name ?? slug, href: `/families/${slug}` },
           { label: "Истории", href: `/families/${slug}/stories` },
           { label: story.title, href: storyHref },

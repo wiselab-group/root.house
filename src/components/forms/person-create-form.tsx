@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { PersonForm } from "./person-form";
@@ -39,6 +40,7 @@ export function PersonCreateForm({
   familySlug: string;
   places: PlaceRecord[];
 }) {
+  const t = useTranslations("personForm");
   const router = useRouter();
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -77,9 +79,7 @@ export function PersonCreateForm({
           // shouldn't block navigation or look like the whole submit
           // failed, just surface it and let the profile page's own
           // AvatarEditor be the fallback path to try again.
-          setPhotoError(
-            "Человек создан, но фото загрузить не удалось — добавьте его на странице редактирования.",
-          );
+          setPhotoError(t("photoUploadFailed"));
         } finally {
           setPhotoProgress(null);
         }
@@ -116,13 +116,15 @@ export function PersonCreateForm({
       <PersonForm
         action={boundAction}
         places={places}
-        submitLabel="Добавить"
+        submitLabel={t("add")}
         submitPendingLabel={
           photoProgress !== null
-            ? `Загружаем фото… ${Math.round(photoProgress * 100)}%`
+            ? t("uploadingPhoto", {
+                percent: Math.round(photoProgress * 100),
+              })
             : isNavigating
-              ? "Открываем профиль…"
-              : "Добавляем…"
+              ? t("openingProfile")
+              : t("adding")
         }
         cancelHref={`/families/${familySlug}/people`}
       />

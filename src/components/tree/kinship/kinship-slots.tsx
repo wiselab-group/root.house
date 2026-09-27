@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { ArrowUpDownIcon, MousePointerClickIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { personDisplayName } from "@/domain/person/display-name";
@@ -27,8 +28,9 @@ export function KinshipSlots({
   onSelect: (slot: TraceSlot, personId: string | null) => void;
   onSwap: () => void;
 }) {
+  const locale = useLocale();
   const asValue = (person: TreePersonClientPayload | null) =>
-    person ? { id: person.id, name: personDisplayName(person) } : null;
+    person ? { id: person.id, name: personDisplayName(person, locale) } : null;
 
   return (
     <div className="flex flex-col gap-2">

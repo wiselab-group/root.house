@@ -1,5 +1,6 @@
 "use client";
 
+import { useUploadErrorMessage } from "@/hooks/use-upload-error-message";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { uploadDocument } from "@/lib/upload-document";
@@ -21,6 +22,7 @@ const DONE_TILE_LINGER_MS = 600;
  */
 export function useDocumentBatchUpload(familyId: string, personId: string) {
   const router = useRouter();
+  const uploadErrorMessage = useUploadErrorMessage();
   const [documents, setDocuments] = useState<QueuedDocument[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -63,7 +65,7 @@ export function useDocumentBatchUpload(familyId: string, personId: string) {
         } catch (err) {
           patchDocument(doc.id, {
             status: "error",
-            error: err instanceof Error ? err.message : "Ошибка загрузки",
+            error: uploadErrorMessage(err),
           });
         }
       }),

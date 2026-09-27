@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -23,6 +24,7 @@ function SubmitButton({
   label: string;
   disabled?: boolean;
 }) {
+  const t = useTranslations("relationships");
   const { pending } = useFormStatus();
   return (
     <Button
@@ -31,7 +33,7 @@ function SubmitButton({
       disabled={pending || disabled}
       aria-busy={pending}
     >
-      {pending ? "Добавляем…" : label}
+      {pending ? t("adding") : label}
     </Button>
   );
 }
@@ -63,6 +65,8 @@ export function AddRelativeForm({
   candidates: PersonRecord[];
   submitLabel: string;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("relationships");
   const close = useCollapsibleFormClose();
   const [mode, setMode] = useState<RelativeMode>(
     candidates.length > 0 ? "existing" : "new",
@@ -101,7 +105,7 @@ export function AddRelativeForm({
         <>
           <PersonCombobox
             familyId={familyId}
-            label="Кто это"
+            label={t("who")}
             value={picked}
             onChange={setPicked}
             excludeId={personId}
@@ -117,10 +121,7 @@ export function AddRelativeForm({
       )}
 
       {kind === "spouse" && (
-        <PersonDateFields
-          prefix="startDate"
-          legend="Дата начала отношений (необязательно)"
-        />
+        <PersonDateFields prefix="startDate" legend={t("startDate")} />
       )}
 
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
@@ -131,7 +132,7 @@ export function AddRelativeForm({
           disabled={mode === "existing" && !picked}
         />
         <Button type="button" variant="ghost" size="sm" onClick={close}>
-          Отмена
+          {tc("cancel")}
         </Button>
       </div>
     </form>

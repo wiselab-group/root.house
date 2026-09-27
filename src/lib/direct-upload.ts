@@ -4,6 +4,7 @@ import {
   uploadPathname,
   type UploadKind,
 } from "@/domain/media/upload-rules";
+import { UploadError } from "./upload-error";
 
 /**
  * Step 1 of every upload (photos: lib/upload-photo.ts, documents:
@@ -31,7 +32,9 @@ export async function uploadToStorage({
 }): Promise<string> {
   const { maxBytes } = UPLOAD_RULES[kind];
   if (file.size > maxBytes) {
-    throw new Error(`Файл больше ${Math.round(maxBytes / 1024 ** 2)} МБ`);
+    throw new UploadError("fileTooLarge", {
+      max: Math.round(maxBytes / 1024 ** 2),
+    });
   }
 
   const blob = await upload(uploadPathname(familyId, file.name), file, {
@@ -53,7 +56,7 @@ export async function uploadToStorage({
 export async function recordUpload(
   route: string,
   body: Record<string, unknown>,
-  fallbackError: string,
+  fallbackError: UploadError,
 ): Promise<{ id: string }> {
   const response = await fetch(route, {
     method: "POST",
@@ -64,7 +67,8 @@ export async function recordUpload(
     .json()
     .catch(() => ({}));
   if (!response.ok || !result.id) {
-    throw new Error(result.error ?? fallbackError);
+    // The route already answered in the request's language.
+    throw result.error ? new Error(result.error) : fallbackError;
   }
   return { id: result.id };
 }

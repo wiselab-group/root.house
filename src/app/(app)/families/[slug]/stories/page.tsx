@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 import { BookOpen } from "lucide-react";
 import { auth } from "@/lib/auth";
@@ -25,6 +26,7 @@ export const metadata: Metadata = {
 export default async function StoriesPage({
   params,
 }: PageProps<"/families/[slug]/stories">) {
+  const tn = await getTranslations("familyNav");
   const { slug } = await params;
   const session = await auth();
   if (!session?.user) return null;
@@ -59,7 +61,7 @@ export default async function StoriesPage({
     <main className="mx-auto flex max-w-2xl flex-col gap-10 px-6 py-12 sm:py-16">
       <SetBreadcrumbs
         items={[
-          { label: "Мои семьи", href: "/families" },
+          { label: tn("myFamilies"), href: "/families" },
           { label: family?.name ?? slug, href: `/families/${slug}` },
           { label: "Истории" },
         ]}

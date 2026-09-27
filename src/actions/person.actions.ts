@@ -1,5 +1,9 @@
 "use server";
 
+import { getErrorMessage } from "@/i18n/errors";
+import { getValidationMessage } from "@/i18n/validation";
+import { getLocale } from "next-intl/server";
+
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
@@ -53,7 +57,8 @@ export async function createPersonAction(
   formData: FormData,
 ): Promise<PersonFormState> {
   const session = await auth();
-  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
 
@@ -72,32 +77,38 @@ export async function createPersonAction(
   });
 
   if (!parsed.success) {
+    const message = await getValidationMessage();
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
-      fieldErrors[String(issue.path[0])] = issue.message;
+      fieldErrors[String(issue.path[0])] = message(issue);
     }
     return { fieldErrors };
   }
 
   const places = await resolvePlaceFields(familyId, formData, PLACE_FIELDS);
-  const person = await addPerson(familyId, session.user.id, {
-    firstName: parsed.data.firstName || undefined,
-    lastName: parsed.data.lastName || undefined,
-    middleName: parsed.data.middleName || undefined,
-    maidenName: parsed.data.maidenName || undefined,
-    gender: parsed.data.gender,
-    isLiving: parsed.data.isLiving,
-    description: parsed.data.description || undefined,
-    religion: parsed.data.religion || undefined,
-    nationality: parsed.data.nationality || undefined,
-    birthDate: partialDateFromFormData(formData, "birth"),
-    deathDate: partialDateFromFormData(formData, "death"),
-    birthPlaceId: places.ids.birthPlaceId ?? undefined,
-    deathPlaceId: places.ids.deathPlaceId ?? undefined,
-    residencePlaceId: places.ids.residencePlaceId ?? undefined,
-    deathCause: parsed.data.deathCause || undefined,
-    privacyLevel: parsed.data.privacyLevel,
-  });
+  const person = await addPerson(
+    familyId,
+    session.user.id,
+    {
+      firstName: parsed.data.firstName || undefined,
+      lastName: parsed.data.lastName || undefined,
+      middleName: parsed.data.middleName || undefined,
+      maidenName: parsed.data.maidenName || undefined,
+      gender: parsed.data.gender,
+      isLiving: parsed.data.isLiving,
+      description: parsed.data.description || undefined,
+      religion: parsed.data.religion || undefined,
+      nationality: parsed.data.nationality || undefined,
+      birthDate: partialDateFromFormData(formData, "birth"),
+      deathDate: partialDateFromFormData(formData, "death"),
+      birthPlaceId: places.ids.birthPlaceId ?? undefined,
+      deathPlaceId: places.ids.deathPlaceId ?? undefined,
+      residencePlaceId: places.ids.residencePlaceId ?? undefined,
+      deathCause: parsed.data.deathCause || undefined,
+      privacyLevel: parsed.data.privacyLevel,
+    },
+    await getLocale(),
+  );
 
   const familySlug = await getFamilySlugById(familyId);
   revalidatePath(`/families/${familySlug}/people`);
@@ -125,7 +136,8 @@ export async function createPlaceholderPersonAction(
   formData: FormData,
 ): Promise<CreatePlaceholderFormState> {
   const session = await auth();
-  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
 
@@ -135,7 +147,7 @@ export async function createPlaceholderPersonAction(
   });
 
   if (!parsed.success) {
-    return { error: "Не удалось создать запись — проверьте введённые данные." };
+    return { error: (await getErrorMessage())("createFailed") };
   }
 
   await addPlaceholderPerson(familyId, session.user.id, parsed.data);
@@ -150,7 +162,7 @@ export async function deletePersonAction(
   personId: string,
 ): Promise<void> {
   const session = await auth();
-  if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
+  if (!session?.user) throw new Error("Session expired.");
 
   const member = await requireFamilyAccess(familyId, session.user.id, "editor");
 
@@ -167,10 +179,10 @@ export async function deletePersonAction(
       { privacyLevel: person.privacyLevel, createdBy: person.createdBy },
     )
   ) {
-    throw new ForbiddenError("У вас нет прав на удаление этой записи.");
+    throw new ForbiddenError("You may not delete this record.");
   }
 
-  await removePerson(personId, familyId, session.user.id);
+  await removePerson(personId, familyId, session.user.id, await getLocale());
 
   const slug = await getFamilySlugById(familyId);
   revalidatePath(`/families/${slug}/people`);
@@ -184,12 +196,14 @@ export async function updatePersonAction(
   formData: FormData,
 ): Promise<PersonFormState> {
   const session = await auth();
-  if (!session?.user) return { error: "Сессия истекла — войдите заново." };
+  if (!session?.user)
+    return { error: (await getErrorMessage())("sessionExpired") };
 
   const member = await requireFamilyAccess(familyId, session.user.id, "editor");
 
   const existingPerson = await getPerson(personId, familyId);
-  if (!existingPerson) return { error: "Человек не найден." };
+  if (!existingPerson)
+    return { error: (await getErrorMessage())("personNotFound") };
   if (
     !canEdit(
       { userId: session.user.id, role: member.role },
@@ -199,7 +213,7 @@ export async function updatePersonAction(
       },
     )
   ) {
-    return { error: "У вас нет прав на редактирование этой записи." };
+    return { error: (await getErrorMessage())("noEditPermission") };
   }
 
   const parsed = createPersonSchema.safeParse({
@@ -217,35 +231,42 @@ export async function updatePersonAction(
   });
 
   if (!parsed.success) {
+    const message = await getValidationMessage();
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) {
-      fieldErrors[String(issue.path[0])] = issue.message;
+      fieldErrors[String(issue.path[0])] = message(issue);
     }
     return { fieldErrors };
   }
 
   const places = await resolvePlaceFields(familyId, formData, PLACE_FIELDS);
-  const updated = await editPerson(personId, familyId, session.user.id, {
-    firstName: parsed.data.firstName || null,
-    lastName: parsed.data.lastName || null,
-    middleName: parsed.data.middleName || null,
-    maidenName: parsed.data.maidenName || null,
-    gender: parsed.data.gender,
-    isLiving: parsed.data.isLiving,
-    description: parsed.data.description || null,
-    religion: parsed.data.religion || null,
-    nationality: parsed.data.nationality || null,
-    birthDate: partialDateFromFormData(formData, "birth") ?? null,
-    deathDate: partialDateFromFormData(formData, "death") ?? null,
-    birthPlaceId: places.ids.birthPlaceId,
-    deathPlaceId: places.ids.deathPlaceId,
-    residencePlaceId: places.ids.residencePlaceId,
-    deathCause: parsed.data.deathCause || null,
-    privacyLevel: parsed.data.privacyLevel,
-  });
+  const updated = await editPerson(
+    personId,
+    familyId,
+    session.user.id,
+    {
+      firstName: parsed.data.firstName || null,
+      lastName: parsed.data.lastName || null,
+      middleName: parsed.data.middleName || null,
+      maidenName: parsed.data.maidenName || null,
+      gender: parsed.data.gender,
+      isLiving: parsed.data.isLiving,
+      description: parsed.data.description || null,
+      religion: parsed.data.religion || null,
+      nationality: parsed.data.nationality || null,
+      birthDate: partialDateFromFormData(formData, "birth") ?? null,
+      deathDate: partialDateFromFormData(formData, "death") ?? null,
+      birthPlaceId: places.ids.birthPlaceId,
+      deathPlaceId: places.ids.deathPlaceId,
+      residencePlaceId: places.ids.residencePlaceId,
+      deathCause: parsed.data.deathCause || null,
+      privacyLevel: parsed.data.privacyLevel,
+    },
+    await getLocale(),
+  );
 
   if (!updated) {
-    return { error: "Человек не найден." };
+    return { error: (await getErrorMessage())("personNotFound") };
   }
 
   const familySlug = await getFamilySlugById(familyId);

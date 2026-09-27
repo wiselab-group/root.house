@@ -16,8 +16,8 @@ export type PlaceOption =
   | { key: string; kind: "typed"; name: string };
 
 export interface PlaceOptionGroup {
+  /** The UI names the group from this (messages `placeForm.group*`). */
   value: "saved" | "map" | "typed";
-  label: string | null;
   items: PlaceOption[];
 }
 
@@ -44,7 +44,6 @@ export function buildPlaceOptionGroups(
   const groups: PlaceOptionGroup[] = [
     {
       value: "saved",
-      label: "В архиве семьи",
       items: saved.map((place) => ({
         key: `saved:${place.id}`,
         kind: "saved",
@@ -53,7 +52,6 @@ export function buildPlaceOptionGroups(
     },
     {
       value: "map",
-      label: "Найти на карте",
       // A result the family already has (same name, nearby) is shown only
       // once — under «В архиве семьи»; the action would reuse it anyway.
       items: key
@@ -66,7 +64,6 @@ export function buildPlaceOptionGroups(
     },
     {
       value: "typed",
-      label: null,
       items:
         key && !hasExactSaved
           ? [{ key: "typed", kind: "typed", name: query.trim() }]
@@ -113,7 +110,8 @@ export function selectionName(selection: PlaceSelection | null): string {
     : selection.draft.name;
 }
 
-/** The muted second line under an option — where on the map it is. */
+/** The muted second line under an option — where on the map it is. Null
+ *  for a typed-in name: the UI shows its own «no map point yet» hint. */
 export function placeOptionDetail(option: PlaceOption): string | null {
   switch (option.kind) {
     case "saved":
@@ -129,6 +127,6 @@ export function placeOptionDetail(option: PlaceOption): string | null {
           .join(", ") || null
       );
     case "typed":
-      return "Без точки на карте — её можно поставить позже";
+      return null;
   }
 }

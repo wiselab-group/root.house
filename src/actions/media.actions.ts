@@ -1,5 +1,7 @@
 "use server";
 
+import { getLocale } from "next-intl/server";
+
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -77,7 +79,7 @@ export async function deleteMediaAction(
   // photoMediaId has no DB-level FK (db/schema/person.ts).
   const portraitOf = await clearProfilePhotoForMedia(mediaId, familyId);
 
-  await removeMedia(mediaId, familyId, session.user.id);
+  await removeMedia(mediaId, familyId, session.user.id, await getLocale());
 
   for (const slug of new Set([
     ...taggedPeople.map((person) => person.slug),
@@ -117,7 +119,12 @@ export async function removePersonAvatarAction(
 
   await setPersonAvatar(personId, familyId, null);
   if (avatarMediaId) {
-    await removeMediaIfUnlinked(avatarMediaId, familyId, session.user.id);
+    await removeMediaIfUnlinked(
+      avatarMediaId,
+      familyId,
+      session.user.id,
+      await getLocale(),
+    );
   }
 
   const familySlug = await getFamilySlugById(familyId);
@@ -187,7 +194,12 @@ export async function setPersonPortraitAction(
 
   await setPersonAvatar(personId, familyId, mediaId);
   if (person.photoMediaId) {
-    await removeMediaIfUnlinked(person.photoMediaId, familyId, session.user.id);
+    await removeMediaIfUnlinked(
+      person.photoMediaId,
+      familyId,
+      session.user.id,
+      await getLocale(),
+    );
   }
 
   revalidatePath(`/families/${familySlug}/people/${person.slug}`);

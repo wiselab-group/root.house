@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -16,15 +17,18 @@ import { useCollapsibleFormClose } from "./collapsible-form";
 const initialState: PlaceFormState = {};
 
 function SubmitButton() {
+  const t = useTranslations("placeForm");
   const { pending } = useFormStatus();
   return (
     <Button type="submit" size="sm" disabled={pending} aria-busy={pending}>
-      {pending ? "Добавляем…" : "Добавить место"}
+      {pending ? t("adding") : t("add")}
     </Button>
   );
 }
 
 export function CreatePlaceForm({ familyId }: { familyId: string }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("placeForm");
   const close = useCollapsibleFormClose();
   const boundAction = createPlaceAction.bind(null, familyId);
   const [state, formAction] = useActionState(boundAction, initialState);
@@ -46,13 +50,18 @@ export function CreatePlaceForm({ familyId }: { familyId: string }) {
       }}
       className="flex flex-col gap-3 rounded-md border border-border p-3"
     >
-      <p className="text-sm font-medium">Добавить место</p>
+      <p className="text-sm font-medium">{t("add")}</p>
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="name" className="text-xs text-muted-foreground">
-          Название
+          {tc("name")}
         </Label>
-        <Input id="name" name="name" placeholder="Таллин" required />
+        <Input
+          id="name"
+          name="name"
+          placeholder={t("namePlaceholder")}
+          required
+        />
         {state.fieldErrors?.name && (
           <p className="text-sm text-destructive">{state.fieldErrors.name}</p>
         )}
@@ -61,13 +70,13 @@ export function CreatePlaceForm({ familyId }: { familyId: string }) {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1">
           <Label htmlFor="region" className="text-xs text-muted-foreground">
-            Регион
+            {t("region")}
           </Label>
           <Input id="region" name="region" />
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="country" className="text-xs text-muted-foreground">
-            Страна
+            {t("country")}
           </Label>
           <Input id="country" name="country" />
         </div>
@@ -75,7 +84,7 @@ export function CreatePlaceForm({ familyId }: { familyId: string }) {
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="description" className="text-xs text-muted-foreground">
-          Описание
+          {tc("description")}
         </Label>
         <Textarea id="description" name="description" rows={2} />
       </div>
@@ -87,7 +96,7 @@ export function CreatePlaceForm({ familyId }: { familyId: string }) {
       <div className="flex gap-2">
         <SubmitButton />
         <Button type="button" variant="ghost" size="sm" onClick={close}>
-          Отмена
+          {tc("cancel")}
         </Button>
       </div>
     </form>

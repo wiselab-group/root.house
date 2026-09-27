@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { glassSurface } from "@/components/hero/glass";
 
 /**
@@ -22,13 +23,14 @@ export function PersonProfileIntro({
   description: string | null;
   facts: { label: string; value: string | null | undefined }[];
 }) {
+  const t = useTranslations("profile");
   const filledFacts = facts.filter(
     (fact): fact is { label: string; value: string } => Boolean(fact.value),
   );
   if (!description && filledFacts.length === 0) return null;
 
   return (
-    <section aria-label="О человеке" className="flex flex-col gap-8">
+    <section aria-label={t("about")} className="flex flex-col gap-8">
       {description && (
         <p className="max-w-[34ch] text-xl leading-snug font-normal tracking-[-0.01em] text-pretty whitespace-pre-wrap text-foreground sm:text-[1.75rem] sm:leading-[1.4]">
           {description}

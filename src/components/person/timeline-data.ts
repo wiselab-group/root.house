@@ -11,6 +11,7 @@ import {
 import type { PartnershipRecord } from "@/domain/relationship/relationship.repository";
 import type { PlaceRecord } from "@/domain/place/place.service";
 import type { TimelineEvent } from "@/domain/event/event.service";
+import { getLocale } from "next-intl/server";
 import { resolveTimelineFacts } from "./timeline-facts";
 
 /**
@@ -41,6 +42,7 @@ export async function resolveEventEditData({
   places: PlaceRecord[];
 }): Promise<Map<string, EventEditData>> {
   const eventEditDataById = new Map<string, EventEditData>();
+  const locale = await getLocale();
   await Promise.all(
     timeline
       .filter(
@@ -52,7 +54,11 @@ export async function resolveEventEditData({
           }),
       )
       .map(async (event) => {
-        const participants = await getParticipantsWithNames(event.id, familyId);
+        const participants = await getParticipantsWithNames(
+          event.id,
+          familyId,
+          locale,
+        );
         eventEditDataById.set(event.id, { participants, places });
       }),
   );

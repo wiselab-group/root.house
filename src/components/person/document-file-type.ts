@@ -15,14 +15,15 @@ import {
  */
 export function documentFileType(mimeType: string): {
   Icon: LucideIcon;
-  label: string;
+  /** Null for a generic file — the caller shows its localized «Файл». */
+  label: string | null;
 } {
   if (mimeType === "application/pdf") {
     return { Icon: FileTextIcon, label: "PDF" };
   }
   if (mimeType.startsWith("image/")) {
-    const subtype = mimeType.split("/")[1]?.toUpperCase() ?? "Изображение";
+    const subtype = mimeType.split("/")[1]?.toUpperCase() ?? null;
     return { Icon: FileImageIcon, label: subtype };
   }
-  return { Icon: FileIcon, label: "Файл" };
+  return { Icon: FileIcon, label: null };
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { TreeCanvas } from "./tree-canvas";
@@ -44,6 +45,7 @@ export function TreeToolbar({
   highlight?: TreeHighlightState;
   filter: PersonFilter;
 }) {
+  const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -84,7 +86,7 @@ export function TreeToolbar({
     headline: summary?.headline ?? null,
     pair:
       personA && personB
-        ? `${personDisplayName(personA)} ↔ ${personDisplayName(personB)}`
+        ? `${personDisplayName(personA, locale)} ↔ ${personDisplayName(personB, locale)}`
         : null,
     isPanelOpen,
     onToggle: () => setPanelOpen(!isPanelOpen),

@@ -1,3 +1,4 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 import { MapPin } from "lucide-react";
 import { auth } from "@/lib/auth";
@@ -23,6 +24,7 @@ export const metadata: Metadata = {
 export default async function FamilyMapPage({
   params,
 }: PageProps<"/families/[slug]/map">) {
+  const tn = await getTranslations("familyNav");
   const { slug } = await params;
   const session = await auth();
   if (!session?.user) return null;
@@ -30,15 +32,19 @@ export default async function FamilyMapPage({
   const familyId = await resolveFamilyIdBySlug(slug);
   const member = await requireFamilyAccess(familyId, session.user.id, "viewer");
   const [markers, family] = await Promise.all([
-    getFamilyMapMarkers(familyId, {
-      userId: session.user.id,
-      role: member.role,
-    }),
+    getFamilyMapMarkers(
+      familyId,
+      {
+        userId: session.user.id,
+        role: member.role,
+      },
+      await getLocale(),
+    ),
     getFamilySummary(familyId),
   ]);
 
   const breadcrumbItems = [
-    { label: "Мои семьи", href: "/families" },
+    { label: tn("myFamilies"), href: "/families" },
     { label: family?.name ?? slug, href: `/families/${slug}` },
     { label: "Карта" },
   ];

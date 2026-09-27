@@ -1,3 +1,4 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -27,7 +28,8 @@ export async function generateMetadata({
     role: member.role,
   });
   if (!event) return {};
-  return { title: `Редактировать — ${event.title}` };
+  const t = await getTranslations("event");
+  return { title: t("editTitle", { title: event.title }) };
 }
 
 export default async function EditEventPage({
@@ -57,15 +59,17 @@ export default async function EditEventPage({
     notFound();
   }
 
+  const locale = await getLocale();
+  const t = await getTranslations();
   const [participants, places, family] = await Promise.all([
-    getParticipantsWithNames(eventId, familyId),
+    getParticipantsWithNames(eventId, familyId, locale),
     listPlaces(familyId),
     getFamilySummary(familyId),
   ]);
 
   const subject = participants[0];
   const breadcrumbItems = [
-    { label: "Мои семьи", href: "/families" },
+    { label: t("families.title"), href: "/families" },
     { label: family?.name ?? slug, href: `/families/${slug}` },
     ...(subject?.slug
       ? [
@@ -74,12 +78,12 @@ export default async function EditEventPage({
             href: `/families/${slug}/people/${subject.slug}`,
           },
         ]
-      : [{ label: "Люди", href: `/families/${slug}/people` }]),
+      : [{ label: t("familyNav.people"), href: `/families/${slug}/people` }]),
     {
       label: event.title,
       href: `/families/${slug}/events/${eventId}`,
     },
-    { label: "Редактировать" },
+    { label: t("common.edit") },
   ];
 
   return (

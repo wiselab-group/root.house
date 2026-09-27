@@ -1,14 +1,17 @@
+import { useTranslations } from "next-intl";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
 import type { PersonRecord } from "@/domain/person/person.service";
 
-const GENDER_OPTIONS: Array<{ value: PersonRecord["gender"]; label: string }> =
-  [
-    { value: "unknown", label: "Не указан" },
-    { value: "male", label: "Мужской" },
-    { value: "female", label: "Женский" },
-  ];
+const GENDER_OPTIONS = [
+  { value: "unknown", labelKey: "genderUnknown" },
+  { value: "male", labelKey: "genderMale" },
+  { value: "female", labelKey: "genderFemale" },
+] as const satisfies ReadonlyArray<{
+  value: PersonRecord["gender"];
+  labelKey: string;
+}>;
 
 export function PersonGenderLivingFields({
   gender,
@@ -19,10 +22,11 @@ export function PersonGenderLivingFields({
   isLiving: boolean;
   onIsLivingChange: (value: boolean) => void;
 }) {
+  const t = useTranslations("personForm");
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="gender">Пол</Label>
+        <Label htmlFor="gender">{t("gender")}</Label>
         <NativeSelect
           id="gender"
           name="gender"
@@ -30,7 +34,7 @@ export function PersonGenderLivingFields({
         >
           {GENDER_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
-              {option.label}
+              {t(option.labelKey)}
             </option>
           ))}
         </NativeSelect>
@@ -47,7 +51,7 @@ export function PersonGenderLivingFields({
           htmlFor="isLiving"
           className="cursor-pointer text-sm font-normal"
         >
-          Жив(а)
+          {t("living")}
         </Label>
       </div>
     </div>

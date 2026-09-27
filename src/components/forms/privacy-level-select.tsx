@@ -1,12 +1,9 @@
+import { useTranslations } from "next-intl";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { PrivacyLevel } from "@/db/schema";
 
-const PRIVACY_LABELS: Record<PrivacyLevel, string> = {
-  private: "Только я",
-  family: "Участники семьи",
-  public: "Публично",
-};
+const PRIVACY_LEVELS: PrivacyLevel[] = ["private", "family", "public"];
 
 /**
  * Shared "who can see this?" picker — inserted into every Person/Event/
@@ -29,10 +26,11 @@ export function PrivacyLevelSelect({
   value?: PrivacyLevel;
   onChange?: (value: PrivacyLevel) => void;
 }) {
+  const t = useTranslations("privacy");
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor="privacyLevel" className="text-xs text-muted-foreground">
-        Кто может это видеть?
+        {t("question")}
       </Label>
       <NativeSelect
         id="privacyLevel"
@@ -43,13 +41,11 @@ export function PrivacyLevelSelect({
           onChange ? (e) => onChange(e.target.value as PrivacyLevel) : undefined
         }
       >
-        {(Object.entries(PRIVACY_LABELS) as [PrivacyLevel, string][]).map(
-          ([optionValue, label]) => (
-            <option key={optionValue} value={optionValue}>
-              {label}
-            </option>
-          ),
-        )}
+        {PRIVACY_LEVELS.map((level) => (
+          <option key={level} value={level}>
+            {t(level)}
+          </option>
+        ))}
       </NativeSelect>
     </div>
   );

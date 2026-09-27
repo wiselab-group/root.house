@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { UploadProgressBar } from "@/components/media/upload-progress-bar";
 
 /**
@@ -15,6 +16,7 @@ export function PhotoUploadCaption({
   hasPhoto: boolean;
   showHint: boolean;
 }) {
+  const t = useTranslations("media");
   if (progress !== null) {
     return (
       <div className="flex flex-col items-center gap-1.5">
@@ -24,8 +26,8 @@ export function PhotoUploadCaption({
           aria-live="polite"
         >
           {progress < 0.9
-            ? `Загружаем фото… ${Math.round(progress * 100)}%`
-            : "Сохраняем…"}
+            ? t("uploadingPhoto", { percent: Math.round(progress * 100) })
+            : t("saving")}
         </p>
       </div>
     );
@@ -33,9 +35,7 @@ export function PhotoUploadCaption({
   if (!showHint) return null;
   return (
     <p className="text-xs text-muted-foreground">
-      {hasPhoto
-        ? "Нажмите или перетащите, чтобы заменить"
-        : "Нажмите или перетащите фото"}
+      {hasPhoto ? t("clickToReplace") : t("clickToAdd")}
     </p>
   );
 }

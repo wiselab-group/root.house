@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import type { PersonRecord } from "@/domain/person/person.service";
 import type { ActingMember } from "@/domain/family/permissions";
 import type { GalleryPhotoView } from "@/components/media/gallery-photo";
@@ -46,6 +47,7 @@ export function PersonProfileSections({
   canEdit: boolean;
   canContribute: boolean;
 }) {
+  const t = useTranslations("profile");
   const personId = person.id;
   const shared = { familyId, familySlug, personId };
 
@@ -54,19 +56,19 @@ export function PersonProfileSections({
       panels={[
         {
           id: "overview",
-          label: "Обзор",
+          label: t("tabOverview"),
           content: (
             <div className={PANEL}>
               <PersonProfileIntro
                 description={person.description}
                 facts={[
-                  { label: "Девичья фамилия", value: person.maidenName },
-                  { label: "Живёт сейчас", value: residencePlaceName },
-                  { label: "Место рождения", value: birthPlaceName },
-                  { label: "Место смерти", value: deathPlaceName },
-                  { label: "Причина смерти", value: person.deathCause },
-                  { label: "Национальность", value: person.nationality },
-                  { label: "Религия", value: person.religion },
+                  { label: t("maidenName"), value: person.maidenName },
+                  { label: t("livesNow"), value: residencePlaceName },
+                  { label: t("birthPlace"), value: birthPlaceName },
+                  { label: t("deathPlace"), value: deathPlaceName },
+                  { label: t("deathCause"), value: person.deathCause },
+                  { label: t("nationality"), value: person.nationality },
+                  { label: t("religion"), value: person.religion },
                 ]}
               />
               <PersonFamilyPanel {...shared} canEdit={canEdit} />
@@ -75,7 +77,7 @@ export function PersonProfileSections({
         },
         {
           id: "stories",
-          label: "Истории",
+          label: t("tabStories"),
           count: counts.stories,
           content: (
             <div className={PANEL}>
@@ -90,7 +92,7 @@ export function PersonProfileSections({
         },
         {
           id: "timeline",
-          label: "Линия жизни",
+          label: t("tabTimeline"),
           count: counts.events,
           content: (
             <div className={PANEL}>
@@ -107,7 +109,7 @@ export function PersonProfileSections({
         },
         {
           id: "photos",
-          label: "Фото",
+          label: t("tabPhotos"),
           count: photos.length,
           content: (
             <div className={PANEL}>
@@ -123,7 +125,7 @@ export function PersonProfileSections({
         },
         {
           id: "documents",
-          label: "Документы",
+          label: t("tabDocuments"),
           count: counts.documents,
           content: (
             <div className={PANEL}>

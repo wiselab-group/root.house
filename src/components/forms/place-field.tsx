@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useId, useState } from "react";
 import { Combobox } from "@base-ui/react/combobox";
 import { MapPinIcon, XIcon } from "lucide-react";
@@ -38,6 +39,7 @@ export function PlaceField({
   places: PlaceRecord[];
   defaultValue?: string | null;
 }) {
+  const t = useTranslations("placeForm");
   const inputId = useId();
   const [selection, setSelection] = useState<PlaceSelection | null>(() => {
     const place = places.find((item) => item.id === defaultValue);
@@ -91,14 +93,14 @@ export function PlaceField({
           <MapPinIcon className="pointer-events-none absolute left-3.5 size-4 text-muted-foreground" />
           <Combobox.Input
             id={inputId}
-            placeholder="Город, село, адрес…"
+            placeholder={t("fieldPlaceholder")}
             className="h-full w-full min-w-0 rounded-lg bg-transparent py-1 pr-10 pl-10 text-base text-foreground outline-none placeholder:text-muted-foreground md:text-sm"
           />
           {selection && (
             <button
               type="button"
               onClick={() => select(null)}
-              aria-label={`Очистить: ${label.toLowerCase()}`}
+              aria-label={t("clearField", { label: label.toLowerCase() })}
               className="absolute right-2 flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-95"
             >
               <XIcon className="size-4" aria-hidden="true" />

@@ -1,9 +1,5 @@
 import type { PersonArchiveSummary } from "@/domain/tree/tree-layout.builder";
-import {
-  photoCountLabel,
-  storyCountLabel,
-  eventCountLabel,
-} from "@/domain/shared/pluralize-ru";
+import { useTranslations } from "next-intl";
 
 /**
  * Written-out archive summary (PersonArchiveSummary — photo/story/event
@@ -26,10 +22,11 @@ export function ArchiveSummaryLine({
   archive: PersonArchiveSummary;
   className?: string;
 }) {
+  const t = useTranslations("counts");
   const parts = [
-    archive.photoCount > 0 ? photoCountLabel(archive.photoCount) : null,
-    archive.storyCount > 0 ? storyCountLabel(archive.storyCount) : null,
-    archive.eventCount > 0 ? eventCountLabel(archive.eventCount) : null,
+    archive.photoCount > 0 ? t("photos", { count: archive.photoCount }) : null,
+    archive.storyCount > 0 ? t("stories", { count: archive.storyCount }) : null,
+    archive.eventCount > 0 ? t("events", { count: archive.eventCount }) : null,
   ].filter((part): part is string => part !== null);
 
   if (parts.length === 0) return null;

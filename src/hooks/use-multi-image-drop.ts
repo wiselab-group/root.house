@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCallback, useState, type DragEvent } from "react";
 import { PHOTO_ACCEPT, PHOTO_MAX_BYTES } from "@/domain/media/upload-rules";
 
@@ -24,6 +25,7 @@ export function useMultiImageDrop({
   disabled?: boolean;
   onFiles: (files: File[]) => void;
 }) {
+  const t = useTranslations("errors");
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +34,10 @@ export function useMultiImageDrop({
   const validate = useCallback(
     (file: File): string | null => {
       if (file.size > maxSize) {
-        return `«${file.name}» превышает максимальный размер ${Math.round(maxSize / (1024 * 1024))} МБ`;
+        return t("fileNameTooLarge", {
+          name: file.name,
+          max: Math.round(maxSize / (1024 * 1024)),
+        });
       }
       const isAccepted = acceptedTypes.some((type) =>
         type.startsWith(".")
@@ -42,11 +47,11 @@ export function useMultiImageDrop({
             : file.type === type,
       );
       if (!isAccepted) {
-        return `«${file.name}» — неподдерживаемый формат файла`;
+        return t("fileNameUnsupported", { name: file.name });
       }
       return null;
     },
-    [acceptedTypes, maxSize],
+    [acceptedTypes, maxSize, t],
   );
 
   const handleFiles = useCallback(

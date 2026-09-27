@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { XIcon, CheckIcon } from "lucide-react";
 import { UploadProgressBar } from "@/components/media/upload-progress-bar";
 import { documentFileType } from "./document-file-type";
@@ -27,6 +28,8 @@ export function DocumentUploadQueue({
   documents: QueuedDocument[];
   onRemove: (id: string) => void;
 }) {
+  const tMedia = useTranslations("media");
+  const t = useTranslations("documents");
   if (documents.length === 0) return null;
 
   return (
@@ -47,7 +50,7 @@ export function DocumentUploadQueue({
               {doc.status === "uploading" && (
                 <UploadProgressBar
                   value={doc.progress}
-                  label={`Загрузка ${doc.file.name}`}
+                  label={tMedia("uploadingFile", { name: doc.file.name })}
                 />
               )}
             </span>
@@ -59,19 +62,19 @@ export function DocumentUploadQueue({
             {doc.status === "done" && (
               <CheckIcon
                 className="size-4 shrink-0 text-primary"
-                aria-label="Загружено"
+                aria-label={t("uploaded")}
               />
             )}
             {doc.status === "error" && (
               <span className="shrink-0 text-xs text-destructive">
-                {doc.error ?? "Ошибка"}
+                {doc.error ?? t("error")}
               </span>
             )}
             {doc.status === "queued" && (
               <button
                 type="button"
                 onClick={() => onRemove(doc.id)}
-                aria-label={`Убрать ${doc.file.name}`}
+                aria-label={tMedia("removeFile", { name: doc.file.name })}
                 className="shrink-0 text-muted-foreground hover:text-foreground"
               >
                 <XIcon className="size-4" />

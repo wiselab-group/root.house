@@ -23,22 +23,6 @@ export const EVENT_ROLES: Record<EventType, string[]> = {
   other: ["participant"],
 };
 
-export const EVENT_TYPE_LABELS: Record<EventType, string> = {
-  birth: "Рождение",
-  death: "Смерть",
-  marriage: "Свадьба",
-  divorce: "Развод",
-  baptism: "Крещение",
-  migration: "Переезд",
-  emigration: "Эмиграция",
-  education: "Образование",
-  military_service: "Военная служба",
-  war: "Война",
-  occupation: "Профессия",
-  imprisonment: "Заключение",
-  other: "Другое",
-};
-
 /**
  * Types no longer manually creatable via AddEventForm — birth/death are
  * derived from Person.birthDate/deathDate, marriage from
@@ -58,18 +42,3 @@ export const MANUAL_EVENT_TYPES = [
   "imprisonment",
   "other",
 ] as const satisfies readonly EventType[];
-
-export const MANUAL_EVENT_TYPE_LABELS: Record<
-  (typeof MANUAL_EVENT_TYPES)[number],
-  string
-> = Object.fromEntries(
-  MANUAL_EVENT_TYPES.map((type) => [type, EVENT_TYPE_LABELS[type]]),
-) as Record<(typeof MANUAL_EVENT_TYPES)[number], string>;
-
-export const EVENT_ROLE_LABELS: Record<string, string> = {
-  subject: "участник",
-  spouse: "супруг(а)",
-  witness: "свидетель",
-  godparent: "крёстный",
-  participant: "участник",
-};

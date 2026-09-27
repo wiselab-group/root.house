@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
@@ -36,6 +37,7 @@ export function TimelineRow({
    *  action as a pill with the same dialogs behind it. */
   className?: string;
 }) {
+  const t = useTranslations("timeline");
   const [open, setOpen] = useState(false);
 
   if (target.kind === "link") {
@@ -60,7 +62,7 @@ export function TimelineRow({
         </DialogTrigger>
         <DialogContent className="flex max-h-[85vh] flex-col overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Редактировать событие</DialogTitle>
+            <DialogTitle>{t("editEvent")}</DialogTitle>
           </DialogHeader>
           <EditEventForm
             familyId={target.familyId}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import {
   useEffect,
   useId,
@@ -50,6 +51,7 @@ export function PersonCombobox({
   excludeId?: string;
   className?: string;
 }) {
+  const locale = useLocale();
   const inputId = useId();
   const [results, setResults] = useState<PersonSearchResult[]>([]);
   const [query, setQuery] = useState(value?.name ?? "");
@@ -148,10 +150,10 @@ export function PersonCombobox({
       // state) so the displayed text is driven only by `query`, never by
       // base-ui's own selected-value resync.
       inputValue={query}
-      itemToStringLabel={(person) => personDisplayName(person)}
+      itemToStringLabel={(person) => personDisplayName(person, locale)}
       onValueChange={(person) => {
         const next = person
-          ? { id: person.id, name: personDisplayName(person) }
+          ? { id: person.id, name: personDisplayName(person, locale) }
           : null;
         setLocalValue(next);
         onChange(next);
@@ -226,7 +228,7 @@ export function PersonCombobox({
                     className="flex cursor-default flex-col items-start gap-0.5 rounded-md px-2 py-2 text-left text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
                   >
                     <span className="font-medium">
-                      {personDisplayName(person)}
+                      {personDisplayName(person, locale)}
                       {person.maidenName &&
                         person.maidenName !== person.lastName && (
                           // Search matches on maidenName too (see searchPersonsByNameSubstring) —
@@ -240,9 +242,9 @@ export function PersonCombobox({
                     </span>
                     {(person.birthDate || person.deathDate) && (
                       <span className="text-xs text-muted-foreground">
-                        {formatPartialDate(person.birthDate)}
+                        {formatPartialDate(person.birthDate, locale)}
                         {person.deathDate &&
-                          ` — ${formatPartialDate(person.deathDate)}`}
+                          ` — ${formatPartialDate(person.deathDate, locale)}`}
                       </span>
                     )}
                   </Combobox.Item>

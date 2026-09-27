@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import {
   useEffect,
   useId,
@@ -42,6 +43,7 @@ export function PersonMultiCombobox({
   onChange: (people: { id: string; name: string }[]) => void;
   className?: string;
 }) {
+  const locale = useLocale();
   const inputId = useId();
   const [results, setResults] = useState<PersonSearchResult[]>([]);
   const [query, setQuery] = useState("");
@@ -116,12 +118,12 @@ export function PersonMultiCombobox({
       filter={null}
       value={selectedValues}
       inputValue={query}
-      itemToStringLabel={(person) => personDisplayName(person)}
+      itemToStringLabel={(person) => personDisplayName(person, locale)}
       onValueChange={(people) => {
         onChange(
           people.map((person) => ({
             id: person.id,
-            name: personDisplayName(person),
+            name: personDisplayName(person, locale),
           })),
         );
       }}

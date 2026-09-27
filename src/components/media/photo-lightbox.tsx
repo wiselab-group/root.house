@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
@@ -189,6 +190,7 @@ function TaggedPeopleStrip({
   highlightedPersonId: string | null;
   onHighlight: (personId: string | null) => void;
 }) {
+  const locale = useLocale();
   // Phones have no hover, so a tap on a name used to go straight to the
   // profile and the spotlight was never seen. There the name is a toggle
   // instead — tap to light the person up, tap again to clear — and the
@@ -206,7 +208,7 @@ function TaggedPeopleStrip({
           highlighted ? "bg-white/25" : "bg-white/10 hover:bg-white/20",
         );
         if (coarsePointer) {
-          const name = personDisplayName(person);
+          const name = personDisplayName(person, locale);
           return (
             <span
               key={person.id}
@@ -242,7 +244,7 @@ function TaggedPeopleStrip({
             onBlur={() => onHighlight(null)}
             className={className}
           >
-            {personDisplayName(person)}
+            {personDisplayName(person, locale)}
           </Link>
         );
       })}

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { PersonPhotoUploadPanel } from "@/components/media/person-photo-upload-panel";
 import { PhotoGrid } from "@/components/media/photo-grid";
 import {
@@ -42,17 +43,19 @@ export function PersonMediaGallery({
   /** The Person's current portrait (photoMediaId) — marked in the menu. */
   portraitMediaId: string | null;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("profile");
   return (
     <PhotoArrangeProvider>
       <ProfileSectionWithAdd
-        title="Фотографии"
+        title={t("photos")}
         count={photos.length}
-        addLabel="Добавить"
+        addLabel={tc("add")}
         extraAction={
           canEdit &&
           photos.length > 0 && <PhotoArrangeHeaderButton look="link" />
         }
-        closeLabel="Закрыть"
+        closeLabel={tc("close")}
         form={
           canContribute && (
             <PersonPhotoUploadPanel familyId={familyId} personId={personId} />
@@ -61,9 +64,7 @@ export function PersonMediaGallery({
       >
         <div className="flex flex-col gap-4">
           {photos.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Фотографий пока нет.
-            </p>
+            <p className="text-sm text-muted-foreground">{t("noPhotos")}</p>
           ) : (
             <PhotoGrid
               photos={photos}

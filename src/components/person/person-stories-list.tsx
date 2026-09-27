@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useOptimistic } from "react";
 import { ChevronRightIcon, ClockIcon } from "lucide-react";
@@ -34,6 +35,7 @@ export function PersonStoriesList({
   personId: string;
   stories: ListedStory[];
 }) {
+  const tStories = useTranslations("stories");
   const [optimisticStories, removeOptimisticStory] = useOptimistic(
     stories,
     (state, deletedStoryId: string) =>
@@ -44,8 +46,10 @@ export function PersonStoriesList({
 
   const href = (story: ListedStory) =>
     `/families/${familySlug}/stories/${story.slug}`;
+  const readingTime = (story: ListedStory) =>
+    readingMinutes(layoutStoryBody(story.body).wordCount);
   const minutes = (story: ListedStory) =>
-    `${readingMinutes(layoutStoryBody(story.body).wordCount)} мин`;
+    tStories("minutes", { count: readingTime(story) });
   const deleteControl = (story: ListedStory) =>
     story.canDelete && (
       <span className="relative z-10 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/story:opacity-100 [@media(hover:hover)]:focus-within:opacity-100">
@@ -70,7 +74,7 @@ export function PersonStoriesList({
         />
         <span className="flex items-center gap-1.5 text-sm text-foreground/55">
           <ClockIcon className="size-4" aria-hidden="true" />
-          {minutes(featured)} чтения
+          {tStories("minutesReading", { count: readingTime(featured) })}
         </span>
         <h3 className="flex items-center gap-2 font-heading text-2xl font-normal text-balance">
           {featured.title}

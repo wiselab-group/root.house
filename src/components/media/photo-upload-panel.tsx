@@ -25,7 +25,6 @@ import { usePhotoBatchUpload } from "./use-photo-batch-upload";
  * checkmarks) until the panel is closed, so a person can see everything
  * that made it in before dismissing.
  */
-const PHOTO_FORMS: [string, string, string] = ["фото", "фото", "фото"];
 
 export function PhotoUploadPanel({
   familyId,
@@ -77,7 +76,7 @@ export function PhotoUploadPanel({
         </p>
       )}
 
-      <BatchUploadSummary items={toBatchItems(photos)} forms={PHOTO_FORMS} />
+      <BatchUploadSummary items={toBatchItems(photos)} noun="photos" />
 
       <div className="flex items-center justify-end gap-2">
         <Button

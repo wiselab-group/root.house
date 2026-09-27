@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import type { KinshipSummary } from "@/domain/relationship/kinship-terms";
 import { personDisplayName } from "@/domain/person/display-name";
 import type { TreePersonClientPayload } from "@/domain/tree/tree-adapter";
@@ -28,6 +29,7 @@ export function KinshipResult({
   familyId: string;
   onPanTo: (personId: string) => void;
 }) {
+  const locale = useLocale();
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1" aria-live="polite">
@@ -36,9 +38,9 @@ export function KinshipResult({
         </h3>
         {summary.roles && (
           <p className="text-sm text-muted-foreground">
-            {personDisplayName(personA)} — {summary.roles.a}
+            {personDisplayName(personA, locale)} — {summary.roles.a}
             <br />
-            {personDisplayName(personB)} — {summary.roles.b}
+            {personDisplayName(personB, locale)} — {summary.roles.b}
           </p>
         )}
         {summary.detail && (

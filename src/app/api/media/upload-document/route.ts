@@ -1,3 +1,5 @@
+import { getLocale } from "next-intl/server";
+import { getErrorMessage } from "@/i18n/errors";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -60,30 +62,40 @@ export async function POST(request: Request): Promise<Response> {
     );
     if (!canCreate(member.role, "media")) {
       return NextResponse.json(
-        { error: "У вас нет прав на добавление документов." },
+        { error: (await getErrorMessage())("noDocumentPermission") },
         { status: 403 },
       );
     }
   } catch (error) {
     if (error instanceof ForbiddenError) {
-      return NextResponse.json({ error: error.message }, { status: 403 });
+      return NextResponse.json(
+        { error: (await getErrorMessage())(error.message) },
+        { status: 403 },
+      );
     }
     throw error;
   }
 
   try {
-    const media = await uploadPersonDocument({
-      familyId,
-      personId,
-      uploadedBy: session.user.id,
-      storageKey,
-      filename,
-      privacyLevel,
-    });
+    const media = await uploadPersonDocument(
+      {
+        familyId,
+        personId,
+        uploadedBy: session.user.id,
+        storageKey,
+        filename,
+        privacyLevel,
+      },
+      await getLocale(),
+    );
     return NextResponse.json({ id: media.id }, { status: 201 });
   } catch (error) {
     if (error instanceof UploadRejectedError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      const message = await getErrorMessage();
+      return NextResponse.json(
+        { error: message(error.message, error.values) },
+        { status: 400 },
+      );
     }
     throw error;
   }

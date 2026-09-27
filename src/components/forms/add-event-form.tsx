@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { useTranslations } from "next-intl";
 import {
   createEventAction,
   type EventFormState,
@@ -15,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PersonDateFields } from "./person-date-fields";
 import { PlaceField } from "./place-field";
 import { PrivacyLevelSelect } from "./privacy-level-select";
-import { MANUAL_EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
+import { MANUAL_EVENT_TYPES } from "@/domain/event/event-roles";
 import type { PlaceRecord } from "@/domain/place/place.service";
 import { useCollapsibleFormClose } from "./collapsible-form";
 
@@ -23,9 +24,10 @@ const initialState: EventFormState = {};
 
 function SubmitButton() {
   const { pending } = useFormStatus();
+  const t = useTranslations("eventForm");
   return (
     <Button type="submit" size="sm" disabled={pending} aria-busy={pending}>
-      {pending ? "Добавляем…" : "Добавить событие"}
+      {pending ? t("adding") : t("add")}
     </Button>
   );
 }
@@ -39,6 +41,9 @@ export function AddEventForm({
   personId: string;
   places?: PlaceRecord[];
 }) {
+  const t = useTranslations("eventForm");
+  const tTypes = useTranslations("eventTypes");
+  const tc = useTranslations("common");
   const close = useCollapsibleFormClose();
   const boundAction = createEventAction.bind(null, familyId, personId);
   const [state, formAction] = useActionState(boundAction, initialState);
@@ -64,48 +69,46 @@ export function AddEventForm({
       }}
       className="flex flex-col gap-3 rounded-md border border-border p-3"
     >
-      <p className="text-sm font-medium">Добавить событие</p>
+      <p className="text-sm font-medium">{t("add")}</p>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1">
           <Label htmlFor="type" className="text-xs text-muted-foreground">
-            Тип
+            {t("type")}
           </Label>
           <NativeSelect id="type" name="type" defaultValue="other">
-            {Object.entries(MANUAL_EVENT_TYPE_LABELS).map(([value, label]) => (
+            {MANUAL_EVENT_TYPES.map((value) => (
               <option key={value} value={value}>
-                {label}
+                {tTypes(value)}
               </option>
             ))}
           </NativeSelect>
         </div>
         <div className="flex flex-col gap-1">
           <Label htmlFor="title" className="text-xs text-muted-foreground">
-            Название
+            {t("title")}
           </Label>
           <Input id="title" name="title" required />
         </div>
       </div>
 
-      <PersonDateFields prefix="date" legend="Дата" />
+      <PersonDateFields prefix="date" legend={t("date")} />
 
       <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Checkbox
           checked={showRange}
           onCheckedChange={(checked) => setShowRange(checked)}
         />
-        Есть дата окончания (например, военная служба)
+        {t("hasEnd")}
       </label>
-      {showRange && (
-        <PersonDateFields prefix="endDate" legend="Дата окончания" />
-      )}
+      {showRange && <PersonDateFields prefix="endDate" legend={t("endDate")} />}
 
-      <PlaceField name="placeId" label="Место" places={places} />
+      <PlaceField name="placeId" label={t("place")} places={places} />
       <PrivacyLevelSelect />
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="description" className="text-xs text-muted-foreground">
-          Описание
+          {t("description")}
         </Label>
         <Textarea id="description" name="description" rows={2} />
       </div>
@@ -121,7 +124,7 @@ export function AddEventForm({
       <div className="flex gap-2">
         <SubmitButton />
         <Button type="button" variant="ghost" size="sm" onClick={close}>
-          Отмена
+          {tc("cancel")}
         </Button>
       </div>
     </form>

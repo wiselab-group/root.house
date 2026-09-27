@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +37,7 @@ export function PersonDateFields({
    *  the profile form's #birth/#death block. */
   anchorId?: string;
 }) {
+  const t = useTranslations("dateFields");
   return (
     <fieldset
       id={anchorId}
@@ -48,7 +50,7 @@ export function PersonDateFields({
             htmlFor={`${prefix}Day`}
             className="text-xs text-muted-foreground"
           >
-            День
+            {t("day")}
           </Label>
           <Input
             id={`${prefix}Day`}
@@ -66,7 +68,7 @@ export function PersonDateFields({
             htmlFor={`${prefix}Month`}
             className="text-xs text-muted-foreground"
           >
-            Месяц
+            {t("month")}
           </Label>
           <Input
             id={`${prefix}Month`}
@@ -84,7 +86,7 @@ export function PersonDateFields({
             htmlFor={`${prefix}Year`}
             className="text-xs text-muted-foreground"
           >
-            Год
+            {t("year")}
           </Label>
           <Input
             id={`${prefix}Year`}
@@ -113,7 +115,7 @@ export function PersonDateFields({
               name={`${prefix}Approximate`}
               defaultChecked={date?.isApproximate ?? false}
             />
-            примерно
+            {t("approximate")}
           </label>
         </div>
       </div>

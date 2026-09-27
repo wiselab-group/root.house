@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -53,6 +54,7 @@ export default async function FamilyTreePage({
   params,
   searchParams,
 }: PageProps<"/families/[slug]/tree">) {
+  const tn = await getTranslations("familyNav");
   const { slug } = await params;
   const { focus, filter: filterParam } = await searchParams;
   const session = await auth();
@@ -65,7 +67,7 @@ export default async function FamilyTreePage({
     getFamilySummary(familyId),
   ]);
   const breadcrumbItems = [
-    { label: "Мои семьи", href: "/families" },
+    { label: tn("myFamilies"), href: "/families" },
     { label: family?.name ?? slug, href: `/families/${slug}` },
     { label: "Семейное дерево" },
   ];

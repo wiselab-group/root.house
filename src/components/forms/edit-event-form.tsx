@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -24,10 +25,11 @@ import type { PlaceRecord } from "@/domain/place/place.service";
 const initialState: EventFormState = {};
 
 function SubmitButton() {
+  const tc = useTranslations("common");
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} aria-busy={pending}>
-      {pending ? "Сохраняем…" : "Сохранить"}
+      {pending ? tc("saving") : tc("save")}
     </Button>
   );
 }
@@ -58,6 +60,8 @@ export function EditEventForm({
   onCancel?: () => void;
   onSuccess?: () => void;
 }) {
+  const t = useTranslations("eventForm");
+  const tc = useTranslations("common");
   const boundAction = updateEventAction.bind(
     null,
     familyId,
@@ -98,7 +102,7 @@ export function EditEventForm({
 
       <PlaceField
         name="placeId"
-        label="Место"
+        label={t("place")}
         places={places}
         defaultValue={event.placeId}
       />
@@ -106,7 +110,7 @@ export function EditEventForm({
 
       <div className="flex flex-col gap-1">
         <Label htmlFor="description" className="text-xs text-muted-foreground">
-          Описание
+          {tc("description")}
         </Label>
         <Textarea
           id="description"
@@ -135,11 +139,11 @@ export function EditEventForm({
         <SubmitButton />
         {cancelHref ? (
           <LinkButton href={cancelHref} variant="ghost">
-            Отмена
+            {tc("cancel")}
           </LinkButton>
         ) : (
           <Button type="button" variant="ghost" onClick={onCancel}>
-            Отмена
+            {tc("cancel")}
           </Button>
         )}
       </div>

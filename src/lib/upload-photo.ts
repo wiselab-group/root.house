@@ -1,4 +1,5 @@
 import { recordUpload, uploadToStorage } from "./direct-upload";
+import { UploadError } from "./upload-error";
 
 /**
  * Uploads one photo, used by every photo picker (the gallery batch upload,
@@ -11,7 +12,7 @@ import { recordUpload, uploadToStorage } from "./direct-upload";
  * server is still working.
  */
 const UPLOAD_PHASE_CEILING = 0.9;
-const GENERIC_ERROR = "Не удалось загрузить фото";
+const GENERIC_ERROR = () => new UploadError("photoUploadFailed");
 
 export async function uploadPhoto({
   familyId,
@@ -40,9 +41,7 @@ export async function uploadPhoto({
     file,
     onProgress: (fraction) => onProgress?.(fraction * UPLOAD_PHASE_CEILING),
   }).catch((error: unknown) => {
-    throw error instanceof Error && error.message.startsWith("Файл")
-      ? error
-      : new Error(GENERIC_ERROR);
+    throw error instanceof UploadError ? error : GENERIC_ERROR();
   });
 
   const result = await recordUpload(
@@ -56,7 +55,7 @@ export async function uploadPhoto({
       isAvatar,
       privacyLevel,
     },
-    GENERIC_ERROR,
+    GENERIC_ERROR(),
   );
   onProgress?.(1);
   return result;

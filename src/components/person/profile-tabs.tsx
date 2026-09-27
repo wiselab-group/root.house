@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   useEffect,
   useRef,
@@ -30,6 +31,7 @@ export interface ProfilePanel {
  * history entry) so a link to #stories opens that tab.
  */
 export function ProfileTabs({ panels }: { panels: ProfilePanel[] }) {
+  const t = useTranslations("profile");
   const hash = useSyncExternalStore(subscribeToHash, readHash, () => "");
   // A tab clicked in this session wins; until then the URL hash (a shared
   // link to #stories) picks the tab, falling back to the first panel.
@@ -79,7 +81,7 @@ export function ProfileTabs({ panels }: { panels: ProfilePanel[] }) {
       <div className="sticky top-[calc(var(--app-header-h,0px)-0.75rem)] z-30 -mt-9 flex justify-center px-4 pt-6 md:pt-8">
         <div
           role="tablist"
-          aria-label="Разделы профиля"
+          aria-label={t("sections")}
           onKeyDown={onKeyDown}
           // Air between the pills (user: tabs touching read unprofessional —
           // a hovered tab's fill butted right against the active one).
@@ -122,7 +124,7 @@ export function ProfileTabs({ panels }: { panels: ProfilePanel[] }) {
         <div className="md:hidden">
           <ContentsMenu
             menuId="profile-contents"
-            menuLabel="Разделы профиля"
+            menuLabel={t("sections")}
             items={panels.map((panel) => ({
               id: panel.id,
               label: panel.label,

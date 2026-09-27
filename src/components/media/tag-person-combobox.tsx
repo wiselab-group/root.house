@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Combobox } from "@base-ui/react/combobox";
 import { SearchIcon } from "lucide-react";
@@ -27,6 +28,7 @@ export function TagPersonCombobox({
   autoFocus?: boolean;
   className?: string;
 }) {
+  const locale = useLocale();
   const [results, setResults] = useState<PersonSearchResult[]>([]);
   const [query, setQuery] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -58,10 +60,10 @@ export function TagPersonCombobox({
       filter={null}
       value={null}
       inputValue={query}
-      itemToStringLabel={(person) => personDisplayName(person)}
+      itemToStringLabel={(person) => personDisplayName(person, locale)}
       onValueChange={(person) => {
         if (!person) return;
-        onSelect({ id: person.id, name: personDisplayName(person) });
+        onSelect({ id: person.id, name: personDisplayName(person, locale) });
       }}
       onInputValueChange={(nextValue, { reason }) => {
         if (reason === "item-press") return;
@@ -110,7 +112,7 @@ export function TagPersonCombobox({
                     value={person}
                     className="flex cursor-default items-center rounded-md px-2 py-2 text-left text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
                   >
-                    {personDisplayName(person)}
+                    {personDisplayName(person, locale)}
                   </Combobox.Item>
                 )}
               </Combobox.List>

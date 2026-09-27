@@ -1,3 +1,4 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -9,7 +10,6 @@ import {
   getParticipantsWithNames,
 } from "@/domain/event/event.service";
 import { getPlace } from "@/domain/place/place.service";
-import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
 import { formatPartialDate } from "@/domain/shared/partial-date";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { ProfileSection } from "@/components/person/profile-section";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
+import { getEventWording } from "@/components/person/event-wording";
 import { DeleteEventButton } from "@/components/event/delete-event-button";
 
 export async function generateMetadata({
@@ -39,6 +40,9 @@ export async function generateMetadata({
 export default async function EventDetailsPage({
   params,
 }: PageProps<"/families/[slug]/events/[eventId]">) {
+  const locale = await getLocale();
+  const t = await getTranslations();
+  const wording = await getEventWording();
   const { slug, eventId } = await params;
   const session = await auth();
   if (!session?.user) return null;
@@ -52,7 +56,7 @@ export default async function EventDetailsPage({
   if (!event) notFound();
 
   const [participants, place, family] = await Promise.all([
-    getParticipantsWithNames(eventId, familyId),
+    getParticipantsWithNames(eventId, familyId, locale),
     event.placeId ? getPlace(event.placeId, familyId) : null,
     getFamilySummary(familyId),
   ]);
@@ -70,7 +74,7 @@ export default async function EventDetailsPage({
   const showEdit = canEdit(actingMember, ownership);
   const showDelete = canDelete(actingMember, ownership);
   const breadcrumbItems = [
-    { label: "Мои семьи", href: "/families" },
+    { label: t("families.title"), href: "/families" },
     { label: family?.name ?? slug, href: `/families/${slug}` },
     ...(subject?.slug
       ? [
@@ -79,7 +83,7 @@ export default async function EventDetailsPage({
             href: `/families/${slug}/people/${subject.slug}`,
           },
         ]
-      : [{ label: "Люди", href: `/families/${slug}/people` }]),
+      : [{ label: t("familyNav.people"), href: `/families/${slug}/people` }]),
     { label: event.title },
   ];
 
@@ -89,14 +93,14 @@ export default async function EventDetailsPage({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
           <Badge variant="secondary" className="w-fit">
-            {EVENT_TYPE_LABELS[event.type]}
+            {t(`eventTypes.${event.type}`)}
           </Badge>
           <h1 className="font-heading text-title font-medium tracking-tight text-balance">
             {event.title}
           </h1>
           <p className="text-muted-foreground">
-            {formatPartialDate(event.date)}
-            {event.endDate && ` — ${formatPartialDate(event.endDate)}`}
+            {formatPartialDate(event.date, locale)}
+            {event.endDate && ` — ${formatPartialDate(event.endDate, locale)}`}
             {place && ` · ${place.name}`}
           </p>
         </div>
@@ -109,7 +113,7 @@ export default async function EventDetailsPage({
                 href={`/families/${slug}/events/${eventId}/edit`}
                 className="flex-1 sm:flex-none"
               >
-                Редактировать
+                {t("common.edit")}
               </LinkButton>
             )}
             {showDelete && subject && (
@@ -126,12 +130,12 @@ export default async function EventDetailsPage({
       </div>
 
       {event.description && (
-        <ProfileSection title="Описание">
+        <ProfileSection title={t("event.description")}>
           <p className="text-sm whitespace-pre-wrap">{event.description}</p>
         </ProfileSection>
       )}
 
-      <ProfileSection title="Участники">
+      <ProfileSection title={t("event.participants")}>
         {participants.length === 0 ? (
           <p className="text-sm text-muted-foreground">—</p>
         ) : (
@@ -152,7 +156,7 @@ export default async function EventDetailsPage({
                   <span className="font-medium">{p.name}</span>
                 )}
                 <span className="text-sm text-muted-foreground">
-                  {p.roleLabel}
+                  {wording.roleLabel(p.role)}
                 </span>
               </li>
             ))}

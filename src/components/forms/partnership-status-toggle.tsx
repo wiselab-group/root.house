@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { HeartIcon, HeartCrackIcon } from "lucide-react";
 import { setPartnershipStatusAction } from "@/actions/relationship.actions";
@@ -42,6 +43,8 @@ export function PartnershipStatusToggle({
   /** Called inside the same transition as the status action, before it resolves — lets RelativeGroup flip the pill's isCurrent immediately instead of waiting for setPartnershipStatusAction's revalidatePath. */
   onToggled: (isCurrent: boolean) => void;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("relationships");
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -60,8 +63,8 @@ export function PartnershipStatusToggle({
   };
 
   const label = isCurrent
-    ? `Отметить брак с ${relativeName} как завершённый`
-    : `Отметить брак с ${relativeName} как текущий`;
+    ? t("markEndedLabel", { name: relativeName })
+    : t("markCurrentLabel", { name: relativeName });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -82,13 +85,11 @@ export function PartnershipStatusToggle({
         <DialogHeader>
           <DialogTitle>
             {isCurrent
-              ? `Отметить брак с ${relativeName} как завершённый?`
-              : `Отметить брак с ${relativeName} как текущий?`}
+              ? t("markEndedTitle", { name: relativeName })
+              : t("markCurrentTitle", { name: relativeName })}
           </DialogTitle>
           <DialogDescription>
-            {isCurrent
-              ? "Связь сохранится — на дереве линия между вами станет пунктиром бывшего брака."
-              : "Линия между вами на дереве снова станет пунктиром текущего брака."}
+            {isCurrent ? t("markEndedBody") : t("markCurrentBody")}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -97,7 +98,7 @@ export function PartnershipStatusToggle({
             onClick={() => setOpen(false)}
             disabled={isPending}
           >
-            Отмена
+            {tc("cancel")}
           </Button>
           <Button
             onClick={handleConfirm}
@@ -105,10 +106,10 @@ export function PartnershipStatusToggle({
             aria-busy={isPending}
           >
             {isPending
-              ? "Сохраняем…"
+              ? t("saving")
               : isCurrent
-                ? "Отметить как бывший"
-                : "Отметить как текущий"}
+                ? t("markEnded")
+                : t("markCurrent")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
@@ -7,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { PersonThumb } from "@/components/person/person-thumb";
 import { personDisplayName } from "@/domain/person/display-name";
 import { formatPartialDate } from "@/domain/shared/partial-date";
-import { personCountLabel } from "@/domain/shared/pluralize-ru";
 import type { PersonRecord } from "@/domain/person/person.repository";
 
 /** Case/diacritic-insensitive substring match — Cyrillic ё/е and similar
@@ -53,6 +53,9 @@ export function PeopleList({
   familySlug: string;
   people: PersonRecord[];
 }) {
+  const t = useTranslations("people");
+  const tCount = useTranslations("counts");
+  const locale = useLocale();
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -67,19 +70,22 @@ export function PeopleList({
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Иванов, Анна, 1924…"
-        aria-label="Поиск по людям"
+        placeholder={t("searchPlaceholder")}
+        aria-label={t("search")}
       />
 
       {query.trim().length > 0 && filtered.length > 0 && (
         <p className="text-sm text-muted-foreground">
-          Найдено {personCountLabel(filtered.length)} из {people.length}
+          {t("found", {
+            found: tCount("people", { count: filtered.length }),
+            total: people.length,
+          })}
         </p>
       )}
 
       {filtered.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
-          Ничего не найдено — попробуйте изменить запрос.
+          {t("noResults")}
         </p>
       ) : (
         <ul className="flex flex-col divide-y divide-border border-y border-border">
@@ -97,7 +103,7 @@ export function PeopleList({
                   <PersonThumb person={person} familyId={familyId} />
                   <div className="flex min-w-0 flex-col">
                     <span className="truncate font-heading text-lg font-medium transition-colors group-hover/row:text-primary">
-                      {personDisplayName(person)}
+                      {personDisplayName(person, locale)}
                       {person.maidenName &&
                         person.maidenName !== person.lastName && (
                           // Same "differs from lastName" guard as the tree's
@@ -111,10 +117,10 @@ export function PeopleList({
                         )}
                     </span>
                     <span className="truncate text-sm text-muted-foreground">
-                      {formatPartialDate(person.birthDate)}
+                      {formatPartialDate(person.birthDate, locale)}
                       {person.isLiving
                         ? ""
-                        : ` — ${formatPartialDate(person.deathDate)}`}
+                        : ` — ${formatPartialDate(person.deathDate, locale)}`}
                     </span>
                   </div>
                 </div>

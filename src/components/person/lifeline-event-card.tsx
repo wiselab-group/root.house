@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ArrowRightIcon, PencilIcon } from "lucide-react";
 import { glassSurface } from "@/components/hero/glass";
 import { TimelineRow } from "./timeline-row";
@@ -61,10 +62,11 @@ export function LifelineEventCard({ point }: { point: LifelinePointView }) {
 }
 
 function EventAction({ target }: { target: TimelineRowTarget }) {
+  const t = useTranslations("timeline");
   if (target.kind === "none") return null;
   const isEdit = target.kind !== "link" || target.intent === "edit";
   const label =
-    target.kind === "link" ? (target.label ?? "Подробнее") : "Редактировать";
+    target.kind === "link" ? (target.label ?? t("details")) : t("edit");
   return (
     <TimelineRow target={target} className={ACTION}>
       {!isEdit ? (

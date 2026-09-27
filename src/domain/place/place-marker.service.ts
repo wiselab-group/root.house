@@ -5,7 +5,8 @@ import type { PersonRecord } from "@/domain/person/person.repository";
 import { personDisplayName } from "@/domain/person/display-name";
 import { listEventsWithPlace } from "@/domain/event/event.service";
 import type { EventRecord } from "@/domain/event/event.repository";
-import { EVENT_TYPE_LABELS } from "@/domain/event/event-roles";
+import type { EventType } from "@/domain/event/event.repository";
+import type { Locale } from "@/domain/shared/locale";
 
 export type PersonPlaceRelation = "birth" | "death" | "residence";
 
@@ -20,7 +21,8 @@ export interface MapMarkerPerson {
 export interface MapMarkerEvent {
   id: string;
   title: string;
-  typeLabel: string;
+  /** Translated by the UI (messages `eventTypes.*`). */
+  type: EventType;
 }
 
 export interface PlaceMarker {
@@ -53,6 +55,7 @@ export interface PlaceMarker {
 export async function getFamilyMapMarkers(
   familyId: string,
   member: ActingMember,
+  locale: Locale,
 ): Promise<PlaceMarker[]> {
   const [places, people, events] = await Promise.all([
     listPlaces(familyId),
@@ -84,7 +87,7 @@ export async function getFamilyMapMarkers(
     existing.push({
       id: person.id,
       slug: person.slug,
-      name: personDisplayName(person),
+      name: personDisplayName(person, locale),
       relation,
     });
     peopleByPlaceId.set(placeId, existing);
@@ -114,7 +117,7 @@ export async function getFamilyMapMarkers(
     existing.push({
       id: event.id,
       title: event.title,
-      typeLabel: EVENT_TYPE_LABELS[event.type] ?? event.type,
+      type: event.type,
     });
     eventsByPlaceId.set(event.placeId, existing);
   }

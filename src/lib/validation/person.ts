@@ -10,12 +10,7 @@ const datePrecisionSchema = z.enum(["exact", "year_only", "decade", "unknown"]);
  */
 export const partialDateInputSchema = z
   .object({
-    year: z.coerce
-      .number()
-      .int()
-      .min(1, "Год должен быть положительным")
-      .max(2100)
-      .optional(),
+    year: z.coerce.number().int().min(1, "yearPositive").max(2100).optional(),
     month: z.coerce.number().int().min(1).max(12).optional(),
     day: z.coerce.number().int().min(1).max(31).optional(),
     precision: datePrecisionSchema.optional(),
@@ -34,12 +29,7 @@ export const partialDateInputSchema = z
  */
 export const yearRequiredPartialDateSchema = z
   .object({
-    year: z.coerce
-      .number()
-      .int()
-      .min(1, "Год должен быть положительным")
-      .max(2100)
-      .optional(),
+    year: z.coerce.number().int().min(1, "yearPositive").max(2100).optional(),
     month: z.coerce.number().int().min(1).max(12).optional(),
     day: z.coerce.number().int().min(1).max(31).optional(),
     isApproximate: z.coerce.boolean().optional(),
@@ -51,7 +41,7 @@ export const yearRequiredPartialDateSchema = z
       !date ||
       date.year !== undefined ||
       (date.month === undefined && date.day === undefined),
-    { message: "Если указан месяц или день, укажите и год" },
+    { message: "yearRequired" },
   );
 
 export const genderSchema = z.enum(["male", "female", "unknown"]);

@@ -65,4 +65,13 @@ export function uploadPathname(familyId: string, filename: string): string {
   return `${uploadPrefix(familyId)}${safe}`;
 }
 
-export class UploadRejectedError extends Error {}
+/** Message is an `errors.*` code, `values` its ICU arguments — translated
+ *  by the route that catches it. */
+export class UploadRejectedError extends Error {
+  constructor(
+    message: string,
+    readonly values: Record<string, number> = {},
+  ) {
+    super(message);
+  }
+}

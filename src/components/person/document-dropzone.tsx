@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRef } from "react";
 import { UploadCloudIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ export function DocumentDropzone({
   disabled?: boolean;
   onFiles: (files: File[]) => void;
 }) {
+  const t = useTranslations("documents");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { isDragging, error, handleFiles, dragHandlers } = useMultiImageDrop({
@@ -69,12 +71,8 @@ export function DocumentDropzone({
           id="person-document-upload-input"
         />
         <UploadCloudIcon className="size-6 text-muted-foreground" />
-        <p className="text-sm font-medium">
-          Перетащите документ сюда или нажмите
-        </p>
-        <p className="text-xs text-muted-foreground">
-          PDF, JPEG, PNG, HEIC, TIFF — до 25 МБ
-        </p>
+        <p className="text-sm font-medium">{t("dropHint")}</p>
+        <p className="text-xs text-muted-foreground">{t("formats")}</p>
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}

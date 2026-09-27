@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import Link from "next/link";
 import {
   useOptimistic,
@@ -222,6 +223,7 @@ export function PhotoTagLayer({
    *  visibility logic below. */
   highlightedPersonId?: string | null;
 }) {
+  const locale = useLocale();
   const containerRef = useRef<HTMLDivElement>(null);
   // A freshly tapped point: its spotlight circle is already out to size,
   // with the person search under it — both picked in one step.
@@ -382,7 +384,7 @@ export function PhotoTagLayer({
             setEditing({
               personId: person.id,
               point: pointOf(person),
-              name: personDisplayName(person),
+              name: personDisplayName(person, locale),
               radius:
                 radiusOf(person) ??
                 startingRadius(
@@ -470,7 +472,8 @@ function PhotoTagMarker({
   onUntag: () => void;
   onRemove: () => void;
 }) {
-  const name = personDisplayName(person);
+  const locale = useLocale();
+  const name = personDisplayName(person, locale);
 
   const marker = (
     <button

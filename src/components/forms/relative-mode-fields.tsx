@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 export type RelativeMode = "existing" | "new";
 
 /** AddRelativeForm's «Уже есть в семье / Новый человек» switch — split out
@@ -13,6 +14,7 @@ export function RelativeModeFields({
   onModeChange: (mode: RelativeMode) => void;
   canPickExisting: boolean;
 }) {
+  const t = useTranslations("relationships");
   return (
     <div className="flex gap-3 text-sm">
       <label className="flex items-center gap-1.5">
@@ -24,7 +26,7 @@ export function RelativeModeFields({
           onChange={() => onModeChange("existing")}
           disabled={!canPickExisting}
         />
-        Уже есть в семье
+        {t("existing")}
       </label>
       <label className="flex items-center gap-1.5">
         <input
@@ -34,7 +36,7 @@ export function RelativeModeFields({
           checked={mode === "new"}
           onChange={() => onModeChange("new")}
         />
-        Новый человек
+        {t("newPerson")}
       </label>
     </div>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -20,10 +21,11 @@ import type { PartialDate } from "@/domain/shared/partial-date";
 const initialState: UpdatePartnershipDateFormState = {};
 
 function SubmitButton() {
+  const tc = useTranslations("common");
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} aria-busy={pending}>
-      {pending ? "Сохраняем…" : "Сохранить"}
+      {pending ? tc("saving") : tc("save")}
     </Button>
   );
 }
@@ -55,6 +57,8 @@ export function PartnershipDateDialogContent({
   label: string;
   onOpenChange: (open: boolean) => void;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("relationships");
   const boundAction = updatePartnershipDateAction.bind(
     null,
     familyId,
@@ -74,10 +78,7 @@ export function PartnershipDateDialogContent({
     <DialogContent>
       <DialogHeader>
         <DialogTitle>{label}</DialogTitle>
-        <DialogDescription>
-          Необязательно — оставьте пустым, если дата неизвестна. Если указываете
-          месяц или день, год обязателен.
-        </DialogDescription>
+        <DialogDescription>{t("dateHint")}</DialogDescription>
       </DialogHeader>
       <form
         action={(formData) => {
@@ -98,7 +99,7 @@ export function PartnershipDateDialogContent({
         <PersonDateFields
           key={JSON.stringify(startDate ?? null)}
           prefix="startDate"
-          legend="Дата"
+          legend={t("date")}
           date={startDate}
         />
         {state.error && (
@@ -110,7 +111,7 @@ export function PartnershipDateDialogContent({
             variant="outline"
             onClick={() => onOpenChange(false)}
           >
-            Отмена
+            {tc("cancel")}
           </Button>
           <SubmitButton />
         </DialogFooter>

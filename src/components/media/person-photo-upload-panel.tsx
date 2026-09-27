@@ -35,10 +35,7 @@ export function PersonPhotoUploadPanel({
       <PhotoDropzone disabled={isUploading} onFiles={addFiles} />
 
       <PhotoUploadGrid photos={photos} onRemove={removePhoto} />
-      <BatchUploadSummary
-        items={toBatchItems(photos)}
-        forms={["фото", "фото", "фото"]}
-      />
+      <BatchUploadSummary items={toBatchItems(photos)} noun="photos" />
     </div>
   );
 }

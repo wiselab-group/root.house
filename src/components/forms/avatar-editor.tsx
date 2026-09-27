@@ -1,5 +1,7 @@
 "use client";
 
+import { useUploadErrorMessage } from "@/hooks/use-upload-error-message";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { PersonPhotoUpload } from "@/components/forms/person-photo-upload";
@@ -30,7 +32,9 @@ export function AvatarEditor({
     "firstName" | "lastName" | "nickname" | "isPlaceholder" | "photoMediaId"
   >;
 }) {
+  const t = useTranslations("personForm");
   const router = useRouter();
+  const uploadErrorMessage = useUploadErrorMessage();
   const [progress, setProgress] = useState<number | null>(null);
   const [isRemoving, startRemoveTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -53,9 +57,7 @@ export function AvatarEditor({
       });
       router.refresh();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Не удалось загрузить фото",
-      );
+      setError(uploadErrorMessage(err));
     } finally {
       setProgress(null);
     }
@@ -67,7 +69,7 @@ export function AvatarEditor({
       try {
         await removePersonAvatarAction(familyId, personId);
       } catch {
-        setError("Не удалось убрать портрет");
+        setError(t("portraitRemoveError"));
       }
     });
   }
@@ -79,7 +81,7 @@ export function AvatarEditor({
         fallback={<span>{personInitials(person)}</span>}
         onFileSelect={handleFileSelect}
         onRemove={handleRemove}
-        removeLabel="Убрать портрет"
+        removeLabel={t("removePortrait")}
         isBusy={progress !== null || isRemoving}
         progress={progress}
         size="compact"

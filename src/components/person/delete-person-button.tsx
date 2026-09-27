@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { deletePersonAction } from "@/actions/person.actions";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,8 @@ export function DeletePersonButton({
   onOpenChange?: (open: boolean) => void;
   trigger?: boolean;
 }) {
+  const t = useTranslations("personForm");
+  const tc = useTranslations("common");
   const [ownOpen, setOwnOpen] = useState(false);
   const open = controlledOpen ?? ownOpen;
   const setOpen = onOpenChange ?? setOwnOpen;
@@ -57,16 +60,13 @@ export function DeletePersonButton({
             <Button variant="destructive" size="sm" className={className} />
           }
         >
-          Удалить
+          {tc("delete")}
         </DialogTrigger>
       )}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Удалить {personName}?</DialogTitle>
-          <DialogDescription>
-            Это действие нельзя отменить. Все связи с родственниками, события и
-            привязанные фото для этого человека также будут удалены.
-          </DialogDescription>
+          <DialogTitle>{t("deleteTitle", { name: personName })}</DialogTitle>
+          <DialogDescription>{t("deleteBody")}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
@@ -74,7 +74,7 @@ export function DeletePersonButton({
             onClick={() => setOpen(false)}
             disabled={isPending}
           >
-            Отмена
+            {tc("cancel")}
           </Button>
           <Button
             variant="destructive"
@@ -82,7 +82,7 @@ export function DeletePersonButton({
             disabled={isPending}
             aria-busy={isPending}
           >
-            {isPending ? "Удаляем…" : "Удалить"}
+            {isPending ? tc("deleting") : tc("delete")}
           </Button>
         </DialogFooter>
       </DialogContent>

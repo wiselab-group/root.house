@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import {
   getPersonTimeline,
   filterVisibleEvents,
@@ -11,6 +12,7 @@ import { resolveTimelineExtras } from "./timeline-data";
 import { ProfileSectionWithAdd } from "./profile-section-with-add";
 import { PersonLifeline } from "./person-lifeline";
 import { lifelineView } from "./lifeline-view";
+import { getEventWording } from "./event-wording";
 import type { ActingMember } from "@/domain/family/permissions";
 import type { TimelineEvent } from "@/domain/event/event.service";
 
@@ -60,6 +62,8 @@ export async function PersonTimeline({
     gender: "male" | "female" | "unknown";
   };
 }) {
+  const tl = await getTranslations("timeline");
+  const wording = await getEventWording();
   const [allTimeline, places, partnerships] = await Promise.all([
     getPersonTimeline(personId, familyId),
     listPlaces(familyId),
@@ -86,6 +90,7 @@ export async function PersonTimeline({
       personSlug,
       canEdit,
       eventEditDataById,
+      wording,
     });
   const lifeline = lifelinePerson
     ? lifelineView(
@@ -93,6 +98,7 @@ export async function PersonTimeline({
         lifelinePerson,
         placeNameById,
         targetFor,
+        wording,
         factsById,
       )
     : null;
@@ -104,9 +110,9 @@ export async function PersonTimeline({
 
   return (
     <ProfileSectionWithAdd
-      title="Линия жизни"
+      title={wording.t("title")}
       count={timeline.length}
-      addLabel="Добавить событие"
+      addLabel={wording.t("addEvent")}
       form={
         canContribute && (
           <AddEventForm
@@ -120,7 +126,7 @@ export async function PersonTimeline({
       <div className="flex flex-col gap-4">
         {lifeline && <PersonLifeline {...lifeline} />}
         {timeline.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Событий пока нет.</p>
+          <p className="text-sm text-muted-foreground">{tl("noEvents")}</p>
         ) : (
           listed.length > 0 && (
             <ol className={`flex flex-col ${lifeline ? "mt-6" : ""}`}>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { ArrowDownIcon, ArrowUpIcon, HeartHandshakeIcon } from "lucide-react";
 import { personDisplayName } from "@/domain/person/display-name";
 import type { KinshipPathStop } from "@/domain/relationship/kinship-terms";
@@ -41,6 +42,7 @@ export function KinshipPath({
   familyId: string;
   onPanTo: (personId: string) => void;
 }) {
+  const locale = useLocale();
   const entries = stops.flatMap((stop) => {
     const person = personsById.get(stop.personId);
     return person ? [{ stop, person }] : [];
@@ -72,7 +74,7 @@ export function KinshipPath({
                 />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-sm font-medium">
-                    {personDisplayName(person)}
+                    {personDisplayName(person, locale)}
                   </span>
                   <span
                     className={
@@ -119,7 +121,7 @@ export function KinshipPath({
                 isCommonAncestor={stop.isCommonAncestor}
               />
               <span className="w-full truncate text-xs font-medium">
-                {person.firstName ?? personDisplayName(person)}
+                {person.firstName ?? personDisplayName(person, locale)}
               </span>
               <span
                 className={

@@ -1,5 +1,7 @@
 "use server";
 
+import { getLocale } from "next-intl/server";
+
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -65,7 +67,12 @@ async function resolveOtherPersonId(
     return placeholder.id;
   }
 
-  const created = await addPerson(familyId, userId, { firstName, lastName });
+  const created = await addPerson(
+    familyId,
+    userId,
+    { firstName, lastName },
+    await getLocale(),
+  );
   return created.id;
 }
 
@@ -138,24 +145,39 @@ export async function addRelativeAction(
       (formData.get("parentRole") as ParentRole | null) ?? undefined;
 
     if (kind === "parent") {
-      await addParentChild(familyId, session.user.id, {
-        parentId: otherPersonId,
-        childId: personId,
-        parentRole,
-      });
+      await addParentChild(
+        familyId,
+        session.user.id,
+        {
+          parentId: otherPersonId,
+          childId: personId,
+          parentRole,
+        },
+        await getLocale(),
+      );
     } else if (kind === "child") {
-      await addParentChild(familyId, session.user.id, {
-        parentId: personId,
-        childId: otherPersonId,
-        parentRole,
-      });
+      await addParentChild(
+        familyId,
+        session.user.id,
+        {
+          parentId: personId,
+          childId: otherPersonId,
+          parentRole,
+        },
+        await getLocale(),
+      );
     } else {
       const startDate = parsePartnershipStartDate(formData);
-      await addPartnership(familyId, session.user.id, {
-        person1Id: personId,
-        person2Id: otherPersonId,
-        startDate,
-      });
+      await addPartnership(
+        familyId,
+        session.user.id,
+        {
+          person1Id: personId,
+          person2Id: otherPersonId,
+          startDate,
+        },
+        await getLocale(),
+      );
     }
   } catch (error) {
     if (error instanceof RelationshipValidationError) {
@@ -179,7 +201,12 @@ export async function removeParentChildAction(
   if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
-  await removeParentChild(relationshipId, familyId, session.user.id);
+  await removeParentChild(
+    relationshipId,
+    familyId,
+    session.user.id,
+    await getLocale(),
+  );
   const familySlug = await getFamilySlugById(familyId);
   const personSlug = await getPersonSlugById(personId, familyId);
   revalidatePath(`/families/${familySlug}/people/${personSlug}`);
@@ -194,7 +221,12 @@ export async function removePartnershipAction(
   if (!session?.user) throw new Error("Сессия истекла — войдите заново.");
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
-  await removePartnership(relationshipId, familyId, session.user.id);
+  await removePartnership(
+    relationshipId,
+    familyId,
+    session.user.id,
+    await getLocale(),
+  );
   const familySlug = await getFamilySlugById(familyId);
   const personSlug = await getPersonSlugById(personId, familyId);
   revalidatePath(`/families/${familySlug}/people/${personSlug}`);

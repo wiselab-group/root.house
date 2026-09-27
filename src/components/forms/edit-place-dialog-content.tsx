@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import {
@@ -22,10 +23,11 @@ import type { PlaceRecord } from "@/domain/place/place.service";
 const initialState: PlaceFormState = {};
 
 function SubmitButton() {
+  const tc = useTranslations("common");
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} aria-busy={pending}>
-      {pending ? "Сохраняем…" : "Сохранить"}
+      {pending ? tc("saving") : tc("save")}
     </Button>
   );
 }
@@ -47,6 +49,8 @@ export function EditPlaceDialogContent({
   place: PlaceRecord;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("placeForm");
+  const tc = useTranslations("common");
   const boundAction = updatePlaceAction.bind(null, familyId, place.id);
   const [state, formAction] = useActionState(boundAction, initialState);
   const submittedRef = useRef(false);
@@ -59,7 +63,7 @@ export function EditPlaceDialogContent({
   return (
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>Редактировать место</DialogTitle>
+        <DialogTitle>{t("edit")}</DialogTitle>
       </DialogHeader>
       <form
         action={(formData) => {
@@ -70,7 +74,7 @@ export function EditPlaceDialogContent({
       >
         <div className="flex flex-col gap-1">
           <Label htmlFor="name" className="text-xs text-muted-foreground">
-            Название
+            {tc("name")}
           </Label>
           <Input id="name" name="name" defaultValue={place.name} required />
           {state.fieldErrors?.name && (
@@ -81,7 +85,7 @@ export function EditPlaceDialogContent({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-1">
             <Label htmlFor="region" className="text-xs text-muted-foreground">
-              Регион
+              {t("region")}
             </Label>
             <Input
               id="region"
@@ -91,7 +95,7 @@ export function EditPlaceDialogContent({
           </div>
           <div className="flex flex-col gap-1">
             <Label htmlFor="country" className="text-xs text-muted-foreground">
-              Страна
+              {t("country")}
             </Label>
             <Input
               id="country"
@@ -106,7 +110,7 @@ export function EditPlaceDialogContent({
             htmlFor="description"
             className="text-xs text-muted-foreground"
           >
-            Описание
+            {tc("description")}
           </Label>
           <Textarea
             id="description"
@@ -135,7 +139,7 @@ export function EditPlaceDialogContent({
             variant="outline"
             onClick={() => onOpenChange(false)}
           >
-            Отмена
+            {tc("cancel")}
           </Button>
           <SubmitButton />
         </DialogFooter>

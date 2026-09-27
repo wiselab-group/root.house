@@ -1,3 +1,4 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -16,6 +17,7 @@ import { personDisplayName } from "@/domain/person/display-name";
 export async function generateMetadata({
   params,
 }: PageProps<"/families/[slug]/people/[personSlug]/edit">): Promise<Metadata> {
+  const locale = await getLocale();
   const { slug, personSlug } = await params;
   const session = await auth();
   if (!session?.user) return {};
@@ -28,12 +30,16 @@ export async function generateMetadata({
     role: member.role,
   });
   if (!person) notFound();
-  return { title: `Редактировать — ${personDisplayName(person)}` };
+  const t = await getTranslations("people");
+  return { title: t("editTitle", { name: personDisplayName(person, locale) }) };
 }
 
 export default async function EditPersonPage({
   params,
 }: PageProps<"/families/[slug]/people/[personSlug]/edit">) {
+  const tn = await getTranslations("familyNav");
+  const tc = await getTranslations("common");
+  const locale = await getLocale();
   const { slug, personSlug } = await params;
   const session = await auth();
   if (!session?.user) return null;
@@ -55,20 +61,20 @@ export default async function EditPersonPage({
     <main className="mx-auto flex max-w-xl flex-col gap-8 px-6 py-12 sm:py-16">
       <SetBreadcrumbs
         items={[
-          { label: "Мои семьи", href: "/families" },
+          { label: tn("myFamilies"), href: "/families" },
           { label: family?.name ?? slug, href: `/families/${slug}` },
-          { label: "Люди", href: `/families/${slug}/people` },
+          { label: tn("people"), href: `/families/${slug}/people` },
           {
-            label: personDisplayName(person),
+            label: personDisplayName(person, locale),
             href: `/families/${slug}/people/${personSlug}`,
           },
-          { label: "Редактировать" },
+          { label: tc("edit") },
         ]}
       />
       <div className="flex items-center gap-4">
         <AvatarEditor familyId={familyId} personId={personId} person={person} />
         <h1 className="font-heading text-title font-medium tracking-tight text-balance">
-          {personDisplayName(person)}
+          {personDisplayName(person, locale)}
         </h1>
       </div>
 
@@ -79,8 +85,8 @@ export default async function EditPersonPage({
           action={updatePersonAction.bind(null, familyId, personId)}
           person={person}
           places={places}
-          submitLabel="Сохранить"
-          submitPendingLabel="Сохраняем…"
+          submitLabel={tc("save")}
+          submitPendingLabel={tc("saving")}
           cancelHref={`/families/${slug}/people/${personSlug}`}
         />
       </section>

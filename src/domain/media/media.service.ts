@@ -8,6 +8,7 @@ import {
 } from "./upload-rules";
 import { canView, type ActingMember } from "@/domain/family/permissions";
 import { logActivity } from "@/domain/activity-log/activity-log.service";
+import type { Locale } from "@/domain/shared/locale";
 import { personDisplayName } from "@/domain/person/display-name";
 import type {
   MediaVariantName,
@@ -60,22 +61,24 @@ async function verifyUploadedFile(
     !isUploadKey(storageKey, familyId) ||
     (await isStorageKeyUsed(storageKey, familyId))
   ) {
-    throw new UploadRejectedError("Файл не найден");
+    throw new UploadRejectedError("fileNotFound");
   }
 
   const info = await storage.getInfo(storageKey);
-  if (!info) throw new UploadRejectedError("Файл не найден");
+  if (!info) throw new UploadRejectedError("fileNotFound");
   const rules = UPLOAD_RULES[kind];
   const rejection = !info.isPrivate
-    ? "Файл загружен не в закрытое хранилище"
+    ? "notPrivateStorage"
     : !rules.contentTypes.includes(info.contentType)
-      ? "Этот формат не поддерживается"
+      ? "unsupportedFormat"
       : info.sizeBytes > rules.maxBytes
-        ? `Файл больше ${Math.round(rules.maxBytes / 1024 ** 2)} МБ`
+        ? "fileTooLarge"
         : null;
   if (rejection) {
     await deleteStoredFiles([storageKey]);
-    throw new UploadRejectedError(rejection);
+    throw new UploadRejectedError(rejection, {
+      max: Math.round(rules.maxBytes / 1024 ** 2),
+    });
   }
   return info;
 }
@@ -112,6 +115,7 @@ export interface UploadPhotoInput {
  */
 export async function uploadPersonPhoto(
   input: UploadPhotoInput,
+  locale: Locale,
 ): Promise<{ id: string }> {
   const { storageKey } = input;
   const info = await verifyUploadedFile(storageKey, input.familyId, "photo");
@@ -140,7 +144,7 @@ export async function uploadPersonPhoto(
       action: "create",
       entityType: "media",
       entityId: result.id,
-      entityLabel: mediaLabel(taggedPeople),
+      entityLabel: mediaLabel(taggedPeople, locale),
     });
 
     return result;
@@ -244,10 +248,14 @@ async function deleteStoredFiles(storageKeys: string[]): Promise<void> {
 
 /** "Фото" alone, or "Фото — Имя" when tagged with at least one person — media
  *  has no title field of its own, unlike Event/Story/Album. */
-function mediaLabel(taggedPeople: MediaTaggedPerson[]): string {
-  if (taggedPeople.length === 0) return "Фото";
-  const name = personDisplayName(taggedPeople[0]);
-  return taggedPeople.length > 1 ? `Фото — ${name} и другие` : `Фото — ${name}`;
+function mediaLabel(taggedPeople: MediaTaggedPerson[], locale: Locale): string {
+  const photo = locale === "ru" ? "Фото" : "Photo";
+  if (taggedPeople.length === 0) return photo;
+  const name = personDisplayName(taggedPeople[0], locale);
+  if (taggedPeople.length === 1) return `${photo} — ${name}`;
+  return locale === "ru"
+    ? `${photo} — ${name} и другие`
+    : `${photo} — ${name} and others`;
 }
 
 export interface UploadDocumentInput {
@@ -273,10 +281,12 @@ export interface UploadDocumentInput {
  */
 export async function uploadPersonDocument(
   input: UploadDocumentInput,
+  locale: Locale,
 ): Promise<{ id: string }> {
   const { storageKey } = input;
   const info = await verifyUploadedFile(storageKey, input.familyId, "document");
-  const title = input.filename.trim().slice(0, 200) || "Документ";
+  const documentWord = locale === "ru" ? "Документ" : "Document";
+  const title = input.filename.trim().slice(0, 200) || documentWord;
 
   try {
     const result = await createMedia({
@@ -299,7 +309,7 @@ export async function uploadPersonDocument(
       action: "create",
       entityType: "media",
       entityId: result.id,
-      entityLabel: `Документ — ${title}`,
+      entityLabel: `${documentWord} — ${title}`,
     });
 
     return result;
@@ -320,9 +330,13 @@ export async function uploadPersonAvatar(
   input: Omit<UploadPhotoInput, "personIds" | "albumIds"> & {
     personId: string;
   },
+  locale: Locale,
 ): Promise<{ id: string }> {
   const { personId, ...rest } = input;
-  return uploadPersonPhoto({ ...rest, personIds: [personId], albumIds: [] });
+  return uploadPersonPhoto(
+    { ...rest, personIds: [personId], albumIds: [] },
+    locale,
+  );
 }
 
 /**
@@ -334,9 +348,10 @@ export async function removeMediaIfUnlinked(
   mediaId: string,
   familyId: string,
   actorId: string,
+  locale: Locale,
 ): Promise<void> {
   if (await isMediaLinked(mediaId, familyId)) return;
-  await removeMedia(mediaId, familyId, actorId);
+  await removeMedia(mediaId, familyId, actorId, locale);
 }
 
 export interface GalleryPhoto {
@@ -556,6 +571,7 @@ export async function removeMedia(
   mediaId: string,
   familyId: string,
   actorId: string,
+  locale: Locale,
 ): Promise<boolean> {
   const record = await getMediaById(mediaId, familyId);
   if (!record) return false;
@@ -573,7 +589,7 @@ export async function removeMedia(
       action: "delete",
       entityType: "media",
       entityId: mediaId,
-      entityLabel: mediaLabel(taggedPeople),
+      entityLabel: mediaLabel(taggedPeople, locale),
     });
   }
 

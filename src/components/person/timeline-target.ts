@@ -4,6 +4,7 @@ import type {
   EventParticipantWithName,
   TimelineEvent,
 } from "@/domain/event/event.service";
+import type { EventWording } from "./event-wording";
 import type { PlaceRecord } from "@/domain/place/place.service";
 
 /**
@@ -59,6 +60,7 @@ export function timelineRowTargetFor({
   personSlug,
   canEdit,
   eventEditDataById,
+  wording,
 }: {
   event: TimelineEvent;
   familyId: string;
@@ -72,6 +74,7 @@ export function timelineRowTargetFor({
     string,
     { participants: EventParticipantWithName[]; places: PlaceRecord[] }
   >;
+  wording: EventWording;
 }): TimelineRowTarget {
   if (!isSyntheticEventId(event.id)) {
     const editData = eventEditDataById.get(event.id);
@@ -92,7 +95,7 @@ export function timelineRowTargetFor({
     return {
       kind: "link",
       href: `/families/${familySlug}/people/${event.relatedPerson.slug}`,
-      label: `Профиль: ${event.relatedPerson.firstName}`,
+      label: wording.t("profileOf", { name: event.relatedPerson.firstName }),
     };
   }
   if (!canEdit) return { kind: "none" };
@@ -101,7 +104,7 @@ export function timelineRowTargetFor({
     return {
       kind: "link",
       href: `/families/${familySlug}/people/${personSlug}/edit#${event.type}`,
-      label: "Редактировать",
+      label: wording.t("edit"),
       intent: "edit",
     };
   }
@@ -109,7 +112,7 @@ export function timelineRowTargetFor({
     return {
       kind: "link",
       href: "#family",
-      label: "Редактировать",
+      label: wording.t("edit"),
       intent: "edit",
     };
   }

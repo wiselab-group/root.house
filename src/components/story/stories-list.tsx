@@ -1,3 +1,4 @@
+import { useLocale } from "next-intl";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { PrivacyBadge } from "@/components/person/privacy-badge";
@@ -29,6 +30,7 @@ export function StoriesList({
   stories: StoryRecord[];
   peopleByStoryId: Map<string, PersonRecord[]>;
 }) {
+  const locale = useLocale();
   return (
     <ul className="flex flex-col divide-y divide-border border-y border-border">
       {stories.map((story, index) => {
@@ -53,7 +55,7 @@ export function StoriesList({
                 </p>
                 {people.length > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    {people.map((p) => personDisplayName(p)).join(", ")}
+                    {people.map((p) => personDisplayName(p, locale)).join(", ")}
                   </p>
                 )}
               </div>

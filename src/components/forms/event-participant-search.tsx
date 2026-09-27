@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { Combobox } from "@base-ui/react/combobox";
 import { SearchIcon, XIcon } from "lucide-react";
@@ -26,6 +27,8 @@ export function EventParticipantSearch({
   excludeIds: string[];
   onPick: (person: PersonSearchResult) => void;
 }) {
+  const t = useTranslations("eventForm");
+  const locale = useLocale();
   const inputId = useId();
   const [results, setResults] = useState<PersonSearchResult[]>([]);
   const [query, setQuery] = useState("");
@@ -63,7 +66,7 @@ export function EventParticipantSearch({
       // TagPersonCombobox.
       value={null}
       inputValue={query}
-      itemToStringLabel={(person) => personDisplayName(person)}
+      itemToStringLabel={(person) => personDisplayName(person, locale)}
       onValueChange={(person) => {
         if (!person) return;
         onPick(person);
@@ -80,18 +83,18 @@ export function EventParticipantSearch({
       }}
     >
       <Label htmlFor={inputId} className="text-sm font-medium">
-        Участники
+        {t("participants")}
       </Label>
       <Combobox.InputGroup className="relative mt-1.5 flex h-11 items-center rounded-lg border border-input bg-transparent transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
         <SearchIcon className="pointer-events-none absolute left-3.5 size-4 text-muted-foreground" />
         <Combobox.Input
           id={inputId}
-          placeholder="Добавить участника…"
+          placeholder={t("addParticipant")}
           className="h-full w-full min-w-0 rounded-lg bg-transparent py-1 pr-9 pl-10 text-base text-foreground outline-none placeholder:text-muted-foreground md:text-sm"
         />
         <Combobox.Clear
           className="absolute right-2 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-          aria-label="Очистить поиск"
+          aria-label={t("clearSearch")}
         >
           <XIcon className="size-4" />
         </Combobox.Clear>

@@ -1,4 +1,5 @@
 import { recordUpload, uploadToStorage } from "./direct-upload";
+import { UploadError } from "./upload-error";
 
 /**
  * Uploads one document for a person's profile: straight into Blob storage
@@ -7,7 +8,7 @@ import { recordUpload, uploadToStorage } from "./direct-upload";
  * sent, the rest is recording it.
  */
 const UPLOAD_PHASE_CEILING = 0.9;
-const GENERIC_ERROR = "Не удалось загрузить документ";
+const GENERIC_ERROR = () => new UploadError("documentUploadFailed");
 
 export async function uploadDocument({
   familyId,
@@ -28,15 +29,13 @@ export async function uploadDocument({
     file,
     onProgress: (fraction) => onProgress?.(fraction * UPLOAD_PHASE_CEILING),
   }).catch((error: unknown) => {
-    throw error instanceof Error && error.message.startsWith("Файл")
-      ? error
-      : new Error(GENERIC_ERROR);
+    throw error instanceof UploadError ? error : GENERIC_ERROR();
   });
 
   const result = await recordUpload(
     "/api/media/upload-document",
     { familyId, personId, storageKey, filename: file.name, privacyLevel },
-    GENERIC_ERROR,
+    GENERIC_ERROR(),
   );
   onProgress?.(1);
   return result;

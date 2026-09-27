@@ -1,3 +1,4 @@
+import { useLocale } from "next-intl";
 import Link from "next/link";
 import { ChevronRightIcon } from "lucide-react";
 import { personDisplayName } from "@/domain/person/display-name";
@@ -20,6 +21,7 @@ export function StoryPeople({
   familyId: string;
   familySlug: string;
 }) {
+  const locale = useLocale();
   if (people.length === 0) return null;
 
   return (
@@ -29,8 +31,8 @@ export function StoryPeople({
       </h2>
       <ul className="grid gap-2 sm:grid-cols-2">
         {people.map((person) => {
-          const name = personDisplayName(person);
-          const lifeSpan = shortLifeSpan(person);
+          const name = personDisplayName(person, locale);
+          const lifeSpan = shortLifeSpan(person, locale);
           return (
             <li key={person.id}>
               <Link

@@ -11,15 +11,18 @@ import {
 
 describe("formatPartialDate", () => {
   it("formats an unknown date", () => {
-    expect(formatPartialDate(null)).toBe("неизвестно");
+    expect(formatPartialDate(null, "ru")).toBe("неизвестно");
     expect(
-      formatPartialDate({
-        year: null,
-        month: null,
-        day: null,
-        precision: "unknown",
-        isApproximate: false,
-      }),
+      formatPartialDate(
+        {
+          year: null,
+          month: null,
+          day: null,
+          precision: "unknown",
+          isApproximate: false,
+        },
+        "ru",
+      ),
     ).toBe("неизвестно");
   });
 
@@ -31,7 +34,7 @@ describe("formatPartialDate", () => {
       precision: "decade",
       isApproximate: false,
     };
-    expect(formatPartialDate(date)).toBe("1920-е гг.");
+    expect(formatPartialDate(date, "ru")).toBe("1920-е гг.");
   });
 
   it("formats a year-only date", () => {
@@ -42,7 +45,7 @@ describe("formatPartialDate", () => {
       precision: "year_only",
       isApproximate: false,
     };
-    expect(formatPartialDate(date)).toBe("1924 г.");
+    expect(formatPartialDate(date, "ru")).toBe("1924 г.");
   });
 
   it("formats an exact date", () => {
@@ -53,7 +56,7 @@ describe("formatPartialDate", () => {
       precision: "exact",
       isApproximate: false,
     };
-    expect(formatPartialDate(date)).toBe("12 мая 1924 г.");
+    expect(formatPartialDate(date, "ru")).toBe("12 мая 1924 г.");
   });
 
   it("prefixes approximate dates", () => {
@@ -64,7 +67,42 @@ describe("formatPartialDate", () => {
       precision: "year_only",
       isApproximate: true,
     };
-    expect(formatPartialDate(date)).toBe("около 1924 г.");
+    expect(formatPartialDate(date, "ru")).toBe("около 1924 г.");
+  });
+});
+
+describe("formatPartialDate (en)", () => {
+  const base = { month: null, day: null, isApproximate: false } as const;
+
+  it("formats every precision without Russian markers", () => {
+    expect(formatPartialDate(null, "en")).toBe("unknown");
+    expect(
+      formatPartialDate({ ...base, year: 1923, precision: "decade" }, "en"),
+    ).toBe("1920s");
+    expect(
+      formatPartialDate({ ...base, year: 1924, precision: "year_only" }, "en"),
+    ).toBe("1924");
+    expect(
+      formatPartialDate(
+        { ...base, year: 1924, month: 5, precision: "exact" },
+        "en",
+      ),
+    ).toBe("May 1924");
+    expect(
+      formatPartialDate(
+        { ...base, year: 1924, month: 5, day: 12, precision: "exact" },
+        "en",
+      ),
+    ).toBe("12 May 1924");
+  });
+
+  it("prefixes approximate dates with c.", () => {
+    expect(
+      formatPartialDate(
+        { ...base, year: 1924, precision: "year_only", isApproximate: true },
+        "en",
+      ),
+    ).toBe("c. 1924");
   });
 });
 
