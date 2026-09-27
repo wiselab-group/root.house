@@ -610,7 +610,15 @@
     "people": "Who is in this story?",
     "add": "Add story",
     "new": "New story",
-    "deleteTitle": "Delete this story?"
+    "deleteTitle": "Delete this story?",
+    "titlePlaceholder": "Story title",
+    "bodyPlaceholder": "Start telling it…",
+    "backToStory": "Back to story",
+    "draftSaved": "Draft saved on this device",
+    "draftFound": "There is an unsaved draft of this story.",
+    "restoreDraft": "Restore",
+    "discardDraft": "Discard draft",
+    "details": "People and access"
   },
   "placeForm": {
     "searchingMap": "Searching the map…",
@@ -897,5 +905,13 @@
       "storyBody": "Mum always said the lake froze so hard that winter that the whole village walked across it to church. She was sixteen, and it was the first time she saw my father — on the ice, carrying someone else's skates."
     },
     "intro": "Great-grandfather|Grandmother|Father|Mother|You"
+  },
+  "editPanel": {
+    "title": "Editing",
+    "loading": "Opening the editor…",
+    "discardTitle": "Close without saving?",
+    "discardBody": "Changes in this form will be lost.",
+    "keepEditing": "Keep editing",
+    "discard": "Discard"
   }
 }

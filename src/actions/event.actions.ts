@@ -23,6 +23,9 @@ import { resolvePlaceFields, revalidatePlacePages } from "@/lib/place-choice";
 export interface EventFormState {
   error?: string;
   fieldErrors?: Record<string, string>;
+  /** Set by updateEventAction when it didn't redirect (redirectTo null —
+   *  the form sits in an EditPanel), so the panel knows to close. */
+  saved?: boolean;
 }
 
 /**
@@ -131,9 +134,9 @@ export async function deleteEventAction(
  *
  * `redirectTo` is bound by the caller: the standalone /events/[id]/edit
  * page binds the event's own details URL (same full-page navigation as
- * before); TimelineRow's in-place edit dialog (opened from a Person's
- * profile, not the event's own page) binds `null` so a save just closes
- * the dialog and revalidates the current page instead of navigating away.
+ * before); an EditPanel (over the event page, or opened in place from a
+ * Person's Линия жизни) binds `null` so a save just closes the panel and
+ * revalidates the pages showing the event instead of navigating away.
  */
 export async function updateEventAction(
   familyId: string,
@@ -205,16 +208,16 @@ export async function updateEventAction(
 
   const familySlug = await getFamilySlugById(familyId);
   if (places.createdAny) revalidatePlacePages(familySlug);
+  revalidatePath(`/families/${familySlug}/events/${eventId}`);
   if (redirectTo === null) {
     // subject is this event's own primary participant — the Person
-    // profile page a Хронология dialog was opened from.
+    // profile page a Линия жизни panel may have been opened from.
     const subjectPersonId = participants[0]?.personId;
     if (subjectPersonId) {
       const personSlug = await getPersonSlugById(subjectPersonId, familyId);
       revalidatePath(`/families/${familySlug}/people/${personSlug}`);
     }
-    return {};
+    return { saved: true };
   }
-  revalidatePath(`/families/${familySlug}/events/${eventId}`);
   redirect(redirectTo);
 }

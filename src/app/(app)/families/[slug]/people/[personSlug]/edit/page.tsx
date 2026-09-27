@@ -9,7 +9,7 @@ import { resolvePersonIdBySlug } from "@/lib/resolve-person-slug";
 import { PersonForm } from "@/components/forms/person-form";
 import { AvatarEditor } from "@/components/forms/avatar-editor";
 import { updatePersonAction } from "@/actions/person.actions";
-import { listPlaces } from "@/domain/place/place.service";
+import { loadPersonEdit } from "@/lib/load-person-edit";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 import { personDisplayName } from "@/domain/person/display-name";
@@ -41,21 +41,10 @@ export default async function EditPersonPage({
   const tc = await getTranslations("common");
   const locale = await getLocale();
   const { slug, personSlug } = await params;
-  const session = await auth();
-  if (!session?.user) return null;
-
-  const familyId = await resolveFamilyIdBySlug(slug);
-  const member = await requireFamilyAccess(familyId, session.user.id, "editor");
-  const personId = await resolvePersonIdBySlug(personSlug, familyId);
-  const person = await getVisiblePerson(personId, familyId, {
-    userId: session.user.id,
-    role: member.role,
-  });
-  if (!person) notFound();
-  const [places, family] = await Promise.all([
-    listPlaces(familyId),
-    getFamilySummary(familyId),
-  ]);
+  const data = await loadPersonEdit(slug, personSlug);
+  if (!data) return null;
+  const { familyId, personId, person, places } = data;
+  const family = await getFamilySummary(familyId);
 
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-8 px-6 py-12 sm:py-16">

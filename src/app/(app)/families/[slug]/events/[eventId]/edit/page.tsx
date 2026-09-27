@@ -1,15 +1,10 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
-import { canEdit } from "@/domain/family/permissions";
-import {
-  getVisibleEvent,
-  getParticipantsWithNames,
-} from "@/domain/event/event.service";
-import { listPlaces } from "@/domain/place/place.service";
+import { getVisibleEvent } from "@/domain/event/event.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
+import { loadEventEdit } from "@/lib/load-event-edit";
 import { EditEventForm } from "@/components/forms/edit-event-form";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
@@ -36,36 +31,13 @@ export default async function EditEventPage({
   params,
 }: PageProps<"/families/[slug]/events/[eventId]/edit">) {
   const { slug, eventId } = await params;
-  const session = await auth();
-  if (!session?.user) return null;
-
-  const familyId = await resolveFamilyIdBySlug(slug);
-  const member = await requireFamilyAccess(
-    familyId,
-    session.user.id,
-    "contributor",
-  );
-  const event = await getVisibleEvent(eventId, familyId, {
-    userId: session.user.id,
-    role: member.role,
-  });
-  if (!event) notFound();
-  if (
-    !canEdit(
-      { userId: session.user.id, role: member.role },
-      { privacyLevel: event.privacyLevel, createdBy: event.createdBy ?? "" },
-    )
-  ) {
-    notFound();
-  }
-
   const locale = await getLocale();
+  const data = await loadEventEdit(slug, eventId, locale);
+  if (!data) return null;
+  const { familyId, event, participants, places } = data;
+
   const t = await getTranslations();
-  const [participants, places, family] = await Promise.all([
-    getParticipantsWithNames(eventId, familyId, locale),
-    listPlaces(familyId),
-    getFamilySummary(familyId),
-  ]);
+  const family = await getFamilySummary(familyId);
 
   const subject = participants[0];
   const breadcrumbItems = [

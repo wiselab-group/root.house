@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
   updateEventAction,
@@ -11,6 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { LinkButton } from "@/components/ui/link-button";
 import { Textarea } from "@/components/ui/textarea";
+import { useEditPanel } from "@/components/edit-panel/edit-panel";
+import { EditPanelFooter } from "@/components/edit-panel/edit-panel-parts";
+import { cn } from "@/lib/utils";
 import { EventTypeTitleFields } from "./event-type-title-fields";
 import { EventDateRangeFields } from "./event-date-range-fields";
 import { PlaceField } from "./place-field";
@@ -35,13 +38,12 @@ function SubmitButton() {
 }
 
 /**
- * `cancelHref` (full-page navigation, e.g. the standalone /events/[id]/edit
- * route) and `onCancel`/`onSuccess` (in-place dialog, e.g. TimelineRow's
- * edit dialog opened from a Person's Хронология) are mutually exclusive —
- * exactly one pair is passed depending on where this form is mounted.
- * `redirectTo` is bound straight into updateEventAction: a URL for the
- * page case (same full navigation as before), `null` for the dialog case
- * (stay put, close via onSuccess).
+ * Edits an Event in one of two places: inside an EditPanel (over the event
+ * page via its intercepted @modal/(.)edit route, or opened in place from a
+ * Person's Линия жизни — TimelineRow), or as the standalone /events/[id]/edit
+ * page after a hard load. In the panel, updateEventAction is bound with
+ * redirectTo = null: it returns `saved` and the panel closes itself; on the
+ * standalone page it redirects to `cancelHref` (the event's own page).
  */
 export function EditEventForm({
   familyId,
@@ -49,43 +51,36 @@ export function EditEventForm({
   participants,
   places = [],
   cancelHref,
-  onCancel,
-  onSuccess,
 }: {
   familyId: string;
   event: EventRecord;
   participants: EventParticipantValue[];
   places?: PlaceRecord[];
   cancelHref?: string;
-  onCancel?: () => void;
-  onSuccess?: () => void;
 }) {
   const t = useTranslations("eventForm");
   const tc = useTranslations("common");
+  const panel = useEditPanel();
   const boundAction = updateEventAction.bind(
     null,
     familyId,
     event.id,
-    cancelHref ?? null,
+    panel ? null : (cancelHref ?? null),
   );
   const [state, formAction] = useActionState(boundAction, initialState);
   const [eventType, setEventType] = useState<EventType>(event.type);
   const [showRange, setShowRange] = useState(Boolean(event.endDate));
   const [participantRows, setParticipantRows] = useState(participants);
-  const submittedRef = useRef(false);
 
+  const closeAfterSave = panel?.closeAfterSave;
   useEffect(() => {
-    if (!submittedRef.current) return;
-    if (!state.error && !state.fieldErrors) onSuccess?.();
-  }, [state, onSuccess]);
+    if (state.saved) closeAfterSave?.();
+  }, [state, closeAfterSave]);
 
   return (
     <form
-      action={(formData) => {
-        submittedRef.current = true;
-        formAction(formData);
-      }}
-      className="flex flex-col gap-4"
+      action={formAction}
+      className={cn("flex flex-col gap-4", panel && "min-h-full")}
     >
       <EventTypeTitleFields
         eventType={eventType}
@@ -115,8 +110,9 @@ export function EditEventForm({
         <Textarea
           id="description"
           name="description"
-          rows={3}
+          rows={4}
           defaultValue={event.description ?? ""}
+          className="field-sizing-content"
         />
       </div>
 
@@ -135,18 +131,23 @@ export function EditEventForm({
           </p>
         ))}
 
-      <div className="flex items-center gap-3">
-        <SubmitButton />
-        {cancelHref ? (
-          <LinkButton href={cancelHref} variant="ghost">
-            {tc("cancel")}
-          </LinkButton>
-        ) : (
-          <Button type="button" variant="ghost" onClick={onCancel}>
+      {panel ? (
+        <EditPanelFooter>
+          <Button type="button" variant="ghost" onClick={panel.requestClose}>
             {tc("cancel")}
           </Button>
-        )}
-      </div>
+          <SubmitButton />
+        </EditPanelFooter>
+      ) : (
+        <div className="flex items-center gap-3">
+          <SubmitButton />
+          {cancelHref && (
+            <LinkButton href={cancelHref} variant="ghost">
+              {tc("cancel")}
+            </LinkButton>
+          )}
+        </div>
+      )}
     </form>
   );
 }

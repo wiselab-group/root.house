@@ -1,24 +1,22 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { EditEventForm } from "@/components/forms/edit-event-form";
+import { EditPanel } from "@/components/edit-panel/edit-panel";
+import {
+  EditPanelBody,
+  EditPanelHeader,
+} from "@/components/edit-panel/edit-panel-parts";
 import type { TimelineRowTarget } from "./timeline-target";
 
 const ROW_CLASSNAME =
   "flex cursor-pointer flex-col gap-0.5 text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none";
 
 /**
- * Renders one timeline row's clickable surface — a Dialog trigger opening
- * the in-place edit form for a real Event, a Link (the event's details
+ * Renders one timeline row's clickable surface — a button opening the
+ * in-place EditPanel for a real Event, a Link (the event's details
  * page, or where a synthetic Рождение/Смерть/Свадьба row's record is
  * edited — see timelineRowTargetFor), or plain unwrapped content when
  * there's nothing to do at all (no edit rights on a synthetic row).
@@ -39,6 +37,7 @@ export function TimelineRow({
 }) {
   const t = useTranslations("timeline");
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   if (target.kind === "link") {
     // A same-page anchor («#family») stays a plain <a>: the browser's own
@@ -55,25 +54,39 @@ export function TimelineRow({
   }
 
   if (target.kind === "event-edit-dialog") {
+    // The same EditPanel as the event page's own «Редактировать», opened in
+    // place (no route of its own): mounted only while open, unmounted by
+    // onClosed once its exit animation ends, focus back on the row.
     return (
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger render={<button type="button" className={className} />}>
+      <>
+        <button
+          ref={triggerRef}
+          type="button"
+          className={className}
+          aria-haspopup="dialog"
+          onClick={() => setOpen(true)}
+        >
           {children}
-        </DialogTrigger>
-        <DialogContent className="flex max-h-[85vh] flex-col overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{t("editEvent")}</DialogTitle>
-          </DialogHeader>
-          <EditEventForm
-            familyId={target.familyId}
-            event={target.event}
-            participants={target.participants}
-            places={target.places}
-            onCancel={() => setOpen(false)}
-            onSuccess={() => setOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
+        </button>
+        {open && (
+          <EditPanel
+            onClosed={() => {
+              setOpen(false);
+              triggerRef.current?.focus();
+            }}
+          >
+            <EditPanelHeader title={t("editEvent")} />
+            <EditPanelBody>
+              <EditEventForm
+                familyId={target.familyId}
+                event={target.event}
+                participants={target.participants}
+                places={target.places}
+              />
+            </EditPanelBody>
+          </EditPanel>
+        )}
+      </>
     );
   }
 

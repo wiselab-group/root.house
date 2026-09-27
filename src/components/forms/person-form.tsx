@@ -1,10 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useActionState, useState } from "react";
-import { useFormStatus } from "react-dom";
-import { Button } from "@/components/ui/button";
-import { LinkButton } from "@/components/ui/link-button";
+import { useActionState, useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PersonNameFields } from "./person-name-fields";
@@ -17,21 +14,9 @@ import type { PersonFormState } from "@/actions/person.actions";
 import type { PersonRecord } from "@/domain/person/person.service";
 import type { PlaceRecord } from "@/domain/place/place.service";
 import { useScrollToHash } from "@/lib/use-scroll-to-hash";
-
-function SubmitButton({
-  label,
-  pendingLabel,
-}: {
-  label: string;
-  pendingLabel: string;
-}) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending} aria-busy={pending}>
-      {pending ? pendingLabel : label}
-    </Button>
-  );
-}
+import { useEditPanel } from "@/components/edit-panel/edit-panel";
+import { PersonFormActions } from "./person-form-actions";
+import { cn } from "@/lib/utils";
 
 export function PersonForm({
   action,
@@ -53,10 +38,14 @@ export function PersonForm({
    *  the caller has no natural "back" page to name. */
   cancelHref?: string;
 }) {
-  const tc = useTranslations("common");
   const t = useTranslations("personForm");
   const [state, formAction] = useActionState(action, {} as PersonFormState);
   useScrollToHash(); // «Редактировать» on a Линия жизни card → #birth/#death
+  const panel = useEditPanel();
+  const closeAfterSave = panel?.closeAfterSave;
+  useEffect(() => {
+    if (state.saved) closeAfterSave?.();
+  }, [state, closeAfterSave]);
 
   // Controlled (not defaultChecked) because it gates whether the death-date
   // fields render at all below — "жив(а)" + a death date is a contradiction
@@ -67,7 +56,13 @@ export function PersonForm({
   const [isLiving, setIsLiving] = useState(person?.isLiving ?? true);
 
   return (
-    <form action={formAction} className="flex flex-col gap-6" noValidate>
+    <form
+      action={formAction}
+      // min-h-full in the panel lets the pinned action row sit at the
+      // bottom even when the form is shorter than the panel.
+      className={cn("flex flex-col gap-6", panel && "min-h-full")}
+      noValidate
+    >
       <PersonNameFields person={person} />
 
       <PersonGenderLivingFields
@@ -140,14 +135,11 @@ export function PersonForm({
           </p>
         ))}
 
-      <div className="flex items-center gap-3">
-        <SubmitButton label={submitLabel} pendingLabel={submitPendingLabel} />
-        {cancelHref && (
-          <LinkButton href={cancelHref} variant="ghost">
-            {tc("cancel")}
-          </LinkButton>
-        )}
-      </div>
+      <PersonFormActions
+        submitLabel={submitLabel}
+        submitPendingLabel={submitPendingLabel}
+        cancelHref={cancelHref}
+      />
     </form>
   );
 }

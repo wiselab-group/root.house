@@ -40,6 +40,10 @@ export interface PersonFormState {
    *  family's own slug, so the client can navigate itself (see below) rather
    *  than this action redirecting. */
   created?: { personId: string; personSlug: string; familySlug: string };
+  /** Set only by updatePersonAction when the form was submitted from the
+   *  EditPanel over the profile — the panel closes itself (router.back())
+   *  instead of this action redirecting, see updatePersonAction. */
+  saved?: boolean;
 }
 
 /**
@@ -273,5 +277,10 @@ export async function updatePersonAction(
   const personSlug = await getPersonSlugById(personId, familyId);
   revalidatePath(`/families/${familySlug}/people/${personSlug}`);
   if (places.createdAny) revalidatePlacePages(familySlug);
+  // In the panel over the profile, redirecting would push a second profile
+  // entry on top of the intercepted /edit one (Back would then land on the
+  // same profile again); the panel pops /edit itself instead. Presentation
+  // only — authorization above is identical either way.
+  if (formData.get("presentation") === "panel") return { saved: true };
   redirect(`/families/${familySlug}/people/${personSlug}`);
 }

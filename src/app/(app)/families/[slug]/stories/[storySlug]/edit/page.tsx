@@ -79,7 +79,7 @@ export default async function EditStoryPage({
   const storyHref = `/families/${slug}/stories/${storySlug}`;
 
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12 sm:py-16">
+    <main className="min-h-svh">
       <SetBreadcrumbs
         items={[
           { label: tn("myFamilies"), href: "/families" },
@@ -89,9 +89,8 @@ export default async function EditStoryPage({
           { label: tc("edit") },
         ]}
       />
-      <h1 className="font-heading text-title font-medium tracking-tight text-balance">
-        {story.title}
-      </h1>
+      {/* The editable title field is the page's visual heading. */}
+      <h1 className="sr-only">{t("editTitle", { title: story.title })}</h1>
 
       <EditStoryForm
         familyId={familyId}
