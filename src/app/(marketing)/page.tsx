@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { INTRO_SCRIPT } from "@/components/marketing/intro/intro-script";
+import { IntroScriptTag } from "@/components/marketing/intro/intro-script-tag";
 import { IntroPreloader } from "@/components/marketing/intro/intro-preloader";
 import { KeywordHero } from "@/components/marketing/keyword-hero/keyword-hero";
 import { MemoryBoxSection } from "@/components/marketing/memory-box/memory-box-section";
@@ -37,7 +37,7 @@ export default async function MarketingPage() {
     <>
       {/* Must precede the overlay: decides before first paint whether this
           visit plays the intro (see intro-script.ts). */}
-      <script dangerouslySetInnerHTML={{ __html: INTRO_SCRIPT }} />
+      <IntroScriptTag />
       <IntroPreloader />
       <KeywordHero />
       <MemoryBoxSection />

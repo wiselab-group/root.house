@@ -75,7 +75,9 @@ export async function registerAction(
 }
 
 export async function signOutAction(): Promise<void> {
-  await signOut({ redirectTo: "/login" });
+  // Back to the landing, not the login form — a deliberate sign-out ends
+  // the visit; the landing already offers «Войти» for anyone coming back.
+  await signOut({ redirectTo: "/" });
 }
 
 export async function signInWithGoogleAction(
