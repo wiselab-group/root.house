@@ -48,11 +48,14 @@ function personRecord(
  *  PersonRecord fixtures, same shape tree.service.ts's real callers use. */
 function withEmptyArchive<T extends { id: string }>(
   personById: Map<string, T>,
-): Map<string, T & { archive: typeof EMPTY_ARCHIVE_SUMMARY }> {
+): Map<
+  string,
+  T & { archive: typeof EMPTY_ARCHIVE_SUMMARY; birthPlaceName: null }
+> {
   return new Map(
     [...personById].map(([id, record]) => [
       id,
-      { ...record, archive: EMPTY_ARCHIVE_SUMMARY },
+      { ...record, archive: EMPTY_ARCHIVE_SUMMARY, birthPlaceName: null },
     ]),
   );
 }
@@ -241,6 +244,16 @@ describe("fromTreeLayout", () => {
       isLiving: true,
       birthYear: 1990,
       deathYear: null,
+      birthDate: {
+        year: 1990,
+        month: null,
+        day: null,
+        precision: "year_only",
+        isApproximate: false,
+      },
+      deathDate: null,
+      maidenName: null,
+      birthPlaceName: null,
       photoMediaId: "media-1",
       gender: "male",
       religion: "orthodox",
@@ -341,6 +354,8 @@ describe("buildClientTreeLayout (rewrite plan §7 Stage 7 — client-side focus 
         photoMediaId: null,
         religion: null,
         nationality: null,
+        maidenName: null,
+        birthPlaceName: null,
         archive: EMPTY_ARCHIVE_SUMMARY,
       })),
       parentChildEdges: [

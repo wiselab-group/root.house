@@ -641,6 +641,9 @@
     "namePlaceholder": "Свадьба 1978"
   },
   "tree": {
+    "lifeAge": "{approx, select, true {~} other {}}{years, plural, one {# год} few {# года} many {# лет} other {# года}}",
+    "lifeAgeMonths": "{months} мес.",
+    "lifeAgeYearsMonths": "{years, plural, one {# год} few {# года} many {# лет} other {# года}} {months} мес.",
     "viewProfile": "Посмотреть профиль",
     "compareWith": "Сравнить с…",
     "searchPlaceholder": "Иванов, Анна, 1924…",

@@ -74,8 +74,10 @@ export interface TreeAdapterInput {
  * page hands it to a Client Component so re-focusing can re-run
  * buildTreeLayout locally instead of a full page reload), so it must never
  * carry privacy-sensitive or simply unneeded fields (createdBy, familyId,
- * privacyLevel, middleName, maidenName, birthPlaceId, deathPlaceId,
- * residencePlaceId, deathCause, description) into client JS, and must stay plain-JSON-safe
+ * privacyLevel, middleName, deathPlaceId, residencePlaceId, deathCause,
+ * description) into client JS. maidenName and the birth place's NAME (not
+ * its id) do cross, for the card popover — the same facts the Person
+ * Profile shows any family member. It must stay plain-JSON-safe
  * (no Date — createdAt is intentionally omitted too, since orderingKeyByPersonId
  * isn't consumed by shouldBeLeft yet, see FamilyGraph's own doc comment).
  */
@@ -94,7 +96,11 @@ export type TreePersonClientPayload = Pick<
   | "photoMediaId"
   | "religion"
   | "nationality"
+  | "maidenName"
 > & {
+  /** birthPlaceId resolved to the place's name server-side
+   *  (tree.service.ts::birthPlaceNamesByPersonId). */
+  birthPlaceName: string | null;
   /** Already viewer-filtered server-side (archive-summary.ts) before this
    *  payload is built — see getRawTreeGraph's own doc comment. Carried
    *  through the client-safe payload (rather than re-fetched) so a
@@ -280,6 +286,10 @@ export function fromTreeLayout(
       isLiving: record.isLiving,
       birthYear: record.birthDate?.year ?? null,
       deathYear: record.deathDate?.year ?? null,
+      birthDate: record.birthDate,
+      deathDate: record.deathDate,
+      maidenName: record.maidenName,
+      birthPlaceName: record.birthPlaceName,
       photoMediaId: record.photoMediaId,
       gender: record.gender,
       religion: record.religion,

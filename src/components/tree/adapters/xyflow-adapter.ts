@@ -4,6 +4,7 @@ import type {
   LayoutNode,
   PersonArchiveSummary,
 } from "@/domain/tree/tree-layout.builder";
+import type { PartialDate } from "@/domain/shared/partial-date";
 import { mediaUrl, shareMediaUrl } from "@/lib/media-url";
 import { FRAME_SIZE } from "../card-dimensions";
 import {
@@ -31,6 +32,12 @@ export interface PersonNodeData extends Record<string, unknown> {
   isLiving: boolean;
   birthYear: number | null;
   deathYear: number | null;
+  /** The rest of the card's click popover (person-node-popover-actions.tsx):
+   *  full dates for the age, maiden name, birth place. */
+  birthDate: PartialDate | null;
+  deathDate: PartialDate | null;
+  maidenName: string | null;
+  birthPlaceName: string | null;
   photoMediaId: string | null;
   /** Phase 1 "Tree as Map of the Family Archive" — how many photos/stories/
    *  events this person is connected to, already viewer-filtered
@@ -301,6 +308,10 @@ function toFlowNode(
       isLiving: node.person.isLiving,
       birthYear: node.person.birthYear,
       deathYear: node.person.deathYear,
+      birthDate: node.person.birthDate,
+      deathDate: node.person.deathDate,
+      maidenName: node.person.maidenName,
+      birthPlaceName: node.person.birthPlaceName,
       photoMediaId: node.person.photoMediaId,
       archive: node.person.archive,
       photoUrl: buildPhotoUrl(node.person.photoMediaId, familyId, shareToken),

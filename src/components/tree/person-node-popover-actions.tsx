@@ -1,23 +1,19 @@
 "use client";
 
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { RouteIcon, UserIcon } from "lucide-react";
 import { PopoverClose } from "@/components/ui/popover";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
-import { personLabel, yearRange } from "./person-node-parts";
-import { ArchiveSummaryLine } from "@/components/person/archive-summary-line";
+import { PersonNodePopoverSummary } from "./person-node-popover-summary";
 import { useKinshipContext } from "./kinship/kinship-context";
 
 /**
- * The card's click popover: a small identity header (name/years — same
- * source as the card itself, personLabel/yearRange from person-node-parts,
- * so the two can never say something different) and archive summary
- * (ArchiveSummaryLine, PersonArchiveSummary written out as words — see its
- * own doc comment on why this is the ONLY place in the tree UI archive
- * counts show; the card itself stays plain), above the two actions — kept
- * separate from PersonNode so its already-long JSX doesn't grow a third
- * nesting level. The "Посмотреть профиль" action is suppressed in read-only
+ * The card's click popover: the who-is-this summary
+ * (PersonNodePopoverSummary — photo, name, years with age, birth place,
+ * archive counts; the ONLY place in the tree UI archive counts show, the
+ * card itself stays plain) above the actions — kept separate from
+ * PersonNode so its already-long JSX doesn't grow a third nesting level. The "Посмотреть профиль" action is suppressed in read-only
  * mode (see PersonNodeData.readOnly): it links into the auth-gated, editable
  * profile page, which has no reason to exist on the anonymous Share Link
  * surface. The header/archive line render in both modes — read-only
@@ -35,22 +31,12 @@ export function PersonNodePopoverActions({
 }: {
   data: PersonFlowNode["data"];
 }) {
-  const locale = useLocale();
   const t = useTranslations("tree");
-  const name = personLabel(data, locale);
-  const years = yearRange(data);
   const kinship = useKinshipContext();
 
   return (
     <div className="flex flex-col">
-      <div className="px-2 pt-1 pb-2">
-        <p className="font-heading text-sm font-medium">{name}</p>
-        {years && <p className="text-xs text-muted-foreground">{years}</p>}
-        <ArchiveSummaryLine
-          archive={data.archive}
-          className="mt-1 text-xs text-muted-foreground"
-        />
-      </div>
+      <PersonNodePopoverSummary data={data} />
       <div className="-mx-1 mb-1 border-t border-border" />
       {!data.readOnly && (
         <PopoverClose

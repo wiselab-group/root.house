@@ -641,6 +641,9 @@
     "namePlaceholder": "Wedding 1978"
   },
   "tree": {
+    "lifeAge": "age {approx, select, true {~} other {}}{years}",
+    "lifeAgeMonths": "age {months, plural, one {# month} other {# months}}",
+    "lifeAgeYearsMonths": "age {years, plural, one {# year} other {# years}} {months, plural, one {# month} other {# months}}",
     "viewProfile": "View profile",
     "compareWith": "Compare with…",
     "searchPlaceholder": "Smith, Anna, 1924…",

@@ -155,12 +155,18 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
       >
         {cardBody}
       </PopoverTrigger>
-      {/* Narrower than PopoverContent's own w-64 default — two short action
-          labels don't need that much width, and a tighter popover reads as
-          a quick action menu rather than a panel. p-1 (vs. the default
-          p-1.5) keeps a small margin around the items without doubling up
-          too much on top of their own px/py. */}
-      <PopoverContent className="w-auto min-w-40 p-1">
+      {/* PopoverContent's own fixed w-64: one width for everyone, so a
+          person with a photo and a birth place doesn't get a wider popover
+          than one without. p-1 is the thin matte around the photo, echoing
+          the card's own framed photo. Beside the card, not under it: with a
+          photo the popover is taller than the gap to the next generation,
+          so below/above it flipped over the page header — to the side it
+          sits level with the card (and flips left near the right edge). */}
+      <PopoverContent
+        side="right"
+        sideOffset={12}
+        className="max-h-(--available-height) overflow-y-auto p-1"
+      >
         <PersonNodePopoverActions data={data} />
       </PopoverContent>
     </Popover>

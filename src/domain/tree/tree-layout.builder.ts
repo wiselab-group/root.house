@@ -17,6 +17,8 @@
  * graph-viz library needs.
  */
 
+import type { PartialDate } from "@/domain/shared/partial-date";
+
 /**
  * Per-person archive content counts (Phase 1 "Tree as Map of the Family
  * Archive") — how many photos/stories/events this person is connected to,
@@ -43,6 +45,13 @@ export interface PersonNode {
   isLiving: boolean;
   birthYear: number | null;
   deathYear: number | null;
+  /** Full dates behind birthYear/deathYear — the card's popover shows the
+   *  age, which needs month/day to be right around the birthday. */
+  birthDate: PartialDate | null;
+  deathDate: PartialDate | null;
+  maidenName: string | null;
+  /** Resolved server-side from birthPlaceId (tree.service.ts). */
+  birthPlaceName: string | null;
   photoMediaId: string | null;
   /** Present so tree-filter.ts can match on them without a second Person lookup — not used by layout positioning itself. */
   gender: "male" | "female" | "unknown";

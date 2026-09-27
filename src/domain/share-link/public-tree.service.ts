@@ -13,6 +13,8 @@ import { buildTreeLayout } from "@/domain/tree/layout/layout";
 import { toTreeFamilyGraph, fromTreeLayout } from "@/domain/tree/tree-adapter";
 import type { TreeLayoutGraph } from "@/domain/tree/tree-layout.builder";
 import { EMPTY_ARCHIVE_SUMMARY } from "@/domain/tree/archive-summary";
+import { listPlacesByFamily } from "@/domain/place/place.repository";
+import { birthPlaceNameOf, placeNamesById } from "@/domain/tree/tree.service";
 import {
   canViewViaShareLink,
   type ShareLinkVisibilityScope,
@@ -46,31 +48,34 @@ export async function getPublicTreeLayout(
   focusPersonId: string,
   visibilityScope: ShareLinkVisibilityScope,
 ): Promise<TreeLayoutGraph> {
-  const [allPersons, parentChildRows, partnershipRows] = await Promise.all([
-    listPersonsByFamily(familyId),
-    db.query.relationshipsParentChild.findMany({
-      where: eq(relationshipsParentChild.familyId, familyId),
-      // parentRole/startDate* added ahead of the dashed-line and
-      // chronological multi-marriage work — see rewrite plan §1.4/§1.6/§5.1/
-      // §5.4. Not yet consumed downstream. Kept in sync with
-      // tree.service.ts::getFocusTreeLayout's own column picks.
-      columns: { id: true, parentId: true, childId: true, parentRole: true },
-    }),
-    db.query.relationshipsPartnership.findMany({
-      where: eq(relationshipsPartnership.familyId, familyId),
-      columns: {
-        id: true,
-        person1Id: true,
-        person2Id: true,
-        status: true,
-        isCurrent: true,
-        startDateYear: true,
-        startDateMonth: true,
-        startDateDay: true,
-        startDateApproximate: true,
-      },
-    }),
-  ]);
+  const [allPersons, parentChildRows, partnershipRows, places] =
+    await Promise.all([
+      listPersonsByFamily(familyId),
+      db.query.relationshipsParentChild.findMany({
+        where: eq(relationshipsParentChild.familyId, familyId),
+        // parentRole/startDate* added ahead of the dashed-line and
+        // chronological multi-marriage work — see rewrite plan §1.4/§1.6/§5.1/
+        // §5.4. Not yet consumed downstream. Kept in sync with
+        // tree.service.ts::getFocusTreeLayout's own column picks.
+        columns: { id: true, parentId: true, childId: true, parentRole: true },
+      }),
+      db.query.relationshipsPartnership.findMany({
+        where: eq(relationshipsPartnership.familyId, familyId),
+        columns: {
+          id: true,
+          person1Id: true,
+          person2Id: true,
+          status: true,
+          isCurrent: true,
+          startDateYear: true,
+          startDateMonth: true,
+          startDateDay: true,
+          startDateApproximate: true,
+        },
+      }),
+      listPlacesByFamily(familyId),
+    ]);
+  const placeNameById = placeNamesById(places);
 
   const visiblePersons = allPersons.filter((p) =>
     canViewViaShareLink(p, visibilityScope),
@@ -100,7 +105,11 @@ export async function getPublicTreeLayout(
   const personById = new Map(
     [...personRecordById].map(([id, record]) => [
       id,
-      { ...record, archive: EMPTY_ARCHIVE_SUMMARY },
+      {
+        ...record,
+        birthPlaceName: birthPlaceNameOf(record, placeNameById),
+        archive: EMPTY_ARCHIVE_SUMMARY,
+      },
     ]),
   );
 

@@ -38,6 +38,10 @@ function node(id: string): LayoutNode {
       gender: "unknown",
       religion: null,
       nationality: null,
+      birthDate: null,
+      deathDate: null,
+      maidenName: null,
+      birthPlaceName: null,
       archive: { photoCount: 0, storyCount: 0, eventCount: 0 },
     },
   };
@@ -336,6 +340,10 @@ function toMinimalLayoutGraph(
       gender: p.gender,
       religion: null,
       nationality: null,
+      birthDate: null,
+      deathDate: null,
+      maidenName: null,
+      birthPlaceName: null,
       archive: { photoCount: 0, storyCount: 0, eventCount: 0 },
     },
   }));

@@ -4,7 +4,11 @@ import {
   relationshipsPartnership,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { listPersonsByFamily } from "@/domain/person/person.repository";
+import {
+  listPersonsByFamily,
+  type PersonRecord,
+} from "@/domain/person/person.repository";
+import { listPlacesByFamily } from "@/domain/place/place.repository";
 import type { ActingMember } from "@/domain/family/permissions";
 import { buildTreeLayout } from "./layout/layout";
 import {
@@ -37,7 +41,7 @@ export type TreeRows = Awaited<ReturnType<typeof fetchTreeRows>>;
  * git history around 2026-09-21 for the version that duplicated them).
  */
 export async function fetchTreeRows(familyId: string, viewer: ActingMember) {
-  const [persons, parentChildRows, partnershipRows, archiveByPersonId] =
+  const [persons, parentChildRows, partnershipRows, archiveByPersonId, places] =
     await Promise.all([
       listPersonsByFamily(familyId),
       db.query.relationshipsParentChild.findMany({
@@ -63,6 +67,7 @@ export async function fetchTreeRows(familyId: string, viewer: ActingMember) {
         },
       }),
       getPersonArchiveSummaries(familyId, viewer),
+      listPlacesByFamily(familyId),
     ]);
   return {
     familyId,
@@ -70,6 +75,7 @@ export async function fetchTreeRows(familyId: string, viewer: ActingMember) {
     parentChildRows,
     partnershipRows,
     archiveByPersonId,
+    placeNameById: placeNamesById(places),
   };
 }
 
@@ -118,6 +124,7 @@ export function getFocusTreeLayout(
     parentChildRows,
     partnershipRows,
     archiveByPersonId,
+    placeNameById,
   } = rows;
 
   const { graph, personById: personRecordById } = toTreeFamilyGraph({
@@ -135,6 +142,7 @@ export function getFocusTreeLayout(
       id,
       {
         ...record,
+        birthPlaceName: birthPlaceNameOf(record, placeNameById),
         archive: archiveByPersonId.get(id) ?? EMPTY_ARCHIVE_SUMMARY,
       },
     ]),
@@ -186,7 +194,13 @@ export function getFocusTreeLayout(
  * too.
  */
 export function getRawTreeGraph(rows: TreeRows): TreeClientGraphPayload {
-  const { persons, parentChildRows, partnershipRows, archiveByPersonId } = rows;
+  const {
+    persons,
+    parentChildRows,
+    partnershipRows,
+    archiveByPersonId,
+    placeNameById,
+  } = rows;
 
   return {
     persons: persons.map((p) => ({
@@ -203,9 +217,27 @@ export function getRawTreeGraph(rows: TreeRows): TreeClientGraphPayload {
       photoMediaId: p.photoMediaId,
       religion: p.religion,
       nationality: p.nationality,
+      maidenName: p.maidenName,
+      birthPlaceName: birthPlaceNameOf(p, placeNameById),
       archive: archiveByPersonId.get(p.id) ?? EMPTY_ARCHIVE_SUMMARY,
     })),
     parentChildEdges: parentChildRows,
     partnershipEdges: partnershipRows,
   };
+}
+
+/** Place id → name, for resolving each person's birthPlaceId. */
+export function placeNamesById(
+  places: { id: string; name: string }[],
+): Map<string, string> {
+  return new Map(places.map((place) => [place.id, place.name]));
+}
+
+export function birthPlaceNameOf(
+  person: Pick<PersonRecord, "birthPlaceId">,
+  placeNameById: Map<string, string>,
+): string | null {
+  return person.birthPlaceId
+    ? (placeNameById.get(person.birthPlaceId) ?? null)
+    : null;
 }
