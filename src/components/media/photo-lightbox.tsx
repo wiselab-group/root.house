@@ -257,9 +257,22 @@ function TaggedPeopleStrip({
             onMouseLeave={() => onHighlight(null)}
             onFocus={() => onHighlight(person.id)}
             onBlur={() => onHighlight(null)}
-            className={className}
+            className={cn(className, "flex items-center gap-1.5 pr-1")}
           >
             {personDisplayName(person, locale)}
+            {/* Same ↗ as the phone chip — says the chip opens the profile.
+                Always there, dimmed at rest and lit with the person: a
+                hidden-until-hover arrow left an empty gap in the chip, and
+                growing the chip on hover shifted its neighbours. */}
+            <span
+              aria-hidden="true"
+              className={cn(
+                "flex size-5 items-center justify-center rounded-full transition-[opacity,background-color] duration-fast ease-reveal motion-reduce:transition-none",
+                highlighted ? "bg-white/15 opacity-100" : "opacity-45",
+              )}
+            >
+              <ArrowUpRightIcon className="size-3.5" />
+            </span>
           </Link>
         );
       })}
