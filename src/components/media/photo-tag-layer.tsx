@@ -219,8 +219,7 @@ export function PhotoTagLayer({
   familyId: string;
   familySlug: string;
   /** Hovering/focusing a person's chip in TaggedPeopleStrip (outside
-   *  taggingMode) briefly reveals just their marker — see the `marker`
-   *  visibility logic below. */
+   *  taggingMode) spotlights them on the photo — see `spotlit` below. */
   highlightedPersonId?: string | null;
 }) {
   const t = useTranslations("media");
@@ -374,7 +373,7 @@ export function PhotoTagLayer({
           key={person.id}
           person={person}
           point={pointOf(person)}
-          isHighlighted={taggingMode || highlightedPersonId === person.id}
+          isHighlighted={taggingMode}
           taggingMode={taggingMode}
           canTag={canTag}
           familySlug={familySlug}
@@ -438,13 +437,12 @@ export function PhotoTagLayer({
 
 /**
  * One already-placed tag: a draggable point (TagReticle) plus (canTag only) its dropdown
- * menu. Outside tagging mode the dot itself is invisible by default —
- * `isHighlighted` (set by the caller from `taggingMode` or a hover/focus on
- * the person's chip in TaggedPeopleStrip) reveals it, matching Instagram/
- * Google Photos: dots don't clutter the photo, only a highlighted one shows.
- * The hit area (`button`) stays in the DOM either way, so a keyboard/
- * screen-reader user can still reach the marker without the hover-only
- * highlight.
+ * menu. The dot shows only in tagging mode (`isHighlighted`), where it's
+ * the handle to drag and to open the menu. While browsing it stays hidden
+ * even for the person lit from their chip — the spotlight already marks
+ * them, and a dot on top of it read as a stray blemish on the face (user
+ * request 2026-09-28). The hit area (`button`) stays in the DOM either way,
+ * so a keyboard/screen-reader user can still reach the marker.
  */
 function PhotoTagMarker({
   person,
@@ -499,8 +497,8 @@ function PhotoTagMarker({
   );
 
   // The management menu (open profile/untag/remove) is a tagging-mode
-  // affordance only — outside it, this hit area exists purely so hover/
-  // focus can reveal the dot (isHighlighted above), and a plain-view click
+  // affordance only — outside it, this hit area exists purely for its
+  // name (title/aria-label) and keyboard focus, and a plain-view click
   // should do nothing rather than surprise the viewer with a popover.
   if (!canTag || !taggingMode) {
     return <div title={name}>{marker}</div>;
