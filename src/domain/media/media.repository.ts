@@ -101,6 +101,26 @@ export async function getMediaById(
   return row ? toRecord(row) : null;
 }
 
+/** Photos of `familyId` among `mediaIds`, in one query — ids from another
+ *  family (or not photos) simply aren't returned. Order is unspecified. */
+export async function getPhotosByIds(
+  mediaIds: string[],
+  familyId: string,
+): Promise<MediaRecord[]> {
+  if (mediaIds.length === 0) return [];
+  const rows = await db
+    .select()
+    .from(media)
+    .where(
+      and(
+        inArray(media.id, mediaIds),
+        eq(media.familyId, familyId),
+        eq(media.kind, "photo"),
+      ),
+    );
+  return rows.map(toRecord);
+}
+
 /** All photo Media linked to a given Person, in gallery order (see GALLERY_ORDER) — the raw material for a Person's photo gallery. Excludes kind='document' — see getDocumentsForPerson for that. */
 export async function getMediaForPerson(
   personId: string,

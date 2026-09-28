@@ -1,41 +1,36 @@
-import { useTranslations } from "next-intl";
 import type { StoryLayout } from "@/domain/story/story-layout";
+import { StoryBlockView } from "./article/story-blocks";
+import { StoryInlineContent } from "./article/story-inline";
+import type { StoryRefs } from "./article/story-refs";
 
 /**
  * The Story's text as a reading column: the lead in large type, chapters as
  * numbered headings (anchor targets for StoryChaptersNav), paragraphs at a
- * comfortable 18px/1.7. Line breaks typed inside one paragraph are kept.
+ * comfortable 18px/1.7, and the rich blocks the editor can place — quotes,
+ * lists, photos, letters (article/story-blocks.tsx). The editor's writing
+ * column (StoryEditor) is set the same way, so text reads as it was written.
  */
-export function StoryArticle({ layout }: { layout: StoryLayout }) {
-  const tStories = useTranslations("stories");
+export function StoryArticle({
+  layout,
+  refs,
+}: {
+  layout: StoryLayout;
+  refs: StoryRefs;
+}) {
   return (
-    <article className="mx-auto flex max-w-[44rem] flex-col gap-7 px-4 pt-12 pb-10 sm:px-8 sm:pt-16">
+    <article className="mx-auto flex max-w-176 flex-col gap-7 px-4 pt-12 pb-10 sm:px-8 sm:pt-16">
       {layout.lead && (
-        <p className="max-w-[34ch] text-2xl leading-snug tracking-[-0.012em] text-pretty whitespace-pre-wrap sm:text-[1.9rem] sm:leading-[1.42]">
-          {layout.lead}
+        <p className="max-w-[34ch] text-2xl leading-snug tracking-[-0.012em] text-pretty sm:text-[1.9rem] sm:leading-[1.42]">
+          <StoryInlineContent content={layout.lead} refs={refs} />
         </p>
       )}
-      {layout.blocks.map((block, index) =>
-        block.type === "chapter" ? (
-          <h2
-            key={block.id}
-            id={block.id}
-            className="mt-6 flex scroll-mt-[calc(var(--app-header-h,0px)+4.5rem)] flex-col gap-1.5 font-heading text-heading font-normal text-balance"
-          >
-            <span className="text-xs tracking-[0.12em] text-foreground/45 uppercase">
-              {tStories("chapter", { number: block.number })}
-            </span>
-            {block.title}
-          </h2>
-        ) : (
-          <p
-            key={index}
-            className="max-w-[62ch] text-[1.0625rem] leading-[1.72] text-pretty whitespace-pre-wrap text-foreground/90 sm:text-lg"
-          >
-            {block.text}
-          </p>
-        ),
-      )}
+      {layout.blocks.map((block, index) => (
+        <StoryBlockView
+          key={block.type === "chapter" ? block.id : index}
+          block={block}
+          refs={refs}
+        />
+      ))}
     </article>
   );
 }

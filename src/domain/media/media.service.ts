@@ -22,6 +22,7 @@ import {
   getAlbumsForMedia,
   getDocumentsForPerson,
   getPhotosForStory,
+  getPhotosByIds,
   getMediaById,
   getMediaForAlbum,
   getMediaForFamily,
@@ -425,6 +426,18 @@ export async function getVisibleStoryPhotos(
   member: ActingMember,
 ): Promise<MediaRecord[]> {
   return filterVisibleMedia(await getPhotosForStory(storyId, familyId), member);
+}
+
+/** Photos placed inside a Story's text (story-doc.ts's StoryPhoto), limited
+ *  to this family and to what `member` may see — a photo the reader can't
+ *  see is simply left out of the text. */
+export async function getVisibleStoryTextPhotos(
+  mediaIds: string[],
+  familyId: string,
+  member: ActingMember,
+): Promise<MediaRecord[]> {
+  const unique = [...new Set(mediaIds)];
+  return filterVisibleMedia(await getPhotosByIds(unique, familyId), member);
 }
 
 /**

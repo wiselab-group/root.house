@@ -2,6 +2,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
 import { PencilLineIcon } from "lucide-react";
 import type { StoryRecord } from "@/domain/story/story.service";
+import { storyPreviewText } from "@/domain/story/story-layout";
 
 const PREVIEW_LENGTH = 140;
 
@@ -51,7 +52,7 @@ export function MyDraftsList({
                 </span>
                 {draft.body && (
                   <span className="line-clamp-1 text-sm text-muted-foreground">
-                    {draft.body.slice(0, PREVIEW_LENGTH)}
+                    {storyPreviewText(draft.body).slice(0, PREVIEW_LENGTH)}
                   </span>
                 )}
                 <span className="text-xs text-muted-foreground/80">

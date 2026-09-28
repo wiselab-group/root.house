@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { layoutStoryBody, readingMinutes } from "./story-layout";
+import {
+  layoutStoryBody,
+  readingMinutes,
+  storyPreviewText,
+} from "./story-layout";
+
+const text = (value: string) => ({ type: "text", text: value });
 
 describe("layoutStoryBody", () => {
   it("turns a one-line story into just a lead (real story «История любви»)", () => {
     const layout = layoutStoryBody("Как мы познакомились");
-    expect(layout.lead).toBe("Как мы познакомились");
+    expect(layout.lead).toEqual([text("Как мы познакомились")]);
     expect(layout.blocks).toEqual([]);
     expect(layout.chapters).toEqual([]);
     expect(layout.wordCount).toBe(3);
@@ -14,10 +20,13 @@ describe("layoutStoryBody", () => {
     const layout = layoutStoryBody(
       "Первый.\n\nВторой,\nс переносом.\n\nТретий.",
     );
-    expect(layout.lead).toBe("Первый.");
+    expect(layout.lead).toEqual([text("Первый.")]);
     expect(layout.blocks).toEqual([
-      { type: "paragraph", text: "Второй,\nс переносом." },
-      { type: "paragraph", text: "Третий." },
+      {
+        type: "paragraph",
+        content: [text("Второй,"), { type: "hardBreak" }, text("с переносом.")],
+      },
+      { type: "paragraph", content: [text("Третий.")] },
     ]);
   });
 
@@ -31,22 +40,50 @@ describe("layoutStoryBody", () => {
     ]);
     expect(layout.blocks).toEqual([
       { type: "chapter", id: "chapter-1", number: 1, title: "Декабрь" },
-      { type: "paragraph", text: "Первые больные." },
+      { type: "paragraph", content: [text("Первые больные.")] },
       { type: "chapter", id: "chapter-2", number: 2, title: "Январь" },
-      { type: "paragraph", text: "Персонал слёг." },
+      { type: "paragraph", content: [text("Персонал слёг.")] },
     ]);
   });
 
   it("has no lead when the story opens with a chapter", () => {
     const layout = layoutStoryBody("## Начало\n\nТекст.");
     expect(layout.lead).toBeNull();
-    expect(layout.blocks[1]).toEqual({ type: "paragraph", text: "Текст." });
+    expect(layout.blocks[1]).toEqual({
+      type: "paragraph",
+      content: [text("Текст.")],
+    });
+  });
+
+  it("has no lead when the story opens with a quote", () => {
+    const layout = layoutStoryBody("> Сколько коек?\n\nТекст.");
+    expect(layout.lead).toBeNull();
+    expect(layout.blocks.map((block) => block.type)).toEqual([
+      "blockquote",
+      "paragraph",
+    ]);
   });
 
   it("normalizes Windows line endings", () => {
     expect(layoutStoryBody("А.\r\n\r\nБ.").blocks).toEqual([
-      { type: "paragraph", text: "Б." },
+      { type: "paragraph", content: [text("Б.")] },
     ]);
+  });
+
+  it("counts words without markup", () => {
+    expect(
+      layoutStoryBody(
+        "**Жирное** слово и [Мария](person:0b8e3f5c-2d7a-4e1b-9c3f-5a6d7e8f9a0b)",
+      ).wordCount,
+    ).toBe(4);
+  });
+});
+
+describe("storyPreviewText", () => {
+  it("strips markup and chapter titles", () => {
+    expect(storyPreviewText("## Глава\n\nЭто *очень* **важно**.")).toBe(
+      "Это очень важно.",
+    );
   });
 });
 

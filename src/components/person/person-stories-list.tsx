@@ -5,7 +5,11 @@ import Link from "next/link";
 import { useOptimistic } from "react";
 import { ChevronRightIcon, ClockIcon } from "lucide-react";
 import { DeleteStoryButton } from "@/components/forms/delete-story-button";
-import { layoutStoryBody, readingMinutes } from "@/domain/story/story-layout";
+import {
+  layoutStoryBody,
+  readingMinutes,
+  storyPreviewText,
+} from "@/domain/story/story-layout";
 import { glassSurface } from "@/components/hero/glass";
 import { PrivacyBadge } from "./privacy-badge";
 import type { StoryRecord } from "@/domain/story/story.service";
@@ -81,7 +85,7 @@ export function PersonStoriesList({
           <PrivacyBadge privacyLevel={featured.privacyLevel} compact />
         </h3>
         <p className="line-clamp-3 max-w-[60ch] text-foreground/70">
-          {featured.body}
+          {storyPreviewText(featured.body)}
         </p>
         <div className="absolute top-3 right-3 z-10 sm:top-5 sm:right-5">
           {deleteControl(featured)}

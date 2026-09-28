@@ -5,10 +5,12 @@ import { PrivacyBadge } from "@/components/person/privacy-badge";
 import { personDisplayName } from "@/domain/person/display-name";
 import type { StoryRecord } from "@/domain/story/story.service";
 import type { PersonRecord } from "@/domain/person/person.repository";
+import { storyPreviewText } from "@/domain/story/story-layout";
 
 const PREVIEW_LENGTH = 180;
 
-function previewOf(body: string): string {
+function previewOf(markdown: string): string {
+  const body = storyPreviewText(markdown);
   if (body.length <= PREVIEW_LENGTH) return body;
   const lastSpace = body.lastIndexOf(" ", PREVIEW_LENGTH);
   const cutoff = lastSpace > 0 ? lastSpace : PREVIEW_LENGTH;

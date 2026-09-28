@@ -8,6 +8,8 @@ import { StoryDetailsSection } from "@/components/story/story-details-section";
 import { StoryEditorToolbar } from "@/components/story/story-editor-toolbar";
 import { StoryDraftBanner } from "@/components/story/story-draft-banner";
 import { useStoryAutosave } from "@/components/story/use-story-autosave";
+import { StoryEditor } from "@/components/story/editor/story-editor";
+import type { MentionPerson } from "@/components/story/editor/use-mention-suggestion";
 import { submitWithoutReset } from "@/lib/submit-without-reset";
 import type { PrivacyLevel } from "@/db/schema";
 
@@ -16,9 +18,9 @@ const initialState: StoryFormState = {};
 /**
  * The story's own full-page editor (/stories/[storySlug]/edit) — variant D
  * of the editing mock (user's pick 2026-09-27): a long text never goes in a
- * modal. One quiet pinned bar, a borderless title, and a writing column set
- * exactly like StoryArticle's reading column, so the text looks while
- * writing the way it will read. Title and text autosave to the server
+ * modal. One quiet pinned bar, a borderless title, and a rich-text writing
+ * column (StoryEditor) set exactly like StoryArticle's reading column, so
+ * the text looks while writing the way it will read. Title and text autosave to the server
  * (useStoryAutosave), so a closed tab or another device never loses them;
  * people, privacy and the hero carousel's photos sit below the text, out
  * of the way and are saved with the submit. A draft story (status `draft`, only its author sees it)
@@ -32,6 +34,7 @@ export function EditStoryForm({
   body,
   privacyLevel,
   people,
+  mentionPeople,
   photos,
   isDraft,
   serverDraft,
@@ -43,6 +46,8 @@ export function EditStoryForm({
   body: string;
   privacyLevel: PrivacyLevel;
   people: { id: string; name: string }[];
+  /** The whole family, for «@» mentions in the text. */
+  mentionPeople: MentionPerson[];
   /** The hero carousel's photos, in order — see StoryPhotosField. */
   photos: StoryPhotoChoice[];
   isDraft: boolean;
@@ -108,18 +113,13 @@ export function EditStoryForm({
           <p className="text-sm text-destructive">{state.fieldErrors.title}</p>
         )}
 
-        <label htmlFor="body" className="sr-only">
-          {t("body")}
-        </label>
-        <textarea
-          id="body"
-          name="body"
+        <input type="hidden" name="body" value={draft.body} />
+        <StoryEditor
+          familyId={familyId}
           value={draft.body}
-          onChange={(event) => draft.setBody(event.target.value)}
-          placeholder={t("bodyPlaceholder")}
-          required
-          aria-invalid={state.fieldErrors?.body ? true : undefined}
-          className="field-sizing-content min-h-[50svh] w-full max-w-[62ch] resize-none bg-transparent text-[1.0625rem] leading-[1.72] text-pretty text-foreground/90 outline-none placeholder:text-foreground/30 sm:text-lg"
+          onChange={draft.setBody}
+          people={mentionPeople}
+          invalid={Boolean(state.fieldErrors?.body)}
         />
         {state.fieldErrors?.body && (
           <p className="text-sm text-destructive">{state.fieldErrors.body}</p>

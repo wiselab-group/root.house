@@ -12,6 +12,7 @@ import {
 import { listPeople } from "@/domain/person/person.service";
 import { getVisibleStoryPhotos } from "@/domain/media/media.service";
 import { personDisplayName } from "@/domain/person/display-name";
+import { formatLifeYears } from "@/domain/shared/partial-date";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { resolveStoryIdBySlug } from "@/lib/resolve-story-slug";
 import { getFamilySummary } from "@/domain/family/family.service";
@@ -85,6 +86,26 @@ export default async function EditStoryPage({
     .filter((p) => p != null)
     .map((p) => ({ id: p.id, name: personDisplayName(p, locale) }));
 
+  const mentionPeople = allPeople.map((p) => {
+    const name = personDisplayName(p, locale);
+    return {
+      id: p.id,
+      name,
+      search: [name, p.maidenName, p.nickname]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase(),
+      years: formatLifeYears(p.birthDate, p.deathDate, locale),
+      thumb: {
+        firstName: p.firstName,
+        lastName: p.lastName,
+        nickname: p.nickname,
+        isPlaceholder: p.isPlaceholder,
+        photoMediaId: p.photoMediaId,
+      },
+    };
+  });
+
   const storiesHref = `/families/${slug}/stories`;
   const storyHref = `${storiesHref}/${storySlug}`;
   const label = story.title || t("untitled");
@@ -116,6 +137,7 @@ export default async function EditStoryPage({
         body={story.body}
         privacyLevel={story.privacyLevel}
         people={people}
+        mentionPeople={mentionPeople}
         photos={photos}
         isDraft={isDraft}
         serverDraft={
