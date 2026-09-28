@@ -576,37 +576,6 @@ export async function upsertPhotoTagPosition(
   return true;
 }
 
-/**
- * "Снять точку" — clears a point-tag back to positionless without removing
- * the mediaPerson row, so the person stays in the photo's "who's tagged"
- * chip list. Distinct from removePersonFromMedia below, which deletes the
- * row entirely ("Убрать из фото").
- */
-export async function clearPhotoTagPosition(
-  mediaId: string,
-  personId: string,
-  familyId: string,
-): Promise<boolean> {
-  const result = await db
-    .update(mediaPerson)
-    .set({ xPercent: null, yPercent: null, radiusPercent: null })
-    .where(
-      and(
-        eq(mediaPerson.mediaId, mediaId),
-        eq(mediaPerson.personId, personId),
-        inArray(
-          mediaPerson.personId,
-          db
-            .select({ id: persons.id })
-            .from(persons)
-            .where(eq(persons.familyId, familyId)),
-        ),
-      ),
-    )
-    .returning({ id: mediaPerson.id });
-  return result.length > 0;
-}
-
 /** "Убрать из фото" — removes the person from this photo entirely (deletes the media_person row). */
 export async function removePersonFromMedia(
   mediaId: string,

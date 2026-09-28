@@ -10,6 +10,8 @@ export interface PersonSearchResult {
   maidenName: string | null;
   nickname: string | null;
   isPlaceholder: boolean;
+  /** The person's portrait, for the picker row's thumb — see components/person-picker. */
+  photoMediaId: string | null;
   birthDate: PartialDate | null;
   deathDate: PartialDate | null;
   /** pg_trgm similarity score [0, 1] — used only for ranking, never shown to the user. */
@@ -41,6 +43,7 @@ export async function searchPersonsByName(
     maiden_name: string | null;
     nickname: string | null;
     is_placeholder: boolean;
+    photo_media_id: string | null;
     birth_date_year: number | null;
     birth_date_month: number | null;
     birth_date_day: number | null;
@@ -54,7 +57,7 @@ export async function searchPersonsByName(
     similarity: number;
   }>(sql`
     SELECT
-      id, slug, first_name, last_name, maiden_name, nickname, is_placeholder,
+      id, slug, first_name, last_name, maiden_name, nickname, is_placeholder, photo_media_id,
       birth_date_year, birth_date_month, birth_date_day, birth_date_precision, birth_date_approximate,
       death_date_year, death_date_month, death_date_day, death_date_precision, death_date_approximate,
       similarity(coalesce(first_name, '') || ' ' || coalesce(last_name, '') || ' ' || coalesce(maiden_name, ''), ${trimmed}) AS similarity
@@ -75,6 +78,7 @@ export async function searchPersonsByName(
       maidenName: row.maiden_name,
       nickname: row.nickname,
       isPlaceholder: row.is_placeholder,
+      photoMediaId: row.photo_media_id,
       birthDate: fromColumns({
         year: row.birth_date_year,
         month: row.birth_date_month,
@@ -116,6 +120,7 @@ export async function searchPersonsByNameSubstring(
     maiden_name: string | null;
     nickname: string | null;
     is_placeholder: boolean;
+    photo_media_id: string | null;
     birth_date_year: number | null;
     birth_date_month: number | null;
     birth_date_day: number | null;
@@ -128,7 +133,7 @@ export async function searchPersonsByNameSubstring(
     death_date_approximate: boolean | null;
   }>(sql`
     SELECT
-      id, slug, first_name, last_name, maiden_name, nickname, is_placeholder,
+      id, slug, first_name, last_name, maiden_name, nickname, is_placeholder, photo_media_id,
       birth_date_year, birth_date_month, birth_date_day, birth_date_precision, birth_date_approximate,
       death_date_year, death_date_month, death_date_day, death_date_precision, death_date_approximate
     FROM persons
@@ -150,6 +155,7 @@ export async function searchPersonsByNameSubstring(
     maidenName: row.maiden_name,
     nickname: row.nickname,
     isPlaceholder: row.is_placeholder,
+    photoMediaId: row.photo_media_id,
     birthDate: fromColumns({
       year: row.birth_date_year,
       month: row.birth_date_month,
@@ -183,6 +189,7 @@ export async function searchPersonsByYear(
     maiden_name: string | null;
     nickname: string | null;
     is_placeholder: boolean;
+    photo_media_id: string | null;
     birth_date_year: number | null;
     birth_date_month: number | null;
     birth_date_day: number | null;
@@ -195,7 +202,7 @@ export async function searchPersonsByYear(
     death_date_approximate: boolean | null;
   }>(sql`
     SELECT
-      id, slug, first_name, last_name, maiden_name, nickname, is_placeholder,
+      id, slug, first_name, last_name, maiden_name, nickname, is_placeholder, photo_media_id,
       birth_date_year, birth_date_month, birth_date_day, birth_date_precision, birth_date_approximate,
       death_date_year, death_date_month, death_date_day, death_date_precision, death_date_approximate
     FROM persons
@@ -216,6 +223,7 @@ export async function searchPersonsByYear(
     maidenName: row.maiden_name,
     nickname: row.nickname,
     isPlaceholder: row.is_placeholder,
+    photoMediaId: row.photo_media_id,
     birthDate: fromColumns({
       year: row.birth_date_year,
       month: row.birth_date_month,

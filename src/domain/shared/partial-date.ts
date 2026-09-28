@@ -137,6 +137,44 @@ export function formatPartialDate(
     : `${approx}${date.day} ${month} ${date.year}`;
 }
 
+/** One end of formatLifeYears: just the year, marked when approximate
+ *  («ок. 1950» / "c. 1950") or a decade («1950-е» / "1950s"). Null when
+ *  there's no year at all. */
+function lifeYear(
+  date: PartialDate | null | undefined,
+  locale: Locale,
+): string | null {
+  if (!date || date.precision === "unknown" || date.year === null) return null;
+  const ru = locale === "ru";
+  if (date.precision === "decade") {
+    const decadeStart = Math.floor(date.year / 10) * 10;
+    return ru ? `${decadeStart}-е` : `${decadeStart}s`;
+  }
+  const approx = date.isApproximate ? (ru ? "ок. " : "c. ") : "";
+  return `${approx}${date.year}`;
+}
+
+/**
+ * Compact life years for telling people apart in a person picker —
+ * «1950 – 2010», a lone birth year «1950» (no «р.» — a year under a name
+ * reads as birth on its own, user request 2026-09-28), «? – 2010» when only
+ * the death is known, matching the tree cards' year range. Years only: a
+ * day and month don't help pick between two namesakes and don't fit a list
+ * row. Null when neither year is known.
+ */
+export function formatLifeYears(
+  birth: PartialDate | null | undefined,
+  death: PartialDate | null | undefined,
+  locale: Locale,
+): string | null {
+  const born = lifeYear(birth, locale);
+  const died = lifeYear(death, locale);
+  if (born && died) return `${born} – ${died}`;
+  if (born) return born;
+  if (died) return `? – ${died}`;
+  return null;
+}
+
 /**
  * Sort-friendly numeric key. Unknown dates sort last (Infinity) so timeline
  * views don't have to special-case them at the call site.

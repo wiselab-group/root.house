@@ -6,7 +6,7 @@ import type { EventParticipantValue } from "./event-participants-field";
 
 /** One selected-participant row (name + role <select> + remove button) —
  *  split out of EventParticipantsField to keep it under the project's
- *  150-line component guideline, same reasoning as PersonMultiComboboxItem.
+ *  150-line component guideline.
  *  The role <select> only renders when the event type has a real choice
  *  (крещение: крестник/крёстный, свадьба: супруг/свидетель); with a single
  *  role it was a one-option dropdown that did nothing (user question

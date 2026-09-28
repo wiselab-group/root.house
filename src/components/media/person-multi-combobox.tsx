@@ -1,27 +1,23 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import {
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { useId, useMemo, useState } from "react";
 import { Combobox } from "@base-ui/react/combobox";
-import { SearchIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { personDisplayName } from "@/domain/person/display-name";
-import { searchPeopleForTraceAction } from "@/actions/tree.actions";
+import { PersonPickerInput } from "@/components/person-picker/person-picker-input";
+import { PersonPickerPopup } from "@/components/person-picker/person-picker-popup";
+import {
+  pinnedPerson,
+  usePersonSearch,
+} from "@/components/person-picker/use-person-search";
 import { RemovableChipList } from "./removable-chip-list";
-import { PersonMultiComboboxPopup } from "./person-multi-combobox-popup";
 import type { PersonSearchResult } from "@/domain/search/search.service";
 
 /**
- * Search-as-you-type picker for TAGGING SEVERAL people on one photo (family
- * gallery upload) — same search-as-you-type input as tree/person-combobox.tsx's
- * PersonCombobox, built on the same @base-ui/react/combobox primitive, but
+ * Search-as-you-type picker for SEVERAL people at once (a story's people) —
+ * the shared person-picker field and rows (components/person-picker), as in
+ * tree/person-combobox.tsx's PersonCombobox, but
  * with `multiple` so a group photo can be tagged with everyone in it at
  * once. Selected people render as removable chips under the input rather
  * than filling the input's own text (which single-select does).
@@ -46,10 +42,8 @@ export function PersonMultiCombobox({
   const tc = useTranslations("common");
   const locale = useLocale();
   const inputId = useId();
-  const [results, setResults] = useState<PersonSearchResult[]>([]);
   const [query, setQuery] = useState("");
-  const [isPending, startTransition] = useTransition();
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const { results, isPending, search } = usePersonSearch(familyId);
 
   // Selected people may fall out of the latest search results (query
   // changed since they were picked) — pin them as items so Combobox can
@@ -60,45 +54,9 @@ export function PersonMultiCombobox({
     );
     return [
       ...results,
-      ...missing.map(
-        (person) =>
-          ({
-            id: person.id,
-            slug: "",
-            firstName: person.name,
-            lastName: null,
-            maidenName: null,
-            nickname: null,
-            isPlaceholder: false,
-            birthDate: null,
-            deathDate: null,
-            similarity: 0,
-          }) satisfies PersonSearchResult,
-      ),
+      ...missing.map((person) => pinnedPerson(person.id, person.name)),
     ];
   }, [results, value]);
-
-  function runSearch(nextQuery: string) {
-    const trimmed = nextQuery.trim();
-
-    const controller = new AbortController();
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = controller;
-
-    startTransition(async () => {
-      const found = await searchPeopleForTraceAction(familyId, trimmed);
-      if (controller.signal.aborted) return;
-      setResults(found);
-    });
-  }
-
-  // Populate the full family list as soon as this control mounts, so
-  // opening the popup shows everyone rather than an empty list.
-  useEffect(() => {
-    runSearch("");
-    return () => abortControllerRef.current?.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [familyId]);
 
   const selectedValues = useMemo(
     () =>
@@ -131,32 +89,27 @@ export function PersonMultiCombobox({
       onInputValueChange={(nextValue, { reason }) => {
         if (reason === "item-press") return;
         setQuery(nextValue);
-        runSearch(nextValue);
+        search(nextValue);
       }}
     >
       <div className={cn("flex flex-col gap-1.5", className)}>
         <label htmlFor={inputId} className="text-sm font-medium">
           {label}
         </label>
-        <Combobox.InputGroup className="relative flex h-11 items-center rounded-lg border border-input bg-transparent transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
-          <SearchIcon className="pointer-events-none absolute left-3.5 size-4 text-muted-foreground" />
-          <Combobox.Input
-            id={inputId}
-            placeholder={tc("personSearchPlaceholder")}
-            className="h-full w-full min-w-0 rounded-lg bg-transparent py-1 pr-9 pl-10 text-base text-foreground outline-none placeholder:text-muted-foreground md:text-sm"
-          />
-          <Combobox.Clear
-            className="absolute right-2 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label={tc("clearSearch")}
-          >
-            <XIcon className="size-4" />
-          </Combobox.Clear>
-        </Combobox.InputGroup>
+        <PersonPickerInput
+          id={inputId}
+          placeholder={tc("personSearchPlaceholder")}
+          clearLabel={tc("clearSearch")}
+        />
 
         <RemovableChipList items={value} onRemove={removePerson} />
       </div>
 
-      <PersonMultiComboboxPopup isPending={isPending} query={query} />
+      <PersonPickerPopup
+        familyId={familyId}
+        isPending={isPending}
+        query={query}
+      />
     </Combobox.Root>
   );
 }

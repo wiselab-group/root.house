@@ -7,7 +7,6 @@ import { getPerson } from "@/domain/person/person.service";
 import { getMedia } from "@/domain/media/media.service";
 import {
   upsertPhotoTagPosition,
-  clearPhotoTagPosition,
   removePersonFromMedia,
 } from "@/domain/media/media.service";
 import {
@@ -55,29 +54,6 @@ export async function setPhotoTagPositionAction(
       radiusPercent: validatePhotoTagRadius(radiusPercent),
     }),
   });
-
-  revalidatePath(`/families/${familySlug}/photos`);
-  revalidatePath(`/families/${familySlug}/people/${person.slug}`);
-}
-
-/**
- * "Снять точку" — clears the point-tag but leaves the person tagged on the
- * photo (untagged/positionless), distinct from removePhotoTagAction below.
- */
-export async function untagPhotoPointAction(
-  familyId: string,
-  familySlug: string,
-  mediaId: string,
-  personId: string,
-): Promise<void> {
-  const session = await auth();
-  if (!session?.user) throw new Error("Session expired.");
-  await requireFamilyAccess(familyId, session.user.id, "contributor");
-
-  const person = await getPerson(personId, familyId);
-  if (!person) throw new Error("Person not found.");
-
-  await clearPhotoTagPosition(mediaId, personId, familyId);
 
   revalidatePath(`/families/${familySlug}/photos`);
   revalidatePath(`/families/${familySlug}/people/${person.slug}`);

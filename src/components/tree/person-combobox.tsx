@@ -1,24 +1,21 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import {
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { useId, useMemo, useState } from "react";
 import { Combobox } from "@base-ui/react/combobox";
-import { SearchIcon, XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { personDisplayName } from "@/domain/person/display-name";
-import { formatPartialDate } from "@/domain/shared/partial-date";
-import { searchPeopleForTraceAction } from "@/actions/tree.actions";
+import { PersonPickerInput } from "@/components/person-picker/person-picker-input";
+import { PersonPickerPopup } from "@/components/person-picker/person-picker-popup";
+import {
+  pinnedPerson,
+  usePersonSearch,
+} from "@/components/person-picker/use-person-search";
 import type { PersonSearchResult } from "@/domain/search/search.service";
 
 /**
- * Inline search-as-you-type picker for a single Person — input and results
+ * Inline search-as-you-type picker for a single Person — the shared
+ * person-picker field and rows (components/person-picker) — input and results
  * list are the same control (no separate picker dialog hop), so picking
  * Person A/B for Relationship Trace stays inside KinshipPanel. Selection
  * is a controlled { id, name } pair so the caller (useKinshipTrace) still
@@ -54,21 +51,14 @@ export function PersonCombobox({
   const t = useTranslations("tree");
   const locale = useLocale();
   const inputId = useId();
-  const [results, setResults] = useState<PersonSearchResult[]>([]);
   const [query, setQuery] = useState(value?.name ?? "");
   const [localValue, setLocalValue] = useState(value);
-  const [isPending, startTransition] = useTransition();
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const { results, setResults, isPending, search } = usePersonSearch(familyId);
 
-  // Resync from the prop the moment it changes — adjusting state during
-  // render (rather than in a useEffect) avoids an extra commit, per React's
-  // "you might not need an effect" guidance for controlled-with-local-
-  // override state. `prevValue` is the previous render's prop snapshot;
-  // when the incoming prop no longer matches it, the prop has moved (URL
-  // navigation completed, or the value changed from outside this component,
-  // e.g. the other slot's excludeId making this one stale) and localValue
-  // (plus the input's displayed text, `query` — see the `inputValue` prop
-  // below) resets to match it.
+  // Resync from the prop the moment it moves (URL navigation completed, or
+  // a change from outside, e.g. the other slot's excludeId) — adjusted
+  // during render rather than in an effect, which would cost a commit.
+  // localValue and the displayed text (`query`) both reset to it.
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
     setPrevValue(value);
@@ -85,48 +75,8 @@ export function PersonCombobox({
       : results;
     if (!localValue || visible.some((person) => person.id === localValue.id))
       return visible;
-    return [
-      ...visible,
-      {
-        id: localValue.id,
-        slug: "",
-        firstName: localValue.name,
-        lastName: null,
-        maidenName: null,
-        nickname: null,
-        isPlaceholder: false,
-        birthDate: null,
-        deathDate: null,
-        similarity: 0,
-      } satisfies PersonSearchResult,
-    ];
+    return [...visible, pinnedPerson(localValue.id, localValue.name)];
   }, [results, localValue, excludeId]);
-
-  function runSearch(nextQuery: string) {
-    const trimmed = nextQuery.trim();
-
-    const controller = new AbortController();
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = controller;
-
-    startTransition(async () => {
-      // Blank query intentionally still hits the server — it returns the
-      // whole family, so the list is populated as soon as the field is
-      // focused, before the user has typed anything (browse, then narrow).
-      const found = await searchPeopleForTraceAction(familyId, trimmed);
-      if (controller.signal.aborted) return;
-      setResults(found);
-    });
-  }
-
-  // Populate the full family list the moment the combobox mounts (panel
-  // opens), so opening the popup shows everyone rather than an empty list
-  // that only fills in once the user starts typing.
-  useEffect(() => {
-    runSearch("");
-    return () => abortControllerRef.current?.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [familyId]);
 
   return (
     <Combobox.Root<PersonSearchResult>
@@ -175,86 +125,25 @@ export function PersonCombobox({
         // eagerly nulling localValue here is what caused base-ui's resync
         // effect to wipe the field (see that prop's comment).
         setQuery(nextValue);
-        runSearch(nextValue);
+        search(nextValue);
       }}
     >
       <div className={cn("flex flex-col gap-1.5", className)}>
         <label htmlFor={inputId} className="text-sm font-medium">
           {label}
         </label>
-        <Combobox.InputGroup className="relative flex h-11 items-center rounded-lg border border-input bg-transparent transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
-          <SearchIcon className="pointer-events-none absolute left-3.5 size-4 text-muted-foreground" />
-          <Combobox.Input
-            id={inputId}
-            placeholder={t("searchPlaceholder")}
-            className="h-full w-full min-w-0 rounded-lg bg-transparent py-1 pr-9 pl-10 text-base text-foreground outline-none placeholder:text-muted-foreground md:text-sm"
-          />
-          <Combobox.Clear
-            className="absolute right-2 flex size-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label={t("resetField", { label: label.toLowerCase() })}
-          >
-            <XIcon className="size-4" />
-          </Combobox.Clear>
-        </Combobox.InputGroup>
+        <PersonPickerInput
+          id={inputId}
+          placeholder={t("searchPlaceholder")}
+          clearLabel={t("resetField", { label: label.toLowerCase() })}
+        />
       </div>
 
-      <Combobox.Portal>
-        <Combobox.Positioner
-          className="isolate z-50 outline-none"
-          sideOffset={4}
-        >
-          <Combobox.Popup
-            className={cn(
-              "w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-instant outline-none",
-              "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-            )}
-            aria-busy={isPending || undefined}
-          >
-            <div className="max-h-72 overflow-y-auto overscroll-contain p-1 scroll-pt-1 scroll-pb-1">
-              <Combobox.Status className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
-                {isPending ? t("searching") : null}
-              </Combobox.Status>
-              <Combobox.Empty className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
-                {!isPending
-                  ? query.trim().length > 0
-                    ? t("nothingFound")
-                    : t("noPeople")
-                  : null}
-              </Combobox.Empty>
-              <Combobox.List>
-                {(person: PersonSearchResult) => (
-                  <Combobox.Item
-                    key={person.id}
-                    value={person}
-                    className="flex cursor-default flex-col items-start gap-0.5 rounded-md px-2 py-2 text-left text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
-                  >
-                    <span className="font-medium">
-                      {personDisplayName(person, locale)}
-                      {person.maidenName &&
-                        person.maidenName !== person.lastName && (
-                          // Search matches on maidenName too (see searchPersonsByNameSubstring) —
-                          // without this, a hit found only via the maiden name looks like an
-                          // unexplained/wrong result since personDisplayName never shows it.
-                          <span className="font-normal text-muted-foreground">
-                            {" "}
-                            ({person.maidenName})
-                          </span>
-                        )}
-                    </span>
-                    {(person.birthDate || person.deathDate) && (
-                      <span className="text-xs text-muted-foreground">
-                        {formatPartialDate(person.birthDate, locale)}
-                        {person.deathDate &&
-                          ` — ${formatPartialDate(person.deathDate, locale)}`}
-                      </span>
-                    )}
-                  </Combobox.Item>
-                )}
-              </Combobox.List>
-            </div>
-          </Combobox.Popup>
-        </Combobox.Positioner>
-      </Combobox.Portal>
+      <PersonPickerPopup
+        familyId={familyId}
+        isPending={isPending}
+        query={query}
+      />
     </Combobox.Root>
   );
 }

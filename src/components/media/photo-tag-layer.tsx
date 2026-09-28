@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import {
   setPhotoTagPositionAction,
-  untagPhotoPointAction,
   removePhotoTagAction,
 } from "@/actions/photo-tag.actions";
 import { personDisplayName } from "@/domain/person/display-name";
@@ -99,7 +98,7 @@ function useTagCursorMarker(
 }
 
 /**
- * Drag-to-move plus untag/remove for the already-placed markers — the
+ * Drag-to-move plus remove for the already-placed markers — the
  * per-person mutation lifecycle, separate from tap-to-place-a-new-tag
  * (which PhotoTagLayer keeps, since it also owns the popover that assigns
  * a person to a fresh point).
@@ -169,12 +168,6 @@ function useTagDrag(
     });
   }
 
-  function onUntag(personId: string) {
-    startTransition(async () => {
-      await untagPhotoPointAction(familyId, familySlug, mediaId, personId);
-    });
-  }
-
   function onRemove(personId: string) {
     startTransition(async () => {
       await removePhotoTagAction(familyId, familySlug, mediaId, personId);
@@ -189,7 +182,6 @@ function useTagDrag(
     onDragStart,
     onDragMove,
     onDragEnd,
-    onUntag,
     onRemove,
   };
 }
@@ -394,7 +386,6 @@ export function PhotoTagLayer({
                 ),
             })
           }
-          onUntag={() => drag.onUntag(person.id)}
           onRemove={() => drag.onRemove(person.id)}
         />
       ))}
@@ -455,7 +446,6 @@ function PhotoTagMarker({
   onDragMove,
   onDragEnd,
   onEditRadius,
-  onUntag,
   onRemove,
 }: {
   person: MediaTaggedPerson;
@@ -468,7 +458,6 @@ function PhotoTagMarker({
   onDragMove: (event: React.PointerEvent<HTMLButtonElement>) => void;
   onDragEnd: (event: React.PointerEvent<HTMLButtonElement>) => void;
   onEditRadius: () => void;
-  onUntag: () => void;
   onRemove: () => void;
 }) {
   const t = useTranslations("media");
@@ -523,10 +512,6 @@ function PhotoTagMarker({
         <DropdownMenuItem onClick={onEditRadius}>
           <CircleDashedIcon />
           {t("editArea")}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={onUntag}>
-          <XIcon />
-          {t("removePoint")}
         </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" onClick={onRemove}>
           <XIcon />

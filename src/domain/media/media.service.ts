@@ -33,7 +33,6 @@ import {
   setMediaTitle,
   setMediaVariants,
   upsertPhotoTagPosition,
-  clearPhotoTagPosition,
   removePersonFromMedia,
   replaceStoryPhotos,
   type CreateMediaData,
@@ -668,4 +667,4 @@ export async function updatePhotoCaption(
 }
 
 export type { CreateMediaData, UpsertPhotoTagPositionData };
-export { upsertPhotoTagPosition, clearPhotoTagPosition, removePersonFromMedia };
+export { upsertPhotoTagPosition, removePersonFromMedia };

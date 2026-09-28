@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   comparePartialDates,
+  formatLifeYears,
   formatPartialDate,
   fromColumns,
   partialDateFromFormData,
   toColumns,
   toSortableValue,
+  UNKNOWN_DATE,
   type PartialDate,
 } from "./partial-date";
 
@@ -239,5 +241,47 @@ describe("partialDateFromFormData", () => {
       precision: "year_only",
       isApproximate: false,
     });
+  });
+});
+
+describe("formatLifeYears", () => {
+  const year = (y: number, isApproximate = false): PartialDate => ({
+    year: y,
+    month: null,
+    day: null,
+    precision: "year_only",
+    isApproximate,
+  });
+  const exact: PartialDate = {
+    year: 1950,
+    month: 3,
+    day: 12,
+    precision: "exact",
+    isApproximate: false,
+  };
+
+  it("shows both years, years only", () => {
+    expect(formatLifeYears(exact, year(2010), "ru")).toBe("1950 – 2010");
+    expect(formatLifeYears(exact, year(2010), "en")).toBe("1950 – 2010");
+  });
+
+  it("shows a lone birth year bare, a lone death year after «?»", () => {
+    expect(formatLifeYears(year(1950), null, "ru")).toBe("1950");
+    expect(formatLifeYears(year(1950), null, "en")).toBe("1950");
+    expect(formatLifeYears(null, year(2010), "ru")).toBe("? – 2010");
+    expect(formatLifeYears(UNKNOWN_DATE, year(2010), "en")).toBe("? – 2010");
+  });
+
+  it("marks approximate years and decades", () => {
+    expect(formatLifeYears(year(1890, true), year(1960), "ru")).toBe(
+      "ок. 1890 – 1960",
+    );
+    const decade: PartialDate = { ...year(1923), precision: "decade" };
+    expect(formatLifeYears(decade, null, "en")).toBe("1920s");
+    expect(formatLifeYears(decade, null, "ru")).toBe("1920-е");
+  });
+
+  it("is null when neither year is known", () => {
+    expect(formatLifeYears(null, UNKNOWN_DATE, "ru")).toBeNull();
   });
 });

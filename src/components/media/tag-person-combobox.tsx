@@ -1,18 +1,18 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState } from "react";
 import { Combobox } from "@base-ui/react/combobox";
-import { SearchIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { personDisplayName } from "@/domain/person/display-name";
-import { searchPeopleForTraceAction } from "@/actions/tree.actions";
+import { PersonPickerInput } from "@/components/person-picker/person-picker-input";
+import { PersonPickerPopup } from "@/components/person-picker/person-picker-popup";
+import { usePersonSearch } from "@/components/person-picker/use-person-search";
 import type { PersonSearchResult } from "@/domain/search/search.service";
 
 /**
  * Compact single-select person picker for the photo-tag popover
- * (photo-tag-layer.tsx) — trimmed version of tree/person-combobox.tsx: no
- * persistent label, no controlled value/clear affordance, fires onSelect
+ * (photo-tag-layer.tsx) — the shared person-picker field and rows, but no
+ * persistent label, no controlled value/clear affordance: fires onSelect
  * immediately once a person is picked so the caller can close the popover
  * right away. Already-tagged people are NOT excluded from results —
  * re-selecting one just moves their existing point (server-side upsert).
@@ -28,33 +28,10 @@ export function TagPersonCombobox({
   autoFocus?: boolean;
   className?: string;
 }) {
-  const tc = useTranslations("common");
   const t = useTranslations("media");
   const locale = useLocale();
-  const [results, setResults] = useState<PersonSearchResult[]>([]);
   const [query, setQuery] = useState("");
-  const [isPending, startTransition] = useTransition();
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  function runSearch(nextQuery: string) {
-    const trimmed = nextQuery.trim();
-
-    const controller = new AbortController();
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = controller;
-
-    startTransition(async () => {
-      const found = await searchPeopleForTraceAction(familyId, trimmed);
-      if (controller.signal.aborted) return;
-      setResults(found);
-    });
-  }
-
-  useEffect(() => {
-    runSearch("");
-    return () => abortControllerRef.current?.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [familyId]);
+  const { results, isPending, search } = usePersonSearch(familyId);
 
   return (
     <Combobox.Root<PersonSearchResult>
@@ -70,58 +47,19 @@ export function TagPersonCombobox({
       onInputValueChange={(nextValue, { reason }) => {
         if (reason === "item-press") return;
         setQuery(nextValue);
-        runSearch(nextValue);
+        search(nextValue);
       }}
     >
-      <div className={cn("flex flex-col gap-1.5", className)}>
-        <Combobox.InputGroup className="relative flex h-10 items-center rounded-lg border border-input bg-transparent transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
-          <SearchIcon className="pointer-events-none absolute left-3 size-4 text-muted-foreground" />
-          <Combobox.Input
-            autoFocus={autoFocus}
-            placeholder={t("whoIsThis")}
-            className="h-full w-full min-w-0 rounded-lg bg-transparent py-1 pr-3 pl-9 text-sm text-foreground outline-none placeholder:text-muted-foreground"
-          />
-        </Combobox.InputGroup>
-      </div>
-
-      <Combobox.Portal>
-        <Combobox.Positioner
-          className="isolate z-50 outline-none"
-          sideOffset={4}
-        >
-          <Combobox.Popup
-            className={cn(
-              "w-(--anchor-width) max-w-(--available-width) origin-(--transform-origin) overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-instant outline-none",
-              "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-            )}
-            aria-busy={isPending || undefined}
-          >
-            <div className="max-h-60 overflow-y-auto overscroll-contain p-1 scroll-pt-1 scroll-pb-1">
-              <Combobox.Status className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
-                {isPending ? tc("searching") : null}
-              </Combobox.Status>
-              <Combobox.Empty className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
-                {!isPending
-                  ? query.trim().length > 0
-                    ? tc("nothingFound")
-                    : tc("noPeople")
-                  : null}
-              </Combobox.Empty>
-              <Combobox.List>
-                {(person: PersonSearchResult) => (
-                  <Combobox.Item
-                    key={person.id}
-                    value={person}
-                    className="flex cursor-default items-center rounded-md px-2 py-2 text-left text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
-                  >
-                    {personDisplayName(person, locale)}
-                  </Combobox.Item>
-                )}
-              </Combobox.List>
-            </div>
-          </Combobox.Popup>
-        </Combobox.Positioner>
-      </Combobox.Portal>
+      <PersonPickerInput
+        autoFocus={autoFocus}
+        placeholder={t("whoIsThis")}
+        className={className}
+      />
+      <PersonPickerPopup
+        familyId={familyId}
+        isPending={isPending}
+        query={query}
+      />
     </Combobox.Root>
   );
 }
