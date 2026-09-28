@@ -82,7 +82,10 @@ export function KinshipDockItem({
               <span
                 className={cn(
                   text,
-                  "truncate font-heading text-[0.95rem] animate-in fade-in-0 slide-in-from-bottom-2 motion-reduce:animate-none",
+                  // Same face and size as the «Родство» label it replaces —
+                  // Lora here read as the button changing font (user report
+                  // 2026-09-28).
+                  "truncate animate-in fade-in-0 slide-in-from-bottom-2 motion-reduce:animate-none",
                 )}
               >
                 {headline}

@@ -80,17 +80,24 @@ export function useKinshipTrace(
     [outcome, genderOf, locale],
   );
 
-  // Only a found path dims the tree — "not related" has nothing to point
-  // at, and dimming every card for it would read as a broken canvas.
+  // The chosen people are framed as soon as they're picked — the first one
+  // used to stay plain until the second was chosen, so a click on the tree
+  // seemed to do nothing (user report 2026-09-28). Only a found path dims
+  // the tree — "not related" has nothing to point at, and dimming every
+  // card for it would read as a broken canvas.
   const traceHighlight = useMemo((): TreeHighlightState | undefined => {
-    if (outcome?.status !== "found") return undefined;
+    const picked = [aId, bId].filter((id) => id !== null);
+    if (picked.length === 0) return undefined;
+    const tracePickedIds = new Set(picked);
+    if (outcome?.status !== "found") return { tracePickedIds };
     const traced = applyRelationshipTrace(graph, outcome);
     return {
+      tracePickedIds,
       tracePersonIds: traced.tracePersonIds,
       traceEdgeIds: traced.traceEdgeIds,
       traceEdgeDirections: traced.traceEdgeDirections,
     };
-  }, [graph, outcome]);
+  }, [graph, outcome, aId, bId]);
 
   const writeSlots = useCallback(
     (next: Partial<Record<TraceSlot, string | null>>) => {

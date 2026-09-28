@@ -74,7 +74,8 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
   const initials = personInitials(data);
 
   const isDimmed = data.isFilterMatch === false || data.isOnTracePath === false;
-  const isTraceHighlighted = data.isOnTracePath === true;
+  const isTraceHighlighted =
+    data.isOnTracePath === true || Boolean(data.isTracePicked);
 
   const cardBody = (
     <>

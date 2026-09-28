@@ -67,6 +67,8 @@ export interface PersonNodeData extends Record<string, unknown> {
   isFilterMatch?: boolean;
   /** Relationship Trace (tree-trace.ts) — true while this person is on the currently traced A-to-B path. */
   isOnTracePath?: boolean;
+  /** Chosen in the Relationship Trace panel (either slot) — framed like a traced card even before the second person is picked, without dimming anyone else. */
+  isTracePicked?: boolean;
   /** Re-centers the tree on this person (pushes ?focus= to the URL) — wired from TreeCanvas so PersonNode's click popover can offer "сделать фокус-персоной" without importing routing itself. Undefined for the currently-focused person, who has nothing to focus onto. */
   onFocusPerson?: (personId: string) => void;
   /** True only for the anonymous Share Link view (components/share-link/public-tree-view.tsx) — suppresses PersonNode's entire click popover (both "Посмотреть профиль", a doorway into the auth-gated edit surface, and "Сделать фокус-персоной", a DB write via updateDefaultFocusPersonAction). Undefined/false for every authenticated rendering of the tree. */
@@ -207,6 +209,8 @@ export interface TreeHighlightState {
   /** Present (even if empty) once a filter is active; absent means "no filter" (isFilterMatch stays undefined on every node). */
   filterMatchedIds?: Set<string>;
   tracePersonIds?: Set<string>;
+  /** The people chosen in the Relationship Trace panel, set as soon as one is — see PersonNodeData.isTracePicked. */
+  tracePickedIds?: Set<string>;
   traceEdgeIds?: Set<string>;
   /** See TracedTreeLayoutGraph.traceEdgeDirections (tree-trace.ts) — which way A→B walks each traced edge, so the marching-ants animation always crawls A→B regardless of the edge's own source/target order. */
   traceEdgeDirections?: Map<string, 1 | -1>;
@@ -325,6 +329,7 @@ function toFlowNode(
       isOnTracePath: highlight.tracePersonIds
         ? highlight.tracePersonIds.has(node.id)
         : undefined,
+      isTracePicked: highlight.tracePickedIds?.has(node.id) ?? false,
       // Focusing the already-focused person would be a no-op navigation —
       // omitting the callback entirely (rather than passing one that no-ops)
       // lets the popover hide "сделать фокус-персоной" for that one card.
