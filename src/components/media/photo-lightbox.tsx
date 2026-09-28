@@ -23,6 +23,7 @@ import {
 } from "./lightbox-carousel-track";
 import type { GalleryPhotoView } from "./gallery-photo";
 import { mediaDownloadUrl } from "@/lib/media-url";
+import { PhotoCaption } from "./photo-caption";
 import { arrowStep } from "./lightbox-keys";
 
 /**
@@ -36,6 +37,8 @@ import { arrowStep } from "./lightbox-keys";
  * mouse/trackpad drag on desktop. The actual sliding-track mechanics live
  * in LightboxCarouselTrack (see its module doc for why it's a real
  * carousel track and not a single `<img src>` swap).
+ * The caption (media.title) sits under the photo, editable in place for
+ * editors — see PhotoCaption.
  * Delete lives on the grid thumbnail (PhotoGrid), not here — a full-screen
  * viewer isn't the place for a destructive action that's one hover away on
  * the grid itself. Download DOES live here too (same /api/media/[id] route,
@@ -168,6 +171,15 @@ export function PhotoLightbox({
               />
             )}
           </div>
+
+          <PhotoCaption
+            key={photo.media.id}
+            mediaId={photo.media.id}
+            caption={photo.media.title}
+            familyId={familyId}
+            familySlug={familySlug}
+            canEdit={canTag}
+          />
 
           <TaggedPeopleStrip
             people={photo.people}

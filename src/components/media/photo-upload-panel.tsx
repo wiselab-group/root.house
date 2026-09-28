@@ -12,7 +12,9 @@ import { usePhotoBatchUpload } from "./use-photo-batch-upload";
 /**
  * Upload panel for the family-wide gallery (/families/[slug]/photos) — a
  * drag&drop, multiple-files-at-once dropzone (PhotoDropzone) with per-tile
- * progress (PhotoUploadGrid, state owned by usePhotoBatchUpload). Kept
+ * progress (PhotoUploadGrid, state owned by usePhotoBatchUpload). Each
+ * queued photo has an optional caption field (its alt text and lightbox
+ * caption, see photo-caption.ts). Otherwise kept
  * deliberately minimal on fields: people are tagged separately, later,
  * against the already-uploaded photo (there is no "who's in this photo?"
  * step here) and privacy silently defaults to "family" (changeable
@@ -50,6 +52,7 @@ export function PhotoUploadPanel({
     isUploading,
     addFiles,
     removePhoto,
+    setCaption,
     uploadAll,
     doneCount,
     hasPending,
@@ -71,7 +74,11 @@ export function PhotoUploadPanel({
 
       <PhotoDropzone disabled={isUploading} onFiles={addFiles} />
 
-      <PhotoUploadGrid photos={photos} onRemove={removePhoto} />
+      <PhotoUploadGrid
+        photos={photos}
+        onRemove={removePhoto}
+        onCaptionChange={setCaption}
+      />
 
       {photos.length > 0 && (
         <p className="text-xs text-muted-foreground">{t("uploadHint")}</p>

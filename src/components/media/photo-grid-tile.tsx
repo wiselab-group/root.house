@@ -74,6 +74,7 @@ export function PhotoGridTile({
       <button
         type="button"
         onClick={onOpen}
+        title={photo.media.title ?? undefined}
         disabled={isArranging}
         tabIndex={isArranging ? -1 : undefined}
         className="absolute inset-0 text-left disabled:pointer-events-none"

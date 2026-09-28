@@ -1,5 +1,6 @@
 import { vercelBlobStorageService } from "./storage.vercel-blob";
 import { processImage } from "./image-variants";
+import { normalizePhotoCaption } from "./photo-caption";
 import {
   isUploadKey,
   UPLOAD_RULES,
@@ -29,6 +30,7 @@ import {
   isMediaLinked,
   isStorageKeyUsed,
   reorderMedia,
+  setMediaTitle,
   setMediaVariants,
   upsertPhotoTagPosition,
   clearPhotoTagPosition,
@@ -94,6 +96,8 @@ export interface UploadPhotoInput {
   /** Where the browser already put the file (see lib/upload-photo.ts). */
   storageKey: string;
   privacyLevel?: PrivacyLevel;
+  /** Already normalized (photo-caption.ts) — null for none. */
+  caption?: string | null;
 }
 
 /**
@@ -131,6 +135,7 @@ export async function uploadPersonPhoto(
       sizeBytes: info.sizeBytes,
       uploadedBy: input.uploadedBy,
       privacyLevel: input.privacyLevel,
+      title: input.caption ?? null,
       personIds: input.personIds,
       albumIds: input.albumIds,
     });
@@ -648,6 +653,18 @@ export async function reorderGalleryPhotos(
   familyId: string,
 ): Promise<void> {
   await reorderMedia(orderedMediaIds, familyId);
+}
+
+/** Sets or clears a photo's caption. `caption` is raw user input —
+ *  normalized (and length-checked) here, see photo-caption.ts. */
+export async function updatePhotoCaption(
+  mediaId: string,
+  familyId: string,
+  caption: unknown,
+): Promise<string | null> {
+  const normalized = normalizePhotoCaption(caption);
+  await setMediaTitle(mediaId, familyId, normalized);
+  return normalized;
 }
 
 export type { CreateMediaData, UpsertPhotoTagPositionData };

@@ -50,6 +50,7 @@ export function usePhotoBatchUpload(
       id: `${Date.now()}-${queuedPhotoIdCounter++}`,
       file,
       previewUrl: URL.createObjectURL(file),
+      caption: "",
       progress: 0,
       status: "queued",
     }));
@@ -71,6 +72,10 @@ export function usePhotoBatchUpload(
     );
   }
 
+  function setCaption(id: string, caption: string) {
+    patchPhoto(id, { caption });
+  }
+
   async function uploadAll(albumIds: string[], only?: QueuedPhoto[]) {
     const pending = (only ?? photos).filter(
       (photo) => photo.status === "queued",
@@ -88,6 +93,7 @@ export function usePhotoBatchUpload(
             personIds,
             albumIds,
             file: photo.file,
+            caption: photo.caption,
             onProgress: (fraction) =>
               patchPhoto(photo.id, { progress: fraction }),
           });
@@ -113,6 +119,7 @@ export function usePhotoBatchUpload(
     isUploading,
     addFiles,
     removePhoto,
+    setCaption,
     uploadAll,
     doneCount: photos.filter((p) => p.status === "done").length,
     hasPending: photos.some((p) => p.status === "queued"),

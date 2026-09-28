@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { ForbiddenError } from "@/domain/family/errors";
-import { canDelete } from "@/domain/family/permissions";
+import { canDelete, canEdit } from "@/domain/family/permissions";
 import { getFamilySlugById } from "@/domain/family/family.service";
 import {
   getPerson,
@@ -21,7 +21,10 @@ import {
   removeMedia,
   removeMediaIfUnlinked,
   reorderGalleryPhotos,
+  updatePhotoCaption,
 } from "@/domain/media/media.service";
+import { UploadRejectedError } from "@/domain/media/upload-rules";
+import { getErrorMessage } from "@/i18n/errors";
 
 /**
  * Photo upload itself is NOT a Server Action — the browser puts the file
@@ -206,4 +209,60 @@ export async function setPersonPortraitAction(
   revalidatePath(`/families/${familySlug}/people/${person.slug}/edit`);
   revalidatePath(`/families/${familySlug}/people`);
   revalidatePath(`/families/${familySlug}/tree`);
+}
+
+/**
+ * Sets or clears a photo's caption (media.title — its alt text and the line
+ * under it in the lightbox). Editing a photo's own field, so canEdit's
+ * "creator owns it" rule applies, same as delete — not tagging's
+ * collaborative contributor-edits-anything rule. The caption shows on every
+ * page holding the photo (galleries, albums, profiles, story slides), so the
+ * whole family subtree is revalidated rather than guessing which pages.
+ *
+ * Returns the saved (normalized) caption, or a translated error — the
+ * lightbox shows it inline instead of losing the typed text to a throw.
+ */
+export async function updatePhotoCaptionAction(
+  familyId: string,
+  familySlug: string,
+  mediaId: string,
+  caption: string,
+): Promise<{ caption: string | null } | { error: string }> {
+  const session = await auth();
+  if (!session?.user) {
+    return { error: (await getErrorMessage())("sessionExpired") };
+  }
+
+  const member = await requireFamilyAccess(
+    familyId,
+    session.user.id,
+    "contributor",
+  );
+
+  const mediaRecord = await getMedia(mediaId, familyId);
+  if (!mediaRecord || mediaRecord.kind !== "photo") {
+    return { error: (await getErrorMessage())("fileNotFound") };
+  }
+  if (
+    !canEdit(
+      { userId: session.user.id, role: member.role },
+      {
+        privacyLevel: mediaRecord.privacyLevel,
+        createdBy: mediaRecord.uploadedBy,
+      },
+    )
+  ) {
+    return { error: (await getErrorMessage())("noPhotoEditPermission") };
+  }
+
+  try {
+    const saved = await updatePhotoCaption(mediaId, familyId, caption);
+    revalidatePath(`/families/${familySlug}`, "layout");
+    return { caption: saved };
+  } catch (error) {
+    if (error instanceof UploadRejectedError) {
+      return { error: (await getErrorMessage())(error.message, error.values) };
+    }
+    throw error;
+  }
 }

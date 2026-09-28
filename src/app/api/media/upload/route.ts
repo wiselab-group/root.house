@@ -12,6 +12,7 @@ import {
   makePhotoVariants,
 } from "@/domain/media/media.service";
 import { UploadRejectedError } from "@/domain/media/upload-rules";
+import { normalizePhotoCaption } from "@/domain/media/photo-caption";
 import { getPerson, setPersonAvatar } from "@/domain/person/person.service";
 
 // The downscaled copies are made in after() — past the response, but still
@@ -28,6 +29,7 @@ interface FinalizeBody {
   albumIds?: unknown;
   isAvatar?: unknown;
   privacyLevel?: unknown;
+  caption?: unknown;
 }
 
 /**
@@ -142,6 +144,7 @@ export async function POST(request: Request): Promise<Response> {
         uploadedBy: session.user.id,
         storageKey,
         privacyLevel,
+        caption: normalizePhotoCaption(body.caption),
       },
       await getLocale(),
     );

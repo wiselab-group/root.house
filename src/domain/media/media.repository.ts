@@ -367,6 +367,20 @@ export async function setMediaVariants(
   return rows.length > 0;
 }
 
+/** Sets (or clears, with null) a photo's caption — see photo-caption.ts. */
+export async function setMediaTitle(
+  mediaId: string,
+  familyId: string,
+  title: string | null,
+): Promise<boolean> {
+  const rows = await db
+    .update(media)
+    .set({ title })
+    .where(and(eq(media.id, mediaId), eq(media.familyId, familyId)))
+    .returning({ id: media.id });
+  return rows.length > 0;
+}
+
 /**
  * Every stored file any Media row points at — originals and variants, all
  * families. Only for the orphaned-upload cleanup (media-cleanup.ts), a

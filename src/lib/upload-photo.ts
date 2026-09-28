@@ -22,6 +22,7 @@ export async function uploadPhoto({
   isAvatar = false,
   file,
   privacyLevel,
+  caption,
   onProgress,
 }: {
   familyId: string;
@@ -32,6 +33,8 @@ export async function uploadPhoto({
   isAvatar?: boolean;
   file: File;
   privacyLevel?: "private" | "family" | "public";
+  /** The photo's caption (alt text) — normalized on the server. */
+  caption?: string;
   onProgress?: (fraction: number) => void;
 }): Promise<{ id: string }> {
   const storageKey = await uploadToStorage({
@@ -54,6 +57,7 @@ export async function uploadPhoto({
       personId,
       isAvatar,
       privacyLevel,
+      caption,
     },
     GENERIC_ERROR(),
   );

@@ -1,16 +1,18 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { CheckIcon, XIcon } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { PHOTO_CAPTION_MAX_LENGTH } from "@/domain/media/photo-caption";
 import { cn } from "@/lib/utils";
-import { QueuedPhotoPreview } from "./queued-photo-preview";
-import { UploadProgressBar } from "./upload-progress-bar";
+import { QueuedPhotoTile } from "./queued-photo-tile";
 import type { BatchItem } from "./batch-upload-progress";
 
 export type QueuedPhoto = {
   id: string;
   file: File;
   previewUrl: string;
+  /** Typed while queued, sent with the upload — see photo-caption.ts. */
+  caption: string;
   progress: number;
   status: "queued" | "uploading" | "done" | "error";
   error?: string;
@@ -31,66 +33,55 @@ export function toBatchItems(photos: QueuedPhoto[]): BatchItem[] {
  * and a checkmark once done, so a batch of 5-10 photos reads as "here's
  * where we are" at a glance instead of one shared progress bar that can't
  * say which file is stuck.
+ *
+ * With `onCaptionChange` every tile gets a caption field under it and the
+ * grid goes wider-tiled (2–3 columns instead of 4–5) so the field has room
+ * to type in. The field locks once the photo starts uploading — the caption
+ * travels with the upload, later edits happen in the lightbox. Without it
+ * (PersonPhotoUploadPanel's instant upload, where a tile lives for about a
+ * second) the grid stays compact and captions are added from the lightbox.
  */
 export function PhotoUploadGrid({
   photos,
   onRemove,
+  onCaptionChange,
 }: {
   photos: QueuedPhoto[];
   onRemove: (id: string) => void;
+  onCaptionChange?: (id: string, caption: string) => void;
 }) {
   const t = useTranslations("media");
-  const tc = useTranslations("common");
   if (photos.length === 0) return null;
 
   return (
-    <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5">
-      {photos.map((photo) => (
-        <div
-          key={photo.id}
-          className="group/tile relative aspect-square overflow-hidden rounded-md border border-border bg-muted"
-        >
-          <QueuedPhotoPreview
-            previewUrl={photo.previewUrl}
-            fileName={photo.file.name}
-          />
-
-          {photo.status !== "done" && photo.status !== "error" && (
-            <button
-              type="button"
-              onClick={() => onRemove(photo.id)}
-              aria-label={t("removeFile", { name: photo.file.name })}
-              className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-foreground/60 text-background opacity-0 transition-opacity group-hover/tile:opacity-100"
-            >
-              <XIcon className="size-3" />
-            </button>
-          )}
-
-          {photo.status === "done" && (
-            <span className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <CheckIcon className="size-3" />
-            </span>
-          )}
-
-          {photo.status === "uploading" && (
-            <UploadProgressBar
-              value={photo.progress}
-              label={t("uploadingFile", { name: photo.file.name })}
-              className="absolute inset-x-1.5 bottom-1.5"
+    <div
+      className={cn(
+        "grid gap-2.5",
+        onCaptionChange
+          ? "grid-cols-2 gap-y-3 sm:grid-cols-3"
+          : "grid-cols-4 sm:grid-cols-5",
+      )}
+    >
+      {photos.map((photo) =>
+        onCaptionChange ? (
+          <div key={photo.id} className="flex flex-col gap-1.5">
+            <QueuedPhotoTile photo={photo} onRemove={onRemove} />
+            <Input
+              value={photo.caption}
+              onChange={(event) =>
+                onCaptionChange(photo.id, event.target.value)
+              }
+              disabled={photo.status !== "queued"}
+              maxLength={PHOTO_CAPTION_MAX_LENGTH}
+              placeholder={t("captionPlaceholder")}
+              aria-label={t("captionFor", { name: photo.file.name })}
+              className="h-8 text-sm"
             />
-          )}
-
-          {photo.status === "error" && (
-            <div
-              className={cn(
-                "absolute inset-0 flex items-center justify-center bg-destructive/80 p-1 text-center text-[10px] leading-tight text-white",
-              )}
-            >
-              {photo.error ?? tc("error")}
-            </div>
-          )}
-        </div>
-      ))}
+          </div>
+        ) : (
+          <QueuedPhotoTile key={photo.id} photo={photo} onRemove={onRemove} />
+        ),
+      )}
     </div>
   );
 }
