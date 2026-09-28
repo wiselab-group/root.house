@@ -11,6 +11,10 @@ import { HeroMoreMenu } from "@/components/hero/hero-more-menu";
  * The Story page's hero, in the same dark photo-backdrop style as the
  * Person Profile (reference screenshots, 2026-09-24): the carousel's photos
  * fill the hero, the title + meta sit bottom-left, glass pills on top.
+ * With photos it fills the screen under the app header exactly (user
+ * request 2026-09-28) — it used to be sized off the window's width and ran
+ * past the bottom edge on wide, short windows, cutting off the caption.
+ * 560px floor so the title block and the film strip never overlap.
  * With no photos at all it collapses to a shorter title block on the plain
  * backdrop instead of an empty photo frame.
  */
@@ -41,7 +45,7 @@ export function StoryHero({
     <header
       className={`relative isolate overflow-hidden ${
         slides.length > 0
-          ? "h-[clamp(560px,58vw,740px)]"
+          ? "h-[max(560px,calc(100svh-var(--app-header-h)))]"
           : "h-[clamp(360px,34vw,440px)]"
       }`}
     >

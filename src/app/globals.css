@@ -831,9 +831,12 @@ body:has(.photo-backdrop) .app-header {
 body:has(.photo-backdrop) {
   --app-header-h: 69px;
 }
+/* The header's real rendered height: py-3 + the RU/EN switch row (38px)
+   + the 1px border. It was 57px — 6px short — which only surfaced once the
+   story hero sized itself off it and ran past the bottom edge. */
 @media (min-width: 768px) {
   body:has(.photo-backdrop) {
-    --app-header-h: 57px;
+    --app-header-h: 63px;
   }
 }
 body:has(.photo-backdrop) .app-header {
