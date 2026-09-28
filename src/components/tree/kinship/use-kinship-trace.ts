@@ -152,14 +152,6 @@ export function useKinshipTrace(
     [writeSlots],
   );
 
-  const compareWith = useCallback(
-    (personId: string) => {
-      writeSlots({ traceA: personId, traceB: null });
-      setPanelOpen(true);
-    },
-    [writeSlots],
-  );
-
   return {
     aId,
     bId,
@@ -175,7 +167,6 @@ export function useKinshipTrace(
     pick,
     swap,
     reset,
-    compareWith,
   };
 }
 

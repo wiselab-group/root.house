@@ -2,11 +2,10 @@
 
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { RouteIcon, UserIcon } from "lucide-react";
+import { UserIcon } from "lucide-react";
 import { PopoverClose } from "@/components/ui/popover";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
 import { PersonNodePopoverSummary } from "./person-node-popover-summary";
-import { useKinshipContext } from "./kinship/kinship-context";
 
 /**
  * The card's click popover: the who-is-this summary
@@ -22,9 +21,8 @@ import { useKinshipContext } from "./kinship/kinship-context";
  * was removed from this popover per explicit user request 2026-09-23 —
  * focus switching now lives only in settings; data.onFocusPerson is still
  * threaded through (xyflow-adapter.ts) for that other surface, this
- * component just no longer reads it. "Сравнить с…" starts a Relationship
- * Trace from this person (kinship-context.tsx) — absent where there's no
- * trace panel (the Share Link tree).
+ * component just no longer reads it. "Сравнить с…" was removed the same way
+ * (user request 2026-09-28) — a trace starts from the dock's «Родство».
  */
 export function PersonNodePopoverActions({
   data,
@@ -32,7 +30,6 @@ export function PersonNodePopoverActions({
   data: PersonFlowNode["data"];
 }) {
   const t = useTranslations("tree");
-  const kinship = useKinshipContext();
 
   return (
     <div className="flex flex-col">
@@ -52,20 +49,6 @@ export function PersonNodePopoverActions({
         >
           <UserIcon className="size-3.5 shrink-0 text-muted-foreground" />
           {t("viewProfile")}
-        </PopoverClose>
-      )}
-      {kinship && (
-        <PopoverClose
-          render={
-            <button
-              type="button"
-              onClick={() => kinship.compareWith(data.personId)}
-              className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-[0.8rem] hover:bg-accent hover:text-accent-foreground"
-            />
-          }
-        >
-          <RouteIcon className="size-3.5 shrink-0 text-muted-foreground" />
-          {t("compareWith")}
         </PopoverClose>
       )}
     </div>

@@ -7,8 +7,8 @@ import { glassIconButtonLarge } from "@/components/hero/glass";
 import type { CarouselSlide } from "./story-carousel";
 
 /**
- * StoryCarousel's bottom bar: the current photo's caption over a strip of
- * thumbnails, the slideshow button (its progress ring IS the timer — the
+ * StoryCarousel's bottom bar: a strip of thumbnails with the current
+ * photo's caption under it (user request 2026-09-28), the slideshow button (its progress ring IS the timer — the
  * next slide is shown on the ring animation's own animationend, no
  * setTimeout, per CLAUDE.md's FORBIDDEN list) and the "all photos" button.
  */
@@ -36,12 +36,6 @@ export function CarouselFilm({
   return (
     <div className="absolute inset-x-4 bottom-12 z-20 flex flex-col gap-3 sm:inset-x-7 sm:bottom-14 sm:flex-row sm:items-end sm:justify-center">
       <div className="flex min-w-0 flex-col items-start gap-2.5 sm:items-center">
-        <p
-          aria-live="polite"
-          className="min-h-5 max-w-full truncate text-xs text-foreground/65"
-        >
-          {caption}
-        </p>
         <div
           role="group"
           aria-label={t("photos")}
@@ -70,9 +64,17 @@ export function CarouselFilm({
             </button>
           ))}
         </div>
+        <p
+          aria-live="polite"
+          className="min-h-5 leading-5 max-w-full truncate text-xs text-foreground/65"
+        >
+          {caption}
+        </p>
       </div>
 
-      <div className="flex gap-2 self-end sm:absolute sm:right-0 sm:bottom-1">
+      {/* sm: level with the thumbnails, not the caption line under them —
+          bottom-8.5 = caption (h-5) + gap-2.5 + the strip's p-1. */}
+      <div className="flex gap-2 self-end sm:absolute sm:right-0 sm:bottom-8.5">
         <button
           type="button"
           className={`${glassIconButtonLarge} relative`}

@@ -75,9 +75,8 @@ export function TreeToolbar({
     () => ({
       isPicking: trace.pickSlot !== null,
       pick: trace.pick,
-      compareWith: trace.compareWith,
     }),
-    [trace.pickSlot, trace.pick, trace.compareWith],
+    [trace.pickSlot, trace.pick],
   );
 
   const { summary, aId, bId, personsById, isPanelOpen, setPanelOpen } = trace;
