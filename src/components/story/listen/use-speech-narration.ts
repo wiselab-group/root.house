@@ -12,6 +12,8 @@ export type { NarrationStatus };
 export const NARRATION_RATES = [1, 1.25, 1.5, 0.8] as const;
 
 const noSubscription = () => () => {};
+/** A phrase that "ends" this soon without having started was never said. */
+const SILENT_END_MS = 400;
 
 function readSaved(key: string, max: number): number {
   try {
@@ -65,6 +67,7 @@ export function useSpeechNarration(
   const noVoice =
     useSyncExternalStore(noSubscription, canSpeak, () => true) === false ||
     (voices.length > 0 && voice === null);
+  const [unheard, setUnheard] = useState(false);
   const run = useRef(0);
 
   // Leaving the page stops the voice — speech outlives the component.
@@ -80,6 +83,9 @@ export function useSpeechNarration(
     const synth = window.speechSynthesis;
     const mine = ++run.current;
     synth.cancel();
+    setUnheard(false);
+    let current = voice;
+    let retried = false;
     const say = (at: number) => {
       if (mine !== run.current) return;
       if (at >= phrases.length) {
@@ -92,9 +98,42 @@ export function useSpeechNarration(
       writeSaved(storageKey, at);
       const utterance = new SpeechSynthesisUtterance(phrases[at].text);
       utterance.lang = lang;
-      if (voice) utterance.voice = voice;
+      if (current) utterance.voice = current;
       utterance.rate = speed;
-      utterance.onend = () => say(at + 1);
+      let started = false;
+      const sentAt = performance.now();
+      utterance.onstart = () => {
+        started = true;
+      };
+      utterance.onend = () => {
+        if (mine !== run.current) return;
+        // A phrase that "ends" at once, never having started, wasn't said —
+        // a muted tab does that in Chrome (user report 2026-09-29), so can
+        // a failing network voice. Carrying on raced through the whole
+        // story in a blink: the capsule flashed and closed. Once, the same
+        // phrase in the next best voice; still nothing — stop here,
+        // paused, the spot kept, and ask to check the sound (no web API
+        // tells a muted tab). Nothing is remembered against the voices:
+        // the next play starts afresh, after the sound is back on.
+        if (!started && performance.now() - sentAt < SILENT_END_MS) {
+          const next = retried
+            ? null
+            : pickVoice(
+                voices.filter((v) => v !== current),
+                lang,
+              );
+          retried = true;
+          if (next) {
+            current = next;
+            say(at);
+          } else {
+            setStatus("paused");
+            setUnheard(true);
+          }
+          return;
+        }
+        say(at + 1);
+      };
       utterance.onerror = (event) => {
         if (mine !== run.current) return;
         if (event.error === "interrupted" || event.error === "canceled") return;
@@ -130,6 +169,7 @@ export function useSpeechNarration(
     index,
     rate,
     noVoice,
+    unheard,
     elapsed: startOf(index),
     total: narration.totalSeconds,
     play: () => speakFrom(index),

@@ -26,6 +26,10 @@ export interface NarrationPlayerState {
   rate: number;
   /** Device voice only: this device can't read the story's language. */
   noVoice: boolean;
+  /** Device voice only: the browser "finished" phrases without saying
+   *  them — most often a muted tab or device, which no web API reports.
+   *  The player stops, paused, and asks to check the sound. */
+  unheard: boolean;
   elapsed: number;
   total: number;
   play: () => void;

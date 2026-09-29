@@ -553,6 +553,7 @@
     "listenNext": "Next phrase",
     "listenSpeed": "Speed: {rate}×",
     "listenDeviceVoice": "Device voice",
+    "listenUnheard": "<b>Can't hear it?</b> Check the tab or device isn't muted",
     "listenNoVoice": "This device has no voice for the story's language",
     "listenPosition": "Position in the story",
     "listenPlayer": "Story player",

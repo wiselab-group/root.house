@@ -182,6 +182,7 @@ export function useRecordingNarration(
     index,
     rate,
     noVoice: false,
+    unheard: false,
     elapsed,
     total,
     play,

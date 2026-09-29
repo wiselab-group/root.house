@@ -7,6 +7,7 @@ import { LayoutGridIcon } from "lucide-react";
 import { glassIconButtonLarge } from "@/components/hero/glass";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import type { CarouselSlide } from "./story-carousel";
+import { FILM_THUMB_HEIGHT } from "./film-thumb-size";
 
 /**
  * StoryCarousel's bottom bar: a strip of thumbnails with the current
@@ -121,12 +122,17 @@ export function CarouselFilm({
                 // opacity, all thumbs on one baseline; the ring fits in p-1.
                 className="photo-tone relative h-14 shrink-0 overflow-hidden rounded-md bg-muted opacity-55 transition-[opacity,transform] duration-base ease-(--ease-reveal) hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-95 aria-pressed:opacity-100 aria-pressed:ring-2 aria-pressed:ring-foreground aria-pressed:focus-visible:ring-foreground"
               >
+                {/* The photo's own width at the strip's height, known before
+                    it loads: nothing shifts as thumbnails arrive, and the
+                    drawn size is exactly width × height — a fixed 96×56
+                    with CSS `w-auto` narrowed portraits by one side only,
+                    which next/image warns about in the console. */}
                 <ArchiveImage
                   src={slide.thumbSrc}
                   alt=""
-                  width={96}
-                  height={56}
-                  className="h-full w-auto max-w-24 object-cover"
+                  width={slide.thumbWidth}
+                  height={FILM_THUMB_HEIGHT}
+                  className="h-full object-cover"
                 />
               </button>
             ))}

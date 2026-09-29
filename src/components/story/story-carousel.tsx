@@ -19,6 +19,9 @@ export interface CarouselSlide {
   /** "wide" photos fill the whole hero; "tall" portraits sit on the right
    *  and dissolve into the backdrop, like the Person Profile hero. */
   fit: "wide" | "tall";
+  /** The film strip thumbnail's width in px, from the photo's proportions
+   *  (film-thumb-size.ts). */
+  thumbWidth: number;
 }
 
 /**

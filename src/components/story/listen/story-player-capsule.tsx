@@ -9,6 +9,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { useNarration } from "./narration-context";
+import { PlayerUnheardHint } from "./player-unheard-hint";
 
 const iconButton =
   "flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-foreground transition-colors duration-fast outline-none hover:bg-glass focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:opacity-40 [&_svg]:size-4";
@@ -43,7 +44,8 @@ export function StoryPlayerCapsule() {
   const position = `${clock(elapsed)} / ${clock(total)}`;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-5">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2.5 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-5">
+      {player.unheard && <PlayerUnheardHint />}
       <section
         aria-label={t("listenPlayer")}
         className="pointer-events-auto flex w-full max-w-xl animate-in items-center gap-2 rounded-full border border-glass-edge bg-background/70 p-1.5 pr-2 shadow-xl shadow-black/40 backdrop-blur-xl backdrop-saturate-150 duration-slow ease-(--ease-reveal) fade-in-0 slide-in-from-bottom-4 motion-reduce:animate-none"

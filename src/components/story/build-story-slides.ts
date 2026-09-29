@@ -4,6 +4,11 @@ import type { PersonRecord } from "@/domain/person/person.repository";
 import { getLocale } from "next-intl/server";
 import { mediaUrl } from "@/lib/media-url";
 import type { CarouselSlide } from "./story-carousel";
+import {
+  FILM_THUMB_HEIGHT,
+  FILM_THUMB_MAX_WIDTH,
+  FILM_THUMB_PORTRAIT_WIDTH,
+} from "./film-thumb-size";
 
 /**
  * The hero carousel's slides: the story's own attached photos; when it has
@@ -30,6 +35,16 @@ export async function buildStorySlides(
       media.width && media.height && media.width > media.height * 1.15
         ? ("wide" as const)
         : ("tall" as const),
+    thumbWidth:
+      media.width && media.height
+        ? Math.min(
+            FILM_THUMB_MAX_WIDTH,
+            Math.max(
+              1,
+              Math.round((FILM_THUMB_HEIGHT * media.width) / media.height),
+            ),
+          )
+        : FILM_THUMB_PORTRAIT_WIDTH,
   });
 
   if (storyPhotos.length > 0) {
