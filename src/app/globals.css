@@ -691,6 +691,31 @@ body:has(.photo-backdrop) .app-header {
     mix-blend-mode: multiply;
     pointer-events: none;
   }
+
+  /* A story's cover on the profile's featured story card: the photo
+     dissolves into the card toward the text — the bottom edge on phones
+     (photo on top), the right edge from sm (photo on the left). Same eased
+     ramp as .hero-photo-mask, so no band where the fade meets full opacity. */
+  .story-cover-fade {
+    --fade-dir: 0deg;
+    mask-image: linear-gradient(
+      var(--fade-dir),
+      transparent 0%,
+      rgb(0 0 0 / 0.04) 7.8%,
+      rgb(0 0 0 / 0.14) 16.2%,
+      rgb(0 0 0 / 0.3) 24.7%,
+      rgb(0 0 0 / 0.5) 32.5%,
+      rgb(0 0 0 / 0.7) 40.3%,
+      rgb(0 0 0 / 0.86) 48.8%,
+      rgb(0 0 0 / 0.96) 57.2%,
+      #000 65%
+    );
+  }
+  @media (min-width: 40rem) {
+    .story-cover-fade {
+      --fade-dir: 270deg;
+    }
+  }
   .hero-photo-mask::after {
     background: linear-gradient(
       0deg,

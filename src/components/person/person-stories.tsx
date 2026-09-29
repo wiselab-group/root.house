@@ -3,6 +3,7 @@ import {
   getPersonStories,
   filterVisibleStories,
 } from "@/domain/story/story.service";
+import { getVisibleStoryPhotos } from "@/domain/media/media.service";
 import { NewStoryButton } from "@/components/story/new-story-button";
 import { PersonStoriesList } from "./person-stories-list";
 import { ProfileSectionWithAdd } from "./profile-section-with-add";
@@ -32,6 +33,15 @@ export async function PersonStories({
   const t = await getTranslations("profile");
   const allStories = await getPersonStories(personId, familyId);
   const stories = filterVisibleStories(allStories, member);
+  // Each story's cover is the first slide of its own hero carousel — the
+  // first attached photo this member may see. None → a text-only card.
+  const covers = await Promise.all(
+    stories.map(
+      async (story) =>
+        (await getVisibleStoryPhotos(story.id, familyId, member))[0]?.id ??
+        null,
+    ),
+  );
 
   return (
     <ProfileSectionWithAdd
@@ -58,8 +68,9 @@ export async function PersonStories({
             familyId={familyId}
             familySlug={familySlug}
             personId={personId}
-            stories={stories.map((story) => ({
+            stories={stories.map((story, index) => ({
               ...story,
+              coverMediaId: covers[index] ?? null,
               canDelete: canDelete(member, {
                 privacyLevel: story.privacyLevel,
                 createdBy: story.authorId,
