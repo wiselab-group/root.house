@@ -12,6 +12,8 @@ import { logActivity } from "@/domain/activity-log/activity-log.service";
 import type { Locale } from "@/domain/shared/locale";
 import { personDisplayName } from "@/domain/person/display-name";
 import { resolveByteRange } from "./byte-range";
+import { getVisibleStory } from "@/domain/story/story.service";
+import { getNarrationStoryId } from "@/domain/story/story-narration.repository";
 import type {
   MediaVariantName,
   MediaVariants,
@@ -245,6 +247,35 @@ export async function storePhotoVariants(
 function variantKeys(variants: MediaVariants | null | undefined): string[] {
   return Object.values(variants ?? {}).map((variant) => variant.storageKey);
 }
+
+/** Checks a story recording the browser has put into storage — the same
+ *  folder/privacy/type/size checks as every other upload, kind "audio". */
+export async function verifyNarrationUpload(
+  storageKey: string,
+  familyId: string,
+): Promise<{ sizeBytes: number; contentType: string }> {
+  return verifyUploadedFile(storageKey, familyId, "audio");
+}
+
+/** Removes a story recording's audio — its media row (the story_narration
+ *  row goes with it, FK cascade) and its file. Only ever an "audio" row:
+ *  never a photo or document, whatever id is passed. */
+export async function deleteNarrationAudio(
+  mediaId: string,
+  familyId: string,
+): Promise<void> {
+  const record = await getMediaById(mediaId, familyId);
+  if (!record || record.kind !== "audio") return;
+  await deleteMediaRow(mediaId, familyId);
+  await deleteStoredFiles([record.storageKey]);
+}
+
+/** A file the browser uploaded that won't be recorded after all. */
+export async function discardUploadedFile(storageKey: string): Promise<void> {
+  await deleteStoredFiles([storageKey]);
+}
+
+export const mediaStorageProvider = storage.providerName;
 
 /** Best-effort — a leftover blob is cheaper than failing the caller's own error path. */
 async function deleteStoredFiles(storageKeys: string[]): Promise<void> {
@@ -541,6 +572,14 @@ export async function getVisibleMedia(
 ): Promise<MediaRecord | null> {
   const record = await getMediaById(mediaId, familyId);
   if (!record) return null;
+  // A story recording is heard by exactly who may read its story — its own
+  // media row carries no privacy of its own (story-narration.service.ts).
+  // Audio with no story behind it is heard by no one.
+  if (record.kind === "audio") {
+    const storyId = await getNarrationStoryId(mediaId, familyId);
+    const story = storyId && (await getVisibleStory(storyId, familyId, member));
+    return story ? record : null;
+  }
   return canView(member, {
     privacyLevel: record.privacyLevel,
     createdBy: record.uploadedBy,

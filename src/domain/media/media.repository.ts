@@ -267,7 +267,14 @@ export async function getMediaForAlbum(
     .select({ media })
     .from(mediaAlbum)
     .innerJoin(media, eq(mediaAlbum.mediaId, media.id))
-    .where(and(eq(mediaAlbum.albumId, albumId), eq(media.familyId, familyId)))
+    .where(
+      and(
+        eq(mediaAlbum.albumId, albumId),
+        eq(media.familyId, familyId),
+        // Albums hold photos only — never a story recording or a document.
+        eq(media.kind, "photo"),
+      ),
+    )
     .orderBy(...GALLERY_ORDER);
 
   return rows.map((r) => toRecord(r.media));
@@ -561,10 +568,17 @@ export interface UpsertPhotoTagPositionData {
 export async function upsertPhotoTagPosition(
   data: UpsertPhotoTagPositionData,
 ): Promise<boolean> {
+  // People are tagged on photos only.
   const [mediaRow] = await db
     .select({ id: media.id })
     .from(media)
-    .where(and(eq(media.id, data.mediaId), eq(media.familyId, data.familyId)));
+    .where(
+      and(
+        eq(media.id, data.mediaId),
+        eq(media.familyId, data.familyId),
+        eq(media.kind, "photo"),
+      ),
+    );
   const [personRow] = await db
     .select({ id: persons.id })
     .from(persons)

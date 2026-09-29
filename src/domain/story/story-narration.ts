@@ -81,11 +81,6 @@ export function buildNarration(title: string, layout: StoryLayout): Narration {
   };
 }
 
-/** Whole minutes for the «Слушать · N мин» label, at least 1. */
-export function narrationMinutes(narration: Narration): number {
-  return Math.max(1, Math.round(narration.totalSeconds / 60));
-}
-
 function blockTexts(block: StoryLayoutBlock): string[] {
   switch (block.type) {
     case "chapter":
@@ -144,4 +139,18 @@ export function splitPhrases(text: string): string[] {
 function estimate(text: string): number {
   const words = text.split(/\s+/).filter(Boolean).length;
   return (words / WORDS_PER_MINUTE) * 60;
+}
+
+/** The block being read at `ms` into the recording (the last cue at or
+ *  before it), or null before the first cue. */
+export function blockAt(
+  cues: readonly { block: string; ms: number }[],
+  ms: number,
+): string | null {
+  let found: string | null = null;
+  for (const cue of cues) {
+    if (cue.ms > ms) break;
+    found = cue.block;
+  }
+  return found;
 }

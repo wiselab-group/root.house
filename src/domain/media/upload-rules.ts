@@ -7,7 +7,7 @@
  * storage, never through our own function body (Vercel caps that at
  * ~4.5MB) — which is what makes a 25MB limit possible at all.
  */
-export type UploadKind = "photo" | "document";
+export type UploadKind = "photo" | "document" | "audio";
 
 export const PHOTO_MAX_BYTES = 25 * 1024 * 1024;
 
@@ -37,6 +37,14 @@ export const DOCUMENT_CONTENT_TYPES = [
 
 export const DOCUMENT_ACCEPT = [...DOCUMENT_CONTENT_TYPES, ".heic"].join(",");
 
+/** A story read aloud (StoryRecorder): about an hour even at Safari's
+ *  AAC bitrate. Only what browsers' MediaRecorder actually produces —
+ *  WebM/Opus (Chrome, Firefox, Edge), MP4/AAC (Safari) — stored under its
+ *  base type (the recorder strips `;codecs=…`). */
+export const AUDIO_MAX_BYTES = 60 * 1024 * 1024;
+
+export const AUDIO_CONTENT_TYPES = ["audio/webm", "audio/mp4", "audio/ogg"];
+
 export const UPLOAD_RULES: Record<
   UploadKind,
   { maxBytes: number; contentTypes: string[] }
@@ -46,6 +54,7 @@ export const UPLOAD_RULES: Record<
     maxBytes: DOCUMENT_MAX_BYTES,
     contentTypes: DOCUMENT_CONTENT_TYPES,
   },
+  audio: { maxBytes: AUDIO_MAX_BYTES, contentTypes: AUDIO_CONTENT_TYPES },
 };
 
 /** Where a browser may put a new file: its own family's uploads folder. */

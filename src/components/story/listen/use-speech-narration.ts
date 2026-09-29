@@ -4,8 +4,9 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { Narration } from "@/domain/story/story-narration";
 import { pickVoice } from "./pick-voice";
 import { canSpeak, useDeviceVoices } from "./device-voices";
+import type { NarrationPlayerState, NarrationStatus } from "./narration-types";
 
-export type NarrationStatus = "idle" | "playing" | "paused";
+export type { NarrationStatus };
 
 /** «Скорость» cycles through these. */
 export const NARRATION_RATES = [1, 1.25, 1.5, 0.8] as const;
@@ -42,7 +43,10 @@ function writeSaved(key: string, index: number) {
  * end/error event can't advance a newer run. The spot is remembered on this
  * device (localStorage) and cleared at the end of the story.
  */
-export function useSpeechNarration(narration: Narration, storageKey: string) {
+export function useSpeechNarration(
+  narration: Narration,
+  storageKey: string,
+): NarrationPlayerState {
   const { phrases, lang } = narration;
   const [status, setStatus] = useState<NarrationStatus>("idle");
   // null until the listener moves: then it's theirs; before, the spot
@@ -107,11 +111,27 @@ export function useSpeechNarration(narration: Narration, storageKey: string) {
     window.speechSynthesis?.cancel();
   };
 
+  const seek = (to: number) => {
+    const at = Math.min(Math.max(to, 0), phrases.length - 1);
+    if (status === "playing") speakFrom(at);
+    else {
+      setIndex(at);
+      writeSaved(storageKey, at);
+    }
+  };
+  // The device voice reports no times — estimated from each phrase's words.
+  const startOf = (at: number) =>
+    phrases.slice(0, at).reduce((sum, phrase) => sum + phrase.seconds, 0);
+
   return {
+    source: "voice",
+    recordedByName: null,
     status,
     index,
     rate,
     noVoice,
+    elapsed: startOf(index),
+    total: narration.totalSeconds,
     play: () => speakFrom(index),
     pause: () => {
       halt();
@@ -121,14 +141,19 @@ export function useSpeechNarration(narration: Narration, storageKey: string) {
       halt();
       setStatus("idle");
     },
-    seek: (to: number) => {
-      const at = Math.min(Math.max(to, 0), phrases.length - 1);
-      if (status === "playing") speakFrom(at);
-      else {
-        setIndex(at);
-        writeSaved(storageKey, at);
+    seekTo: (seconds: number) => {
+      let at = 0;
+      let start = 0;
+      while (
+        at < phrases.length - 1 &&
+        start + phrases[at].seconds <= seconds
+      ) {
+        start += phrases[at].seconds;
+        at++;
       }
+      seek(at);
     },
+    step: (direction: 1 | -1) => seek(index + direction),
     cycleRate: () => {
       const next =
         NARRATION_RATES[
@@ -141,5 +166,3 @@ export function useSpeechNarration(narration: Narration, storageKey: string) {
     },
   };
 }
-
-export type SpeechNarration = ReturnType<typeof useSpeechNarration>;

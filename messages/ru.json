@@ -185,7 +185,8 @@
     "eventNotFound": "Событие не найдено.",
     "noEventEdit": "У вас нет прав на редактирование этого события.",
     "albumNotFound": "Альбом не найден.",
-    "placeNotFound": "Место не найдено."
+    "placeNotFound": "Место не найдено.",
+    "invalidRecording": "Не удалось сохранить запись — попробуйте записать ещё раз."
   },
   "familyHome": {
     "since": "с {year} г.",
@@ -555,7 +556,28 @@
     "listenNoVoice": "На этом устройстве нет голоса для языка истории",
     "listenPosition": "Место в истории",
     "listenPlayer": "Плеер истории",
-    "listenOpening": "Начало"
+    "listenOpening": "Начало",
+    "listenReadBy": "Читает {name}",
+    "listenRecording": "Запись семьи",
+    "recordTitle": "Начитать историю",
+    "recordHint": "Читайте вслух в своём темпе. Перейдя к следующему абзацу, нажмите «Дальше» — при прослушивании будет подсвечиваться нужное место.",
+    "recordStart": "Начать запись",
+    "recordNext": "Дальше",
+    "recordPause": "Пауза",
+    "recordResume": "Продолжить",
+    "recordFinish": "Готово",
+    "recordSave": "Сохранить запись",
+    "recordAgain": "Записать заново",
+    "recordSaving": "Сохраняем… {percent}%",
+    "recordReplaceNote": "У истории уже есть запись. Новая заменит её.",
+    "recordDelete": "Удалить запись",
+    "recordNoMic": "Нет доступа к микрофону. Разрешите его в настройках браузера и попробуйте ещё раз.",
+    "recordUnsupported": "Этот браузер не умеет записывать звук. Попробуйте Chrome, Safari или Edge.",
+    "recordLevel": "Уровень звука",
+    "recordReview": "Послушайте, что получилось",
+    "recordStale": "Текст истории менялся после записи — подсветка может не совпадать с голосом.",
+    "recordLive": "Идёт запись",
+    "recordPaused": "Запись на паузе"
   },
   "documents": {
     "uploaded": "Загружено",
@@ -818,7 +840,8 @@
   "hero": {
     "actions": "Действия",
     "deletePerson": "Удалить человека",
-    "deleteStory": "Удалить историю"
+    "deleteStory": "Удалить историю",
+    "recordStory": "Начитать своим голосом"
   },
   "places": {
     "title": "Места",

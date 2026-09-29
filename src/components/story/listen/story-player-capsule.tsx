@@ -30,14 +30,17 @@ export function StoryPlayerCapsule() {
   const t = useTranslations("stories");
   const player = useNarration();
   if (!player || player.status === "idle") return null;
-  const { narration, index, status, rate, play, pause, stop, seek, cycleRate } =
-    player;
+  const { narration, index, status, rate, elapsed, total } = player;
   const phrase = narration.phrases[index];
   const chapter = narration.chapters.find((c) => c.number === phrase?.chapter);
-  const elapsed = narration.phrases
-    .slice(0, index)
-    .reduce((sum, p) => sum + p.seconds, 0);
   const playing = status === "playing";
+  const voice =
+    player.source === "voice"
+      ? t("listenDeviceVoice")
+      : player.recordedByName
+        ? t("listenReadBy", { name: player.recordedByName })
+        : t("listenRecording");
+  const position = `${clock(elapsed)} / ${clock(total)}`;
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-5">
@@ -47,7 +50,7 @@ export function StoryPlayerCapsule() {
       >
         <button
           type="button"
-          onClick={playing ? pause : play}
+          onClick={playing ? player.pause : player.play}
           aria-label={playing ? t("listenPause") : t("listenPlay")}
           className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background [&_svg]:size-4 [&_svg]:fill-current"
         >
@@ -59,8 +62,8 @@ export function StoryPlayerCapsule() {
         </button>
         <button
           type="button"
-          onClick={() => seek(index - 1)}
-          disabled={index === 0}
+          onClick={() => player.step(-1)}
+          disabled={elapsed === 0}
           aria-label={t("listenPrev")}
           className={`${iconButton} max-sm:hidden`}
         >
@@ -68,8 +71,7 @@ export function StoryPlayerCapsule() {
         </button>
         <button
           type="button"
-          onClick={() => seek(index + 1)}
-          disabled={index >= narration.phrases.length - 1}
+          onClick={() => player.step(1)}
           aria-label={t("listenNext")}
           className={`${iconButton} max-sm:hidden`}
         >
@@ -81,29 +83,30 @@ export function StoryPlayerCapsule() {
             {chapter?.title ?? t("listenOpening")}
             <span className="font-normal text-muted-foreground">
               {" · "}
-              {t("listenDeviceVoice")}
+              {voice}
             </span>
           </p>
           <div className="flex items-center gap-2">
             <input
               type="range"
               min={0}
-              max={narration.phrases.length - 1}
-              value={index}
-              onChange={(event) => seek(Number(event.target.value))}
+              max={Math.max(1, Math.floor(total))}
+              step={1}
+              value={Math.floor(elapsed)}
+              onChange={(event) => player.seekTo(Number(event.target.value))}
               aria-label={t("listenPosition")}
-              aria-valuetext={`${clock(elapsed / rate)} / ${clock(narration.totalSeconds / rate)}`}
+              aria-valuetext={position}
               className="h-1 min-w-0 flex-1 cursor-pointer accent-primary"
             />
             <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-              {clock(elapsed / rate)} / {clock(narration.totalSeconds / rate)}
+              {position}
             </span>
           </div>
         </div>
 
         <button
           type="button"
-          onClick={cycleRate}
+          onClick={player.cycleRate}
           aria-label={t("listenSpeed", { rate })}
           className="h-8 shrink-0 cursor-pointer rounded-full border border-glass-edge px-2.5 text-xs font-medium tabular-nums outline-none hover:bg-glass focus-visible:ring-2 focus-visible:ring-ring"
         >
@@ -111,7 +114,7 @@ export function StoryPlayerCapsule() {
         </button>
         <button
           type="button"
-          onClick={stop}
+          onClick={player.stop}
           aria-label={t("listenStop")}
           className={iconButton}
         >

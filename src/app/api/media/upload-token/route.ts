@@ -13,7 +13,8 @@ import {
 } from "@/domain/media/upload-rules";
 
 /**
- * Issues the short-lived token a browser needs to put ONE photo or document
+ * Issues the short-lived token a browser needs to put ONE photo, document
+ * or story recording
  * straight into private Blob storage (see lib/direct-upload.ts) — the file
  * itself never passes through our functions, so Vercel's ~4.5MB
  * request-body cap no longer limits file size.
@@ -99,8 +100,11 @@ function parsePayload(clientPayload: string | null): {
     "familyId" in parsed &&
     typeof parsed.familyId === "string"
   ) {
-    const kind =
-      "kind" in parsed && parsed.kind === "document" ? "document" : "photo";
+    const kind: UploadKind =
+      "kind" in parsed &&
+      (parsed.kind === "document" || parsed.kind === "audio")
+        ? parsed.kind
+        : "photo";
     return {
       familyId: parsed.familyId,
       kind,

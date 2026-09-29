@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { layoutStoryBody } from "./story-layout";
-import {
-  buildNarration,
-  narrationMinutes,
-  splitPhrases,
-} from "./story-narration";
+import { buildNarration, splitPhrases } from "./story-narration";
 
 const PHOTO = "11111111-1111-4111-8111-111111111111";
 
@@ -72,8 +68,8 @@ describe("buildNarration", () => {
     expect(narration.phrases.every((p) => p.photoId === PHOTO)).toBe(true);
   });
 
-  it("detects the story's language and estimates at least a minute", () => {
+  it("detects the story's language and estimates its length", () => {
     expect(narration.lang).toBe("ru-RU");
-    expect(narrationMinutes(narration)).toBe(1);
+    expect(narration.totalSeconds).toBeGreaterThan(0);
   });
 });

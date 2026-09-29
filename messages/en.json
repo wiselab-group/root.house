@@ -185,7 +185,8 @@
     "eventNotFound": "Event not found.",
     "noEventEdit": "You don't have permission to edit this event.",
     "albumNotFound": "Album not found.",
-    "placeNotFound": "Place not found."
+    "placeNotFound": "Place not found.",
+    "invalidRecording": "The recording couldn't be saved — try recording again."
   },
   "familyHome": {
     "since": "since {year}",
@@ -555,7 +556,28 @@
     "listenNoVoice": "This device has no voice for the story's language",
     "listenPosition": "Position in the story",
     "listenPlayer": "Story player",
-    "listenOpening": "Opening"
+    "listenOpening": "Opening",
+    "listenReadBy": "Read by {name}",
+    "listenRecording": "Family recording",
+    "recordTitle": "Read the story aloud",
+    "recordHint": "Read aloud at your own pace. When you move on to the next paragraph, press «Next» — listeners will then see the right place lit up.",
+    "recordStart": "Start recording",
+    "recordNext": "Next",
+    "recordPause": "Pause",
+    "recordResume": "Resume",
+    "recordFinish": "Done",
+    "recordSave": "Save the recording",
+    "recordAgain": "Record again",
+    "recordSaving": "Saving… {percent}%",
+    "recordReplaceNote": "This story already has a recording. The new one will replace it.",
+    "recordDelete": "Delete the recording",
+    "recordNoMic": "No access to the microphone. Allow it in the browser's settings and try again.",
+    "recordUnsupported": "This browser can't record sound. Try Chrome, Safari or Edge.",
+    "recordLevel": "Sound level",
+    "recordReview": "Listen to how it came out",
+    "recordStale": "The story's text changed after it was recorded — the highlight may not match the voice.",
+    "recordLive": "Recording",
+    "recordPaused": "Recording paused"
   },
   "documents": {
     "uploaded": "Uploaded",
@@ -818,7 +840,8 @@
   "hero": {
     "actions": "Actions",
     "deletePerson": "Delete person",
-    "deleteStory": "Delete story"
+    "deleteStory": "Delete story",
+    "recordStory": "Read it in your own voice"
   },
   "places": {
     "title": "Places",

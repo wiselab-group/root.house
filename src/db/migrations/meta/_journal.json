@@ -183,6 +183,13 @@
       "when": 1790540629578,
       "tag": "0025_pink_daimon_hellstrom",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1790696474540,
+      "tag": "0026_crazy_lily_hollister",
+      "breakpoints": true
     }
   ]
 }

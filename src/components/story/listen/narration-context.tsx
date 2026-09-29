@@ -2,12 +2,11 @@
 
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 import type { Narration } from "@/domain/story/story-narration";
-import {
-  useSpeechNarration,
-  type SpeechNarration,
-} from "./use-speech-narration";
+import type { NarrationPlayerState, StoryRecording } from "./narration-types";
+import { useRecordingNarration } from "./use-recording-narration";
+import { useSpeechNarration } from "./use-speech-narration";
 
-interface NarrationContextValue extends SpeechNarration {
+export interface NarrationContextValue extends NarrationPlayerState {
   narration: Narration;
 }
 
@@ -22,23 +21,84 @@ export function useNarration(): NarrationContextValue | null {
 /**
  * Wraps a Story page: one narration shared by the «Слушать» button in the
  * hero, the carousel (shows the photo the text is at), the player capsule
- * and the reading column's highlight. Stops when the page is left.
+ * and the reading column's highlight. A family member's recording plays if
+ * the story has one; otherwise the device's voice reads the text. Either
+ * way it stops when the page is left.
  */
 export function NarrationProvider({
   narration,
   storyId,
+  recording,
   children,
 }: {
   narration: Narration;
   storyId: string;
+  recording: StoryRecording | null;
   children: ReactNode;
 }) {
-  const speech = useSpeechNarration(
-    narration,
-    `root-house:story-listen:${storyId}`,
+  const key = `root-house:story-listen:${storyId}`;
+  return recording ? (
+    <RecordingProvider
+      narration={narration}
+      recording={recording}
+      storageKey={`${key}:${recording.mediaId}`}
+    >
+      {children}
+    </RecordingProvider>
+  ) : (
+    <VoiceProvider narration={narration} storageKey={key}>
+      {children}
+    </VoiceProvider>
   );
+}
+
+function VoiceProvider({
+  narration,
+  storageKey,
+  children,
+}: {
+  narration: Narration;
+  storageKey: string;
+  children: ReactNode;
+}) {
+  const player = useSpeechNarration(narration, storageKey);
+  return (
+    <Provide narration={narration} player={player}>
+      {children}
+    </Provide>
+  );
+}
+
+function RecordingProvider({
+  narration,
+  recording,
+  storageKey,
+  children,
+}: {
+  narration: Narration;
+  recording: StoryRecording;
+  storageKey: string;
+  children: ReactNode;
+}) {
+  const player = useRecordingNarration(narration, recording, storageKey);
+  return (
+    <Provide narration={narration} player={player}>
+      {children}
+    </Provide>
+  );
+}
+
+function Provide({
+  narration,
+  player,
+  children,
+}: {
+  narration: Narration;
+  player: NarrationPlayerState;
+  children: ReactNode;
+}) {
   const block =
-    speech.status === "idle" ? null : narration.phrases[speech.index]?.block;
+    player.status === "idle" ? null : narration.phrases[player.index]?.block;
 
   // Lights the block being read (StoryArticle marks every block with
   // data-narration-block). DOM, not React state: the reading column is
@@ -51,7 +111,7 @@ export function NarrationProvider({
   }, [block]);
 
   return (
-    <NarrationContext.Provider value={{ ...speech, narration }}>
+    <NarrationContext.Provider value={{ ...player, narration }}>
       {children}
     </NarrationContext.Provider>
   );

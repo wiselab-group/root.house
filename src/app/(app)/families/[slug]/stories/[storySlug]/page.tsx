@@ -27,6 +27,7 @@ import { StoryArticle } from "@/components/story/story-article";
 import { StoryChaptersNav } from "@/components/story/story-chapters-nav";
 import { StoryPeople } from "@/components/story/story-people";
 import { buildNarration } from "@/domain/story/story-narration";
+import { getStoryNarration } from "@/domain/story/story-narration.service";
 import { NarrationProvider } from "@/components/story/listen/narration-context";
 import { StoryListenButton } from "@/components/story/listen/story-listen-button";
 import { StoryPlayerCapsule } from "@/components/story/listen/story-player-capsule";
@@ -125,6 +126,20 @@ export default async function StoryDetailPage({
     })),
   };
 
+  // A family member's recording, if the story has one — it then plays
+  // instead of the device voice.
+  const recorded = await getStoryNarration(story, familyId);
+  const recording = recorded
+    ? {
+        mediaId: recorded.mediaId,
+        familyId,
+        cues: recorded.cues,
+        durationMs: recorded.durationMs,
+        recordedByName: recorded.recordedByName,
+        artwork: slides[0]?.thumbSrc ?? null,
+      }
+    : null;
+
   const ownership = {
     privacyLevel: story.privacyLevel,
     createdBy: story.authorId,
@@ -140,7 +155,11 @@ export default async function StoryDetailPage({
           { label: story.title },
         ]}
       />
-      <NarrationProvider narration={narration} storyId={storyId}>
+      <NarrationProvider
+        narration={narration}
+        storyId={storyId}
+        recording={recording}
+      >
         <StoryHero
           title={story.title}
           privacyLevel={story.privacyLevel}
@@ -157,6 +176,17 @@ export default async function StoryDetailPage({
             canDelete(viewer, ownership) ? { familyId, storyId } : null
           }
           listen={<StoryListenButton />}
+          record={
+            canEdit(viewer, ownership)
+              ? {
+                  familyId,
+                  storyId,
+                  storyPath: `/families/${slug}/stories/${storySlug}`,
+                  hasRecording: recording !== null,
+                  staleRecording: recorded?.stale ?? false,
+                }
+              : null
+          }
         />
         {layout.chapters.length > 1 && (
           <StoryChaptersNav chapters={layout.chapters} />

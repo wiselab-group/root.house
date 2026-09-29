@@ -5,6 +5,9 @@ import {
 } from "@/domain/family/permissions";
 import { logActivity } from "@/domain/activity-log/activity-log.service";
 import { ensureUniqueSlug, slugifyStory } from "./slug";
+import { getNarrationByStory } from "./story-narration.repository";
+import { deleteMediaRow } from "@/domain/media/media.repository";
+import { vercelBlobStorageService as storage } from "@/domain/media/storage.vercel-blob";
 import {
   createStory,
   deleteStory,
@@ -135,7 +138,14 @@ export async function removeStory(
   actorId: string,
 ): Promise<boolean> {
   const story = await getStoryById(storyId, familyId);
+  // Its recording goes with it: the story_narration row cascades, but the
+  // audio's own media row and file would be left behind otherwise.
+  const narration = await getNarrationByStory(storyId, familyId);
   const deleted = await deleteStory(storyId, familyId);
+  if (deleted && narration) {
+    await deleteMediaRow(narration.mediaId, familyId);
+    await storage.delete(narration.storageKey).catch(() => {});
+  }
 
   if (deleted && story) {
     await logActivity({

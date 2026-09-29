@@ -207,3 +207,51 @@ export const mediaStory = pgTable(
     uniqueIndex("media_story_unique").on(table.mediaId, table.storyId),
   ],
 );
+
+/** Where the reader is when a new block of the story starts, in the
+ *  recording — `block` is the narration script's block key ("title",
+ *  "lead", `b${index}`, see domain/story/story-narration.ts). */
+export interface NarrationCue {
+  block: string;
+  ms: number;
+}
+
+/**
+ * A family member reading a Story aloud — the «Слушать» player plays this
+ * instead of the device voice (no AI, CLAUDE.md § STORIES). The audio is an
+ * ordinary `media` row of kind "audio", linked to its story ONLY through
+ * this table — never media_story, whose rows are the story's photo
+ * carousel — so a recording can't turn up among photos anywhere.
+ *
+ * One per story: recording again replaces it (the old audio is deleted).
+ * Who may hear it follows the story, not the media row's own privacy
+ * (getVisibleMedia). `bodyHash` is the story text it was read from, so a
+ * later edit of the text is detectable.
+ */
+export const storyNarration = pgTable(
+  "story_narration",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    storyId: uuid("story_id")
+      .notNull()
+      .references(() => stories.id, { onDelete: "cascade" }),
+    mediaId: uuid("media_id")
+      .notNull()
+      .references(() => media.id, { onDelete: "cascade" }),
+    recordedBy: uuid("recorded_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    cues: jsonb("cues").$type<NarrationCue[]>().notNull(),
+    durationMs: integer("duration_ms").notNull(),
+    bodyHash: text("body_hash").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("story_narration_story_unique").on(table.storyId),
+    uniqueIndex("story_narration_media_unique").on(table.mediaId),
+    index("story_narration_family_idx").on(table.familyId),
+  ],
+);

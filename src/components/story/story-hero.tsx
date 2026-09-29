@@ -7,6 +7,7 @@ import { HeroMeta } from "@/components/hero/hero-meta";
 import { glassChip } from "@/components/hero/glass";
 import { StoryCarousel, type CarouselSlide } from "./story-carousel";
 import { HeroMoreMenu } from "@/components/hero/hero-more-menu";
+import type { StoryRecordTarget } from "./listen/story-recorder";
 
 /**
  * The Story page's hero, in the same dark photo-backdrop style as the
@@ -29,6 +30,7 @@ export function StoryHero({
   editHref,
   deleteProps,
   listen,
+  record,
 }: {
   title: string;
   privacyLevel: PrivacyLevel;
@@ -41,6 +43,8 @@ export function StoryHero({
   /** The «Слушать» button (client): left of the film strip, or under the
    *  reading time when the story has no strip. */
   listen?: ReactNode;
+  /** Set when the viewer may record the story in their own voice. */
+  record?: StoryRecordTarget | null;
 }) {
   const tc = useTranslations("common");
   const t = useTranslations("stories");
@@ -64,6 +68,7 @@ export function StoryHero({
         actions={
           <HeroMoreMenu
             editHref={editHref}
+            record={record}
             deleteTarget={
               deleteProps
                 ? { kind: "story", ...deleteProps, name: title }

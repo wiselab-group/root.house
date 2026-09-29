@@ -300,8 +300,13 @@ export async function setProfilePhoto(
 ): Promise<boolean> {
   if (mediaId !== null) {
     const media = await db.query.media.findFirst({
+      // A portrait is a photo — never a story recording or a document.
       where: (m, { and: sqlAnd, eq: sqlEq }) =>
-        sqlAnd(sqlEq(m.id, mediaId), sqlEq(m.familyId, familyId)),
+        sqlAnd(
+          sqlEq(m.id, mediaId),
+          sqlEq(m.familyId, familyId),
+          sqlEq(m.kind, "photo"),
+        ),
     });
     if (!media) return false;
   }

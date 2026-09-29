@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl";
 import { PauseIcon, PlayIcon } from "lucide-react";
-import { narrationMinutes } from "@/domain/story/story-narration";
 import { useNarration } from "./narration-context";
 
 /**
@@ -17,13 +16,13 @@ export function StoryListenButton() {
   const t = useTranslations("stories");
   const narration = useNarration();
   if (!narration) return null;
-  const { status, index, noVoice, play, pause } = narration;
+  const { status, elapsed, total, noVoice, play, pause } = narration;
   const playing = status === "playing";
   const label = playing
     ? t("listenPause")
-    : status === "paused" || index > 0
+    : status === "paused" || elapsed > 0
       ? t("listenResume")
-      : t("listen", { minutes: narrationMinutes(narration.narration) });
+      : t("listen", { minutes: Math.max(1, Math.round(total / 60)) });
 
   return (
     <button
