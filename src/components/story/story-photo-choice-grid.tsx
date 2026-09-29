@@ -34,10 +34,10 @@ export function StoryPhotoChoiceGrid({
     return (
       <div
         aria-busy="true"
-        className="grid grid-cols-3 gap-2 pb-1 sm:grid-cols-4"
+        className="grid grid-cols-3 gap-2 py-1 sm:grid-cols-4"
       >
         {Array.from({ length: 8 }, (_, index) => (
-          <Skeleton key={index} className="aspect-square rounded-md" />
+          <Skeleton key={index} className="aspect-square rounded-lg" />
         ))}
       </div>
     );
@@ -49,7 +49,7 @@ export function StoryPhotoChoiceGrid({
   }
 
   return (
-    <ul className="grid grid-cols-3 gap-2 pb-1 sm:grid-cols-4">
+    <ul className="grid grid-cols-3 gap-2 py-1 sm:grid-cols-4">
       {choices.map((photo) => {
         const order = selected.indexOf(photo.id);
         const isSelected = order !== -1;
@@ -59,19 +59,25 @@ export function StoryPhotoChoiceGrid({
               type="button"
               aria-pressed={isSelected}
               onClick={() => onToggle(photo.id)}
-              className={cn(
-                "group relative block aspect-square w-full overflow-hidden rounded-md bg-muted ring-1 ring-border transition-shadow duration-base ease-(--ease-reveal) outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                isSelected && "ring-3 ring-primary",
-              )}
+              // The selection ring is drawn inside the tile, over the photo
+              // (the span below), not around it: an outer ring was clipped
+              // by the dialog's scroll area, and the photo shrunk inside it
+              // showed square corners in a round frame (user screenshot
+              // 2026-09-29). Photo, frame and ring share one radius.
+              className="group relative block aspect-square w-full cursor-pointer overflow-hidden rounded-lg bg-muted outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               <ArchiveImage
                 src={mediaUrl(photo.id, familyId, "thumb")}
                 alt={photo.alt ?? tc("familyPhoto")}
                 fill
                 sizes="(max-width: 640px) 33vw, 160px"
+                className="object-cover transition-transform duration-base ease-(--ease-reveal) group-hover:scale-105 group-active:scale-100 motion-reduce:transition-none"
+              />
+              <span
+                aria-hidden="true"
                 className={cn(
-                  "object-cover transition-transform duration-base ease-(--ease-reveal) group-hover:scale-105 group-active:scale-100",
-                  isSelected && "scale-95 group-hover:scale-95",
+                  "pointer-events-none absolute inset-0 rounded-[inherit] ring-1 ring-foreground/10 ring-inset transition-shadow duration-base ease-(--ease-reveal)",
+                  isSelected && "ring-3 ring-primary",
                 )}
               />
               <span
