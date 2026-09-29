@@ -11,6 +11,7 @@ import { canView, type ActingMember } from "@/domain/family/permissions";
 import { logActivity } from "@/domain/activity-log/activity-log.service";
 import type { Locale } from "@/domain/shared/locale";
 import { personDisplayName } from "@/domain/person/display-name";
+import { resolveByteRange } from "./byte-range";
 import type {
   MediaVariantName,
   MediaVariants,
@@ -606,21 +607,60 @@ export function mediaCacheControl(
  * processing). `isVariant` tells the route it may cache hard: a variant's
  * bytes never change for a given media id.
  */
+/**
+ * A Media file's bytes for the media route — whole, or the byte range the
+ * browser asked for (`rangeHeader`, see byte-range.ts): audio seeks by
+ * range, and Safari won't play audio at all from a server that can't.
+ * `range` is set only when the store really returned just that range;
+ * `unsatisfiable` (the file's size) means answer 416.
+ */
 export async function getMediaStream(
   mediaId: string,
   familyId: string,
   size: MediaSize = "original",
+  rangeHeader: string | null = null,
 ) {
   const record = await getMediaById(mediaId, familyId);
   if (!record) return null;
   const variant = size === "original" ? undefined : record.variants?.[size];
-  const { stream, contentType } = await storage.getStream(
-    variant?.storageKey ?? record.storageKey,
-  );
+  const storageKey = variant?.storageKey ?? record.storageKey;
+  const typeOf = (stored: string | null) =>
+    variant ? "image/webp" : (stored ?? record.mimeType);
+
+  const info = rangeHeader ? await storage.getInfo(storageKey) : null;
+  if (info) {
+    const range = resolveByteRange(rangeHeader, info.sizeBytes);
+    if (range === "unsatisfiable") {
+      return {
+        stream: null,
+        contentType: typeOf(info.contentType),
+        isVariant: Boolean(variant),
+        totalSize: info.sizeBytes,
+        range: null,
+        unsatisfiable: true,
+      };
+    }
+    if (range) {
+      const part = await storage.getStream(storageKey, range);
+      return {
+        stream: part.stream,
+        contentType: typeOf(part.contentType),
+        isVariant: Boolean(variant),
+        totalSize: info.sizeBytes,
+        range: part.partial ? range : null,
+        unsatisfiable: false,
+      };
+    }
+  }
+
+  const whole = await storage.getStream(storageKey);
   return {
-    stream,
-    contentType: variant ? "image/webp" : (contentType ?? record.mimeType),
+    stream: whole.stream,
+    contentType: typeOf(whole.contentType),
     isVariant: Boolean(variant),
+    totalSize: whole.size,
+    range: null,
+    unsatisfiable: false,
   };
 }
 

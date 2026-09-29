@@ -4,6 +4,7 @@ import type {
   UploadInput,
   UploadResult,
 } from "./storage.service";
+import type { ByteRange } from "./byte-range";
 
 /**
  * Vercel Blob implementation of StorageService — chosen for the MVP (see
@@ -92,16 +93,37 @@ class VercelBlobStorageService implements StorageService {
     return Buffer.from(await new Response(stream).arrayBuffer());
   }
 
-  /** Used by the media route handler to stream a private blob's bytes back to an authorized request. */
-  async getStream(storageKey: string): Promise<{
+  /**
+   * Used by the media route handler to stream a private blob's bytes back
+   * to an authorized request — the whole blob, or one byte `range` of it.
+   * `partial` says whether the store actually answered with just that
+   * range (a Content-Range came back); if it ever sends the whole blob
+   * instead, the caller must serve it as a whole file, not as the range.
+   */
+  async getStream(
+    storageKey: string,
+    range?: ByteRange,
+  ): Promise<{
     stream: ReadableStream<Uint8Array>;
     contentType: string | null;
+    size: number | null;
+    partial: boolean;
   }> {
-    const result = await get(storageKey, { access: "private" });
+    const result = await get(storageKey, {
+      access: "private",
+      ...(range && {
+        headers: { Range: `bytes=${range.start}-${range.end}` },
+      }),
+    });
     if (!result || !result.stream) {
       throw new Error(`Blob not found: ${storageKey}`);
     }
-    return { stream: result.stream, contentType: result.blob.contentType };
+    return {
+      stream: result.stream,
+      contentType: result.blob.contentType,
+      size: result.blob.size || null,
+      partial: Boolean(range && result.headers.get("content-range")),
+    };
   }
 }
 

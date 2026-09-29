@@ -29,6 +29,10 @@ import {
  *
  * `?size=thumb|display` serves a downscaled WebP copy (see
  * domain/media/image-variants.ts); omitted, it's the original.
+ *
+ * Byte ranges (`Range: bytes=…` → 206 with Content-Range, 416 past the
+ * end): audio seeks by range, and Safari won't play audio from a server
+ * that can't answer one. Every response says `Accept-Ranges: bytes`.
  */
 export async function GET(
   request: Request,
@@ -75,7 +79,12 @@ export async function GET(
   const size = isDownload
     ? "original"
     : parseMediaSize(searchParams.get("size"));
-  const result = await getMediaStream(mediaId, familyId, size);
+  const result = await getMediaStream(
+    mediaId,
+    familyId,
+    size,
+    request.headers.get("range"),
+  );
   if (!result) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -83,13 +92,25 @@ export async function GET(
   const headers: Record<string, string> = {
     "Content-Type": result.contentType,
     "Cache-Control": mediaCacheControl(size, result.isVariant),
+    "Accept-Ranges": "bytes",
   };
+  if (result.unsatisfiable || !result.stream) {
+    headers["Content-Range"] = `bytes */${result.totalSize}`;
+    return new Response(null, { status: 416, headers });
+  }
   if (isDownload) {
     headers["Content-Disposition"] = contentDisposition(
       downloadFilename(media.title, result.contentType),
     );
   }
 
+  if (result.range) {
+    const { start, end } = result.range;
+    headers["Content-Range"] = `bytes ${start}-${end}/${result.totalSize}`;
+    headers["Content-Length"] = String(end - start + 1);
+    return new Response(result.stream, { status: 206, headers });
+  }
+  if (result.totalSize) headers["Content-Length"] = String(result.totalSize);
   return new Response(result.stream, { headers });
 }
 
