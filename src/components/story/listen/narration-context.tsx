@@ -54,7 +54,7 @@ export function NarrationProvider({
 }) {
   const host = useListeningHost();
   const source = useMemo<StorySource>(
-    () => ({ storyId, title, href, narration, recording }),
+    () => ({ kind: "story", storyId, title, href, narration, recording }),
     [storyId, title, href, narration, recording],
   );
 
@@ -70,7 +70,7 @@ export function NarrationProvider({
     noStore,
   );
   const player: NarrationPlayerState =
-    active && active.source.storyId === storyId
+    active?.source.kind === "story" && active.source.storyId === storyId
       ? active.player
       : {
           source: recording ? "recording" : "voice",

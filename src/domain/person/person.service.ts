@@ -11,6 +11,9 @@ import { canView, type ActingMember } from "@/domain/family/permissions";
 import { logActivity } from "@/domain/activity-log/activity-log.service";
 import type { Locale } from "@/domain/shared/locale";
 import { personDisplayName } from "@/domain/person/display-name";
+import { deleteMediaRow } from "@/domain/media/media.repository";
+import { vercelBlobStorageService as storage } from "@/domain/media/storage.vercel-blob";
+import { listVoicesByPerson } from "@/domain/person-voice/person-voice.repository";
 import {
   createPerson,
   deletePerson,
@@ -284,7 +287,16 @@ export async function removePerson(
   locale: Locale,
 ): Promise<boolean> {
   const person = await getPersonById(personId, familyId);
+  // Their voice recordings go with them: the person_voice rows cascade,
+  // but the audio's own media rows and files would be left behind.
+  const voices = await listVoicesByPerson(personId, familyId);
   const deleted = await deletePerson(personId, familyId);
+  if (deleted) {
+    for (const voice of voices) {
+      await deleteMediaRow(voice.mediaId, familyId);
+      await storage.delete(voice.storageKey).catch(() => {});
+    }
+  }
 
   if (deleted) {
     await logActivity({

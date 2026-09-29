@@ -186,7 +186,9 @@
     "noEventEdit": "У вас нет прав на редактирование этого события.",
     "albumNotFound": "Альбом не найден.",
     "placeNotFound": "Место не найдено.",
-    "invalidRecording": "Не удалось сохранить запись — попробуйте записать ещё раз."
+    "invalidRecording": "Не удалось сохранить запись — попробуйте записать ещё раз.",
+    "voiceNarratorMissing": "Укажите, кто рассказывает.",
+    "voiceNotFound": "Запись не найдена, или у вас нет прав её менять."
   },
   "familyHome": {
     "since": "с {year} г.",
@@ -1022,5 +1024,40 @@
     "discardBody": "Изменения в этой форме пропадут.",
     "keepEditing": "Остаться",
     "discard": "Закрыть"
+  },
+  "voice": {
+    "titleSelf": "Голос",
+    "titleNarrator": "Рассказывает {name}",
+    "play": "Слушать: {title}",
+    "pause": "Пауза: {title}",
+    "more": "Ещё {count, plural, one {# запись} few {# записи} many {# записей} other {# записи}}",
+    "manage": "Записи голоса",
+    "listTitle": "Записи голоса",
+    "main": "В шапке профиля",
+    "makeMain": "Показывать в шапке",
+    "actions": "Действия с записью",
+    "delete": "Удалить",
+    "deleteAsk": "Удалить запись насовсем?",
+    "add": "Добавить голос",
+    "addMore": "Добавить запись",
+    "addTitle": "Голос в профиле",
+    "addHint": "Запишите голос прямо сейчас или загрузите файл — например, оцифрованную кассету.",
+    "recordNow": "Записать",
+    "pickFile": "Выбрать файл",
+    "fileHint": "MP3, M4A, WAV или WebM, до {max} МБ",
+    "badFile": "Не получилось прочитать этот файл как аудио.",
+    "recordStop": "Остановить",
+    "recordAgain": "Заново",
+    "speakerLabel": "Чей это голос",
+    "speakerSelf": "Голос самого человека",
+    "speakerNarrator": "Рассказ о человеке",
+    "narratorName": "Кто рассказывает",
+    "narratorPlaceholder": "Например, внучка Галина",
+    "titleLabel": "Название",
+    "titleOptional": "необязательно",
+    "titlePlaceholder": "Например, поёт «Ой, у гаю»",
+    "dateLegend": "Когда записано",
+    "save": "Сохранить",
+    "saving": "Сохраняем… {percent}%"
   }
 }

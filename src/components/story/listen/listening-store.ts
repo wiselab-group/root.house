@@ -3,6 +3,7 @@ import type { NarrationPlayerState, StoryRecording } from "./narration-types";
 
 /** A story as its page hands it to the family-wide player. */
 export interface StorySource {
+  kind: "story";
   storyId: string;
   title: string;
   /** The story's page — the capsule links back to it from elsewhere. */
@@ -11,19 +12,43 @@ export interface StorySource {
   recording: StoryRecording | null;
 }
 
-/** Which story the player holds, and its live state. */
+/** A voice kept on a person's profile (PersonVoice) — a recording on its
+ *  own, with no text to follow. */
+export interface VoiceClipSource {
+  kind: "voice";
+  voiceId: string;
+  mediaId: string;
+  familyId: string;
+  /** «Голос» / «Рассказывает Галина» / its own title. */
+  title: string;
+  /** Whose profile it's on — the lock screen's second line. */
+  personName: string;
+  /** The date and length line, as the profile shows it. */
+  subtitle: string;
+  /** The person's profile — the capsule links back to it. */
+  href: string;
+  durationMs: number;
+  /** The person's portrait, thumb size, for the lock screen. */
+  artwork: string | null;
+}
+
+export type ListenSource = StorySource | VoiceClipSource;
+
+/** What the player holds, and its live state. */
 export interface ActiveNarration {
-  source: StorySource;
+  source: ListenSource;
   player: NarrationPlayerState;
 }
 
 /** One player per voice: a new recording is a different player. */
-export const sourceKey = (source: StorySource) =>
-  `${source.storyId}:${source.recording?.mediaId ?? "voice"}`;
+export const sourceKey = (source: ListenSource) =>
+  source.kind === "voice"
+    ? `voice:${source.voiceId}`
+    : `${source.storyId}:${source.recording?.mediaId ?? "voice"}`;
 
 /**
- * The player's state, published for the story page's parts (the «Слушать»
- * button, the hero photo, the text highlight) — a tiny external store, so
+ * The player's state, published for the page parts that show it (a story's
+ * «Слушать» button, hero photo and text highlight; a profile's voice) — a tiny external store, so
  * a new phrase re-renders only them, not the family layout around them.
  */
 export function createListeningStore() {

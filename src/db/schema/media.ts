@@ -5,6 +5,8 @@ import {
   timestamp,
   uuid,
   integer,
+  smallint,
+  boolean,
   numeric,
   jsonb,
   index,
@@ -253,5 +255,61 @@ export const storyNarration = pgTable(
     uniqueIndex("story_narration_story_unique").on(table.storyId),
     uniqueIndex("story_narration_media_unique").on(table.mediaId),
     index("story_narration_family_idx").on(table.familyId),
+  ],
+);
+
+/** Whose voice a person's recording is: their own, or someone telling
+ *  about them (a grandchild's memories) — the profile names them apart. */
+export const voiceSpeakerEnum = pgEnum("voice_speaker", ["self", "narrator"]);
+
+/**
+ * A voice recording kept on a Person's profile — an old cassette, a phone
+ * voicemail, a relative's memories recorded in the app. The audio is an
+ * ordinary `media` row of kind "audio", linked to its person ONLY through
+ * this table (never media_person, whose rows are photo tags), so a
+ * recording can't turn up among photos anywhere.
+ *
+ * Who may hear it follows the person, not the media row's own privacy
+ * (getVisibleMedia). The lowest `position` is the one the profile hero
+ * plays; the rest are listed under it. `peaks` is the waveform, measured
+ * in the browser at upload (0–1 per bar) — null when it couldn't be.
+ * `recordedDate*` is a PartialDate (domain/shared/partial-date.ts) — an
+ * old tape's date is rarely known to the day.
+ */
+export const personVoice = pgTable(
+  "person_voice",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    familyId: uuid("family_id")
+      .notNull()
+      .references(() => families.id, { onDelete: "cascade" }),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => persons.id, { onDelete: "cascade" }),
+    mediaId: uuid("media_id")
+      .notNull()
+      .references(() => media.id, { onDelete: "cascade" }),
+    speaker: voiceSpeakerEnum("speaker").notNull().default("self"),
+    /** Who is telling, for a "narrator" recording — free text, since the
+     *  teller is often not in the tree. Null for "self". */
+    narratorName: text("narrator_name"),
+    title: text("title"),
+    recordedDateYear: smallint("recorded_date_year"),
+    recordedDateMonth: smallint("recorded_date_month"),
+    recordedDateDay: smallint("recorded_date_day"),
+    recordedDatePrecision: text("recorded_date_precision"),
+    recordedDateApproximate: boolean("recorded_date_approximate"),
+    durationMs: integer("duration_ms").notNull(),
+    peaks: jsonb("peaks").$type<number[] | null>(),
+    position: integer("position").notNull().default(0),
+    addedBy: uuid("added_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("person_voice_media_unique").on(table.mediaId),
+    index("person_voice_person_idx").on(table.personId, table.position),
+    index("person_voice_family_idx").on(table.familyId),
   ],
 );

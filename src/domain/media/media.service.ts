@@ -11,9 +11,11 @@ import { canView, type ActingMember } from "@/domain/family/permissions";
 import { logActivity } from "@/domain/activity-log/activity-log.service";
 import type { Locale } from "@/domain/shared/locale";
 import { personDisplayName } from "@/domain/person/display-name";
+import { getVisiblePerson } from "@/domain/person/person.service";
 import { resolveByteRange } from "./byte-range";
 import { getVisibleStory } from "@/domain/story/story.service";
 import { getNarrationStoryId } from "@/domain/story/story-narration.repository";
+import { getVoicePersonId } from "@/domain/person-voice/person-voice.repository";
 import type {
   MediaVariantName,
   MediaVariants,
@@ -248,19 +250,20 @@ function variantKeys(variants: MediaVariants | null | undefined): string[] {
   return Object.values(variants ?? {}).map((variant) => variant.storageKey);
 }
 
-/** Checks a story recording the browser has put into storage — the same
- *  folder/privacy/type/size checks as every other upload, kind "audio". */
-export async function verifyNarrationUpload(
+/** Checks a recording the browser has put into storage (a story read
+ *  aloud, a voice on a profile) — the same folder/privacy/type/size checks
+ *  as every other upload, kind "audio". */
+export async function verifyAudioUpload(
   storageKey: string,
   familyId: string,
 ): Promise<{ sizeBytes: number; contentType: string }> {
   return verifyUploadedFile(storageKey, familyId, "audio");
 }
 
-/** Removes a story recording's audio — its media row (the story_narration
- *  row goes with it, FK cascade) and its file. Only ever an "audio" row:
- *  never a photo or document, whatever id is passed. */
-export async function deleteNarrationAudio(
+/** Removes a recording's audio — its media row (the story_narration or
+ *  person_voice row goes with it, FK cascade) and its file. Only ever an
+ *  "audio" row: never a photo or document, whatever id is passed. */
+export async function deleteAudioMedia(
   mediaId: string,
   familyId: string,
 ): Promise<void> {
@@ -572,13 +575,20 @@ export async function getVisibleMedia(
 ): Promise<MediaRecord | null> {
   const record = await getMediaById(mediaId, familyId);
   if (!record) return null;
-  // A story recording is heard by exactly who may read its story — its own
-  // media row carries no privacy of its own (story-narration.service.ts).
-  // Audio with no story behind it is heard by no one.
+  // A recording is heard by exactly who may see what it belongs to — a
+  // story read aloud follows its story, a voice follows its person; the
+  // media row carries no privacy of its own. Audio with neither behind it
+  // is heard by no one.
   if (record.kind === "audio") {
     const storyId = await getNarrationStoryId(mediaId, familyId);
-    const story = storyId && (await getVisibleStory(storyId, familyId, member));
-    return story ? record : null;
+    if (storyId) {
+      const story = await getVisibleStory(storyId, familyId, member);
+      return story ? record : null;
+    }
+    const personId = await getVoicePersonId(mediaId, familyId);
+    const person =
+      personId && (await getVisiblePerson(personId, familyId, member));
+    return person ? record : null;
   }
   return canView(member, {
     privacyLevel: record.privacyLevel,

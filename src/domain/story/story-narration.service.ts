@@ -1,9 +1,9 @@
 import type { ActingMember } from "@/domain/family/permissions";
 import {
-  deleteNarrationAudio,
+  deleteAudioMedia,
   discardUploadedFile,
   mediaStorageProvider,
-  verifyNarrationUpload,
+  verifyAudioUpload,
 } from "@/domain/media/media.service";
 import { UploadRejectedError } from "@/domain/media/upload-rules";
 import { canEditStory, getStory } from "./story.service";
@@ -79,7 +79,7 @@ export async function saveStoryNarration(input: {
     const cues = parseNarrationCues(input.cues, durationMs);
     if (!cues) throw new NarrationRejectedError("invalidRecording");
 
-    const info = await verifyNarrationUpload(storageKey, familyId);
+    const info = await verifyAudioUpload(storageKey, familyId);
     const previous = await getNarrationByStory(storyId, familyId);
     const mediaId = await insertNarrationWithMedia({
       familyId,
@@ -94,11 +94,11 @@ export async function saveStoryNarration(input: {
       bodyHash: storyTextHash(story.title, story.body),
     });
     if (previous && previous.mediaId !== mediaId) {
-      await deleteNarrationAudio(previous.mediaId, familyId);
+      await deleteAudioMedia(previous.mediaId, familyId);
     }
     return { mediaId };
   } catch (error) {
-    // verifyNarrationUpload already deleted a file it rejected.
+    // verifyAudioUpload already deleted a file it rejected.
     if (!(error instanceof UploadRejectedError)) {
       await discardUploadedFile(storageKey);
     }
@@ -117,5 +117,5 @@ export async function removeStoryNarration(input: {
     throw new NarrationRejectedError("noStoryEdit");
   }
   const record = await getNarrationByStory(input.storyId, input.familyId);
-  if (record) await deleteNarrationAudio(record.mediaId, input.familyId);
+  if (record) await deleteAudioMedia(record.mediaId, input.familyId);
 }

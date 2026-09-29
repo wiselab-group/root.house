@@ -9,7 +9,6 @@ import {
   XIcon,
 } from "lucide-react";
 import Link from "next/link";
-import type { Narration } from "@/domain/story/story-narration";
 import type { NarrationPlayerState } from "./narration-types";
 import { PlayerUnheardHint } from "./player-unheard-hint";
 
@@ -21,40 +20,36 @@ const clock = (seconds: number) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 };
 
+/** The capsule's line: what's playing — a link back when it's off its
+ *  own page — then whose voice it is (or when it was recorded). */
+export interface CapsuleHeading {
+  title: string;
+  href: string | null;
+  subtitle: string;
+}
+
 /**
- * The story's player once listening has started: a frosted capsule pinned
+ * The family player once listening has started: a frosted capsule pinned
  * to the bottom of the screen (the same glass as the tree's dock), so it
- * stays in reach however far the reader scrolls. Play/pause, a phrase
- * back/forward, where you are (chapter, time, a slider over every phrase),
- * speed and close. Times are estimates — the device voice reports none.
- * «Голос устройства» says honestly whose voice this is. Rendered by the
+ * stays in reach however far the reader scrolls. Play/pause, back/forward
+ * (a phrase or block of a story, 15 s of a profile's voice), where you are
+ * (the heading, time, a slider), speed and close. A story's times are
+ * estimates for the device voice — it reports none. Rendered by the
  * family-wide player (ActivePlayer), so it stays on every family page;
  * over the tree's dock or the photo arrange bar it moves up (globals.css,
  * .story-player-bar).
  */
 export function StoryPlayerCapsule({
   player,
-  narration,
-  away,
+  heading,
 }: {
   player: NarrationPlayerState;
-  narration: Narration;
-  /** Off the story's page: its title, a link back, instead of the
-   *  chapter. */
-  away: { title: string; href: string } | null;
+  heading: CapsuleHeading;
 }) {
   const t = useTranslations("stories");
   if (player.status === "idle") return null;
-  const { index, status, rate, elapsed, total } = player;
-  const phrase = narration.phrases[index];
-  const chapter = narration.chapters.find((c) => c.number === phrase?.chapter);
+  const { status, rate, elapsed, total } = player;
   const playing = status === "playing";
-  const voice =
-    player.source === "voice"
-      ? t("listenDeviceVoice")
-      : player.recordedByName
-        ? t("listenReadBy", { name: player.recordedByName })
-        : t("listenRecording");
   const position = `${clock(elapsed)} / ${clock(total)}`;
 
   return (
@@ -96,19 +91,19 @@ export function StoryPlayerCapsule({
 
         <div className="flex min-w-0 flex-1 flex-col gap-1 px-1">
           <p className="truncate text-sm font-medium">
-            {away ? (
+            {heading.href ? (
               <Link
-                href={away.href}
+                href={heading.href}
                 className="rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {away.title}
+                {heading.title}
               </Link>
             ) : (
-              (chapter?.title ?? t("listenOpening"))
+              heading.title
             )}
             <span className="font-normal text-muted-foreground">
               {" · "}
-              {voice}
+              {heading.subtitle}
             </span>
           </p>
           <div className="flex items-center gap-2">

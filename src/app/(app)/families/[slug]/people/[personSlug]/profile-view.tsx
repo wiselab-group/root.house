@@ -10,6 +10,9 @@ import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { resolvePersonIdBySlug } from "@/lib/resolve-person-slug";
 import { PersonProfileHero } from "@/components/person/person-profile-hero";
 import { PersonProfileSections } from "@/components/person/person-profile-sections";
+import { PersonVoice } from "@/components/person/voice/person-voice";
+import { getPersonVoices } from "@/domain/person-voice/person-voice.service";
+import { mediaUrl } from "@/lib/media-url";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { getFamilySummary } from "@/domain/family/family.service";
 import { getPersonArchiveSummary } from "@/domain/tree/archive-summary";
@@ -62,6 +65,7 @@ export async function PersonProfileView({
     allDocuments,
     allPhotos,
     avatarMedia,
+    voices,
   ] = await Promise.all([
     person.birthPlaceId ? getPlace(person.birthPlaceId, familyId) : null,
     person.deathPlaceId ? getPlace(person.deathPlaceId, familyId) : null,
@@ -77,6 +81,8 @@ export async function PersonProfileView({
     // never shows up in getPersonGallery and must be fetched separately for
     // PersonProfileHero's dimensions (portrait vs landscape crop).
     person.photoMediaId ? getMedia(person.photoMediaId, familyId) : null,
+    // Who may hear a recording follows its person — already checked above.
+    getPersonVoices(personId, familyId),
   ]);
   const documentCount = filterVisibleMedia(allDocuments, viewer).length;
   const photos = filterVisibleGalleryPhotos(allPhotos, viewer);
@@ -110,6 +116,25 @@ export async function PersonProfileView({
           residencePlaceName,
         })}
         role={member.role}
+        voice={
+          (voices.length > 0 || canContribute) && (
+            <PersonVoice
+              voices={voices}
+              familyId={familyId}
+              personId={personId}
+              personName={personDisplayName(person, locale)}
+              profilePath={`/families/${slug}/people/${personSlug}`}
+              artwork={
+                avatarMedia ? mediaUrl(avatarMedia.id, familyId, "thumb") : null
+              }
+              viewer={{
+                userId: viewer.userId,
+                canContribute,
+                canEditAll: canEdit,
+              }}
+            />
+          )
+        }
       />
       <PersonProfileSections
         person={person}

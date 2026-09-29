@@ -2,6 +2,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { ArchiveImage } from "@/components/media/archive-image";
 import { mediaUrl } from "@/lib/media-url";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { LockIcon, UserRoundIcon } from "lucide-react";
 import {
   personDisplayName,
@@ -36,6 +37,10 @@ import { personHeroMeta } from "./person-hero-meta";
  *
  * Edit and delete live under the single «⋮» pill in the top glass bar,
  * away from the face (user request: no separate «Редактировать» pill).
+ *
+ * `voice` (PersonVoice) sits under the years and places — the person's
+ * recorded voice, read as one more line about who they were. With one,
+ * the hero grows a little so the name keeps its room.
  */
 export function PersonProfileHero({
   person,
@@ -44,6 +49,7 @@ export function PersonProfileHero({
   avatarMedia,
   place,
   role,
+  voice,
 }: {
   person: PersonRecord;
   familyId: string;
@@ -51,6 +57,7 @@ export function PersonProfileHero({
   avatarMedia: MediaRecord | null;
   place: ProfilePlace | null;
   role: FamilyRole;
+  voice?: ReactNode;
 }) {
   const locale = useLocale();
   const t = useTranslations("profile");
@@ -67,7 +74,13 @@ export function PersonProfileHero({
   });
 
   return (
-    <header className="relative isolate h-[clamp(440px,50vw,620px)] overflow-hidden">
+    <header
+      className={
+        voice
+          ? "relative isolate h-[clamp(520px,54vw,680px)] overflow-hidden"
+          : "relative isolate h-[clamp(440px,50vw,620px)] overflow-hidden"
+      }
+    >
       <div
         aria-hidden="true"
         className="hero-glow pointer-events-none absolute inset-0"
@@ -137,6 +150,7 @@ export function PersonProfileHero({
           {name}
         </h1>
         <HeroMeta items={meta} />
+        {voice}
       </div>
     </header>
   );

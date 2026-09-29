@@ -186,7 +186,9 @@
     "noEventEdit": "You don't have permission to edit this event.",
     "albumNotFound": "Album not found.",
     "placeNotFound": "Place not found.",
-    "invalidRecording": "The recording couldn't be saved — try recording again."
+    "invalidRecording": "The recording couldn't be saved — try recording again.",
+    "voiceNarratorMissing": "Say who is telling.",
+    "voiceNotFound": "The recording wasn't found, or you may not change it."
   },
   "familyHome": {
     "since": "since {year}",
@@ -1022,5 +1024,40 @@
     "discardBody": "Changes in this form will be lost.",
     "keepEditing": "Keep editing",
     "discard": "Discard"
+  },
+  "voice": {
+    "titleSelf": "Voice",
+    "titleNarrator": "Told by {name}",
+    "play": "Play: {title}",
+    "pause": "Pause: {title}",
+    "more": "{count, plural, one {# more recording} other {# more recordings}}",
+    "manage": "Voice recordings",
+    "listTitle": "Voice recordings",
+    "main": "In the profile header",
+    "makeMain": "Show in the header",
+    "actions": "Recording actions",
+    "delete": "Delete",
+    "deleteAsk": "Delete this recording for good?",
+    "add": "Add a voice",
+    "addMore": "Add a recording",
+    "addTitle": "Voice on the profile",
+    "addHint": "Record a voice right now or upload a file, such as a digitized cassette.",
+    "recordNow": "Record",
+    "pickFile": "Choose a file",
+    "fileHint": "MP3, M4A, WAV or WebM, up to {max} MB",
+    "badFile": "This file couldn't be read as audio.",
+    "recordStop": "Stop",
+    "recordAgain": "Start over",
+    "speakerLabel": "Whose voice is it",
+    "speakerSelf": "The person's own voice",
+    "speakerNarrator": "Someone telling about them",
+    "narratorName": "Who is telling",
+    "narratorPlaceholder": "For example, granddaughter Galina",
+    "titleLabel": "Title",
+    "titleOptional": "optional",
+    "titlePlaceholder": "For example, singing an old folk song",
+    "dateLegend": "When it was recorded",
+    "save": "Save",
+    "saving": "Saving… {percent}%"
   }
 }

@@ -11,6 +11,7 @@ import { ActivePlayer } from "./active-player";
 import {
   createListeningStore,
   sourceKey,
+  type ListenSource,
   type ListeningStore,
   type StorySource,
 } from "./listening-store";
@@ -22,8 +23,9 @@ interface ListeningHostValue {
   offer: (source: StorySource) => void;
   /** The story page closed — the player keeps its story. */
   withdraw: (storyId: string) => void;
-  /** «Слушать» on a story the player doesn't hold: switch and play. */
-  start: (source: StorySource) => void;
+  /** «Слушать» on a story, or a profile's voice, the player doesn't hold:
+   *  switch and play. */
+  start: (source: ListenSource) => void;
 }
 
 const ListeningHostContext = createContext<ListeningHostValue | null>(null);
@@ -35,15 +37,15 @@ export function useListeningHost(): ListeningHostValue | null {
 /**
  * The «Слушать» player for a whole family (user request 2026-09-29: keep
  * listening while going about the app). It lives in the family layout, so
- * it outlives any one page: the story keeps playing on the tree, in the
- * archive, anywhere in the family, and stops only on leaving the family.
- * Story pages offer their story; the capsule links back to it from
- * elsewhere.
+ * it outlives any one page: a story — or a voice from someone's profile —
+ * keeps playing on the tree, in the archive, anywhere in the family, and
+ * stops only on leaving the family. Story pages offer their story; the
+ * capsule links back to it from elsewhere.
  */
 export function ListeningHost({ children }: { children: ReactNode }) {
   const [store] = useState(createListeningStore);
   const [active, setActive] = useState<{
-    source: StorySource;
+    source: ListenSource;
     autoPlay: boolean;
   } | null>(null);
   const [onPage, setOnPage] = useState<string | null>(null);
@@ -55,9 +57,11 @@ export function ListeningHost({ children }: { children: ReactNode }) {
         setOnPage(source.storyId);
         setActive((current) => {
           if (!current) return { source, autoPlay: false };
-          const same = current.source.storyId === source.storyId;
+          const same =
+            current.source.kind === "story" &&
+            current.source.storyId === source.storyId;
           const busy = store.get()?.player.status !== "idle";
-          // Another story is playing or paused — it keeps the player.
+          // Something else is playing or paused — it keeps the player.
           if (!same && busy) return current;
           // Same player (the page re-rendered, the text was edited): keep
           // it running with the fresh script. A new recording of the same
@@ -84,7 +88,9 @@ export function ListeningHost({ children }: { children: ReactNode }) {
           source={active.source}
           autoPlay={active.autoPlay}
           store={store}
-          onStoryPage={onPage === active.source.storyId}
+          onStoryPage={
+            active.source.kind === "story" && onPage === active.source.storyId
+          }
         />
       )}
     </ListeningHostContext.Provider>

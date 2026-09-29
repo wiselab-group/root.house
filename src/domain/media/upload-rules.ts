@@ -37,13 +37,33 @@ export const DOCUMENT_CONTENT_TYPES = [
 
 export const DOCUMENT_ACCEPT = [...DOCUMENT_CONTENT_TYPES, ".heic"].join(",");
 
-/** A story read aloud (StoryRecorder): about an hour even at Safari's
- *  AAC bitrate. Only what browsers' MediaRecorder actually produces —
- *  WebM/Opus (Chrome, Firefox, Edge), MP4/AAC (Safari) — stored under its
- *  base type (the recorder strips `;codecs=…`). */
+/** A story read aloud (StoryRecorder), or a voice on a person's profile
+ *  (recorded in the app or a digitized tape): about an hour even at
+ *  Safari's AAC bitrate. What browsers' MediaRecorder produces — WebM/Opus
+ *  (Chrome, Firefox, Edge), MP4/AAC (Safari), stored under its base type
+ *  (the recorder strips `;codecs=…`) — plus the files a digitized cassette
+ *  usually comes as: MP3, M4A, WAV. */
 export const AUDIO_MAX_BYTES = 60 * 1024 * 1024;
 
-export const AUDIO_CONTENT_TYPES = ["audio/webm", "audio/mp4", "audio/ogg"];
+export const AUDIO_CONTENT_TYPES = [
+  "audio/webm",
+  "audio/mp4",
+  "audio/ogg",
+  "audio/mpeg",
+  "audio/x-m4a",
+  "audio/aac",
+  "audio/wav",
+  "audio/x-wav",
+];
+
+/** A voice file picker's `accept` — extensions too, since some browsers
+ *  report an odd or empty type for .m4a. */
+export const AUDIO_ACCEPT = [
+  ...AUDIO_CONTENT_TYPES,
+  ".mp3",
+  ".m4a",
+  ".wav",
+].join(",");
 
 export const UPLOAD_RULES: Record<
   UploadKind,
