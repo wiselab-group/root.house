@@ -31,7 +31,7 @@ export async function generateMetadata(): Promise<Metadata> {
 // of the graph (unlike the /people list, profile pages, and photo/story/
 // event views, which do — see domain/family/permissions.ts::canView and its
 // filterVisibleX/getVisibleX call sites). The tree's layout algorithm
-// (domain/tree/layout/ — see CLAUDE.md's TREE LAYOUT RULES) treats every
+// (domain/tree/layout/ — see its CLAUDE.md) treats every
 // node as always-present for connector-line/spacing invariants; removing a
 // node conditionally would need genealogy-aware re-layout (routing lines
 // around a hidden ancestor, or promoting a hidden node's children) that is
