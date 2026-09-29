@@ -6,9 +6,15 @@ import { PencilIcon, PlusIcon } from "lucide-react";
 import { updatePhotoCaptionAction } from "@/actions/media.actions";
 import { cn } from "@/lib/utils";
 import { PhotoCaptionEditor } from "./photo-caption-editor";
+import {
+  captionTextClass,
+  PhotoCaptionText,
+  type CaptionPlacement,
+} from "./photo-caption-text";
 
 /**
- * The caption line under the photo in PhotoLightbox — the same
+ * The caption line in PhotoLightbox — in the top bar on desktop, under the
+ * photo on phones (`placement`), one line either way. The
  * `media.title` the grid and lightbox use as the image's alt text. Read-only
  * for viewers (and hidden when empty); with `canEdit` the caption itself is
  * the edit button, and an uncaptioned photo shows a quiet «Добавить
@@ -25,12 +31,14 @@ export function PhotoCaption({
   familyId,
   familySlug,
   canEdit,
+  placement,
 }: {
   mediaId: string;
   caption: string | null;
   familyId: string;
   familySlug: string;
   canEdit: boolean;
+  placement: CaptionPlacement;
 }) {
   const t = useTranslations("media");
   const [lastCaption, setLastCaption] = useState(caption);
@@ -88,29 +96,33 @@ export function PhotoCaption({
 
   if (!canEdit) {
     if (!saved) return null;
-    return (
-      <p className="mx-auto max-w-xl px-4 pb-3 text-center text-sm text-pretty text-white/85">
-        {saved}
-      </p>
-    );
+    return <PhotoCaptionText text={saved} placement={placement} />;
   }
 
+  // The full text of a long caption is in the editor's input one click away.
   return (
-    <div className="flex justify-center px-3 pb-3">
+    <div className="flex min-w-0">
       <button
         type="button"
         onClick={() => setDraft(saved ?? "")}
         aria-busy={isPending || undefined}
         className={cn(
-          "group/caption flex max-w-xl items-center gap-2 rounded-full px-3 py-1 text-sm transition-colors outline-none hover:bg-white/10 focus-visible:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/50",
-          saved ? "text-center text-pretty text-white/85" : "text-white/55",
+          "group/caption -mx-2 flex min-w-0 cursor-pointer items-center gap-2 rounded-full px-2 py-1 text-left transition-colors outline-none hover:bg-glass focus-visible:bg-glass focus-visible:ring-2 focus-visible:ring-ring",
+          !saved && "text-sm text-muted-foreground",
           isPending && "opacity-70",
         )}
       >
         {saved ? (
           <>
             <span className="sr-only">{t("editCaption")}: </span>
-            <span>{saved}</span>
+            <span
+              className={cn(
+                captionTextClass,
+                placement === "bar" ? "text-lg" : "text-base",
+              )}
+            >
+              {saved}
+            </span>
             <PencilIcon
               aria-hidden="true"
               className="size-3.5 shrink-0 opacity-0 transition-opacity group-hover/caption:opacity-70 group-focus-visible/caption:opacity-70 pointer-coarse:opacity-70"

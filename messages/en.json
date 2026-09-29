@@ -623,7 +623,21 @@
     "uploadingPhotoGeneric": "Uploading photo",
     "deleteAlbumTitle": "Delete the “{name}” album?",
     "selectedCount": "Selected: {count}",
-    "albumCount": "Album · {photos}"
+    "albumCount": "Album · {photos}",
+    "stripLabel": "What to show below",
+    "stripPhotos": "All photos",
+    "stripPeople": "Who's in the photo",
+    "nobodyTagged": "No one is tagged",
+    "tapFaceToTag": "Tap a face in the photo",
+    "tagAction": "Tag",
+    "taggedCount": "In the photo: {count}",
+    "leftToRight": "left to right",
+    "findByName": "Find by name",
+    "nobodyFound": "No one found",
+    "showAllTagged": "Everyone tagged: {count}",
+    "morePeople": "{count} more, show everyone",
+    "photoPosition": "Photo {index} of {total}",
+    "showFullCaption": "Show the full caption"
   },
   "storyForm": {
     "body": "Story",

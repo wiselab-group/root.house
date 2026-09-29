@@ -623,7 +623,21 @@
     "uploadingPhotoGeneric": "Загрузка фото",
     "deleteAlbumTitle": "Удалить альбом «{name}»?",
     "selectedCount": "Выбрано: {count}",
-    "albumCount": "Альбом · {photos}"
+    "albumCount": "Альбом · {photos}",
+    "stripLabel": "Что показать внизу",
+    "stripPhotos": "Все фото",
+    "stripPeople": "Кто на фото",
+    "nobodyTagged": "Никто не отмечен",
+    "tapFaceToTag": "Нажмите на лицо на фото",
+    "tagAction": "Отметить",
+    "taggedCount": "На фото {count}",
+    "leftToRight": "слева направо",
+    "findByName": "Найти по имени",
+    "nobodyFound": "Никого не нашли",
+    "showAllTagged": "Все отмеченные: {count}",
+    "morePeople": "Ещё {count}, показать всех",
+    "photoPosition": "Фото {index} из {total}",
+    "showFullCaption": "Показать подпись целиком"
   },
   "storyForm": {
     "body": "История",

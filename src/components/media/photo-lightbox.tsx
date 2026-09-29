@@ -1,49 +1,41 @@
 "use client";
 
-import { useLocale, useTranslations } from "next-intl";
-import Link from "next/link";
-import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
+import { useMemo, useRef, useState } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
-import {
-  ArrowUpRightIcon,
-  CheckIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  DownloadIcon,
-  UserPlusIcon,
-  XIcon,
-} from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useCoarsePointer } from "@/hooks/use-coarse-pointer";
-import { Button } from "@/components/ui/button";
-import { personDisplayName } from "@/domain/person/display-name";
+import { glassIconButtonLarge } from "@/components/hero/glass";
 import {
   LightboxCarouselTrack,
   type LightboxCarouselTrackHandle,
 } from "./lightbox-carousel-track";
 import type { GalleryPhotoView } from "./gallery-photo";
-import { mediaDownloadUrl } from "@/lib/media-url";
+import { LightboxAmbient } from "./lightbox-ambient";
+import { LightboxStrip } from "./lightbox-strip";
+import type { StripMode } from "./lightbox-strip-tabs";
+import { LightboxTopBar } from "./lightbox-top-bar";
 import { PhotoCaption } from "./photo-caption";
 import { arrowStep } from "./lightbox-keys";
+import { sortLeftToRight } from "./tagged-people-order";
+import { useWideLightbox } from "./use-wide-lightbox";
 
 /**
  * Full-screen photo viewer for the family gallery — built directly on
- * @base-ui/react/dialog (not the centered ui/dialog.tsx wrapper, which is
- * capped at sm:max-w-sm) so it gets focus-trap/Escape/scroll-lock "for
- * free" while filling the viewport edge to edge. Shows who's tagged on the
- * current photo (linking to their profile) and lets the user step through
- * the gallery with prev/next without closing the overlay — via the chevron
- * buttons, or by dragging/swiping the image left/right — touch on mobile,
- * mouse/trackpad drag on desktop. The actual sliding-track mechanics live
- * in LightboxCarouselTrack (see its module doc for why it's a real
- * carousel track and not a single `<img src>` swap).
- * The caption (media.title) sits under the photo, editable in place for
- * editors — see PhotoCaption.
- * Delete lives on the grid thumbnail (PhotoGrid), not here — a full-screen
- * viewer isn't the place for a destructive action that's one hover away on
- * the grid itself. Download DOES live here too (same /api/media/[id] route,
- * ?download=1 for Content-Disposition: attachment) since viewing a photo
- * full-size is exactly when someone decides they want to keep a copy of it.
+ * @base-ui/react/dialog (not the centered ui/dialog.tsx wrapper) so it gets
+ * focus-trap/Escape/scroll-lock "for free" while filling the viewport.
+ * Redesigned 2026-09-29 (variant C2 of the lightbox mock) to be compact:
+ *
+ * - top bar: «3 / 24», the caption (desktop), tag / download / close;
+ * - the photo, as large as the window allows — no max width, only side
+ *   room for the hover chevrons on desktop;
+ * - one bottom strip of fixed height: who's on the photo, or (desktop) the
+ *   whole gallery as a filmstrip — see LightboxStrip.
+ *
+ * The strip's tab survives paging; tagging pins it to people and «Готово»
+ * gives the previous tab back (it's only ever overridden, never changed).
+ * Paging: chevrons, ←/→, or dragging the photo — the sliding mechanics live
+ * in LightboxCarouselTrack. Delete lives on the grid thumbnail, not here.
  */
 export function PhotoLightbox({
   photos,
@@ -63,18 +55,34 @@ export function PhotoLightbox({
   /** Contributor+ may place/move/remove point-tags — see photo-tag-layer.tsx. */
   canTag?: boolean;
 }) {
-  const t = useTranslations("media");
   const tc = useTranslations("common");
   const photo = photos[index];
+  const wide = useWideLightbox();
   const [taggingMode, setTaggingMode] = useState(false);
+  const [stripMode, setStripMode] = useState<StripMode>("people");
   const [highlightedPersonId, setHighlightedPersonId] = useState<string | null>(
     null,
   );
   const trackRef = useRef<LightboxCarouselTrackHandle>(null);
+  const people = useMemo(
+    () => (photo ? sortLeftToRight(photo.people) : []),
+    [photo],
+  );
   if (!photo) return null;
 
   const hasPrev = index > 0;
   const hasNext = index < photos.length - 1;
+  const caption = (placement: "bar" | "below") => (
+    <PhotoCaption
+      key={photo.media.id}
+      mediaId={photo.media.id}
+      caption={photo.media.title}
+      familyId={familyId}
+      familySlug={familySlug}
+      canEdit={canTag}
+      placement={placement}
+    />
+  );
 
   return (
     <DialogPrimitive.Root
@@ -84,9 +92,9 @@ export function PhotoLightbox({
       }}
     >
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/90 duration-fast data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
+        <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-background duration-base data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
         <DialogPrimitive.Popup
-          className="fixed inset-0 z-50 flex flex-col outline-none duration-fast data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
+          className="group/lightbox fixed inset-0 z-50 flex flex-col overflow-hidden outline-none duration-base data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
           onKeyDown={(event) => {
             const step = arrowStep(event);
             if (!step) return;
@@ -98,54 +106,23 @@ export function PhotoLightbox({
           <DialogPrimitive.Title className="sr-only">
             {photo.media.title ?? tc("familyPhoto")}
           </DialogPrimitive.Title>
+          <LightboxAmbient mediaId={photo.media.id} familyId={familyId} />
 
-          <div className="flex items-center justify-end gap-2 p-3">
-            {canTag && (
-              <Button
-                type="button"
-                variant={taggingMode ? "default" : "secondary"}
-                size="sm"
-                // «Готово» ends the mode — the green confirm, same as
-                // PhotoArrangeBar's (see CLAUDE.md DESIGN TOKENS).
-                className={cn(
-                  "rounded-full shadow-sm",
-                  taggingMode &&
-                    "bg-confirm text-confirm-foreground hover:bg-confirm/85 focus-visible:border-confirm focus-visible:ring-confirm/50",
-                )}
-                aria-pressed={taggingMode}
-                onClick={() => setTaggingMode((v) => !v)}
-              >
-                {taggingMode ? <CheckIcon /> : <UserPlusIcon />}
-                {taggingMode ? tc("done") : t("tagPeople")}
-              </Button>
-            )}
-            <Button
-              variant="secondary"
-              size="icon-sm"
-              className="rounded-full shadow-sm"
-              aria-label={t("downloadPhoto")}
-              nativeButton={false}
-              render={
-                <a href={mediaDownloadUrl(photo.media.id, familyId)} download />
-              }
-            >
-              <DownloadIcon />
-            </Button>
-            <DialogPrimitive.Close
-              render={
-                <Button
-                  variant="secondary"
-                  size="icon-sm"
-                  className="rounded-full shadow-sm"
-                  aria-label={tc("close")}
-                />
-              }
-            >
-              <XIcon />
-            </DialogPrimitive.Close>
-          </div>
+          <LightboxTopBar
+            index={index}
+            total={photos.length}
+            caption={wide ? caption("bar") : null}
+            wide={wide}
+            canTag={canTag}
+            tagging={taggingMode}
+            onToggleTagging={() => setTaggingMode((v) => !v)}
+            mediaId={photo.media.id}
+            familyId={familyId}
+          />
 
-          <div className="relative flex flex-1 items-center justify-center overflow-hidden pt-1 pb-4">
+          {/* overflow-hidden here, not only on the Popup: the track is three
+              screens wide, and the Popup must never become scrollable. */}
+          <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden py-1">
             <LightboxCarouselTrack
               ref={trackRef}
               photos={photos}
@@ -157,7 +134,6 @@ export function PhotoLightbox({
               canTag={canTag}
               highlightedPersonId={highlightedPersonId}
             />
-
             {hasPrev && (
               <LightboxNavButton
                 direction="prev"
@@ -172,17 +148,24 @@ export function PhotoLightbox({
             )}
           </div>
 
-          <PhotoCaption
-            key={photo.media.id}
-            mediaId={photo.media.id}
-            caption={photo.media.title}
-            familyId={familyId}
-            familySlug={familySlug}
-            canEdit={canTag}
-          />
+          {!wide && (photo.media.title || canTag) && (
+            <div className="relative z-10 shrink-0 px-4 pt-3">
+              {caption("below")}
+            </div>
+          )}
 
-          <TaggedPeopleStrip
-            people={photo.people}
+          <LightboxStrip
+            wide={wide}
+            mode={taggingMode ? "people" : stripMode}
+            onModeChange={setStripMode}
+            tagging={taggingMode}
+            canTag={canTag}
+            onStartTagging={() => setTaggingMode(true)}
+            photos={photos}
+            index={index}
+            onIndexChange={onIndexChange}
+            people={people}
+            familyId={familyId}
             familySlug={familySlug}
             highlightedPersonId={highlightedPersonId}
             onHighlight={setHighlightedPersonId}
@@ -193,93 +176,8 @@ export function PhotoLightbox({
   );
 }
 
-function TaggedPeopleStrip({
-  people,
-  familySlug,
-  highlightedPersonId,
-  onHighlight,
-}: {
-  people: GalleryPhotoView["people"];
-  familySlug: string;
-  highlightedPersonId: string | null;
-  onHighlight: (personId: string | null) => void;
-}) {
-  const t = useTranslations("media");
-  const locale = useLocale();
-  // Phones have no hover, so a tap on a name used to go straight to the
-  // profile and the spotlight was never seen. There the name is a toggle
-  // instead — tap to light the person up, tap again to clear — and the
-  // profile is one more deliberate tap on the ↗ that appears inside the lit
-  // chip (user request 2026-09-26). Desktop keeps hover-to-light,
-  // click-to-open.
-  const coarsePointer = useCoarsePointer();
-  if (people.length === 0) return null;
-  return (
-    <div className="flex flex-wrap gap-2 border-t border-white/10 p-3">
-      {people.map((person) => {
-        const highlighted = highlightedPersonId === person.id;
-        const className = cn(
-          "rounded-full px-3 py-1 text-sm text-white transition-colors",
-          highlighted ? "bg-white/25" : "bg-white/10 hover:bg-white/20",
-        );
-        if (coarsePointer) {
-          const name = personDisplayName(person, locale);
-          return (
-            <span
-              key={person.id}
-              className={cn(className, "flex items-center p-0")}
-            >
-              <button
-                type="button"
-                aria-pressed={highlighted}
-                onClick={() => onHighlight(highlighted ? null : person.id)}
-                className={cn("py-1 pl-3", highlighted ? "pr-1" : "pr-3")}
-              >
-                {name}
-              </button>
-              {highlighted && (
-                <Link
-                  href={`/families/${familySlug}/people/${person.slug}`}
-                  aria-label={t("openProfileOf", { name })}
-                  className="mr-0.5 flex size-7 items-center justify-center rounded-full bg-white/15 transition-colors active:bg-white/30"
-                >
-                  <ArrowUpRightIcon className="size-4" />
-                </Link>
-              )}
-            </span>
-          );
-        }
-        return (
-          <Link
-            key={person.id}
-            href={`/families/${familySlug}/people/${person.slug}`}
-            onMouseEnter={() => onHighlight(person.id)}
-            onMouseLeave={() => onHighlight(null)}
-            onFocus={() => onHighlight(person.id)}
-            onBlur={() => onHighlight(null)}
-            className={cn(className, "flex items-center gap-1.5 pr-1")}
-          >
-            {personDisplayName(person, locale)}
-            {/* Same ↗ as the phone chip — says the chip opens the profile.
-                Always there, dimmed at rest and lit with the person: a
-                hidden-until-hover arrow left an empty gap in the chip, and
-                growing the chip on hover shifted its neighbours. */}
-            <span
-              aria-hidden="true"
-              className={cn(
-                "flex size-5 items-center justify-center rounded-full transition-[opacity,background-color] duration-fast ease-reveal motion-reduce:transition-none",
-                highlighted ? "bg-white/15 opacity-100" : "opacity-45",
-              )}
-            >
-              <ArrowUpRightIcon className="size-3.5" />
-            </span>
-          </Link>
-        );
-      })}
-    </div>
-  );
-}
-
+/** Desktop only (phones swipe): a wide invisible edge zone whose chevron
+ *  shows while the pointer is over the lightbox or the button has focus. */
 function LightboxNavButton({
   direction,
   onClick,
@@ -295,11 +193,12 @@ function LightboxNavButton({
       aria-label={direction === "prev" ? t("prevPhoto") : t("nextPhoto")}
       onClick={onClick}
       className={cn(
-        "absolute top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60",
-        direction === "prev" ? "left-2" : "right-2",
+        glassIconButtonLarge,
+        "absolute top-1/2 hidden -translate-y-1/2 opacity-0 transition-[opacity,background-color,transform] group-hover/lightbox:opacity-100 focus-visible:opacity-100 md:pointer-fine:inline-flex",
+        direction === "prev" ? "left-5" : "right-5",
       )}
     >
-      <Icon className="size-5" />
+      <Icon />
     </button>
   );
 }

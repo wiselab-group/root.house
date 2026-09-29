@@ -800,6 +800,41 @@ body:has(.photo-backdrop) .app-header {
     stroke-dasharray: 1;
     animation: carousel-ring 6s linear forwards;
   }
+
+  /* The lightbox's people strip on phones (LightboxPeopleScroller): the
+     fades say "more names this way" — right edge until the end is reached,
+     left edge once scrolled. Mask alpha, not a color. */
+  .mask-fade-end {
+    mask-image: linear-gradient(90deg, black calc(100% - 2.75rem), transparent);
+  }
+  .mask-fade-start {
+    mask-image: linear-gradient(90deg, transparent, black 1.75rem);
+  }
+  .mask-fade-start.mask-fade-end {
+    mask-image: linear-gradient(
+      90deg,
+      transparent,
+      black 1.75rem,
+      black calc(100% - 2.75rem),
+      transparent
+    );
+  }
+
+  /* One-time nudge of the same strip: slides left and back so it's clear
+     the names scroll (user request 2026-09-29). Once per device, never
+     under reduced motion — see LightboxPeopleScroller. */
+  @keyframes strip-nudge {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    45% {
+      transform: translateX(-2.25rem);
+    }
+  }
+  .animate-strip-nudge {
+    animation: strip-nudge 1.1s var(--ease-transition) 0.7s both;
+  }
 }
 
 /* The ring is the slideshow's timer (the next slide comes on its

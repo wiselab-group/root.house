@@ -4,7 +4,8 @@ import type { KeyboardEvent } from "react";
  * ←/→ page through the photos, same as the chevrons. Not while the key
  * belongs to something else: typing in the tag-person search, moving
  * through an open menu/listbox (those portal out of the dialog in the DOM
- * but React still bubbles their keys up here), or with a modifier held.
+ * but React still bubbles their keys up here), switching the bottom strip's
+ * tabs, or with a modifier held.
  */
 export function arrowStep(event: KeyboardEvent): "prev" | "next" | null {
   if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return null;
@@ -14,7 +15,7 @@ export function arrowStep(event: KeyboardEvent): "prev" | "next" | null {
   if (
     target.isContentEditable ||
     target.closest(
-      "input, textarea, select, [role=menu], [role=listbox], [role=combobox], [role=slider]",
+      "input, textarea, select, [role=menu], [role=listbox], [role=combobox], [role=slider], [role=tablist]",
     )
   ) {
     return null;

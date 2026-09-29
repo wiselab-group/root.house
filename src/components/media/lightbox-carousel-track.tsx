@@ -7,6 +7,11 @@ import { LightboxSlide } from "./lightbox-slide";
 import { useSwipeNavigation, SWIPE_SETTLE_MS } from "./use-swipe-navigation";
 import type { GalleryPhotoView } from "./gallery-photo";
 
+/** Room beside the photo: a thin edge on phones; on desktop, space for
+ *  PhotoLightbox's hover chevrons so they never sit on the photo. No max
+ *  width — the photo is as large as the window allows (2026-09-29). */
+const SLIDE_GUTTER = "px-3 md:pointer-fine:px-20";
+
 /** Imperative escape hatch for PhotoLightbox's chevron buttons — see module doc. */
 export type LightboxCarouselTrackHandle = {
   triggerStep: (direction: "prev" | "next") => void;
@@ -27,8 +32,9 @@ export type LightboxCarouselTrackHandle = {
  *
  * The prev/next chevron buttons live in PhotoLightbox, not here — they must
  * be positioned against the full-screen lightbox, not inside a slide's own
- * `max-w-4xl` box (real bug: chevrons rendered inside the track drifted off
- * the screen edge on narrower photos), and they must sit outside the
+ * box (real bug, back when slides were capped at max-w-4xl: chevrons
+ * rendered inside the track drifted off the screen edge on narrower
+ * photos), and they must sit outside the
  * `pointerHandlers`-bearing div below (real bug: a button nested inside it
  * had its pointerdown/pointerup swallowed by the drag gesture's
  * `setPointerCapture`, so clicking a chevron silently did nothing). Exposes
@@ -109,7 +115,7 @@ export function LightboxCarouselTrack({
 
   if (reducedMotion) {
     return (
-      <div className="relative h-full w-full max-w-4xl px-4">
+      <div className={cn("relative h-full w-full", SLIDE_GUTTER)}>
         <LightboxSlide
           photo={current}
           familyId={familyId}
@@ -127,7 +133,7 @@ export function LightboxCarouselTrack({
 
   return (
     // Full-width track, each slide the whole screen wide with the photo
-    // itself capped at max-w-4xl inside it (see TrackSlot): at rest the
+    // inside its side gutter (see TrackSlot): at rest the
     // neighbors lie entirely past the screen edges — nothing shows beside
     // the current photo — and a swipe carries the photo all the way off the
     // screen instead of cutting it at a box edge (user request, both).
@@ -152,16 +158,28 @@ export function LightboxCarouselTrack({
               ? undefined
               : `${SWIPE_SETTLE_MS}ms`,
         }}
-        onTransitionEnd={() => {
+        onTransitionEnd={(event) => {
+          // Only the track's own slide — transitionend bubbles, and a photo
+          // fading in inside a slide (ArchiveImage) would otherwise end the
+          // settle early, mid-slide.
+          if (event.target !== event.currentTarget) return;
           if (isSettling) onSettleTransitionEnd();
         }}
       >
+        {/* Keyed by photo, not by position: after a step the neighbor's
+            slide — its <img> already loaded and painted — MOVES into the
+            middle. Unkeyed, the middle slot's <img> swapped its src instead
+            and kept painting the previous photo until the new one decoded,
+            letterboxed into the new photo's frame so it lost its rounded
+            corners (user report on a phone, 2026-09-29). */}
         <TrackSlot
+          key={hasPrev ? photos[index - 1].media.id : "edge-prev"}
           photo={hasPrev ? photos[index - 1] : undefined}
           familyId={familyId}
           familySlug={familySlug}
         />
         <TrackSlot
+          key={current.media.id}
           photo={current}
           familyId={familyId}
           familySlug={familySlug}
@@ -170,6 +188,7 @@ export function LightboxCarouselTrack({
           highlightedPersonId={highlightedPersonId}
         />
         <TrackSlot
+          key={hasNext ? photos[index + 1].media.id : "edge-next"}
           photo={hasNext ? photos[index + 1] : undefined}
           familyId={familyId}
           familySlug={familySlug}
@@ -197,8 +216,10 @@ function TrackSlot({
   return (
     // The side padding lives in each slide, not on the lightbox around the
     // track — there it left a 16px strip where the neighbor's edge peeked in.
-    <div className="flex h-full w-full shrink-0 justify-center px-4">
-      <div className="relative h-full w-full max-w-4xl">
+    <div
+      className={cn("flex h-full w-full shrink-0 justify-center", SLIDE_GUTTER)}
+    >
+      <div className="relative h-full w-full">
         {photo && (
           <LightboxSlide
             photo={photo}
