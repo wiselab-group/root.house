@@ -1,109 +1,160 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { ArchiveImage } from "@/components/media/archive-image";
-import { LayoutGridIcon, PauseIcon, PlayIcon } from "lucide-react";
+import { LayoutGridIcon } from "lucide-react";
 import { glassIconButtonLarge } from "@/components/hero/glass";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import type { CarouselSlide } from "./story-carousel";
 
 /**
  * StoryCarousel's bottom bar: a strip of thumbnails with the current
- * photo's caption under it (user request 2026-09-28), the slideshow button (its progress ring IS the timer — the
- * next slide is shown on the ring animation's own animationend, no
- * setTimeout, per CLAUDE.md's FORBIDDEN list) and the "all photos" button.
+ * photo's caption under it (user request 2026-09-28) and the "all photos"
+ * button, which also carries the slideshow's timer — a progress ring whose
+ * own animationend shows the next photo (no setTimeout, per CLAUDE.md's
+ * FORBIDDEN list). There's no play/pause button any more: the slideshow
+ * always runs (user request 2026-09-29) and holds by itself while the
+ * pointer is over this bar — see StoryCarousel for every hold.
  */
 export function CarouselFilm({
   slides,
   current,
-  playing,
+  autoplay,
+  paused,
   onSelect,
-  onTogglePlay,
   onAdvance,
   onOpenGrid,
+  onHover,
+  captionHidden,
+  leading,
 }: {
   slides: CarouselSlide[];
   current: number;
-  playing: boolean;
+  /** Off under prefers-reduced-motion: no ring, no timer. */
+  autoplay: boolean;
+  /** The ring freezes where it is and picks up from there. */
+  paused: boolean;
   onSelect: (index: number) => void;
-  onTogglePlay: () => void;
   onAdvance: () => void;
   onOpenGrid: () => void;
+  onHover: (hovering: boolean) => void;
+  /** While the story is read aloud the player's capsule covers the
+   *  caption line (and the voice tells the story) — it fades out. Lifting
+   *  the whole bar instead covered the hero's «Пауза» button. */
+  captionHidden: boolean;
+  /** The «Слушать» button — left of the strip, mirroring «Все фото». */
+  leading?: ReactNode;
 }) {
   const tStories = useTranslations("stories");
   const t = useTranslations("stories");
   const caption = slides[current]?.caption;
   const stripRef = useRef<HTMLDivElement>(null);
   const currentRef = useRef<HTMLButtonElement>(null);
+  const reducedMotion = useReducedMotion();
 
   // Focus follows the photo: a clicked thumbnail kept focus, so paging with
   // ←/→ (or the slideshow) left its focus ring on the old thumbnail (user
   // screenshot, 2026-09-29 — same fix as LightboxFilmstrip). Only when focus
   // is already in the strip; preventScroll so no ancestor scrolls.
+  // The current thumbnail always sits in the middle of the strip, the
+  // others fade and blur toward both edges (user request 2026-09-29).
+  // scrollTo on the strip itself — scrollIntoView would scroll the page.
   useEffect(() => {
     const strip = stripRef.current;
     const thumb = currentRef.current;
     if (!strip || !thumb) return;
+    strip.scrollTo({
+      left: thumb.offsetLeft - (strip.clientWidth - thumb.offsetWidth) / 2,
+      behavior: reducedMotion ? "auto" : "smooth",
+    });
     if (
       strip.contains(document.activeElement) &&
       document.activeElement !== thumb
     ) {
       thumb.focus({ preventScroll: true });
     }
-  }, [current]);
+  }, [current, reducedMotion]);
 
   return (
-    <div className="absolute inset-x-4 bottom-12 z-20 flex flex-col gap-3 sm:inset-x-7 sm:bottom-14 sm:flex-row sm:items-end sm:justify-center">
-      <div className="flex min-w-0 flex-col items-start gap-2.5 sm:items-center">
-        <div
-          ref={stripRef}
-          role="group"
-          aria-label={t("photos")}
-          className="flex max-w-full gap-1.5 overflow-x-auto p-1 [scrollbar-width:none]"
-        >
-          {slides.map((slide, index) => (
-            <button
-              key={slide.id}
-              ref={index === current ? currentRef : undefined}
-              type="button"
-              aria-pressed={index === current}
-              aria-label={slide.caption ?? tStories("photoN", { n: index + 1 })}
-              onClick={() => onSelect(index)}
-              // No lift on hover/current: the strip scrolls horizontally, so
-              // it clips vertically too — a raised thumb lost its ring's top
-              // edge and sat off the others' line. Current = ring + full
-              // opacity, all thumbs on one baseline; the ring fits in p-1.
-              className="photo-tone relative h-14 shrink-0 overflow-hidden rounded-md bg-muted opacity-55 transition-[opacity,transform] duration-base ease-(--ease-reveal) hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-95 aria-pressed:opacity-100 aria-pressed:ring-2 aria-pressed:ring-foreground aria-pressed:focus-visible:ring-foreground"
-            >
-              <ArchiveImage
-                src={slide.thumbSrc}
-                alt=""
-                width={96}
-                height={56}
-                className="h-full w-auto max-w-24 object-cover"
-              />
-            </button>
-          ))}
+    <div
+      onPointerEnter={(event) => {
+        if (event.pointerType === "mouse") onHover(true);
+      }}
+      onPointerLeave={() => onHover(false)}
+      className="absolute inset-x-4 bottom-12 z-20 flex flex-col gap-3 sm:inset-x-7 sm:bottom-14 sm:flex-row sm:items-end sm:justify-center"
+    >
+      <div className="flex min-w-0 flex-col items-center gap-2.5">
+        <div className="relative w-full sm:w-[min(34rem,calc(100vw-22rem))]">
+          <div
+            ref={stripRef}
+            role="group"
+            aria-label={t("photos")}
+            className="mask-fade-x relative flex gap-1.5 overflow-x-auto p-1 scrollbar-none"
+          >
+            {/* Room so the first and last thumbnails can reach the middle. */}
+            <span aria-hidden="true" className="w-[calc(50%-3rem)] shrink-0" />
+            {slides.map((slide, index) => (
+              <button
+                key={slide.id}
+                ref={index === current ? currentRef : undefined}
+                type="button"
+                aria-pressed={index === current}
+                aria-label={
+                  slide.caption ?? tStories("photoN", { n: index + 1 })
+                }
+                onClick={() => onSelect(index)}
+                // No lift on hover/current: the strip scrolls horizontally, so
+                // it clips vertically too — a raised thumb lost its ring's top
+                // edge and sat off the others' line. Current = ring + full
+                // opacity, all thumbs on one baseline; the ring fits in p-1.
+                className="photo-tone relative h-14 shrink-0 overflow-hidden rounded-md bg-muted opacity-55 transition-[opacity,transform] duration-base ease-(--ease-reveal) hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-95 aria-pressed:opacity-100 aria-pressed:ring-2 aria-pressed:ring-foreground aria-pressed:focus-visible:ring-foreground"
+              >
+                <ArchiveImage
+                  src={slide.thumbSrc}
+                  alt=""
+                  width={96}
+                  height={56}
+                  className="h-full w-auto max-w-24 object-cover"
+                />
+              </button>
+            ))}
+            <span aria-hidden="true" className="w-[calc(50%-3rem)] shrink-0" />
+          </div>
+          <div
+            aria-hidden="true"
+            className="film-edge-blur-start pointer-events-none absolute inset-y-0 left-0 w-1/4 backdrop-blur-[3px]"
+          />
+          <div
+            aria-hidden="true"
+            className="film-edge-blur-end pointer-events-none absolute inset-y-0 right-0 w-1/4 backdrop-blur-[3px]"
+          />
         </div>
         <p
           aria-live="polite"
-          className="min-h-5 leading-5 max-w-full truncate text-xs text-foreground/65"
+          className={`min-h-5 max-w-full truncate text-xs leading-5 text-foreground/65 transition-opacity duration-base ease-(--ease-reveal) motion-reduce:transition-none ${captionHidden ? "opacity-0" : ""}`}
         >
           {caption}
         </p>
       </div>
 
-      {/* sm: level with the thumbnails, not the caption line under them —
-          bottom-8.5 = caption (h-5) + gap-2.5 + the strip's p-1. */}
+      {/* sm: «Слушать» and «Все фото» on either side of the strip, level
+          with the thumbnails, not the caption line under them — bottom-8.5 =
+          caption (h-5) + gap-2.5 + the strip's p-1. Phones: one row under
+          the strip, «Слушать» left, «Все фото» right. */}
+      {leading && (
+        <div className="pointer-events-auto flex sm:absolute sm:bottom-8.5 sm:left-0 max-sm:absolute max-sm:bottom-0 max-sm:left-0">
+          {leading}
+        </div>
+      )}
       <div className="flex gap-2 self-end sm:absolute sm:right-0 sm:bottom-8.5">
         <button
           type="button"
           className={`${glassIconButtonLarge} relative`}
-          aria-pressed={playing}
-          aria-label={playing ? t("stopSlideshow") : t("slideshow")}
-          onClick={onTogglePlay}
+          aria-label={t("allPhotos")}
+          onClick={onOpenGrid}
         >
-          {playing && (
+          {autoplay && (
             <svg
               aria-hidden="true"
               viewBox="0 0 52 52"
@@ -122,22 +173,13 @@ export function CarouselFilm({
                 stroke="currentColor"
                 strokeWidth="1.5"
                 className="animate-carousel-ring"
+                // Inline, not a utility class: .animate-carousel-ring's own
+                // `animation` shorthand would reset the play state.
+                style={{ animationPlayState: paused ? "paused" : "running" }}
                 onAnimationEnd={onAdvance}
               />
             </svg>
           )}
-          {playing ? (
-            <PauseIcon aria-hidden="true" />
-          ) : (
-            <PlayIcon className="translate-x-px" aria-hidden="true" />
-          )}
-        </button>
-        <button
-          type="button"
-          className={glassIconButtonLarge}
-          aria-label={t("allPhotos")}
-          onClick={onOpenGrid}
-        >
           <LayoutGridIcon aria-hidden="true" />
         </button>
       </div>

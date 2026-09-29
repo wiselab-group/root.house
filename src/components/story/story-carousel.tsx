@@ -1,10 +1,12 @@
 "use client";
 
 import { ArchiveImage } from "@/components/media/archive-image";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { usePageVisible } from "@/hooks/use-page-visible";
 import { CarouselFilm } from "./carousel-film";
 import { CarouselGrid } from "./carousel-grid";
+import { useNarration } from "./listen/narration-context";
 
 export interface CarouselSlide {
   id: string;
@@ -23,26 +25,47 @@ export interface CarouselSlide {
  * The Story page's hero carousel — the filmstrip that was deliberately taken
  * OFF the Person Profile (user request, 2026-09-24: it duplicated the Фото
  * tab there) lives here, matching the reference screenshot: thumbnails
- * switch the photo, the slideshow runs by itself in a loop (the round
- * button pauses/resumes it, its progress ring is the timer), the grid
- * button opens every photo of the story at once.
+ * switch the photo, the slideshow runs by itself in a loop, the grid
+ * button opens every photo of the story at once and carries the
+ * slideshow's progress ring.
+ *
+ * No play/pause button (user request 2026-09-29: the slideshow is always
+ * on). It holds by itself instead — WCAG 2.2.2 wants moving content to be
+ * stoppable: while the mouse is over the film bar, while keyboard focus is
+ * inside the carousel, while the all-photos grid is open and while the tab
+ * is hidden. Under prefers-reduced-motion it doesn't run at all; the
+ * thumbnails and ←/→ still switch photos.
  *
  * Renders only the photo layers and the bottom controls — the title, meta
  * and top bar are the server-rendered StoryHero around it. Slides crossfade
  * on opacity only (CLAUDE.md animation rules); the slow settle-in zoom is a
  * transform.
  */
-export function StoryCarousel({ slides }: { slides: CarouselSlide[] }) {
+export function StoryCarousel({
+  slides,
+  listen,
+}: {
+  slides: CarouselSlide[];
+  /** «Слушать», placed left of the film strip (CarouselFilm). */
+  listen?: ReactNode;
+}) {
   const [current, setCurrent] = useState(0);
-  // null until the reader presses play/pause: the slideshow then runs on
-  // its own (user request 2026-09-27: the photos cycle smoothly), except
-  // under prefers-reduced-motion, where it waits for the play button.
-  const [playChoice, setPlayChoice] = useState<boolean | null>(null);
   const reducedMotion = useReducedMotion();
+  const pageVisible = usePageVisible();
   const [gridOpen, setGridOpen] = useState(false);
-  const wantsPlay = playChoice ?? !reducedMotion;
-  // Held while the all-photos grid covers the hero.
-  const playing = wantsPlay && !gridOpen;
+  const [hovering, setHovering] = useState(false);
+  // Keyboard focus only: a thumbnail clicked with the mouse keeps focus,
+  // and holding on that would stop the slideshow for good after one click.
+  const [keyboardFocus, setKeyboardFocus] = useState(false);
+  // While the story is read aloud the voice, not the timer, picks the photo:
+  // the one placed nearest above the text being read (story-narration.ts).
+  const narration = useNarration();
+  const narrating = narration !== null && narration.status !== "idle";
+  const narratedPhoto = narrating
+    ? (narration.narration.phrases[narration.index]?.photoId ?? null)
+    : null;
+  const paused =
+    narrating || gridOpen || hovering || keyboardFocus || !pageVisible;
 
   // The slide being covered: it stays fully opaque under the incoming one
   // and only fades once that has fully appeared. Fading both at once
@@ -51,6 +74,18 @@ export function StoryCarousel({ slides }: { slides: CarouselSlide[] }) {
   // truly covers it — a tall portrait's dissolving left side otherwise let
   // the previous wide photo show through as a collage.
   const [previous, setPrevious] = useState<number | null>(null);
+
+  // Adjusting state during render when the narrated photo changes (React's
+  // "storing information from previous renders"), not in an effect.
+  const [lastNarrated, setLastNarrated] = useState<string | null>(null);
+  if (narratedPhoto !== lastNarrated) {
+    setLastNarrated(narratedPhoto);
+    const at = slides.findIndex((slide) => slide.id === narratedPhoto);
+    if (at >= 0 && at !== current) {
+      setPrevious(current);
+      setCurrent(at);
+    }
+  }
 
   const show = (index: number) => {
     const next = (index + slides.length) % slides.length;
@@ -62,6 +97,14 @@ export function StoryCarousel({ slides }: { slides: CarouselSlide[] }) {
   return (
     <div
       className="absolute inset-0"
+      onFocus={(event) =>
+        setKeyboardFocus(event.target.matches(":focus-visible"))
+      }
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setKeyboardFocus(false);
+        }
+      }}
       onKeyDown={(event) => {
         if (event.key === "ArrowRight") show(current + 1);
         if (event.key === "ArrowLeft") show(current - 1);
@@ -123,11 +166,14 @@ export function StoryCarousel({ slides }: { slides: CarouselSlide[] }) {
         <CarouselFilm
           slides={slides}
           current={current}
-          playing={playing}
+          autoplay={!reducedMotion}
+          paused={paused}
           onSelect={show}
-          onTogglePlay={() => setPlayChoice(!wantsPlay)}
           onAdvance={() => show(current + 1)}
           onOpenGrid={() => setGridOpen(true)}
+          onHover={setHovering}
+          captionHidden={narrating}
+          leading={listen}
         />
       )}
       <CarouselGrid

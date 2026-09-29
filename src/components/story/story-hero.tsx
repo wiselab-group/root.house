@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { BookOpenIcon, CalendarIcon, ClockIcon, LockIcon } from "lucide-react";
 import type { PrivacyLevel } from "@/db/schema";
@@ -27,6 +28,7 @@ export function StoryHero({
   backHref,
   editHref,
   deleteProps,
+  listen,
 }: {
   title: string;
   privacyLevel: PrivacyLevel;
@@ -36,6 +38,9 @@ export function StoryHero({
   backHref: string;
   editHref: string | null;
   deleteProps: { familyId: string; storyId: string } | null;
+  /** The «Слушать» button (client): left of the film strip, or under the
+   *  reading time when the story has no strip. */
+  listen?: ReactNode;
 }) {
   const tc = useTranslations("common");
   const t = useTranslations("stories");
@@ -49,7 +54,9 @@ export function StoryHero({
           : "h-[clamp(360px,34vw,440px)]"
       }`}
     >
-      {slides.length > 0 && <StoryCarousel slides={slides} />}
+      {slides.length > 0 && (
+        <StoryCarousel slides={slides} listen={hasFilm ? listen : undefined} />
+      )}
 
       <HeroTopBar
         backHref={backHref}
@@ -98,6 +105,8 @@ export function StoryHero({
             },
           ]}
         />
+        {/* With a film strip «Слушать» sits left of it (CarouselFilm). */}
+        {!hasFilm && listen}
       </div>
     </header>
   );

@@ -30,7 +30,7 @@ export const glassPill = `${glassPillBase} h-10 gap-2 px-4 [&_svg]:size-4`;
 /** Icon-only 40px circle. */
 export const glassIconButton = `${glassPillBase} size-10 [&_svg]:size-4`;
 
-/** Icon-only 48px circle — the story carousel's slideshow / grid buttons. */
+/** Icon-only 48px circle — the story carousel's «all photos» button. */
 export const glassIconButtonLarge = `${glassPillBase} size-12 [&_svg]:size-5`;
 
 export const glassChip = `${glassOverPhoto} inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs text-foreground [&_svg]:size-3.5`;

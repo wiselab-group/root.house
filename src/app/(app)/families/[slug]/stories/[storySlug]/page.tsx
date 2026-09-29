@@ -26,6 +26,10 @@ import { StoryHero } from "@/components/story/story-hero";
 import { StoryArticle } from "@/components/story/story-article";
 import { StoryChaptersNav } from "@/components/story/story-chapters-nav";
 import { StoryPeople } from "@/components/story/story-people";
+import { buildNarration } from "@/domain/story/story-narration";
+import { NarrationProvider } from "@/components/story/listen/narration-context";
+import { StoryListenButton } from "@/components/story/listen/story-listen-button";
+import { StoryPlayerCapsule } from "@/components/story/listen/story-player-capsule";
 import { buildStorySlides } from "@/components/story/build-story-slides";
 
 export async function generateMetadata({
@@ -108,6 +112,19 @@ export default async function StoryDetailPage({
     ),
   };
 
+  // Only photos this reader sees in the hero go to the client — the text
+  // may place photos they aren't allowed to see.
+  const slideIds = new Set(slides.map((slide) => slide.id));
+  const script = buildNarration(story.title, layout);
+  const narration = {
+    ...script,
+    phrases: script.phrases.map((phrase) => ({
+      ...phrase,
+      photoId:
+        phrase.photoId && slideIds.has(phrase.photoId) ? phrase.photoId : null,
+    })),
+  };
+
   const ownership = {
     privacyLevel: story.privacyLevel,
     createdBy: story.authorId,
@@ -123,29 +140,33 @@ export default async function StoryDetailPage({
           { label: story.title },
         ]}
       />
-      <StoryHero
-        title={story.title}
-        privacyLevel={story.privacyLevel}
-        createdAt={story.createdAt}
-        readingMinutes={readingMinutes(layout.wordCount)}
-        slides={slides}
-        backHref={`/families/${slug}/stories`}
-        editHref={
-          canEdit(viewer, ownership)
-            ? `/families/${slug}/stories/${storySlug}/edit`
-            : null
-        }
-        deleteProps={
-          canDelete(viewer, ownership) ? { familyId, storyId } : null
-        }
-      />
-      {layout.chapters.length > 1 && (
-        <StoryChaptersNav chapters={layout.chapters} />
-      )}
-      <StoryArticle layout={layout} refs={refs} />
-      <div className="mx-auto flex max-w-176 flex-col gap-12 px-4 pb-20 sm:px-8">
-        <StoryPeople people={people} familyId={familyId} familySlug={slug} />
-      </div>
+      <NarrationProvider narration={narration} storyId={storyId}>
+        <StoryHero
+          title={story.title}
+          privacyLevel={story.privacyLevel}
+          createdAt={story.createdAt}
+          readingMinutes={readingMinutes(layout.wordCount)}
+          slides={slides}
+          backHref={`/families/${slug}/stories`}
+          editHref={
+            canEdit(viewer, ownership)
+              ? `/families/${slug}/stories/${storySlug}/edit`
+              : null
+          }
+          deleteProps={
+            canDelete(viewer, ownership) ? { familyId, storyId } : null
+          }
+          listen={<StoryListenButton />}
+        />
+        {layout.chapters.length > 1 && (
+          <StoryChaptersNav chapters={layout.chapters} />
+        )}
+        <StoryArticle layout={layout} refs={refs} />
+        <StoryPlayerCapsule />
+        <div className="mx-auto flex max-w-176 flex-col gap-12 px-4 pb-20 sm:px-8">
+          <StoryPeople people={people} familyId={familyId} familySlug={slug} />
+        </div>
+      </NarrationProvider>
     </main>
   );
 }
