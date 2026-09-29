@@ -825,13 +825,15 @@ body:has(.photo-backdrop) .app-header {
   /* The story hero's film strip (CarouselFilm): the current thumbnail sits
      in the middle, the others fade out toward both edges — and blur, via
      the film-edge-blur-* overlays whose backdrop blur is strongest at the
-     edge and gone by a quarter in. */
+     edge and gone 6rem in. A fixed length, not a share of the width: the
+     strip now stretches between the hero's buttons, and a quarter of it
+     faded far too many thumbnails (user 2026-09-29). */
   .mask-fade-x {
     mask-image: linear-gradient(
       90deg,
       transparent,
-      black 24%,
-      black 76%,
+      black 6rem,
+      black calc(100% - 6rem),
       transparent
     );
   }

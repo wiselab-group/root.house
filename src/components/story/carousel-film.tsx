@@ -82,10 +82,21 @@ export function CarouselFilm({
         if (event.pointerType === "mouse") onHover(true);
       }}
       onPointerLeave={() => onHover(false)}
-      className="absolute inset-x-4 bottom-12 z-20 flex flex-col gap-3 sm:inset-x-7 sm:bottom-14 sm:flex-row sm:items-end sm:justify-center"
+      className="absolute inset-x-4 bottom-12 z-20 flex flex-col gap-3 sm:inset-x-7 sm:gap-12 sm:bottom-14 sm:flex-row sm:items-end sm:justify-center"
     >
-      <div className="flex min-w-0 flex-col items-center gap-2.5">
-        <div className="relative w-full sm:w-[min(34rem,calc(100vw-22rem))]">
+      {/* sm: «Слушать» at the hero's left edge, «Все фото» at its right, the
+          strip stretched to fill the row between them (user 2026-09-29: a
+          fixed-width strip left wide gaps to the buttons), level
+          with the thumbnails, not the caption line under them — mb-8.5 =
+          caption (h-5) + gap-2.5 + the strip's p-1. Phones: one row under
+          the strip, «Слушать» left, «Все фото» right. */}
+      {leading && (
+        <div className="pointer-events-auto flex shrink-0 max-sm:absolute max-sm:bottom-0 max-sm:left-0 sm:mb-8.5">
+          {leading}
+        </div>
+      )}
+      <div className="flex min-w-0 flex-col items-center gap-2.5 sm:flex-1">
+        <div className="relative w-full">
           <div
             ref={stripRef}
             role="group"
@@ -123,11 +134,11 @@ export function CarouselFilm({
           </div>
           <div
             aria-hidden="true"
-            className="film-edge-blur-start pointer-events-none absolute inset-y-0 left-0 w-1/4 backdrop-blur-[3px]"
+            className="film-edge-blur-start pointer-events-none absolute inset-y-0 left-0 w-24 backdrop-blur-[3px]"
           />
           <div
             aria-hidden="true"
-            className="film-edge-blur-end pointer-events-none absolute inset-y-0 right-0 w-1/4 backdrop-blur-[3px]"
+            className="film-edge-blur-end pointer-events-none absolute inset-y-0 right-0 w-24 backdrop-blur-[3px]"
           />
         </div>
         <p
@@ -138,16 +149,7 @@ export function CarouselFilm({
         </p>
       </div>
 
-      {/* sm: «Слушать» and «Все фото» on either side of the strip, level
-          with the thumbnails, not the caption line under them — bottom-8.5 =
-          caption (h-5) + gap-2.5 + the strip's p-1. Phones: one row under
-          the strip, «Слушать» left, «Все фото» right. */}
-      {leading && (
-        <div className="pointer-events-auto flex sm:absolute sm:bottom-8.5 sm:left-0 max-sm:absolute max-sm:bottom-0 max-sm:left-0">
-          {leading}
-        </div>
-      )}
-      <div className="flex gap-2 self-end sm:absolute sm:right-0 sm:bottom-8.5">
+      <div className="flex shrink-0 gap-2 self-end sm:mb-8.5">
         <button
           type="button"
           className={`${glassIconButtonLarge} relative`}
