@@ -67,7 +67,10 @@ export function TreeDock({
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-28 bg-linear-to-t from-tree-canvas/85 to-transparent"
       />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pointer-fine:pb-4">
+      <div
+        data-bottom-bar
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pointer-fine:pb-4"
+      >
         <div className="pointer-events-auto flex w-full max-w-sm flex-col gap-2 md:pointer-fine:w-auto md:pointer-fine:max-w-none">
           {kinship && <KinshipShelf kinship={kinship} />}
           <div

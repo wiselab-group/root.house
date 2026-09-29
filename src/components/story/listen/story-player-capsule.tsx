@@ -8,7 +8,9 @@ import {
   SkipForwardIcon,
   XIcon,
 } from "lucide-react";
-import { useNarration } from "./narration-context";
+import Link from "next/link";
+import type { Narration } from "@/domain/story/story-narration";
+import type { NarrationPlayerState } from "./narration-types";
 import { PlayerUnheardHint } from "./player-unheard-hint";
 
 const iconButton =
@@ -25,13 +27,25 @@ const clock = (seconds: number) => {
  * stays in reach however far the reader scrolls. Play/pause, a phrase
  * back/forward, where you are (chapter, time, a slider over every phrase),
  * speed and close. Times are estimates — the device voice reports none.
- * «Голос устройства» says honestly whose voice this is.
+ * «Голос устройства» says honestly whose voice this is. Rendered by the
+ * family-wide player (ActivePlayer), so it stays on every family page;
+ * over the tree's dock or the photo arrange bar it moves up (globals.css,
+ * .story-player-bar).
  */
-export function StoryPlayerCapsule() {
+export function StoryPlayerCapsule({
+  player,
+  narration,
+  away,
+}: {
+  player: NarrationPlayerState;
+  narration: Narration;
+  /** Off the story's page: its title, a link back, instead of the
+   *  chapter. */
+  away: { title: string; href: string } | null;
+}) {
   const t = useTranslations("stories");
-  const player = useNarration();
-  if (!player || player.status === "idle") return null;
-  const { narration, index, status, rate, elapsed, total } = player;
+  if (player.status === "idle") return null;
+  const { index, status, rate, elapsed, total } = player;
   const phrase = narration.phrases[index];
   const chapter = narration.chapters.find((c) => c.number === phrase?.chapter);
   const playing = status === "playing";
@@ -44,7 +58,7 @@ export function StoryPlayerCapsule() {
   const position = `${clock(elapsed)} / ${clock(total)}`;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2.5 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-5">
+    <div className="story-player-bar pointer-events-none fixed inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2.5 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-5">
       {player.unheard && <PlayerUnheardHint />}
       <section
         aria-label={t("listenPlayer")}
@@ -82,7 +96,16 @@ export function StoryPlayerCapsule() {
 
         <div className="flex min-w-0 flex-1 flex-col gap-1 px-1">
           <p className="truncate text-sm font-medium">
-            {chapter?.title ?? t("listenOpening")}
+            {away ? (
+              <Link
+                href={away.href}
+                className="rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {away.title}
+              </Link>
+            ) : (
+              (chapter?.title ?? t("listenOpening"))
+            )}
             <span className="font-normal text-muted-foreground">
               {" · "}
               {voice}

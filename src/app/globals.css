@@ -860,6 +860,13 @@ body:has(.photo-backdrop) .app-header {
     animation: strip-nudge 1.1s var(--ease-transition) 0.7s both;
   }
 
+  /* The «Слушать» capsule follows the reader around the family
+     (ListeningHost); where a page has its own bottom-centre bar — the
+     tree's dock — the capsule sits above it instead of over it. */
+  body:has([data-bottom-bar]) .story-player-bar {
+    translate: 0 -4.75rem;
+  }
+
   /* The block the «Слушать» player is reading (NarrationProvider sets
      data-narration-now on StoryArticle's display:contents wrapper). A tint
      behind the text, bleeding past it so the words keep their place —

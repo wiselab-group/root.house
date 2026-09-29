@@ -30,7 +30,6 @@ import { buildNarration } from "@/domain/story/story-narration";
 import { getStoryNarration } from "@/domain/story/story-narration.service";
 import { NarrationProvider } from "@/components/story/listen/narration-context";
 import { StoryListenButton } from "@/components/story/listen/story-listen-button";
-import { StoryPlayerCapsule } from "@/components/story/listen/story-player-capsule";
 import { buildStorySlides } from "@/components/story/build-story-slides";
 
 export async function generateMetadata({
@@ -158,6 +157,8 @@ export default async function StoryDetailPage({
       <NarrationProvider
         narration={narration}
         storyId={storyId}
+        title={story.title}
+        href={`/families/${slug}/stories/${storySlug}`}
         recording={recording}
       >
         <StoryHero
@@ -192,7 +193,6 @@ export default async function StoryDetailPage({
           <StoryChaptersNav chapters={layout.chapters} />
         )}
         <StoryArticle layout={layout} refs={refs} />
-        <StoryPlayerCapsule />
         <div className="mx-auto flex max-w-176 flex-col gap-12 px-4 pb-20 sm:px-8">
           <StoryPeople people={people} familyId={familyId} familySlug={slug} />
         </div>

@@ -9,6 +9,7 @@ import { personDisplayName } from "@/domain/person/display-name";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { FamilyProvider } from "@/components/family/family-context";
 import { SetFamilyNav } from "@/components/family-nav-context";
+import { ListeningHost } from "@/components/story/listen/listening-host";
 
 // No generateMetadata here — every page under /families/[slug] sets its own
 // short `title` (e.g. "Дерево", "Люди", a person's own name) and inherits
@@ -114,7 +115,9 @@ export default async function FamilyLayout({
           },
         ]}
       />
-      {children}
+      {/* The «Слушать» player lives here, not on the story page, so a
+          story keeps playing while the reader goes about the family. */}
+      <ListeningHost>{children}</ListeningHost>
     </FamilyProvider>
   );
 }

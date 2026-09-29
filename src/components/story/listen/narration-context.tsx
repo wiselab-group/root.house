@@ -1,10 +1,17 @@
 "use client";
 
-import { createContext, useContext, useEffect, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import type { Narration } from "@/domain/story/story-narration";
+import { useListeningHost } from "./listening-host";
+import type { StorySource } from "./listening-store";
 import type { NarrationPlayerState, StoryRecording } from "./narration-types";
-import { useRecordingNarration } from "./use-recording-narration";
-import { useSpeechNarration } from "./use-speech-narration";
 
 export interface NarrationContextValue extends NarrationPlayerState {
   narration: Narration;
@@ -18,85 +25,73 @@ export function useNarration(): NarrationContextValue | null {
   return useContext(NarrationContext);
 }
 
+const noop = () => {};
+const noStore = () => null;
+const noSubscription = () => noop;
+
 /**
- * Wraps a Story page: one narration shared by the «Слушать» button in the
- * hero, the carousel (shows the photo the text is at), the player capsule
- * and the reading column's highlight. A family member's recording plays if
- * the story has one; otherwise the device's voice reads the text. Either
- * way it stops when the page is left.
+ * Wraps a Story page: hands the story to the family-wide player
+ * (ListeningHost — it keeps playing after the page is left) and gives the
+ * page's parts — the «Слушать» button, the carousel (shows the photo the
+ * text is at), the reading column's highlight, the recorder — the player's
+ * state. While the player holds another story, this page sees an idle
+ * player whose «Слушать» switches it to this story.
  */
 export function NarrationProvider({
   narration,
   storyId,
+  title,
+  href,
   recording,
   children,
 }: {
   narration: Narration;
   storyId: string;
+  title: string;
+  href: string;
   recording: StoryRecording | null;
   children: ReactNode;
 }) {
-  const key = `root-house:story-listen:${storyId}`;
-  return recording ? (
-    <RecordingProvider
-      narration={narration}
-      recording={recording}
-      storageKey={`${key}:${recording.mediaId}`}
-    >
-      {children}
-    </RecordingProvider>
-  ) : (
-    <VoiceProvider narration={narration} storageKey={key}>
-      {children}
-    </VoiceProvider>
+  const host = useListeningHost();
+  const source = useMemo<StorySource>(
+    () => ({ storyId, title, href, narration, recording }),
+    [storyId, title, href, narration, recording],
   );
-}
 
-function VoiceProvider({
-  narration,
-  storageKey,
-  children,
-}: {
-  narration: Narration;
-  storageKey: string;
-  children: ReactNode;
-}) {
-  const player = useSpeechNarration(narration, storageKey);
-  return (
-    <Provide narration={narration} player={player}>
-      {children}
-    </Provide>
+  useEffect(() => {
+    if (!host) return;
+    host.offer(source);
+    return () => host.withdraw(source.storyId);
+  }, [host, source]);
+
+  const active = useSyncExternalStore(
+    host?.store.subscribe ?? noSubscription,
+    host?.store.get ?? noStore,
+    noStore,
   );
-}
+  const player: NarrationPlayerState =
+    active && active.source.storyId === storyId
+      ? active.player
+      : {
+          source: recording ? "recording" : "voice",
+          recordedByName: recording?.recordedByName ?? null,
+          status: "idle",
+          index: 0,
+          rate: 1,
+          noVoice: false,
+          unheard: false,
+          elapsed: 0,
+          total: recording
+            ? recording.durationMs / 1000
+            : narration.totalSeconds,
+          play: () => host?.start(source),
+          pause: noop,
+          stop: noop,
+          seekTo: noop,
+          step: noop,
+          cycleRate: noop,
+        };
 
-function RecordingProvider({
-  narration,
-  recording,
-  storageKey,
-  children,
-}: {
-  narration: Narration;
-  recording: StoryRecording;
-  storageKey: string;
-  children: ReactNode;
-}) {
-  const player = useRecordingNarration(narration, recording, storageKey);
-  return (
-    <Provide narration={narration} player={player}>
-      {children}
-    </Provide>
-  );
-}
-
-function Provide({
-  narration,
-  player,
-  children,
-}: {
-  narration: Narration;
-  player: NarrationPlayerState;
-  children: ReactNode;
-}) {
   const block =
     player.status === "idle" ? null : narration.phrases[player.index]?.block;
 
