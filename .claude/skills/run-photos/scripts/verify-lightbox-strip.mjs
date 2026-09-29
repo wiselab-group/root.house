@@ -204,6 +204,18 @@ async function main() {
       if (shifted.length) throw new Error(`lightbox scrolled sideways after photo ${n}: ${shifted}`);
     }
     console.log("    no sideways scroll after filmstrip jumps");
+    // Regression (2026-09-29): a clicked thumbnail kept focus, so ← left its
+    // focus ring on the old thumbnail. Focus must follow the current photo.
+    await page.keyboard.press("ArrowLeft");
+    await page.waitForTimeout(700);
+    const focus = await page.evaluate(() => ({
+      label: document.activeElement?.getAttribute("aria-label"),
+      current: document.activeElement?.getAttribute("aria-current"),
+    }));
+    if (focus.current !== "true")
+      throw new Error(`focus stayed on a non-current thumbnail: ${focus.label}`);
+    console.log(`    focus follows the photo (${focus.label})`);
+    await shoot(page, "d04b-focus-follows");
     await page.getByRole("button", { name: "Отметить людей" }).click();
     await page.waitForTimeout(500);
     await shoot(page, "d05-tagging-pins-people");

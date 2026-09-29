@@ -42,6 +42,15 @@ export function LightboxFilmstrip({
       left: current.offsetLeft - (strip.clientWidth - current.offsetWidth) / 2,
       behavior: reducedMotion ? "auto" : "smooth",
     });
+    // Focus follows the photo: after a thumbnail was clicked it kept focus,
+    // and paging with ←/→ left its focus ring on the old one (user
+    // screenshot, 2026-09-29). Only when focus is already in the strip.
+    if (
+      strip.contains(document.activeElement) &&
+      document.activeElement !== current
+    ) {
+      current.focus({ preventScroll: true });
+    }
   }, [index, reducedMotion]);
 
   return (
@@ -60,7 +69,7 @@ export function LightboxFilmstrip({
           })}
           aria-current={i === index ? "true" : undefined}
           onClick={() => onIndexChange(i)}
-          className="relative size-11 shrink-0 cursor-pointer overflow-hidden rounded-lg bg-muted opacity-50 ring-offset-2 ring-offset-background transition-[opacity,scale] duration-base ease-(--ease-reveal) outline-none hover:opacity-85 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring aria-current:scale-110 aria-current:opacity-100 aria-current:ring-2 aria-current:ring-foreground motion-reduce:transition-none"
+          className="relative size-11 shrink-0 cursor-pointer overflow-hidden rounded-lg bg-muted opacity-50 ring-offset-2 ring-offset-background transition-[opacity,scale] duration-base ease-(--ease-reveal) outline-none hover:opacity-85 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring aria-current:scale-110 aria-current:opacity-100 aria-current:ring-2 aria-current:ring-foreground aria-current:focus-visible:ring-foreground motion-reduce:transition-none"
         >
           <ArchiveImage
             src={mediaUrl(photo.media.id, familyId, "thumb")}
