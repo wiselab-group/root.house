@@ -191,6 +191,15 @@
     "voiceNotFound": "Запись не найдена, или у вас нет прав её менять."
   },
   "familyHome": {
+    "todayBirthday": "сегодня день рождения",
+    "todayWedding": "сегодня годовщина свадьбы",
+    "todayMemory": "сегодня день памяти",
+    "todayBirth": "сегодня {years, plural, one {# год} few {# года} many {# лет} other {# года}} со дня рождения",
+    "yearsSuffix": "{years, plural, one {# год} few {# года} many {# лет} other {# года}}",
+    "andMore": "и ещё {count}",
+    "draftWaiting": "у вас есть черновик «{title}»",
+    "draftWaitingUntitled": "у вас есть незаконченная история",
+    "draftContinue": "продолжить",
     "greeting": "{period, select, morning {Доброе утро} day {Добрый день} evening {Добрый вечер} night {Доброй ночи} other {Здравствуйте}}",
     "greetingNamed": "{greeting}, {name}",
     "weekAdded": "за неделю добавлено",

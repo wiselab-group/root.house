@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayPeriod, isTimeZone } from "./day-period";
+import { dayPeriod, isTimeZone, localDate } from "./day-period";
 
 describe("dayPeriod", () => {
   it("reads the hour in the given zone, not UTC", () => {
@@ -32,5 +32,22 @@ describe("isTimeZone", () => {
     expect(isTimeZone("Not/AZone")).toBe(false);
     expect(isTimeZone("")).toBe(false);
     expect(isTimeZone(undefined)).toBe(false);
+  });
+});
+
+describe("localDate", () => {
+  it("returns the date in the zone, falling back to UTC", () => {
+    // 22:30 UTC on Sep 30 is already Oct 1 in Tallinn.
+    const now = new Date("2026-09-30T22:30:00Z");
+    expect(localDate(now, "Europe/Tallinn")).toEqual({
+      year: 2026,
+      month: 10,
+      day: 1,
+    });
+    expect(localDate(now, undefined)).toEqual({
+      year: 2026,
+      month: 9,
+      day: 30,
+    });
   });
 });

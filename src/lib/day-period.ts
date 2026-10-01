@@ -35,3 +35,20 @@ export function dayPeriod(now: Date, timeZone: string): DayPeriod {
   if (hour >= 17 && hour < 23) return "evening";
   return "night";
 }
+
+/** Today's calendar date in `timeZone` (UTC when the zone is unknown) —
+ *  which day's anniversaries the greeting shows. */
+export function localDate(
+  now: Date,
+  timeZone: string | undefined,
+): { year: number; month: number; day: number } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    timeZone: isTimeZone(timeZone) ? timeZone : "UTC",
+  }).formatToParts(now);
+  const part = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value);
+  return { year: part("year"), month: part("month"), day: part("day") };
+}

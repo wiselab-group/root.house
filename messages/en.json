@@ -191,6 +191,15 @@
     "voiceNotFound": "The recording wasn't found, or you may not change it."
   },
   "familyHome": {
+    "todayBirthday": "birthday today",
+    "todayWedding": "wedding anniversary today",
+    "todayMemory": "remembrance day today",
+    "todayBirth": "born {years, plural, one {# year} other {# years}} ago today",
+    "yearsSuffix": "{years, plural, one {# year} other {# years}}",
+    "andMore": "and {count} more",
+    "draftWaiting": "you have a draft “{title}”",
+    "draftWaitingUntitled": "you have an unfinished story",
+    "draftContinue": "continue",
     "greeting": "{period, select, morning {Good morning} day {Good afternoon} evening {Good evening} night {Good evening} other {Hello}}",
     "greetingNamed": "{greeting}, {name}",
     "weekAdded": "added this week:",

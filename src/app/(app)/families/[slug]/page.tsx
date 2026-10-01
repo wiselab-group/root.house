@@ -84,6 +84,8 @@ export default async function FamilyDashboardPage({
       />
       <div className="mx-auto flex max-w-3xl flex-col gap-14 px-4 pt-14 pb-20 sm:px-8 sm:pt-20">
         <FamilyHomeTop
+          familyId={familyId}
+          userId={session.user.id}
           familySlug={slug}
           name={family?.name ?? slug}
           description={family?.description ?? null}
