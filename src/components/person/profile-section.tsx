@@ -58,8 +58,11 @@ export function ProfileSection({
       id={id}
       className={`flex flex-col gap-4 border-t pt-8 in-[.photo-backdrop]:gap-5 in-[.photo-backdrop]:border-t-0 in-[.photo-backdrop]:pt-0 ${tone === "danger" ? "border-destructive/30" : "border-border"} ${className ?? ""}`}
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <div className="flex flex-col gap-1">
+      {/* The description sits under the title+action row, not beside the
+          action: a long one took the row's full width and wrapped the
+          action onto a line of its own. */}
+      <div className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h2
             className={`font-heading text-xl font-medium in-[.photo-backdrop]:text-[1.625rem] in-[.photo-backdrop]:font-normal ${tone === "danger" ? "text-destructive" : ""}`}
           >
@@ -70,11 +73,11 @@ export function ProfileSection({
               </span>
             )}
           </h2>
-          {description && (
-            <p className="text-sm text-muted-foreground">{description}</p>
-          )}
+          {action}
         </div>
-        {action}
+        {description && (
+          <p className="text-sm text-muted-foreground">{description}</p>
+        )}
       </div>
       {children}
     </section>

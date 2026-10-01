@@ -301,7 +301,8 @@
     "noPassword": "No password",
     "expires": "expires {date}",
     "noExpiry": "never expires",
-    "links": "Links"
+    "newLink": "New link",
+    "empty": "No links yet."
   },
   "invite": {
     "title": "Family invitation",

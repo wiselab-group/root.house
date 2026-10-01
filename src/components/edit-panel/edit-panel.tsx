@@ -11,6 +11,9 @@ interface EditPanelApi {
   requestClose: () => void;
   /** Close without asking — the form just saved, nothing is left to lose. */
   closeAfterSave: () => void;
+  /** The form's input is saved but the panel stays open (e.g. showing the
+   *  result) — closing it shouldn't ask about unsaved changes any more. */
+  markClean: () => void;
 }
 
 const EditPanelContext = createContext<EditPanelApi | null>(null);
@@ -57,6 +60,7 @@ export function EditPanel({
     () => ({
       requestClose: () => (dirty ? setConfirming(true) : setOpen(false)),
       closeAfterSave: () => setOpen(false),
+      markClean: () => setDirty(false),
     }),
     [dirty],
   );

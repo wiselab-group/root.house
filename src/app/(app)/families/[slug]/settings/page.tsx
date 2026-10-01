@@ -86,26 +86,23 @@ export default async function FamilySettingsPage({
       </ProfileSection>
 
       {isOwner && member && (
-        <ProfileSection
+        <FamilyMembersSection
+          familyId={familyId}
+          currentUserId={member.userId}
+          members={members}
+          pendingInvitations={pendingInvitations}
           title={t("membersTitle")}
           description={t("membersDescription")}
-        >
-          <FamilyMembersSection
-            familyId={familyId}
-            currentUserId={member.userId}
-            members={members}
-            pendingInvitations={pendingInvitations}
-          />
-        </ProfileSection>
+        />
       )}
 
       {isOwner && member && (
-        <ProfileSection
+        <ShareLinkSection
+          familyId={familyId}
+          shareLinks={shareLinks}
           title={t("shareTitle")}
           description={t("shareDescription")}
-        >
-          <ShareLinkSection familyId={familyId} shareLinks={shareLinks} />
-        </ProfileSection>
+        />
       )}
 
       {isOwner && member && (

@@ -5,6 +5,7 @@ import { MemberRoleSelect } from "./member-role-select";
 import { RemoveMemberButton } from "./remove-member-button";
 import { PendingInvitationsList } from "./pending-invitations-list";
 import { InviteMemberForm } from "./invite-member-form";
+import { ProfileSectionWithAdd } from "@/components/person/profile-section-with-add";
 
 const ownerCount = (members: FamilyMemberWithUser[]) =>
   members.filter((m) => m.role === "owner").length;
@@ -16,25 +17,37 @@ const ownerCount = (members: FamilyMemberWithUser[]) =>
  * by the other Settings cards, since Members needs a fresh member/invite
  * list the client-only `useFamily()` context can't provide. Interactive
  * bits (role change, remove, resend/revoke, invite) are pushed down into
- * leaf Client Components.
+ * leaf Client Components. The invite form isn't on the page: «Пригласить
+ * участника» on the heading row opens it in an EditPanel (2026-10-01, same
+ * as Ссылки для общего доступа).
  */
 export function FamilyMembersSection({
   familyId,
   currentUserId,
   members,
   pendingInvitations,
+  title,
+  description,
 }: {
   familyId: string;
   currentUserId: string;
   members: FamilyMemberWithUser[];
   pendingInvitations: InvitationRecord[];
+  title: string;
+  description: string;
 }) {
   const singleOwner = ownerCount(members) <= 1;
   const t = useTranslations("members");
   const format = useFormatter();
 
   return (
-    <div className="flex flex-col gap-6">
+    <ProfileSectionWithAdd
+      title={title}
+      description={description}
+      addLabel={t("invite")}
+      panelTitle={t("invite")}
+      form={<InviteMemberForm familyId={familyId} />}
+    >
       <div className="flex flex-col gap-3">
         {members.map((member) => (
           <div
@@ -83,11 +96,6 @@ export function FamilyMembersSection({
           />
         </div>
       )}
-
-      <div className="flex flex-col gap-2">
-        <h3 className="text-sm font-medium">{t("invite")}</h3>
-        <InviteMemberForm familyId={familyId} />
-      </div>
-    </div>
+    </ProfileSectionWithAdd>
   );
 }

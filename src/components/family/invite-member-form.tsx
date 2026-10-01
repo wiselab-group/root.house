@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { useFormStatus } from "react-dom";
 import { useTranslations } from "next-intl";
 import {
   inviteFamilyMemberAction,
@@ -12,24 +11,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import type { FamilyRole } from "@/domain/family/roles";
+import { useEditPanel } from "@/components/edit-panel/edit-panel";
+import { EditPanelFooter } from "@/components/edit-panel/edit-panel-parts";
+import { submitWithoutReset } from "@/lib/submit-without-reset";
+import { CreatedLinkResult } from "./created-link-result";
 
 const initialState: InviteMemberFormState = {};
 const ROLE_OPTIONS: FamilyRole[] = ["editor", "contributor", "viewer", "owner"];
 const DEFAULT_ROLE: FamilyRole = "viewer";
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  const t = useTranslations("members");
-  return (
-    <Button type="submit" disabled={pending} aria-busy={pending}>
-      {pending ? t("sending") : t("sendInvite")}
-    </Button>
-  );
-}
-
 /**
- * Invite-by-email form — on success shows the invite link inline (copyable)
- * rather than navigating away, since email delivery is best-effort (see
+ * Invite-by-email form, rendered inside the EditPanel opened by «Пригласить
+ * участника» (FamilyMembersSection) — on success shows the invite link
+ * (copyable) in the panel rather than closing it, since email delivery is best-effort (see
  * src/lib/email/send-invitation.ts) and the link is the guaranteed path.
  */
 export function InviteMemberForm({ familyId }: { familyId: string }) {
@@ -38,73 +32,59 @@ export function InviteMemberForm({ familyId }: { familyId: string }) {
   const tr = useTranslations("roles");
   const trd = useTranslations("roleDescriptions");
   const boundAction = inviteFamilyMemberAction.bind(null, familyId);
-  const [state, formAction] = useActionState(boundAction, initialState);
-  const [copied, setCopied] = useState(false);
+  const panel = useEditPanel();
+  const [state, formAction, pending] = useActionState(
+    boundAction,
+    initialState,
+  );
   const [role, setRole] = useState<FamilyRole>(DEFAULT_ROLE);
 
-  async function copyLink() {
-    if (!state.inviteUrl) return;
-    await navigator.clipboard.writeText(state.inviteUrl);
-    setCopied(true);
-  }
-
-  if (state.inviteUrl) {
+  if (state.inviteUrl)
     return (
-      <div className="flex flex-col gap-2 rounded-md border border-border p-3">
-        <p className="text-sm text-muted-foreground">{t("inviteCreated")}</p>
-        <div className="flex items-center gap-2">
-          <Input readOnly value={state.inviteUrl} className="text-xs" />
-          <Button type="button" size="sm" variant="outline" onClick={copyLink}>
-            {copied ? tc("copied") : tc("copy")}
-          </Button>
-        </div>
-      </div>
+      <CreatedLinkResult message={t("inviteCreated")} url={state.inviteUrl} />
     );
-  }
 
   return (
-    <form action={formAction} className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="flex min-w-48 flex-1 flex-col gap-1">
-          <Label
-            htmlFor="invite-email"
-            className="text-xs text-muted-foreground"
-          >
-            Email
-          </Label>
-          <Input id="invite-email" name="email" type="email" required />
-          {state.fieldErrors?.email && (
-            <p className="text-xs text-destructive">
-              {state.fieldErrors.email}
-            </p>
-          )}
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label
-            htmlFor="invite-role"
-            className="text-xs text-muted-foreground"
-          >
-            {t("role")}
-          </Label>
-          <NativeSelect
-            id="invite-role"
-            name="role"
-            value={role}
-            onChange={(e) => setRole(e.target.value as FamilyRole)}
-          >
-            {ROLE_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {tr(option)}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
-        <SubmitButton />
+    <form
+      onSubmit={submitWithoutReset(formAction)}
+      className="flex min-h-full flex-col gap-4"
+    >
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="invite-email" className="text-xs text-muted-foreground">
+          Email
+        </Label>
+        <Input id="invite-email" name="email" type="email" required />
+        {state.fieldErrors?.email && (
+          <p className="text-xs text-destructive">{state.fieldErrors.email}</p>
+        )}
       </div>
-      <p className="max-w-md text-xs text-muted-foreground">{trd(role)}</p>
-      {state.error && (
-        <p className="w-full text-sm text-destructive">{state.error}</p>
-      )}
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="invite-role" className="text-xs text-muted-foreground">
+          {t("role")}
+        </Label>
+        <NativeSelect
+          id="invite-role"
+          name="role"
+          value={role}
+          onChange={(e) => setRole(e.target.value as FamilyRole)}
+        >
+          {ROLE_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {tr(option)}
+            </option>
+          ))}
+        </NativeSelect>
+        <p className="text-xs text-muted-foreground">{trd(role)}</p>
+      </div>
+      {state.error && <p className="text-sm text-destructive">{state.error}</p>}
+      <EditPanelFooter>
+        <Button type="button" variant="ghost" onClick={panel?.requestClose}>
+          {tc("cancel")}
+        </Button>
+        <Button type="submit" disabled={pending} aria-busy={pending}>
+          {pending ? t("sending") : t("sendInvite")}
+        </Button>
+      </EditPanelFooter>
     </form>
   );
 }

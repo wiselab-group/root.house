@@ -45,6 +45,7 @@ const ICON = SECTION_ACTION_ICON_CLASS;
  */
 export function ProfileSectionWithAdd({
   title,
+  description,
   count,
   addLabel,
   closeLabel,
@@ -54,6 +55,7 @@ export function ProfileSectionWithAdd({
   children,
 }: {
   title: string;
+  description?: string;
   count?: number;
   addLabel: string;
   closeLabel?: string;
@@ -108,6 +110,7 @@ export function ProfileSectionWithAdd({
   return (
     <ProfileSection
       title={title}
+      description={description}
       count={count}
       action={
         extraAction ? (
