@@ -476,6 +476,77 @@ body:has(.photo-backdrop) .app-header {
     animation: content-enter 420ms var(--ease-reveal) backwards;
   }
 
+  /* «Линия жизни» unfolding from the birth (PersonLifeline), once, when it
+     first comes on screen: the track grows left→right, then each event
+     lights up in the order of its place on the axis (--lifeline-at, 0..1),
+     its label settling toward the axis, the card last. Held on the first
+     frame (paused + backwards fill) until useInViewOnce sets data-revealed.
+     Under reduced motion it's skipped outright — the global rule zeroes
+     durations but not delays, which would leave dots blank for a moment. */
+  @keyframes lifeline-track-grow {
+    from {
+      transform: scaleX(0);
+    }
+  }
+  @keyframes lifeline-dot-pop {
+    from {
+      opacity: 0;
+      transform: scale(0);
+    }
+  }
+  @keyframes lifeline-label-up {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+  @keyframes lifeline-label-down {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+  @keyframes lifeline-fade {
+    from {
+      opacity: 0;
+    }
+  }
+  .lifeline-track {
+    transform-origin: left;
+    animation: lifeline-track-grow 900ms var(--ease-reveal) backwards;
+  }
+  .lifeline-dot {
+    animation: lifeline-dot-pop 420ms var(--ease-reveal)
+      calc(150ms + var(--lifeline-at) * 600ms) backwards;
+  }
+  .lifeline-label-up,
+  .lifeline-label-down,
+  .lifeline-stem {
+    animation: lifeline-label-up 420ms var(--ease-reveal)
+      calc(250ms + var(--lifeline-at) * 600ms) backwards;
+  }
+  .lifeline-label-down {
+    animation-name: lifeline-label-down;
+  }
+  .lifeline-stem {
+    animation-name: lifeline-fade;
+  }
+  .lifeline-decade {
+    animation: lifeline-fade 600ms var(--ease-reveal)
+      calc(var(--lifeline-at) * 600ms) backwards;
+  }
+  .lifeline-card-reveal {
+    animation: content-enter 420ms var(--ease-reveal) 450ms backwards;
+  }
+  .lifeline-reveal:not([data-revealed]) * {
+    animation-play-state: paused;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lifeline-reveal * {
+      animation: none !important;
+    }
+  }
+
   /* Relationship Trace "marching ants" (reactflow.dev/examples/interaction/
      contextual-zoom's animated-edge look, user-requested) — a traced edge's
      dashes visibly crawl along the path, reading as "flow" from Person A to

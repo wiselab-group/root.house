@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { LIFELINE_INSET } from "@/domain/event/lifeline-scale";
+import { useInViewOnce } from "@/hooks/use-in-view-once";
+import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { useScrollEdges } from "@/hooks/use-scroll-edges";
 import { cn } from "@/lib/utils";
+import { LifelineDot, axisStyle } from "./lifeline-dot";
 import { LifelineEventCard } from "./lifeline-event-card";
 import type { LifelinePointView } from "./lifeline-view";
 
@@ -18,6 +21,8 @@ import type { LifelinePointView } from "./lifeline-view";
  * layoutLifelineScale) stops shrinking and scrolls sideways instead.
  * Positions are fractions of the span placed with calc(), so the one
  * scale stretches with the track in CSS alone: no measuring, no shift.
+ * Motion (globals.css § lifeline): the line unfolds from the birth the
+ * first time it's on screen.
  */
 export function PersonLifeline({
   points,
@@ -33,12 +38,28 @@ export function PersonLifeline({
   // so the selected dot and its card always match what's on screen.
   const [selectedId, setSelectedId] = useState(points[0].id);
   const selected = points.find((p) => p.id === selectedId) ?? points[0];
+  const reducedMotion = useReducedMotion();
+  const { ref: revealRef, inView } = useInViewOnce<HTMLDivElement>();
+
+  const select = (id: string, dot: HTMLElement) => {
+    setSelectedId(id);
+    // A dot picked under the edge fade (or half off-screen) slides in.
+    dot.scrollIntoView({
+      inline: "nearest",
+      block: "nearest",
+      behavior: reducedMotion ? "auto" : "smooth",
+    });
+  };
   const { ref, moreStart, moreEnd } = useScrollEdges(
     `${minWidth}:${points.map((p) => p.id).join()}`,
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div
+      ref={revealRef}
+      data-revealed={inView || undefined}
+      className="lifeline-reveal flex flex-col gap-4"
+    >
       {/* Phones: bleeds past the panel's px-4 to the screen edges. No
           scrollbar — a narrow fade on whichever side the line continues. */}
       <div
@@ -52,7 +73,7 @@ export function PersonLifeline({
         <div className="relative h-[250px]" style={{ minWidth }}>
           <div
             aria-hidden="true"
-            className="absolute top-[122px] h-2.5 rounded-full bg-tree-accent/80"
+            className="lifeline-track absolute top-[122px] h-2.5 rounded-full bg-tree-accent/80"
             // Rounded ends concentric with the end dots (h-2.5 → 5px radius).
             style={{ left: LIFELINE_INSET - 5, right: LIFELINE_INSET - 5 }}
           />
@@ -61,15 +82,15 @@ export function PersonLifeline({
               key={point.id}
               point={point}
               pressed={point.id === selected.id}
-              onSelect={() => setSelectedId(point.id)}
+              onSelect={(dot) => select(point.id, dot)}
             />
           ))}
           {decades.map((decade) => (
             <span
               key={decade.year}
               aria-hidden="true"
-              className="absolute top-[232px] -translate-x-1/2 text-[11px] text-foreground/35 tabular-nums"
-              style={{ left: axisLeft(decade.position) }}
+              className="lifeline-decade absolute top-[232px] -translate-x-1/2 text-[11px] text-foreground/35 tabular-nums"
+              style={axisStyle(decade.position)}
             >
               {decade.year}
             </span>
@@ -77,74 +98,9 @@ export function PersonLifeline({
         </div>
       </div>
 
-      <LifelineEventCard point={selected} />
+      <div className="lifeline-card-reveal">
+        <LifelineEventCard point={selected} />
+      </div>
     </div>
   );
-}
-
-function LifelineDot({
-  point,
-  pressed,
-  onSelect,
-}: {
-  point: LifelinePointView;
-  pressed: boolean;
-  onSelect: () => void;
-}) {
-  const up = point.side === "up";
-  // A label centered on a dot at the very start/end of the axis would hang
-  // past the scroll box and get clipped — anchor those to the dot instead.
-  const edge =
-    point.align === "start"
-      ? "-ml-1.5 self-start text-left"
-      : point.align === "end"
-        ? "-mr-1.5 self-end text-right"
-        : "text-center";
-  const label = (
-    <span
-      className={`${edge} rounded-lg px-1.5 py-0.5 leading-[1.3] whitespace-nowrap transition-colors duration-base ease-(--ease-reveal) group-hover:bg-glass`}
-    >
-      <b
-        className={`block text-sm font-medium tabular-nums ${pressed ? "text-primary" : ""}`}
-      >
-        {point.year}
-      </b>
-      <small className="text-xs text-foreground/55">{point.caption}</small>
-    </span>
-  );
-  const stem = <span className={`w-px bg-branch ${up ? "h-5" : "h-6"}`} />;
-  const dot = (
-    <span
-      className={`size-[11px] rounded-full border-2 transition-transform duration-base ease-(--ease-reveal) group-hover:scale-125 ${
-        pressed
-          ? "border-primary bg-primary shadow-[0_0_0_5px_color-mix(in_oklch,var(--primary)_25%,transparent)]"
-          : "border-tree-accent bg-card"
-      }`}
-    />
-  );
-
-  return (
-    <button
-      type="button"
-      aria-pressed={pressed}
-      aria-label={`${point.year}: ${point.caption}`}
-      onClick={onSelect}
-      // Label first in the DOM on both sides (so it gets the focus ring);
-      // below the axis the column simply runs bottom-up, dot on the axis.
-      className={`group absolute flex w-0 -translate-x-1/2 cursor-pointer items-center gap-1 focus-visible:outline-none [&:focus-visible>span:first-child]:ring-2 [&:focus-visible>span:first-child]:ring-ring ${
-        up ? "bottom-29.5 flex-col" : "top-30.25 flex-col-reverse"
-      }`}
-      style={{ left: axisLeft(point.position) }}
-    >
-      {label}
-      {stem}
-      {dot}
-    </button>
-  );
-}
-
-/** A span fraction → CSS left: the end dots sit LIFELINE_INSET in from the
- *  track edges, everything else on one linear scale between them. */
-function axisLeft(fraction: number): string {
-  return `calc(${LIFELINE_INSET}px + ${fraction} * (100% - ${2 * LIFELINE_INSET}px))`;
 }
