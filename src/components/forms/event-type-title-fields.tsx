@@ -18,6 +18,13 @@ export function EventTypeTitleFields({
 }) {
   const t = useTranslations("eventForm");
   const tTypes = useTranslations("eventTypes");
+  // An older event may carry a type no longer offered (divorce) — keep it
+  // selectable so editing doesn't silently change the event's type.
+  const types: readonly EventType[] = (
+    MANUAL_EVENT_TYPES as readonly EventType[]
+  ).includes(eventType)
+    ? MANUAL_EVENT_TYPES
+    : [eventType, ...MANUAL_EVENT_TYPES];
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div className="flex flex-col gap-1">
@@ -30,7 +37,7 @@ export function EventTypeTitleFields({
           value={eventType}
           onChange={(e) => onEventTypeChange(e.target.value as EventType)}
         >
-          {MANUAL_EVENT_TYPES.map((value) => (
+          {types.map((value) => (
             <option key={value} value={value}>
               {tTypes(value)}
             </option>

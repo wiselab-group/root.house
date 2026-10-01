@@ -115,6 +115,7 @@ export async function PersonTimeline({
       title={wording.t("title")}
       count={timeline.length}
       addLabel={wording.t("addEvent")}
+      panelTitle={wording.t("addEvent")}
       form={
         canContribute && (
           <AddEventForm

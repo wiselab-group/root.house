@@ -23,8 +23,9 @@ import { resolvePlaceFields, revalidatePlacePages } from "@/lib/place-choice";
 export interface EventFormState {
   error?: string;
   fieldErrors?: Record<string, string>;
-  /** Set by updateEventAction when it didn't redirect (redirectTo null —
-   *  the form sits in an EditPanel), so the panel knows to close. */
+  /** Set by createEventAction, and by updateEventAction when it didn't
+   *  redirect (redirectTo null — the form sits in an EditPanel), so the
+   *  panel knows to close. */
   saved?: boolean;
 }
 
@@ -87,7 +88,7 @@ export async function createEventAction(
   const personSlug = await getPersonSlugById(personId, familyId);
   revalidatePath(`/families/${familySlug}/people/${personSlug}`);
   if (places.createdAny) revalidatePlacePages(familySlug);
-  return {};
+  return { saved: true };
 }
 
 export async function deleteEventAction(

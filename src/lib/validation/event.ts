@@ -7,7 +7,9 @@ export const privacyLevelSchema = z.enum(["private", "family", "public"]);
 // (see event.service.ts::synthesizeDerivedEvents) and can no longer be
 // created as ordinary `events` rows. Mirrors event-roles.ts's
 // MANUAL_EVENT_TYPES — kept as a literal list here since this file must stay
-// framework/domain-import-free (validation schemas only).
+// framework/domain-import-free (validation schemas only). "divorce" is the
+// one extra: no longer offered (recorded on the partnership), but accepted so
+// an older divorce event can still be saved from its edit form.
 export const eventTypeSchema = z.enum([
   "divorce",
   "baptism",

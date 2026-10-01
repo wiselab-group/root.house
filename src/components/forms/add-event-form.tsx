@@ -1,37 +1,33 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
-import { useFormStatus } from "react-dom";
+import { useActionState, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   createEventAction,
   type EventFormState,
 } from "@/actions/event.actions";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
-import { PersonDateFields } from "./person-date-fields";
+import { useEditPanel } from "@/components/edit-panel/edit-panel";
+import { EditPanelFooter } from "@/components/edit-panel/edit-panel-parts";
+import { submitWithoutReset } from "@/lib/submit-without-reset";
+import { EventTypeTitleFields } from "./event-type-title-fields";
+import { EventDateRangeFields } from "./event-date-range-fields";
 import { PlaceField } from "./place-field";
 import { PrivacyLevelSelect } from "./privacy-level-select";
-import { MANUAL_EVENT_TYPES } from "@/domain/event/event-roles";
+import type { EventType } from "@/domain/event/event.repository";
 import type { PlaceRecord } from "@/domain/place/place.service";
-import { useCollapsibleFormClose } from "./collapsible-form";
 
 const initialState: EventFormState = {};
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  const t = useTranslations("eventForm");
-  return (
-    <Button type="submit" size="sm" disabled={pending} aria-busy={pending}>
-      {pending ? t("adding") : t("add")}
-    </Button>
-  );
-}
-
+/**
+ * Adds an Event to a Person — rendered inside an EditPanel opened from the
+ * Линия жизни heading (ProfileSectionWithAdd's `panelTitle`), the same
+ * panel/sheet an existing event is edited in, instead of an inline form
+ * that pushed the whole section down (user request 2026-10-01).
+ * createEventAction answers `saved`, and the panel closes itself.
+ */
 export function AddEventForm({
   familyId,
   personId,
@@ -42,66 +38,38 @@ export function AddEventForm({
   places?: PlaceRecord[];
 }) {
   const t = useTranslations("eventForm");
-  const tTypes = useTranslations("eventTypes");
   const tc = useTranslations("common");
-  const close = useCollapsibleFormClose();
+  const panel = useEditPanel();
   const boundAction = createEventAction.bind(null, familyId, personId);
-  const [state, formAction] = useActionState(boundAction, initialState);
+  const [state, formAction, pending] = useActionState(
+    boundAction,
+    initialState,
+  );
+  const [eventType, setEventType] = useState<EventType>("other");
   const [showRange, setShowRange] = useState(false);
-  // Closes the form back to its trigger button on a successful submit —
-  // without this, createEventAction's revalidatePath-only success path (no
-  // redirect, unlike e.g. updatePersonAction) left the form sitting open
-  // with its stale inputs even though the event was already created, easily
-  // mistaken for "did that actually work?" (reported by the user). Gated on
-  // submittedRef so the effect never fires on initial mount (initialState
-  // is also error-free).
-  const submittedRef = useRef(false);
+
+  const closeAfterSave = panel?.closeAfterSave;
   useEffect(() => {
-    if (!submittedRef.current) return;
-    if (!state.error && !state.fieldErrors) close();
-  }, [state, close]);
+    if (state.saved) closeAfterSave?.();
+  }, [state, closeAfterSave]);
 
   return (
     <form
-      action={(formData) => {
-        submittedRef.current = true;
-        formAction(formData);
-      }}
-      className="flex flex-col gap-3 rounded-md border border-border p-3"
+      onSubmit={submitWithoutReset(formAction)}
+      className="flex min-h-full flex-col gap-4"
     >
-      <p className="text-sm font-medium">{t("add")}</p>
+      <EventTypeTitleFields
+        eventType={eventType}
+        onEventTypeChange={setEventType}
+        defaultTitle=""
+      />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="type" className="text-xs text-muted-foreground">
-            {t("type")}
-          </Label>
-          <NativeSelect id="type" name="type" defaultValue="other">
-            {MANUAL_EVENT_TYPES.map((value) => (
-              <option key={value} value={value}>
-                {tTypes(value)}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="title" className="text-xs text-muted-foreground">
-            {t("title")}
-          </Label>
-          <Input id="title" name="title" required />
-        </div>
-      </div>
-
-      <PersonDateFields prefix="date" legend={t("date")} />
-
-      <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Checkbox
-          checked={showRange}
-          onCheckedChange={(checked) => setShowRange(checked)}
-        />
-        {t("hasEnd")}
-      </label>
-      {showRange && <PersonDateFields prefix="endDate" legend={t("endDate")} />}
+      <EventDateRangeFields
+        date={null}
+        endDate={null}
+        showRange={showRange}
+        onShowRangeChange={setShowRange}
+      />
 
       <PlaceField name="placeId" label={t("place")} places={places} />
       <PrivacyLevelSelect />
@@ -110,7 +78,12 @@ export function AddEventForm({
         <Label htmlFor="description" className="text-xs text-muted-foreground">
           {t("description")}
         </Label>
-        <Textarea id="description" name="description" rows={2} />
+        <Textarea
+          id="description"
+          name="description"
+          rows={4}
+          className="field-sizing-content"
+        />
       </div>
 
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
@@ -121,12 +94,14 @@ export function AddEventForm({
           </p>
         ))}
 
-      <div className="flex gap-2">
-        <SubmitButton />
-        <Button type="button" variant="ghost" size="sm" onClick={close}>
+      <EditPanelFooter>
+        <Button type="button" variant="ghost" onClick={panel?.requestClose}>
           {tc("cancel")}
         </Button>
-      </div>
+        <Button type="submit" disabled={pending} aria-busy={pending}>
+          {pending ? t("adding") : t("add")}
+        </Button>
+      </EditPanelFooter>
     </form>
   );
 }

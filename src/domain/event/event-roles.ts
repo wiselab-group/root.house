@@ -27,11 +27,12 @@ export const EVENT_ROLES: Record<EventType, string[]> = {
  * Types no longer manually creatable via AddEventForm — birth/death are
  * derived from Person.birthDate/deathDate, marriage from
  * Partnership.startDate (see event.service.ts::synthesizeDerivedEvents).
- * Kept as a named export so the form's option list and createEventSchema's
- * rejection both read from one source of truth.
+ * Divorce isn't offered either: it's recorded on the partnership itself
+ * (MarriageEditForm / PartnershipStatusToggle — user request 2026-10-01).
+ * createEventSchema still accepts "divorce" so an older divorce event stays
+ * editable; EventTypeTitleFields keeps its current type as an option.
  */
 export const MANUAL_EVENT_TYPES = [
-  "divorce",
   "baptism",
   "migration",
   "emigration",

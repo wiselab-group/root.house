@@ -1,9 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { PlusIcon, XIcon } from "lucide-react";
 import { CollapsibleFormCloseProvider } from "@/components/forms/collapsible-form";
+import { EditPanel } from "@/components/edit-panel/edit-panel";
+import {
+  EditPanelBody,
+  EditPanelHeader,
+} from "@/components/edit-panel/edit-panel-parts";
 import { ProfileSection } from "./profile-section";
 
 // On phones the label shortens to a bare «Добавить» (the section title
@@ -32,12 +37,18 @@ const ICON = SECTION_ACTION_ICON_CLASS;
  *   the heading action turns into «Закрыть» while open, and the panel stays
  *   mounted (just hidden) once opened, so closing it mid-upload doesn't drop
  *   the upload queue.
+ *
+ * Or pass `panelTitle`: the form opens in an EditPanel over the page (side
+ * panel / phone sheet, like editing an event) instead of under the heading,
+ * so nothing below shifts (user request 2026-10-01, Линия жизни). The form
+ * closes through useEditPanel there, and focus returns to the action.
  */
 export function ProfileSectionWithAdd({
   title,
   count,
   addLabel,
   closeLabel,
+  panelTitle,
   form,
   extraAction,
   children,
@@ -46,6 +57,8 @@ export function ProfileSectionWithAdd({
   count?: number;
   addLabel: string;
   closeLabel?: string;
+  /** Opens `form` in an EditPanel with this title instead of inline. */
+  panelTitle?: string;
   form?: ReactNode;
   /** Another heading action, before «Добавить» (the photos' «Упорядочить»). */
   extraAction?: ReactNode;
@@ -55,16 +68,19 @@ export function ProfileSectionWithAdd({
   const [open, setOpen] = useState(false);
   const [everOpened, setEverOpened] = useState(false);
   const keepMounted = Boolean(closeLabel);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const openForm = () => {
     setOpen(true);
     setEverOpened(true);
   };
 
-  const action = !form ? null : !open ? (
+  const action = !form ? null : !open || panelTitle ? (
     <button
+      ref={triggerRef}
       type="button"
-      aria-expanded={false}
+      aria-expanded={panelTitle ? undefined : false}
+      aria-haspopup={panelTitle ? "dialog" : undefined}
       onClick={openForm}
       className={`${ACTION} text-primary hover:text-primary/80`}
     >
@@ -104,13 +120,25 @@ export function ProfileSectionWithAdd({
         )
       }
     >
-      {(open || (keepMounted && everOpened)) && (
-        <div hidden={!open}>
-          <CollapsibleFormCloseProvider value={() => setOpen(false)}>
-            {form}
-          </CollapsibleFormCloseProvider>
-        </div>
-      )}
+      {panelTitle
+        ? open && (
+            <EditPanel
+              onClosed={() => {
+                setOpen(false);
+                triggerRef.current?.focus();
+              }}
+            >
+              <EditPanelHeader title={panelTitle} />
+              <EditPanelBody>{form}</EditPanelBody>
+            </EditPanel>
+          )
+        : (open || (keepMounted && everOpened)) && (
+            <div hidden={!open}>
+              <CollapsibleFormCloseProvider value={() => setOpen(false)}>
+                {form}
+              </CollapsibleFormCloseProvider>
+            </div>
+          )}
       {children}
     </ProfileSection>
   );
