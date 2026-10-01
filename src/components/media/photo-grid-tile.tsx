@@ -7,16 +7,20 @@ import { GripVerticalIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ArchiveImage } from "@/components/media/archive-image";
 import { mediaUrl } from "@/lib/media-url";
-import { PhotoTileMenu } from "./photo-tile-menu";
+import { PhotoActionsMenu } from "./photo-actions-menu";
 import type { GalleryPhotoView } from "./gallery-photo";
 
 /**
  * One tile in PhotoGrid — split out so useSortable's per-tile
- * transform/listeners don't clutter the grid component itself. Two states:
- * normally a plain photo to look at (tap opens the lightbox, no menu, and
- * no touch-none — a swipe over the grid must scroll the page on a phone);
- * in «Упорядочить» mode the whole tile becomes the drag handle, marked with a
- * grip, the photo no longer opens, and the «⋯» menu is always visible.
+ * transform/listeners don't clutter the grid component itself. An editor's
+ * «⋯» menu shows on hover/focus in the plain grid — not at all on a touch
+ * screen, which has no hover: a ⋯ on every small thumbnail was noise, and
+ * the same menu sits in the lightbox (user request 2026-10-01). Two states:
+ * normally a photo to look at (tap opens the lightbox, no touch-none — a
+ * swipe over the grid must scroll the page on a phone); in «Упорядочить»
+ * mode the whole tile becomes the drag handle, marked with a grip, the
+ * photo no longer opens, and the «⋯» is hidden — that mode is only for
+ * moving photos (user request 2026-10-01).
  */
 export function PhotoGridTile({
   photo,
@@ -37,7 +41,7 @@ export function PhotoGridTile({
   /** «Упорядочить» mode — see usePhotoGridReorder. */
   isArranging: boolean;
   albumId?: string | null;
-  /** Set in a Person's profile gallery — see PhotoTileMenu's `portrait`. */
+  /** Set in a Person's profile gallery — see PhotoActionsMenu's `portrait`. */
   portraitPersonId?: string;
   isPortrait?: boolean;
   onOpen: () => void;
@@ -100,16 +104,14 @@ export function PhotoGridTile({
         </span>
       )}
 
-      {canEdit && isArranging && (
-        // The tile itself is the drag handle — keep the menu's own presses
-        // (and Enter/Space, which would lift the tile) out of dnd-kit.
+      {canEdit && !isArranging && (
+        // Sits over the photo's own button — keep its presses from also
+        // opening the lightbox.
         <div
-          className="absolute top-2 right-2"
+          className="absolute top-2 right-2 opacity-0 transition-opacity duration-fast ease-(--ease-reveal) group-hover:opacity-100 focus-within:opacity-100 has-data-popup-open:opacity-100 pointer-coarse:hidden"
           onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
         >
-          <PhotoTileMenu
+          <PhotoActionsMenu
             familyId={familyId}
             familySlug={familySlug}
             mediaId={photo.media.id}

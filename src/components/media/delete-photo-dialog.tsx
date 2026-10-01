@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-/** PhotoTileMenu's «Удалить фото?» confirmation — split out to keep the
+/** PhotoActionsMenu's «Удалить фото?» confirmation — split out to keep the
  *  menu under the 150-line component guideline. */
 export function DeletePhotoDialog({
   open,

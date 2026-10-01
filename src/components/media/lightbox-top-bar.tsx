@@ -10,8 +10,9 @@ import { mediaDownloadUrl } from "@/lib/media-url";
 
 /**
  * The lightbox's top bar: «3 / 24» on the left, then the caption (desktop
- * only — on phones it sits under the photo), then tagging, download and
- * close. Glass controls straight on the lightbox's warm backdrop, no bar
+ * only — on phones it sits under the photo), then tagging, an editor's «⋯»
+ * menu (`actions`, which carries download too) or a plain download button,
+ * and close. Glass controls straight on the lightbox's warm backdrop, no bar
  * background of its own.
  */
 export function LightboxTopBar({
@@ -24,6 +25,7 @@ export function LightboxTopBar({
   onToggleTagging,
   mediaId,
   familyId,
+  actions,
 }: {
   index: number;
   total: number;
@@ -35,6 +37,7 @@ export function LightboxTopBar({
   onToggleTagging: () => void;
   mediaId: string;
   familyId: string;
+  actions?: ReactNode;
 }) {
   const t = useTranslations("media");
   const tc = useTranslations("common");
@@ -60,14 +63,16 @@ export function LightboxTopBar({
           onToggle={onToggleTagging}
         />
       )}
-      <a
-        href={mediaDownloadUrl(mediaId, familyId)}
-        download
-        aria-label={t("downloadPhoto")}
-        className={glassIconButton}
-      >
-        <DownloadIcon />
-      </a>
+      {actions ?? (
+        <a
+          href={mediaDownloadUrl(mediaId, familyId)}
+          download
+          aria-label={t("downloadPhoto")}
+          className={glassIconButton}
+        >
+          <DownloadIcon />
+        </a>
+      )}
       <DialogPrimitive.Close
         render={
           <button

@@ -3,7 +3,7 @@
 import { useOptimistic, useState } from "react";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
-import { PhotoLightbox } from "./photo-lightbox";
+import { PhotoGridLightbox } from "./photo-grid-lightbox";
 import { PhotoGridTile } from "./photo-grid-tile";
 import { usePhotoGridReorder } from "./use-photo-grid-reorder";
 import { PhotoArrangeBar } from "./photo-arrange-controls";
@@ -14,13 +14,15 @@ export type { GalleryPhotoView };
 /**
  * The family-wide gallery grid (/families/[slug]/photos) — same visual
  * chrome as PersonMediaGallery's grid (aspect-square, object-cover, same
- * placeholder). Clicking the photo itself opens PhotoLightbox; delete
- * lives in the thumbnail's «⋯» menu (top-right, «Упорядочить» mode only)
- * rather than inside the lightbox. The menu is a sibling of the photo's
- * own <button>, not nested inside it — a <button> inside a <button> is invalid HTML and would
- * make a delete click also fire the lightbox-opening click.
+ * placeholder). Clicking the photo itself opens PhotoLightbox. An editor's
+ * actions (portrait, album cover, download, delete) live in PhotoActionsMenu,
+ * rendered both in the lightbox's top bar (via `renderActions`) and, on
+ * desktop, on each tile on hover. On a tile the menu is a sibling of the
+ * photo's own <button>, not nested inside it — a <button> inside a <button>
+ * is invalid HTML and would make a delete click also fire the
+ * lightbox-opening click.
  *
- * Deletion is optimistic: PhotoTileMenu calls onDelete inside its own
+ * Deletion is optimistic: PhotoActionsMenu calls onDelete inside its own
  * startTransition (wrapping both the optimistic update and the actual
  * server action, as React 19 requires), so the tile disappears immediately
  * on confirm instead of waiting for deleteMediaAction's revalidatePath
@@ -30,9 +32,8 @@ export type { GalleryPhotoView };
  * Reordering (canEdit only — same floor as this page's other edit actions,
  * see photos/page.tsx) is drag-and-drop via dnd-kit, but only inside the
  * explicit «Упорядочить» mode (button in the section heading — see
- * PhotoArrangeProvider, which callers wrap the section in), which also reveals
- * each tile's «⋯» menu (portrait, album cover, delete) — outside it a tile
- * is just a photo: tap opens it, a swipe scrolls the page. Mode, draft and persistence live in usePhotoGridReorder (split out
+ * PhotoArrangeProvider, which callers wrap the section in) — outside it a
+ * tile is just a photo: tap opens it, a swipe scrolls the page. Mode, draft and persistence live in usePhotoGridReorder (split out
  * for CLAUDE.md's 150-line ceiling). sortOrder is a single global value on
  * Media itself (see db/schema/media.ts), so a reorder here is visible in
  * every other gallery containing the same photos too.
@@ -71,6 +72,19 @@ export function PhotoGrid({
     (state, deletedMediaId: string) =>
       state.filter((photo) => photo.media.id !== deletedMediaId),
   );
+
+  // Deleting the open photo shows the next one (the list just closes up),
+  // the previous one if it was the last, or closes the lightbox when it
+  // was the only photo.
+  const deleteFromLightbox = (mediaId: string) => {
+    const remaining = optimisticPhotos.length - 1;
+    removeOptimisticPhoto(mediaId);
+    setOpenIndex((current) =>
+      remaining === 0 || current === null
+        ? null
+        : Math.min(current, remaining - 1),
+    );
+  };
 
   return (
     <>
@@ -111,14 +125,17 @@ export function PhotoGrid({
       )}
 
       {openIndex !== null && (
-        <PhotoLightbox
+        <PhotoGridLightbox
           photos={optimisticPhotos}
           index={openIndex}
           onIndexChange={setOpenIndex}
           onClose={() => setOpenIndex(null)}
           familyId={familyId}
           familySlug={familySlug}
-          canTag={canEdit}
+          canEdit={canEdit}
+          albumId={albumId}
+          portrait={portrait}
+          onDeleted={deleteFromLightbox}
         />
       )}
     </>

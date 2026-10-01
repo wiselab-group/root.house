@@ -24,7 +24,7 @@ import {
 /**
  * Owner/editor-only actions for the currently open album — "Переименовать"
  * / "Удалить альбом" collapsed behind one `⋮` trigger next to the title,
- * same MoreVerticalIcon + DropdownMenu pattern as PhotoTileMenu on the
+ * same MoreVerticalIcon + DropdownMenu pattern as PhotoActionsMenu on the
  * grid. Replaces two bare icon buttons (pencil, trash) that sat directly
  * next to the h1 — visual noise for actions used rarely, and one more
  * thing competing with the title itself for attention (user-requested

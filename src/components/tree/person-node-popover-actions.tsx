@@ -34,7 +34,9 @@ export function PersonNodePopoverActions({
   return (
     <div className="flex flex-col">
       <PersonNodePopoverSummary data={data} />
-      <div className="-mx-1 mb-1 border-t border-border" />
+      {/* Rows run to the popover's edges (out through its p-1 matte) and
+          its rounded corner clips the last one — same as DropdownMenu. */}
+      <div className="-mx-1 border-t border-border" />
       {!data.readOnly && (
         <PopoverClose
           nativeButton={false}
@@ -43,7 +45,7 @@ export function PersonNodePopoverActions({
               href={`/families/${data.familySlug}/people/${data.slug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[0.8rem] hover:bg-accent hover:text-accent-foreground"
+              className="-mx-1 -mb-1 flex items-center gap-1.5 px-3 py-2 text-[0.8rem] hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:outline-none"
             />
           }
         >

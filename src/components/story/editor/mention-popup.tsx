@@ -47,10 +47,10 @@ export function MentionPopup({
   return createPortal(
     <div
       style={{ top: rect.bottom + 6, left, width: WIDTH }}
-      className="fixed z-50 animate-in overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-instant fade-in-0 zoom-in-95"
+      className="fixed z-50 animate-in overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-instant fade-in-0 zoom-in-95"
     >
       {state.items.length === 0 ? (
-        <p className="px-2 py-2 text-sm text-muted-foreground">
+        <p className="px-3 py-2.5 text-sm text-muted-foreground">
           {t("mentionEmpty")}
         </p>
       ) : (
@@ -66,7 +66,7 @@ export function MentionPopup({
               }}
               onMouseEnter={() => onHover(index)}
               className={cn(
-                "flex cursor-default items-center gap-3 rounded-md px-2 py-1.5 text-sm select-none",
+                "flex cursor-default items-center gap-3 px-3 py-2 text-sm select-none",
                 index === state.index && "bg-accent text-accent-foreground",
               )}
             >

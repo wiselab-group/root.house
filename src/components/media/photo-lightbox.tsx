@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,8 @@ import { useWideLightbox } from "./use-wide-lightbox";
  * focus-trap/Escape/scroll-lock "for free" while filling the viewport.
  * Redesigned 2026-09-29 (variant C2 of the lightbox mock) to be compact:
  *
- * - top bar: «3 / 24», the caption (desktop), tag / download / close;
+ * - top bar: «3 / 24», the caption (desktop), tag / «⋯» (an editor's
+ *   photo actions, from `renderActions`) or download / close;
  * - the photo, as large as the window allows — no max width, only side
  *   room for the hover chevrons on desktop;
  * - one bottom strip of fixed height: who's on the photo, or (desktop) the
@@ -35,7 +36,7 @@ import { useWideLightbox } from "./use-wide-lightbox";
  * The strip's tab survives paging; tagging pins it to people and «Готово»
  * gives the previous tab back (it's only ever overridden, never changed).
  * Paging: chevrons, ←/→, or dragging the photo — the sliding mechanics live
- * in LightboxCarouselTrack. Delete lives on the grid thumbnail, not here.
+ * in LightboxCarouselTrack.
  */
 export function PhotoLightbox({
   photos,
@@ -45,6 +46,7 @@ export function PhotoLightbox({
   familyId,
   familySlug,
   canTag = false,
+  renderActions,
 }: {
   photos: GalleryPhotoView[];
   index: number;
@@ -54,6 +56,9 @@ export function PhotoLightbox({
   familySlug: string;
   /** Contributor+ may place/move/remove point-tags — see photo-tag-layer.tsx. */
   canTag?: boolean;
+  /** An editor's «⋯» menu for the shown photo (PhotoGrid's
+   *  PhotoActionsMenu) — replaces the plain download button. */
+  renderActions?: (photo: GalleryPhotoView) => ReactNode;
 }) {
   const tc = useTranslations("common");
   const photo = photos[index];
@@ -118,6 +123,7 @@ export function PhotoLightbox({
             onToggleTagging={() => setTaggingMode((v) => !v)}
             mediaId={photo.media.id}
             familyId={familyId}
+            actions={renderActions?.(photo)}
           />
 
           {/* overflow-hidden here, not only on the Popup: the track is three

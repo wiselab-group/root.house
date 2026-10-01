@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactElement } from "react";
 import {
   DownloadIcon,
   ImageIcon,
@@ -22,21 +22,23 @@ import { PortraitMenuItem } from "./portrait-menu-item";
 import { mediaDownloadUrl } from "@/lib/media-url";
 
 /**
- * The «⋯» on a gallery photo tile (PhotoGrid), shown only in the grid's
- * «Упорядочить» mode and always visible there — a plain grid is for looking
- * (and a hover-revealed button never showed on a phone at all). Download
- * also lives in the lightbox for everyone. "Сделать обложкой альбома" only shows on an
- * album's own page (albumId present), since a cover only makes sense
- * relative to one specific album. "Сделать портретом" (first item, by user
- * request) only shows in a Person's own gallery (`portrait` present).
+ * An editor's «⋯» actions for one gallery photo, in two places (user
+ * request 2026-10-01): the lightbox's top bar (`trigger` — the only place
+ * on a touch screen, where the grid shows bare photos) and the grid tile on
+ * desktop, revealed on hover — see PhotoGridTile. Viewers get a plain
+ * download button in the lightbox instead. "Сделать обложкой альбома" only
+ * shows on an album's own page (albumId present), since a cover only makes
+ * sense relative to one specific album. "Сделать портретом" (first item, by
+ * user request) only shows in a Person's own gallery (`portrait` present).
  */
-export function PhotoTileMenu({
+export function PhotoActionsMenu({
   familyId,
   familySlug,
   mediaId,
   albumId,
   portrait,
   onDeleted,
+  trigger,
 }: {
   familyId: string;
   familySlug: string;
@@ -46,6 +48,9 @@ export function PhotoTileMenu({
   portrait?: { personId: string; isCurrent: boolean };
   /** Called inside the same transition as the delete action, before it resolves — lets PhotoGrid remove the tile from its optimistic list immediately instead of waiting for deleteMediaAction's revalidatePath. */
   onDeleted: () => void;
+  /** The «⋯» button itself — defaults to the grid tile's round one. Gets
+   *  its aria-label and icon from here. */
+  trigger?: ReactElement;
 }) {
   const tc = useTranslations("common");
   const t = useTranslations("media");
@@ -73,14 +78,16 @@ export function PhotoTileMenu({
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button
-              type="button"
-              variant="secondary"
-              size="icon-sm"
-              aria-label={t("photoActions")}
-              className="rounded-full shadow-sm [&_svg]:size-4.5"
-            />
+            trigger ?? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon-sm"
+                className="rounded-full shadow-sm [&_svg]:size-4.5"
+              />
+            )
           }
+          aria-label={t("photoActions")}
         >
           <MoreVerticalIcon />
         </DropdownMenuTrigger>
