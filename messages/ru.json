@@ -191,6 +191,10 @@
     "voiceNotFound": "Запись не найдена, или у вас нет прав её менять."
   },
   "familyHome": {
+    "greeting": "{period, select, morning {Доброе утро} day {Добрый день} evening {Добрый вечер} night {Доброй ночи} other {Здравствуйте}}",
+    "greetingNamed": "{greeting}, {name}",
+    "weekAdded": "за неделю добавлено",
+    "and": "и",
     "since": "с {year} г.",
     "otherSections": "Другие разделы архива",
     "peopleDescription": "Профили, поиск по имени и году",

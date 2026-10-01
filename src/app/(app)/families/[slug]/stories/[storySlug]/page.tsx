@@ -164,7 +164,7 @@ export default async function StoryDetailPage({
         <StoryHero
           title={story.title}
           privacyLevel={story.privacyLevel}
-          createdAt={story.createdAt}
+          addedAt={story.publishedAt ?? story.createdAt}
           readingMinutes={readingMinutes(layout.wordCount)}
           slides={slides}
           backHref={`/families/${slug}/stories`}

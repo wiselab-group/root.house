@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { HeroMeta, type HeroMetaItem } from "@/components/hero/hero-meta";
 
 /**
@@ -6,19 +7,24 @@ import { HeroMeta, type HeroMetaItem } from "@/components/hero/hero-meta";
  * as a mosaic of portraits — read as "another profile"). Just the family's
  * name set large in the serif heading face (Lora, as before the dark
  * restyle — user request), its description, and
- * the at-a-glance counts; the tree card right below is the page's lead.
+ * the at-a-glance counts (linked to their sections); the tree card right
+ * below is the page's lead. `greeting` (FamilyHomeGreeting) is the quiet
+ * line above the title.
  */
 export function FamilyHomeHeader({
+  greeting,
   name,
   description,
   meta,
 }: {
+  greeting?: ReactNode;
   name: string;
   description: string | null;
   meta: HeroMetaItem[];
 }) {
   return (
     <header className="flex flex-col gap-4">
+      {greeting}
       <h1 className="font-heading text-display-lg leading-[1.05] font-medium tracking-tight text-balance">
         {name}
       </h1>

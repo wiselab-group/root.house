@@ -191,6 +191,10 @@
     "voiceNotFound": "The recording wasn't found, or you may not change it."
   },
   "familyHome": {
+    "greeting": "{period, select, morning {Good morning} day {Good afternoon} evening {Good evening} night {Good evening} other {Hello}}",
+    "greetingNamed": "{greeting}, {name}",
+    "weekAdded": "added this week:",
+    "and": "and",
     "since": "since {year}",
     "otherSections": "Other sections of the archive",
     "peopleDescription": "Profiles, search by name and year",

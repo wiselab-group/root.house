@@ -23,6 +23,7 @@ function story(overrides: Partial<StoryRecord>): StoryRecord {
     status: "published",
     createdAt: new Date(0),
     updatedAt: new Date(0),
+    publishedAt: new Date(0),
     ...overrides,
   };
 }

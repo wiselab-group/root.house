@@ -23,7 +23,7 @@ import type { StoryRecordTarget } from "./listen/story-recorder";
 export function StoryHero({
   title,
   privacyLevel,
-  createdAt,
+  addedAt,
   readingMinutes,
   slides,
   backHref,
@@ -34,7 +34,8 @@ export function StoryHero({
 }: {
   title: string;
   privacyLevel: PrivacyLevel;
-  createdAt: Date;
+  /** «Добавлено …» — when the family first saw it (publishedAt). */
+  addedAt: Date;
   readingMinutes: number;
   slides: CarouselSlide[];
   backHref: string;
@@ -106,7 +107,7 @@ export function StoryHero({
             },
             {
               Icon: CalendarIcon,
-              label: t("added", { date: format.dateTime(createdAt, "long") }),
+              label: t("added", { date: format.dateTime(addedAt, "long") }),
             },
           ]}
         />

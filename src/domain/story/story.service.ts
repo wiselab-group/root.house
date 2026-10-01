@@ -294,8 +294,9 @@ export async function discardMyStoryDraft(
 /**
  * Draft → published: saves the final fields, flips the status and gives
  * the story a real slug from its title (the draft's was a placeholder like
- * «story-1a2b3c4d» — nobody but the author ever saw that URL). Logged as
- * the story's creation, since that's when the family first sees it.
+ * «story-1a2b3c4d» — nobody but the author ever saw that URL). Stamps
+ * publishedAt and is logged as the story's creation, since that's when the
+ * family first sees it.
  */
 export async function publishStory(
   story: StoryRecord,
@@ -308,6 +309,7 @@ export async function publishStory(
     ...patch,
     status: "published",
     slug,
+    publishedAt: new Date(),
   });
   if (personIds !== undefined) {
     await replaceStoryPeople(story.id, personIds);

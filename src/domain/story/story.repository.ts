@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { stories, storyPerson, type PrivacyLevel } from "@/db/schema";
 
@@ -17,7 +17,16 @@ export interface StoryRecord {
   status: StoryStatus;
   createdAt: Date;
   updatedAt: Date;
+  /** When it went from draft to published — null while a draft. */
+  publishedAt: Date | null;
 }
+
+/** Newest-published first; a draft (no publishedAt) sorts by when it was
+ *  started. Lists only ever show published stories, but they're filtered
+ *  after the query (story.service.ts::filterVisibleStories). */
+const byPublishedDesc = desc(
+  sql`coalesce(${stories.publishedAt}, ${stories.createdAt})`,
+);
 
 function toRecord(row: typeof stories.$inferSelect): StoryRecord {
   return {
@@ -31,6 +40,7 @@ function toRecord(row: typeof stories.$inferSelect): StoryRecord {
     status: row.status,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    publishedAt: row.publishedAt,
   };
 }
 
@@ -72,7 +82,7 @@ export async function isStorySlugTaken(
   return row !== undefined;
 }
 
-/** All stories linked to a given Person, newest first. */
+/** All stories linked to a given Person, newest-published first. */
 export async function getStoriesForPerson(
   personId: string,
   familyId: string,
@@ -84,7 +94,7 @@ export async function getStoriesForPerson(
     .where(
       and(eq(storyPerson.personId, personId), eq(stories.familyId, familyId)),
     )
-    .orderBy(desc(stories.createdAt));
+    .orderBy(byPublishedDesc);
 
   return rows.map((r) => toRecord(r.story));
 }
@@ -94,7 +104,7 @@ export async function listStoriesByFamily(
 ): Promise<StoryRecord[]> {
   const rows = await db.query.stories.findMany({
     where: eq(stories.familyId, familyId),
-    orderBy: [desc(stories.createdAt)],
+    orderBy: [byPublishedDesc],
   });
   return rows.map(toRecord);
 }
@@ -150,6 +160,7 @@ export interface CreateStoryData {
 export async function createStory(
   data: CreateStoryData,
 ): Promise<{ id: string }> {
+  const status = data.status ?? "published";
   const [row] = await db
     .insert(stories)
     .values({
@@ -159,7 +170,8 @@ export async function createStory(
       body: data.body,
       authorId: data.authorId,
       privacyLevel: data.privacyLevel ?? "family",
-      status: data.status ?? "published",
+      status,
+      publishedAt: status === "published" ? new Date() : null,
     })
     .returning({ id: stories.id });
 
@@ -182,6 +194,8 @@ export interface UpdateStoryData {
   status?: StoryStatus;
   /** Re-derived from the title on first publish — see publishStory. */
   slug?: string;
+  /** Set together with status `published` — see publishStory. */
+  publishedAt?: Date;
 }
 
 export async function updateStory(
@@ -197,6 +211,7 @@ export async function updateStory(
   if (data.privacyLevel !== undefined) patch.privacyLevel = data.privacyLevel;
   if (data.status !== undefined) patch.status = data.status;
   if (data.slug !== undefined) patch.slug = data.slug;
+  if (data.publishedAt !== undefined) patch.publishedAt = data.publishedAt;
 
   const result = await db
     .update(stories)

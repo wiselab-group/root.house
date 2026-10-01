@@ -45,6 +45,11 @@ export const stories = pgTable(
       .references(() => users.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    // When the family first saw it: set on draft → published
+    // (story.service.ts::publishStory), null while a draft. createdAt is
+    // when the draft was started, which can be weeks earlier — lists, the
+    // story page's «Добавлено» and Family Home's «за неделю» go by this.
+    publishedAt: timestamp("published_at"),
   },
   (table) => [
     index("stories_family_idx").on(table.familyId),

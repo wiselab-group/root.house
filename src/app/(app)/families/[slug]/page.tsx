@@ -2,11 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { FamilyTreeLaunchCard } from "@/components/family/family-nav-card";
 import { FamilySectionLinks } from "@/components/family/family-section-links";
-import { FamilyHomeHeader } from "@/components/family/family-home-header";
-import {
-  earliestBirthYear,
-  familyHomeMeta,
-} from "@/components/family/family-home-meta";
+import { FamilyHomeTop } from "@/components/family/family-home-top";
 import { RecentMemories } from "@/components/family/recent-memories";
 import { FamilyHomeActivity } from "@/components/family/family-home-activity";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
@@ -18,6 +14,10 @@ import {
   filterVisiblePersons,
 } from "@/domain/person/person.service";
 import { listPlaces } from "@/domain/place/place.service";
+import {
+  listStories,
+  filterVisibleStories,
+} from "@/domain/story/story.service";
 import {
   getFamilyGallery,
   filterVisibleGalleryPhotos,
@@ -48,12 +48,13 @@ export default async function FamilyDashboardPage({
   const member = await requireFamilyAccess(familyId, session.user.id, "viewer");
   const viewer = { userId: session.user.id, role: member.role };
 
-  const [family, allPeople, places, allPhotos, activityEntries] =
+  const [family, allPeople, places, allPhotos, allStories, activityEntries] =
     await Promise.all([
       getFamilySummary(familyId),
       listPeople(familyId),
       listPlaces(familyId),
       getFamilyGallery(familyId),
+      listStories(familyId),
       // Same rule as Settings' own Активность семьи section — entityLabel
       // is an unfiltered snapshot string (e.g. a Person's name), so surfacing
       // it to non-owners here would bypass privacy filtering that every
@@ -67,6 +68,7 @@ export default async function FamilyDashboardPage({
 
   const people = filterVisiblePersons(allPeople, viewer);
   const visiblePhotos = filterVisibleGalleryPhotos(allPhotos, viewer);
+  const stories = filterVisibleStories(allStories, viewer);
   const photos = visiblePhotos.slice(0, RECENT_MEMORIES_LIMIT);
   const hasMoreActivity = activityEntries.length > RECENT_ACTIVITY_LIMIT;
   const recentActivity = activityEntries.slice(0, RECENT_ACTIVITY_LIMIT);
@@ -81,15 +83,15 @@ export default async function FamilyDashboardPage({
         ]}
       />
       <div className="mx-auto flex max-w-3xl flex-col gap-14 px-4 pt-14 pb-20 sm:px-8 sm:pt-20">
-        <FamilyHomeHeader
+        <FamilyHomeTop
+          familySlug={slug}
           name={family?.name ?? slug}
           description={family?.description ?? null}
-          meta={await familyHomeMeta({
-            personCount: people.length,
-            placeCount: places.length,
-            photoCount: visiblePhotos.length,
-            earliestYear: earliestBirthYear(people),
-          })}
+          userName={session.user.name}
+          people={people}
+          placeCount={places.length}
+          photos={visiblePhotos}
+          stories={stories}
         />
         <div className="animate-content-enter">
           <FamilyTreeLaunchCard
