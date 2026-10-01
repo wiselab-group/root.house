@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { LIFELINE_INSET } from "@/domain/event/lifeline-scale";
+import { useScrollEdges } from "@/hooks/use-scroll-edges";
+import { cn } from "@/lib/utils";
 import { LifelineEventCard } from "./lifeline-event-card";
 import type { LifelinePointView } from "./lifeline-view";
 
@@ -15,8 +17,7 @@ import type { LifelinePointView } from "./lifeline-view";
  * and only below `minWidth` (where dense years' labels would touch, see
  * layoutLifelineScale) stops shrinking and scrolls sideways instead.
  * Positions are fractions of the span placed with calc(), so the one
- * scale stretches with the track in CSS alone: no measuring, no shift
- * after hydration.
+ * scale stretches with the track in CSS alone: no measuring, no shift.
  */
 export function PersonLifeline({
   points,
@@ -32,10 +33,22 @@ export function PersonLifeline({
   // so the selected dot and its card always match what's on screen.
   const [selectedId, setSelectedId] = useState(points[0].id);
   const selected = points.find((p) => p.id === selectedId) ?? points[0];
+  const { ref, moreStart, moreEnd } = useScrollEdges(
+    `${minWidth}:${points.map((p) => p.id).join()}`,
+  );
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:thin]">
+      {/* Phones: bleeds past the panel's px-4 to the screen edges. No
+          scrollbar — a narrow fade on whichever side the line continues. */}
+      <div
+        ref={ref}
+        className={cn(
+          "-mx-1 overflow-x-auto px-1 scrollbar-none max-sm:-mx-4 max-sm:overscroll-x-contain max-sm:px-4 [&::-webkit-scrollbar]:hidden",
+          moreStart && "mask-fade-start",
+          moreEnd && "mask-fade-end",
+        )}
+      >
         <div className="relative h-[250px]" style={{ minWidth }}>
           <div
             aria-hidden="true"

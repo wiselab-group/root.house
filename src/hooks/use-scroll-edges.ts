@@ -14,7 +14,8 @@ const NONE: ScrollEdges = { overflow: false, moreStart: false, moreEnd: false };
 
 /**
  * Where a horizontal scroller still has hidden content — drives the fade
- * masks and the count chip of LightboxPeopleScroller. Updates on scroll and
+ * masks (.mask-fade-start/-end) of LightboxPeopleScroller and the
+ * profile's PersonLifeline, and the former's count chip. Updates on scroll and
  * when the scroller or its content changes size.
  */
 export function useScrollEdges(signature: string) {

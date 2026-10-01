@@ -5,10 +5,10 @@ import { useState } from "react";
 import { UsersIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { useScrollEdges } from "@/hooks/use-scroll-edges";
 import type { GalleryPhotoView } from "./gallery-photo";
 import { LightboxPersonChip } from "./lightbox-person-chip";
 import { LightboxPeopleList } from "./lightbox-people-list";
-import { useScrollEdges } from "./use-scroll-edges";
 
 type TaggedPerson = GalleryPhotoView["people"][number];
 

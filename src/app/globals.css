@@ -828,9 +828,10 @@ body:has(.photo-backdrop) .app-header {
     animation: carousel-ring 6s linear forwards;
   }
 
-  /* The lightbox's people strip on phones (LightboxPeopleScroller): the
-     fades say "more names this way" — right edge until the end is reached,
-     left edge once scrolled. Mask alpha, not a color. */
+  /* Horizontal scrollers without a scrollbar (LightboxPeopleScroller,
+     PersonLifeline — toggled by useScrollEdges): the fades say "more this
+     way" — right edge until the end is reached, left edge once scrolled.
+     Mask alpha, not a color. */
   .mask-fade-end {
     mask-image: linear-gradient(90deg, black calc(100% - 2.75rem), transparent);
   }
