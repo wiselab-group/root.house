@@ -1,67 +1,67 @@
 import { useTranslations } from "next-intl";
-import { useDemoFamily } from "@/components/marketing/shared/use-demo-family";
-import { ChevronLeft, MapPin, Pencil, Share2 } from "lucide-react";
-import Image from "next/image";
-import { LANDING_PHOTOS } from "@/components/marketing/shared/landing-photos";
-import { GlassPill, PanelFrame } from "./panel-frame";
+import { cn } from "@/lib/utils";
+import { glassSurface } from "@/components/hero/glass";
+import { ScaledCanvas } from "@/components/marketing/shared/scaled-canvas";
+import { PanelFrame } from "./panel-frame";
+import { PROFILE_HERO_HEIGHT, ProfilePageHero } from "./profile-page-hero";
 
-const TABS = ["tabOverview", "tabLifeline", "tabPhotos", "tabStories"] as const;
+/** The profile at a real desktop width, 4:3 like the panel. */
+const WIDTH = 1040;
+const HEIGHT = 780;
 
-/** Person profile hero in the app's dark archive style: glass pills,
- *  portrait dissolving into the page, serif name, meta line, tabs. */
+/** The profile's tabs (person-profile-sections.tsx), with Vera's counts. */
+const TABS = [
+  { id: "tabOverview" },
+  { id: "tabStories", count: 3 },
+  { id: "tabTimeline", count: 6 },
+  { id: "tabPhotos", count: 24 },
+  { id: "tabDocuments", count: 2 },
+] as const;
+
+/**
+ * A person's page as the app draws it (people/[personSlug]: PersonProfileHero
+ * + ProfileTabs) — the hero, then the glass tab strip riding up over its
+ * faded bottom with «Обзор» picked by the inverted pill. Built from the
+ * app's own classes and `profile.*` labels, filled with the landing's
+ * fictional family, scaled down as a whole.
+ */
 export function ProfilePanel() {
-  const t = useTranslations("landing");
-  const family = useDemoFamily();
+  const t = useTranslations("profile");
   return (
-    <PanelFrame className="flex flex-col p-0">
-      <div className="relative flex-1">
-        <div className="absolute inset-y-0 right-0 w-[55%] bg-secondary [mask-image:linear-gradient(to_left,black_45%,transparent),linear-gradient(to_top,transparent,black_30%)] [mask-composite:intersect]">
-          <Image
-            src={LANDING_PHOTOS.wedding.src}
-            alt=""
-            fill
-            sizes="(min-width: 1024px) 360px, 55vw"
-            className="object-cover object-[75%_20%] sepia-25"
-          />
-        </div>
-        <div className="relative flex h-full flex-col justify-between p-[6%]">
-          <div className="flex gap-2">
-            <GlassPill>
-              <ChevronLeft className="size-[1.1em]" /> {t("panel.back")}
-            </GlassPill>
-            <GlassPill>
-              <Pencil className="size-[1em]" /> {t("panel.edit")}
-            </GlassPill>
-            <GlassPill>
-              <Share2 className="size-[1em]" /> {t("panel.share")}
-            </GlassPill>
-          </div>
-          <div className="flex max-w-[60%] flex-col gap-[0.4em]">
-            <GlassPill className="w-fit">{t("panel.veraRole")}</GlassPill>
-            <p className="font-heading text-[clamp(1.25rem,0.6rem+4cqw,2.5rem)] leading-tight font-medium">
-              {family.vera.name}
-            </p>
-            <p className="flex items-center gap-1.5 text-[clamp(0.6875rem,0.5rem+1cqw,0.9375rem)] text-muted-foreground">
-              1931 – 2014 <span aria-hidden>·</span>
-              <MapPin className="size-[1em]" /> {t("panel.riga")}
-            </p>
-          </div>
-        </div>
-      </div>
-      <div className="flex gap-[5%] border-t border-border px-[6%] text-[clamp(0.6875rem,0.5rem+1cqw,0.9375rem)]">
-        {TABS.map((tab, index) => (
-          <span
-            key={tab}
-            className={
-              index === 0
-                ? "border-b-2 border-primary py-[3%] text-foreground"
-                : "py-[3%] text-muted-foreground"
-            }
+    <PanelFrame className="bg-background p-0">
+      <ScaledCanvas width={WIDTH} height={HEIGHT}>
+        <ProfilePageHero />
+        <div
+          className="-mt-9 flex justify-center px-4 pt-8"
+          style={{ height: HEIGHT - PROFILE_HERO_HEIGHT + 36 }}
+        >
+          <div
+            className={cn(
+              glassSurface,
+              "flex h-fit gap-1.5 rounded-full p-1.5",
+            )}
           >
-            {t(`panel.${tab}`)}
-          </span>
-        ))}
-      </div>
+            {TABS.map((tab, index) => (
+              <span
+                key={tab.id}
+                className={cn(
+                  "inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium",
+                  index === 0
+                    ? "bg-foreground text-background"
+                    : "text-foreground/65",
+                )}
+              >
+                {t(tab.id)}
+                {"count" in tab && (
+                  <span className="text-xs text-foreground/40 tabular-nums">
+                    {tab.count}
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      </ScaledCanvas>
     </PanelFrame>
   );
 }

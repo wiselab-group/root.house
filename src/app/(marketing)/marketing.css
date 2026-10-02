@@ -307,3 +307,66 @@ html:has(.marketing-header) {
   --marketing-header-h: 69px;
   scroll-padding-top: calc(var(--marketing-header-h) + 1rem);
 }
+
+/* ---------------------------------------------------------------------
+ * The app's desktop .hero-photo-mask (globals.css, ≥640px: fading toward
+ * the name on the left as well as down) for a page drawn at desktop size
+ * inside a scaled canvas (feature-showcase/panels/profile-page-hero.tsx) —
+ * that canvas is "desktop" on any screen, so it can't wait for the media
+ * query. Same gradients, copied.
+ * ------------------------------------------------------------------- */
+.hero-photo-mask.hero-photo-mask-wide {
+  mask-image:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgb(0 0 0 / 0.04) 5.4%,
+      rgb(0 0 0 / 0.14) 11.2%,
+      rgb(0 0 0 / 0.3) 17.1%,
+      rgb(0 0 0 / 0.5) 22.5%,
+      rgb(0 0 0 / 0.7) 27.9%,
+      rgb(0 0 0 / 0.86) 33.8%,
+      rgb(0 0 0 / 0.96) 39.6%,
+      #000 45%
+    ),
+    linear-gradient(
+      0deg,
+      transparent 0%,
+      rgb(0 0 0 / 0.04) 4.1%,
+      rgb(0 0 0 / 0.14) 8.5%,
+      rgb(0 0 0 / 0.3) 12.9%,
+      rgb(0 0 0 / 0.5) 17%,
+      rgb(0 0 0 / 0.7) 21.1%,
+      rgb(0 0 0 / 0.86) 25.5%,
+      rgb(0 0 0 / 0.96) 29.9%,
+      #000 34%
+    );
+  mask-composite: intersect;
+}
+.hero-photo-mask.hero-photo-mask-wide::after {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in oklch, var(--background) 90%, transparent) 0%,
+      color-mix(in oklch, var(--background) 86%, transparent) 6.2%,
+      color-mix(in oklch, var(--background) 77%, transparent) 13%,
+      color-mix(in oklch, var(--background) 63%, transparent) 19.8%,
+      color-mix(in oklch, var(--background) 45%, transparent) 26%,
+      color-mix(in oklch, var(--background) 27%, transparent) 32.2%,
+      color-mix(in oklch, var(--background) 13%, transparent) 39%,
+      color-mix(in oklch, var(--background) 4%, transparent) 45.8%,
+      transparent 52%
+    ),
+    linear-gradient(
+      0deg,
+      color-mix(in oklch, var(--background) 90%, transparent) 0%,
+      color-mix(in oklch, var(--background) 86%, transparent) 4.8%,
+      color-mix(in oklch, var(--background) 77%, transparent) 10%,
+      color-mix(in oklch, var(--background) 63%, transparent) 15.2%,
+      color-mix(in oklch, var(--background) 45%, transparent) 20%,
+      color-mix(in oklch, var(--background) 27%, transparent) 24.8%,
+      color-mix(in oklch, var(--background) 13%, transparent) 30%,
+      color-mix(in oklch, var(--background) 4%, transparent) 35.2%,
+      transparent 40%
+    );
+}
