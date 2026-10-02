@@ -874,7 +874,6 @@
     "metaDescription": "A private family archive: your tree, photos, stories and relatives' voices in one place. Gather your family's story together — start for free.",
     "brandStatement": "Create the living story of your family.",
     "ctaButton": "Start for free →",
-    "ctaNote": "Free · no limit on the number of people in your tree",
     "howItWorks": "How it works",
     "soon": "Coming soon",
     "demoNote": "The Hartleys are fictional. Photos are archival and in the public domain.",
@@ -889,7 +888,20 @@
     },
     "hero": {
       "eyebrow": "A private family archive",
-      "lead": "Keep it together with the people who remember: your tree, photos, stories and relatives' voices — in one private place."
+      "lead": "From your earliest known ancestor to your children — on one line, with photos, places and stories.",
+      "yearLabel": "Year",
+      "events": {
+        "ivanBorn": "Ivan Hartley is born",
+        "veraBorn": "Vera is born",
+        "dance": "Dancing by the Daugava",
+        "wedding": "A wedding in Riga",
+        "paulBorn": "Paul is born",
+        "tallinn": "The move to Tallinn",
+        "youBorn": "You are born",
+        "lilyBorn": "Lily is born",
+        "kidBorn": "Max is born",
+        "archive": "You start the family archive"
+      }
     },
     "how": {
       "eyebrow": "How it works",

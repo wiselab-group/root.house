@@ -1,44 +1,40 @@
 import { useTranslations } from "next-intl";
 import { LinkButton } from "@/components/ui/link-button";
+import { HeroYears } from "./hero-years";
 
 /**
  * 01 — What is it, and what's in it for me? The brand's promise as the
- * headline, what's inside in one line, and the first step — readable at
- * once, nothing to wait for. What it looks like comes right after (the
- * story page lives in «Возможности» → «Истории»).
+ * headline over a hundred years of one (fictional) family: the era's photo
+ * behind it and the year as a small date under it, «1952 · Свадьба в
+ * Риге». The copy stays the biggest thing on screen; the years are the
+ * backdrop that says "generations", not a second headline.
  */
 export function LandingHero() {
   const t = useTranslations("landing");
   return (
-    <section
-      aria-labelledby="hero-title"
-      className="flex min-h-[88svh] items-center px-4 pt-28 pb-section sm:px-6 lg:pt-24"
-    >
-      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-6 text-center">
+    <HeroYears>
+      <div className="flex max-w-xl flex-col gap-4.5">
         <p className="text-xs font-medium tracking-[0.14em] text-primary uppercase">
           {t("hero.eyebrow")}
         </p>
         <h1
           id="hero-title"
-          className="font-heading text-hero font-medium text-balance"
+          className="font-heading text-hero font-medium tracking-[-0.015em] text-balance"
         >
           {t("brandStatement")}
         </h1>
-        <p className="max-w-2xl text-balance text-muted-foreground sm:text-lg">
+        <p className="max-w-[50ch] text-pretty text-muted-foreground sm:text-lg">
           {t("hero.lead")}
         </p>
-        <div className="flex flex-col items-center gap-3 pt-2">
-          <div className="flex flex-wrap justify-center gap-3">
-            <LinkButton href="/register" size="lg">
-              {t("ctaButton")}
-            </LinkButton>
-            <LinkButton href="#how-it-works" variant="ghost" size="lg">
-              {t("howItWorks")}
-            </LinkButton>
-          </div>
-          <p className="text-sm text-muted-foreground">{t("ctaNote")}</p>
+        <div className="flex flex-wrap gap-2.5">
+          <LinkButton href="/register" size="lg">
+            {t("ctaButton")}
+          </LinkButton>
+          <LinkButton href="#how-it-works" variant="outline" size="lg">
+            {t("howItWorks")}
+          </LinkButton>
         </div>
       </div>
-    </section>
+    </HeroYears>
   );
 }

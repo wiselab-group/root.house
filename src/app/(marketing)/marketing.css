@@ -182,3 +182,117 @@
     width: 21cqw;
   }
 }
+
+/* ---------------------------------------------------------------------
+ * Hero: a hundred years of one family (hero/hero-years.tsx). The era's
+ * photo darkened to sepia, crossfading and settling from a slight zoom;
+ * the scrim keeps the copy and the date line readable; the year sits in a
+ * dry sand tone; the range input is a 2px line filled up to --p.
+ * ------------------------------------------------------------------- */
+.hero-years {
+  --hero-sand: oklch(0.83 0.05 82);
+}
+.hero-years-photo {
+  filter: sepia(0.45) brightness(0.42);
+  opacity: 0;
+  scale: 1.06;
+  transition:
+    opacity 1200ms var(--ease-reveal),
+    scale 6000ms var(--ease-reveal);
+}
+.hero-years-photo[data-on="true"] {
+  opacity: 1;
+  scale: 1;
+}
+.hero-years-scrim {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in oklch, var(--background) 92%, transparent) 0%,
+      color-mix(in oklch, var(--background) 55%, transparent) 55%,
+      color-mix(in oklch, var(--background) 20%, transparent) 100%
+    ),
+    linear-gradient(
+      0deg,
+      color-mix(in oklch, var(--background) 90%, transparent),
+      transparent 45%
+    );
+}
+.hero-years-year {
+  color: var(--hero-sand);
+}
+.hero-years-event {
+  animation: hero-years-event 600ms var(--ease-reveal);
+}
+@keyframes hero-years-event {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.hero-years-range {
+  --track: color-mix(in oklch, var(--foreground) 18%, transparent);
+  appearance: none;
+  width: 100%;
+  height: 18px;
+  margin: 0;
+  background: transparent;
+  cursor: ew-resize;
+}
+.hero-years-range:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.hero-years-range::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--hero-sand) var(--p, 0%),
+    var(--track) var(--p, 0%)
+  );
+}
+.hero-years-range::-moz-range-track {
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--hero-sand) var(--p, 0%),
+    var(--track) var(--p, 0%)
+  );
+}
+.hero-years-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  margin-top: -5px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--hero-sand);
+  transition: transform var(--duration-slow) var(--ease-reveal);
+}
+.hero-years-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--hero-sand);
+  transition: transform var(--duration-slow) var(--ease-reveal);
+}
+.hero-years-range:hover::-webkit-slider-thumb {
+  transform: scale(1.4);
+}
+.hero-years-range:hover::-moz-range-thumb {
+  transform: scale(1.4);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-years-photo,
+  .hero-years-event {
+    transition: none;
+    animation: none;
+  }
+  .hero-years-photo {
+    scale: 1;
+  }
+}
