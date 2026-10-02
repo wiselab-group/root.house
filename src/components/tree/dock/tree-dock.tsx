@@ -1,10 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useReactFlow } from "@xyflow/react";
-import { FilterIcon, ScanIcon } from "lucide-react";
+import { FilterIcon, ScanIcon, Undo2Icon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { DockItem } from "./dock-item";
 import { DockTooltip, useDockHint } from "./dock-tooltip";
 import {
@@ -13,6 +11,7 @@ import {
   type DockKinship,
 } from "./kinship-dock-item";
 import { DOCK_SHORTCUT_LABELS, useDockShortcuts } from "./use-dock-shortcuts";
+import { useFitToggle } from "./use-fit-toggle";
 
 /**
  * The tree's one control surface, bottom-center over the canvas: a frosted
@@ -49,11 +48,9 @@ export function TreeDock({
   kinship?: DockKinship;
 }) {
   const t = useTranslations("tree");
-  const { fitView } = useReactFlow();
-  const reducedMotion = useReducedMotion();
+  const { canRestore, toggle: fit } = useFitToggle();
   const { hint, show, hide } = useDockHint();
-
-  const fit = () => void fitView({ duration: reducedMotion ? undefined : 300 });
+  const fitLabel = canRestore ? t("restoreView") : t("showAll");
 
   useDockShortcuts({
     filter: onOpenFilter,
@@ -98,9 +95,11 @@ export function TreeDock({
               />
             )}
             <DockItem
-              icon={<ScanIcon />}
-              label={t("showAll")}
-              shortLabel={t("showAllShort")}
+              icon={canRestore ? <Undo2Icon /> : <ScanIcon />}
+              label={fitLabel}
+              shortLabel={
+                canRestore ? t("restoreViewShort") : t("showAllShort")
+              }
               shortcut={DOCK_SHORTCUT_LABELS.fit}
               onClick={fit}
               onHint={show}

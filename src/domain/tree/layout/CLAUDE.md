@@ -21,7 +21,7 @@
   стороны → `growInLawAncestors` → `repairSideConstraintViolations`.
 - `generation` (`graph.ts::assignGenerations`) — мягкий хинт для группировки
   рядов, не жёсткий инвариант. Итоговый `y` — непрерывный, `anchor.y ±
-  GENERATION_GAP`, а не `generation * GENERATION_GAP`.
+GENERATION_GAP`, а не `generation * GENERATION_GAP`.
 - `branch` (`graph.ts::assignBranches`, BFS от обоих родителей фокуса) —
   единственный источник directional bias: paternal — влево, maternal — вправо.
 - **Эластичный Y**: если X-поиск на ряду исчерпан, `findFreeSlot` пробует

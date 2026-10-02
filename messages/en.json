@@ -790,6 +790,8 @@
     "filter": "Filter",
     "showAll": "Show the whole tree",
     "showAllShort": "Whole tree",
+    "restoreView": "Back to the previous view",
+    "restoreViewShort": "Back",
     "title": "Family tree",
     "emptyTitle": "The tree is empty for now",
     "emptyBody": "Add at least one person to see the tree.",

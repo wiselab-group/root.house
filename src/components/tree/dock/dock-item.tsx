@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import type { ShowDockHint } from "./dock-tooltip";
 
@@ -32,8 +33,18 @@ export function DockItem({
   onHint: ShowDockHint;
   className?: string;
 }) {
+  const ref = useRef<HTMLButtonElement>(null);
+
+  // A toggle item renames itself on click (show all ⇄ back) — refresh the
+  // tooltip the pointer is still resting on instead of showing the old name.
+  useEffect(() => {
+    const item = ref.current;
+    if (item?.matches(":hover, :focus-visible")) onHint(item, label, shortcut);
+  }, [label, shortcut, onHint]);
+
   return (
     <button
+      ref={ref}
       type="button"
       aria-label={label}
       aria-pressed={pressed}
