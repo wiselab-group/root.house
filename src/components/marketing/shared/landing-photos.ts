@@ -25,8 +25,8 @@ export const LANDING_PHOTOS = {
   /** Marjory Collins, Greenbelt, Maryland, 1942 (Library of Congress). */
   stroll: {
     src: "/landing/stroll.jpg",
-    width: 908,
-    height: 963,
+    width: 868,
+    height: 931,
     source:
       "https://commons.wikimedia.org/wiki/File:Greenbelt,_Maryland._Family_strolling_on_Sunday8d21147v.jpg",
   },

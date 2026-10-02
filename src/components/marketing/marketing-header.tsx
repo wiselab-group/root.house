@@ -40,7 +40,7 @@ export function MarketingHeader() {
   return (
     <header
       ref={headerRef}
-      className="marketing-header sticky top-0 z-40 border-b border-glass-edge bg-background/70 px-4 py-3 backdrop-blur-xl backdrop-saturate-150 sm:px-6"
+      className="marketing-header sticky top-0 z-40 border-b border-glass-edge bg-background/45 px-4 py-3 backdrop-blur-lg backdrop-saturate-150 sm:px-6"
     >
       <div className="mx-auto max-w-6xl">
         <div className="flex items-center justify-between gap-4">

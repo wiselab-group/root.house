@@ -20,7 +20,9 @@ const RESUME_AFTER_MS = 5_000;
  * copy and the year as a date under it, travelling 1928 → 2026 on its own
  * while the hero is on screen and the tab is visible. Dragging the line
  * takes over; autoplay picks up from there a few seconds later. Reduced
- * motion: no autoplay, the hero rests on the wedding until moved by hand.
+ * motion: no autoplay, the hero rests on today until moved by hand. The
+ * photo runs up under the glass header (negative margin of its height);
+ * the copy starts below it.
  */
 export function HeroYears({ children }: { children: ReactNode }) {
   const reduced = useReducedMotion();
@@ -76,7 +78,7 @@ export function HeroYears({ children }: { children: ReactNode }) {
     <section
       ref={sectionRef}
       aria-labelledby="hero-title"
-      className="hero-years relative isolate flex min-h-[max(620px,calc(100svh-var(--marketing-header-h)))] flex-col overflow-hidden px-4 pt-14 pb-9 sm:px-6 sm:pt-16"
+      className="hero-years relative isolate -mt-(--marketing-header-h) flex min-h-[max(620px,100svh)] flex-col overflow-hidden px-4 pt-[calc(var(--marketing-header-h)+3.5rem)] pb-9 sm:px-6 sm:pt-[calc(var(--marketing-header-h)+4rem)]"
     >
       <HeroPhotos year={shown} />
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6">
