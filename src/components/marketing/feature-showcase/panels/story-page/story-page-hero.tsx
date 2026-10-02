@@ -14,7 +14,7 @@ import {
   glassIconButtonLarge,
   glassPill,
 } from "@/components/hero/glass";
-import { StoryPreviewSlides, StoryPreviewFilm } from "./story-preview-slides";
+import { StoryPageSlides, StoryPageFilm } from "./story-page-slides";
 
 /** When the demo story was added — fixed, so the page never shows "today". */
 const ADDED_AT = new Date(Date.UTC(2026, 8, 21));
@@ -26,13 +26,13 @@ const READING_MINUTES = 4;
  * carousel-film.tsx — `sm:` variants resolved, since the canvas is always
  * "desktop"). Decorative: nothing here is a real control.
  */
-export function StoryPreviewHero() {
+export function StoryPageHero() {
   const t = useTranslations("stories");
-  const tl = useTranslations("landing.hero.preview");
+  const tl = useTranslations("landing.storyPage");
   const format = useFormatter();
   return (
     <div className="relative isolate h-[580px] overflow-hidden">
-      <StoryPreviewSlides />
+      <StoryPageSlides />
       <div className="absolute inset-x-7 top-6 z-20 flex items-start justify-between gap-2">
         <span className={glassPill}>
           <ArrowLeftIcon />
@@ -70,7 +70,7 @@ export function StoryPreviewHero() {
           </span>
           {t("listen", { minutes: READING_MINUTES })}
         </span>
-        <StoryPreviewFilm />
+        <StoryPageFilm />
         <span className={`${glassIconButtonLarge} relative mb-8.5 shrink-0`}>
           <svg
             viewBox="0 0 52 52"
@@ -84,7 +84,7 @@ export function StoryPreviewHero() {
               fill="none"
               stroke="currentColor"
               strokeWidth="1.5"
-              className="story-preview-ring"
+              className="story-page-ring"
             />
           </svg>
           <LayoutGridIcon />

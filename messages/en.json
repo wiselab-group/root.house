@@ -889,22 +889,7 @@
     },
     "hero": {
       "eyebrow": "A private family archive",
-      "title": "Keep your family's story — together with the people who remember it.",
-      "lead": "Your tree, photos, stories and relatives' voices — in one private place. Start with one person; your family will fill in the rest.",
-      "visualLabel": "What a story looks like in Root house: a 1952 wedding photo, the title “How Grandpa met Grandma”, a Listen button, a film strip of photos, the start of the story and a letter from 1952.",
-      "preview": {
-        "title": "How Grandpa met Grandma",
-        "lead": "In the spring of '52 Grandpa worked at the Riga port, and on Saturdays he went dancing by the Daugava. That's where he first saw Grandma.",
-        "chapterTitle": "How we met",
-        "paragraph": "He asked her three times before she said yes — and for the rest of his life he called it his best stubbornness.",
-        "letter": "Verochka, I'm counting the days until Saturday. Wear the blue dress — I'll know you from across the room.",
-        "letterCaption": "Letter, May 12, 1952",
-        "captions": {
-          "dance": "Riga, 1951. Dancing by the Daugava",
-          "wedding": "Riga, June 1952. Wedding day",
-          "family": "Tallinn, 1958. The whole family together"
-        }
-      }
+      "lead": "Keep it together with the people who remember: your tree, photos, stories and relatives' voices — in one private place."
     },
     "how": {
       "eyebrow": "How it works",
@@ -986,11 +971,6 @@
       "tabLifeline": "Life line",
       "tabPhotos": "Photos",
       "tabStories": "Stories",
-      "story": "Story",
-      "storyTitle": "Two suitcases",
-      "storyMeta": "Told by Margaret · 3 min read",
-      "storyBody": "In '56 Dad found work at the Tallinn port and went ahead. Mom followed — with little Paul in her arms and the children's things in two suitcases. One of them still sits in our attic.",
-      "listen": "Listen",
       "annaName": "Anna Ozolina"
     },
     "together": {
@@ -1109,8 +1089,7 @@
       "line1": "Add one person.",
       "line2": "Tell one story.",
       "line3": "Then your family starts remembering together.",
-      "haveArchive": "Already have an archive?",
-      "next": "Turning voice recordings into dates and places · “Ask the family” about gaps in the story · exporting the whole archive"
+      "haveArchive": "Already have an archive?"
     },
     "family": {
       "ivan": {
@@ -1206,6 +1185,19 @@
       "cardTitle": "The Hartley family",
       "cardMeta": "8 people · 3 generations · 4 cities",
       "cardKinds": "Photos · stories · voices · documents"
+    },
+    "storyPage": {
+      "title": "How Grandpa met Grandma",
+      "lead": "In the spring of '52 Grandpa worked at the Riga port, and on Saturdays he went dancing by the Daugava. That's where he first saw Grandma.",
+      "chapterTitle": "How we met",
+      "paragraph": "He asked her three times before she said yes — and for the rest of his life he called it his best stubbornness.",
+      "letter": "Verochka, I'm counting the days until Saturday. Wear the blue dress — I'll know you from across the room.",
+      "letterCaption": "Letter, May 12, 1952",
+      "captions": {
+        "dance": "Riga, 1951. Dancing by the Daugava",
+        "wedding": "Riga, June 1952. Wedding day",
+        "family": "Tallinn, 1958. The whole family together"
+      }
     }
   },
   "editPanel": {

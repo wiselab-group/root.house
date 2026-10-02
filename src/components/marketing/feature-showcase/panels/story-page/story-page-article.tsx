@@ -6,11 +6,14 @@ import { useTranslations } from "next-intl";
  * its first paragraph, and a letter on paper — fading out where the frame
  * cuts the page off.
  */
-export function StoryPreviewArticle() {
+export function StoryPageArticle({ height }: { height: number }) {
   const t = useTranslations("stories");
-  const tl = useTranslations("landing.hero.preview");
+  const tl = useTranslations("landing.storyPage");
   return (
-    <div className="h-[420px] overflow-hidden bg-background mask-[linear-gradient(to_bottom,black_70%,transparent)]">
+    <div
+      className="overflow-hidden bg-background mask-[linear-gradient(to_bottom,black_40%,transparent)]"
+      style={{ height }}
+    >
       <div className="mx-auto flex max-w-176 flex-col gap-7 px-8 pt-16 pb-10">
         <p className="max-w-[34ch] text-[1.9rem] leading-[1.42] tracking-[-0.012em] text-pretty">
           {tl("lead")}

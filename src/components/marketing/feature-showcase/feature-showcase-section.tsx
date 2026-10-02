@@ -68,26 +68,31 @@ export function FeatureShowcaseSection() {
             })}
           </ul>
         </div>
-        <div
-          id="showcase-illustration"
-          role="img"
-          aria-label={t(`features.${active.id}.title`)}
-          className="relative aspect-[4/3] w-full max-lg:order-first"
-        >
-          {SHOWCASE_FEATURES.map(({ id, Panel }, index) => (
-            <div
-              key={id}
-              inert={index !== activeIndex}
-              className={cn(
-                "absolute inset-0 transition-[opacity,transform] duration-reveal ease-(--ease-reveal)",
-                index === activeIndex
-                  ? "opacity-100"
-                  : "translate-y-3 scale-[0.98] opacity-0",
-              )}
-            >
-              <Panel />
-            </div>
-          ))}
+        <div className="flex flex-col gap-3 max-lg:order-first">
+          <div
+            id="showcase-illustration"
+            role="img"
+            aria-label={t(`features.${active.id}.title`)}
+            className="relative aspect-4/3 w-full"
+          >
+            {SHOWCASE_FEATURES.map(({ id, Panel }, index) => (
+              <div
+                key={id}
+                inert={index !== activeIndex}
+                className={cn(
+                  "absolute inset-0 transition-[opacity,transform] duration-reveal ease-(--ease-reveal)",
+                  index === activeIndex
+                    ? "opacity-100"
+                    : "translate-y-3 scale-[0.98] opacity-0",
+                )}
+              >
+                <Panel />
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-xs text-muted-foreground">
+            {t("demoNote")}
+          </p>
         </div>
       </div>
     </section>

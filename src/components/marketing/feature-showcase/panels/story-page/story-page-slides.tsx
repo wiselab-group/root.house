@@ -47,9 +47,9 @@ function turn(index: number): CSSProperties {
  * StoryCarousel's slides — wide photos full-bleed under the scrim, the
  * rest in the right 55% through .hero-photo-mask, all in the print tone —
  * taking turns on their own (opacity/transform only; marketing.css
- * .story-preview-slide). Reduced motion: the first photo, still.
+ * .story-page-slide). Reduced motion: the first photo, still.
  */
-export function StoryPreviewSlides() {
+export function StoryPageSlides() {
   return (
     <>
       {SLIDES.map(({ id, photo }, index) => {
@@ -57,7 +57,7 @@ export function StoryPreviewSlides() {
         return (
           <div
             key={id}
-            className="story-preview-slide absolute inset-0 bg-background"
+            className="story-page-slide absolute inset-0 bg-background"
             style={turn(index)}
           >
             <div
@@ -73,7 +73,7 @@ export function StoryPreviewSlides() {
                 fill
                 priority={index === 0}
                 sizes="(min-width: 1024px) 560px, 100vw"
-                className={`story-preview-drift object-cover ${wide ? "object-[50%_40%]" : "object-[50%_20%]"}`}
+                className={`story-page-drift object-cover ${wide ? "object-[50%_40%]" : "object-[50%_20%]"}`}
                 style={turn(index)}
               />
             </div>
@@ -89,15 +89,15 @@ export function StoryPreviewSlides() {
 
 /** CarouselFilm's strip: thumbnails at their own widths, the current one
  *  ringed and at full strength, its caption underneath. */
-export function StoryPreviewFilm() {
-  const t = useTranslations("landing.hero.preview.captions");
+export function StoryPageFilm() {
+  const t = useTranslations("landing.storyPage.captions");
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center gap-2.5">
       <div className="flex justify-center gap-1.5 p-1">
         {SLIDES.map(({ id, photo }, index) => (
           <span
             key={id}
-            className="story-preview-thumb photo-tone relative h-14 shrink-0 overflow-hidden rounded-md bg-muted"
+            className="story-page-thumb photo-tone relative h-14 shrink-0 overflow-hidden rounded-md bg-muted"
             style={{ width: thumbWidth(photo), ...turn(index) }}
           >
             <Image
@@ -114,7 +114,7 @@ export function StoryPreviewFilm() {
         {SLIDES.map(({ id }, index) => (
           <span
             key={id}
-            className="story-preview-caption absolute inset-0 truncate"
+            className="story-page-caption absolute inset-0 truncate"
             style={turn(index)}
           >
             {t(id)}

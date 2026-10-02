@@ -50,25 +50,25 @@
 }
 
 /* ---------------------------------------------------------------------
- * Hero story preview (hero/story-preview-*.tsx): the story page's
+ * Story page panel (feature-showcase/panels/story-page/): the story page's
  * slideshow without its script — three photos take 6s turns in an 18s
  * cycle (--slide is each one's start), the current one settling from a
  * slight zoom as in StoryCarousel; the film strip's ring, the caption and
  * the «all photos» timer ring follow. Without animation (reduced motion)
  * the first photo, its thumbnail and caption simply stay.
  * ------------------------------------------------------------------- */
-.story-preview-slide:not(:first-child),
-.story-preview-caption:not(:first-child) {
+.story-page-slide:not(:first-child),
+.story-page-caption:not(:first-child) {
   opacity: 0;
 }
-.story-preview-thumb {
+.story-page-thumb {
   opacity: 0.55;
 }
-.story-preview-thumb:first-child {
+.story-page-thumb:first-child {
   opacity: 1;
 }
 /* The ring — ::before, since .photo-tone owns ::after. */
-.story-preview-thumb::before {
+.story-page-thumb::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -77,37 +77,37 @@
   box-shadow: inset 0 0 0 2px var(--foreground);
   opacity: 0;
 }
-.story-preview-thumb:first-child::before {
+.story-page-thumb:first-child::before {
   opacity: 1;
 }
-.story-preview-ring {
+.story-page-ring {
   stroke-dasharray: 1;
 }
 @media (prefers-reduced-motion: no-preference) {
-  .story-preview-slide,
-  .story-preview-caption {
-    animation: story-preview-turn 18s var(--ease-transition) var(--slide)
-      infinite both;
-  }
-  .story-preview-drift {
-    animation: story-preview-drift 18s var(--ease-reveal) var(--slide) infinite
+  .story-page-slide,
+  .story-page-caption {
+    animation: story-page-turn 18s var(--ease-transition) var(--slide) infinite
       both;
   }
-  .story-preview-thumb {
-    animation: story-preview-thumb 18s var(--ease-transition) var(--slide)
-      infinite both;
+  .story-page-drift {
+    animation: story-page-drift 18s var(--ease-reveal) var(--slide) infinite
+      both;
   }
-  .story-preview-thumb::before {
-    animation: story-preview-turn 18s var(--ease-transition) var(--slide)
-      infinite both;
+  .story-page-thumb {
+    animation: story-page-thumb 18s var(--ease-transition) var(--slide) infinite
+      both;
+  }
+  .story-page-thumb::before {
+    animation: story-page-turn 18s var(--ease-transition) var(--slide) infinite
+      both;
   }
   /* The app's own carousel-ring keyframes and its documented `linear`
      exception (globals.css): a timer has to move at a constant rate. */
-  .story-preview-ring {
+  .story-page-ring {
     animation: carousel-ring 6s linear infinite both;
   }
 }
-@keyframes story-preview-turn {
+@keyframes story-page-turn {
   0%,
   33.3% {
     opacity: 1;
@@ -120,7 +120,7 @@
     opacity: 1;
   }
 }
-@keyframes story-preview-drift {
+@keyframes story-page-drift {
   0% {
     transform: scale(1.04);
   }
@@ -129,7 +129,7 @@
     transform: scale(1);
   }
 }
-@keyframes story-preview-thumb {
+@keyframes story-page-thumb {
   0%,
   33.3% {
     opacity: 1;
