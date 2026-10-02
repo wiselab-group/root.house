@@ -5,12 +5,15 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { MarketingSectionHeading } from "@/components/marketing/marketing-section-heading";
 import { SHOWCASE_FEATURES } from "./features.data";
+import { FeatureShowcaseItem } from "./feature-showcase-item";
 
 /**
  * Apple-style feature block (the user's skiper76 reference): one list item
- * open at a time on one side, its illustration crossfading in on the
- * other. Every panel stays mounted so switching is a pure opacity/transform
- * crossfade; hidden ones are `inert`. The list is real buttons with
+ * open at a time. On desktop its illustration crossfades in beside the
+ * list — every panel stays mounted so switching is a pure opacity/transform
+ * crossfade; hidden ones are `inert`. On phones that column is gone and
+ * the open row carries its own illustration under its text (an image
+ * above the list would change off-screen). The list is real buttons with
  * aria-expanded, so it works from the keyboard like any disclosure.
  */
 export function FeatureShowcaseSection() {
@@ -33,42 +36,21 @@ export function FeatureShowcaseSection() {
             title={t("showcaseTitle")}
           />
           <ul className="divide-y divide-border border-y border-border">
-            {SHOWCASE_FEATURES.map((feature, index) => {
-              const isOpen = index === activeIndex;
-              return (
-                <li key={feature.id}>
-                  <button
-                    type="button"
-                    aria-expanded={isOpen}
-                    aria-controls="showcase-illustration"
-                    onClick={() => setActiveIndex(index)}
-                    className="group flex w-full items-baseline gap-4 rounded-md py-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    <span className="w-5 shrink-0 text-xs text-muted-foreground tabular-nums">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                    <span
-                      className={cn(
-                        "font-heading text-lg transition-colors duration-base ease-(--ease-reveal) sm:text-xl",
-                        isOpen
-                          ? "text-foreground"
-                          : "text-muted-foreground group-hover:text-foreground",
-                      )}
-                    >
-                      {t(`features.${feature.id}.title`)}
-                    </span>
-                  </button>
-                  {isOpen && (
-                    <p className="animate-content-enter pb-5 pl-9 text-balance text-muted-foreground">
-                      {t(`features.${feature.id}.body`)}
-                    </p>
-                  )}
-                </li>
-              );
-            })}
+            {SHOWCASE_FEATURES.map((feature, index) => (
+              <FeatureShowcaseItem
+                key={feature.id}
+                feature={feature}
+                index={index}
+                isOpen={index === activeIndex}
+                onOpen={() => setActiveIndex(index)}
+              />
+            ))}
           </ul>
+          <p className="text-center text-xs text-muted-foreground lg:hidden">
+            {t("demoNote")}
+          </p>
         </div>
-        <div className="flex flex-col gap-3 max-lg:order-first">
+        <div className="flex flex-col gap-3 max-lg:hidden">
           <div
             id="showcase-illustration"
             role="img"

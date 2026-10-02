@@ -22,11 +22,16 @@ function at(year: number): string {
  *  the selected one ringed in terracotta with its card above. */
 export function LifelinePanel() {
   const t = useTranslations("landing");
+  const tTimeline = useTranslations("timeline");
   const selected = EVENTS[SELECTED];
+  // Vera's life, as on her profile: the age reads the app's own way.
+  const age = tTimeline("age", { age: selected.year - FROM, gender: "female" });
   return (
     <PanelFrame className="flex flex-col justify-center gap-[10%] px-[8%]">
       <div className="flex flex-col gap-[0.35em] rounded-2xl border border-glass-edge bg-glass p-[5%] text-[clamp(0.6875rem,0.5rem+1cqw,0.9375rem)]">
-        <span className="text-primary">{selected.year} · age 25</span>
+        <span className="text-primary">
+          {selected.year} · {age}
+        </span>
         <span className="font-heading text-[clamp(1rem,0.6rem+2.4cqw,1.75rem)] leading-tight">
           {t(`panel.${selected.label}`)}
         </span>
