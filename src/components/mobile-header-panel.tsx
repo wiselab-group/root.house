@@ -25,9 +25,15 @@ const PANEL_ID = "mobile-header-panel";
 export function MobileHeaderToggle({
   open,
   onOpenChange,
+  panelId = PANEL_ID,
+  className = "md:hidden",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** The panel it drives — the landing header has its own. */
+  panelId?: string;
+  /** Where it hides — the landing header keeps its links up to lg. */
+  className?: string;
 }) {
   const t = useTranslations("common");
   return (
@@ -35,9 +41,9 @@ export function MobileHeaderToggle({
       type="button"
       variant="ghost"
       size="icon"
-      className="md:hidden"
+      className={className}
       aria-expanded={open}
-      aria-controls={PANEL_ID}
+      aria-controls={panelId}
       aria-label={open ? t("closeMenu") : t("openMenu")}
       onClick={() => onOpenChange(!open)}
     >
