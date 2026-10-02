@@ -1336,7 +1336,8 @@
       "methods": "Sign-in",
       "families": "Families",
       "password": "password",
-      "google": "Google"
+      "google": "Google",
+      "actions": "Delete"
     },
     "families": {
       "title": "Families",
@@ -1352,6 +1353,26 @@
       "lastActivity": "Activity"
     },
     "never": "—",
-    "truncated": "Showing the first {count}."
+    "truncated": "Showing the first {count}.",
+    "delete": {
+      "trigger": "Delete account {email}",
+      "protected": "Admin accounts can’t be deleted here",
+      "title": "Delete account?",
+      "body": "The account {email}, its sign-in methods and all family memberships will be deleted for good. This can’t be undone.",
+      "families": "{count, plural, one {# family} other {# families}} where they are the only owner will be deleted too — with all people, stories and files.",
+      "shared": "{count, plural, one {# of them has} other {# of them have}} other members, who will lose access.",
+      "kept": "Entries in families with other owners stay and pass to those owners.",
+      "confirmLabel": "Type the email to confirm",
+      "cancel": "Cancel",
+      "confirm": "Delete for good",
+      "deleting": "Deleting…",
+      "done": "Account {email} deleted",
+      "errors": {
+        "notFound": "The account is already deleted or wasn’t found.",
+        "emailMismatch": "The email doesn’t match.",
+        "protected": "Admin accounts can’t be deleted here.",
+        "failed": "Couldn’t delete the account. Try again — retrying is safe."
+      }
+    }
   }
 }

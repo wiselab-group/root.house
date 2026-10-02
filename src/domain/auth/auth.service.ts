@@ -71,3 +71,11 @@ export async function recordSignIn(userId: string): Promise<void> {
     // Swallowed on purpose: a missing timestamp is harmless.
   }
 }
+
+export async function getUserEmail(userId: string): Promise<string | null> {
+  const row = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { email: true },
+  });
+  return row?.email ?? null;
+}

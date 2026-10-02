@@ -57,6 +57,11 @@ export type AdminUserRow = {
   hasPassword: boolean;
   hasGoogle: boolean;
   families: number;
+  /** Families deleted along with the account (no other owner) — same rule
+   *  as deleteUserAccount; shown in the delete confirmation. */
+  familiesToDelete: number;
+  /** …of which other members would lose access. */
+  sharedFamiliesToDelete: number;
 };
 
 export async function listAdminUsers(limit = 500): Promise<AdminUserRow[]> {
@@ -69,6 +74,8 @@ export async function listAdminUsers(limit = 500): Promise<AdminUserRow[]> {
     has_password: boolean;
     has_google: boolean;
     families: string;
+    families_to_delete: string;
+    shared_families_to_delete: string;
   }>(sql`
     SELECT
       u.id, u.email, u.created_at, u.last_sign_in_at,
@@ -78,7 +85,20 @@ export async function listAdminUsers(limit = 500): Promise<AdminUserRow[]> {
       EXISTS (SELECT 1 FROM accounts a
         WHERE a.user_id = u.id AND a.provider = 'google') AS has_google,
       (SELECT count(*) FROM family_members fm
-        WHERE fm.user_id = u.id) AS families
+        WHERE fm.user_id = u.id) AS families,
+      (SELECT count(*) FROM family_members fm
+        WHERE fm.user_id = u.id AND NOT EXISTS (
+          SELECT 1 FROM family_members o WHERE o.family_id = fm.family_id
+            AND o.user_id <> u.id AND o.role = 'owner'
+        )) AS families_to_delete,
+      (SELECT count(*) FROM family_members fm
+        WHERE fm.user_id = u.id AND NOT EXISTS (
+          SELECT 1 FROM family_members o WHERE o.family_id = fm.family_id
+            AND o.user_id <> u.id AND o.role = 'owner'
+        ) AND EXISTS (
+          SELECT 1 FROM family_members o WHERE o.family_id = fm.family_id
+            AND o.user_id <> u.id
+        )) AS shared_families_to_delete
     FROM users u
     ORDER BY u.created_at DESC
     LIMIT ${limit}
@@ -94,6 +114,8 @@ export async function listAdminUsers(limit = 500): Promise<AdminUserRow[]> {
     hasPassword: row.has_password,
     hasGoogle: row.has_google,
     families: Number(row.families),
+    familiesToDelete: Number(row.families_to_delete),
+    sharedFamiliesToDelete: Number(row.shared_families_to_delete),
   }));
 }
 

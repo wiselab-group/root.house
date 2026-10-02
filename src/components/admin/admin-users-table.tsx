@@ -1,6 +1,8 @@
 import { getFormatter, getTranslations } from "next-intl/server";
 import type { AdminUserRow } from "@/domain/admin/admin.repository";
+import { isAdminEmail } from "@/domain/admin/admin-access";
 import { AdminCell, AdminTable } from "./admin-table";
+import { DeleteAccountButton } from "./delete-account-button";
 
 export async function AdminUsersTable({
   users,
@@ -30,6 +32,7 @@ export async function AdminUsersTable({
         t("users.lastActivity"),
         t("users.methods"),
         t("users.families"),
+        t("users.actions"),
       ]}
     >
       {users.map((user) => (
@@ -47,6 +50,18 @@ export async function AdminUsersTable({
               .join(" · ") || t("never")}
           </AdminCell>
           <AdminCell>{format.number(user.families)}</AdminCell>
+          <AdminCell muted>
+            {isAdminEmail(user.email) ? (
+              <span title={t("delete.protected")}>{t("never")}</span>
+            ) : (
+              <DeleteAccountButton
+                userId={user.id}
+                email={user.email}
+                familiesToDelete={user.familiesToDelete}
+                sharedFamiliesToDelete={user.sharedFamiliesToDelete}
+              />
+            )}
+          </AdminCell>
         </tr>
       ))}
     </AdminTable>
