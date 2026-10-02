@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Lora } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Toaster } from "@/components/ui/sonner";
+import { VercelTelemetry } from "@/components/vercel-telemetry";
 import "./globals.css";
 
 // `subsets` must include "cyrillic" — the UI ships in Russian and English
@@ -71,6 +72,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             that action silently persists a per-user default otherwise. */}
           <Toaster position="bottom-center" />
         </NextIntlClientProvider>
+        <VercelTelemetry />
       </body>
     </html>
   );
