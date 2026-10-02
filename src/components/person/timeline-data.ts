@@ -12,7 +12,7 @@ import type { PartnershipRecord } from "@/domain/relationship/relationship.repos
 import type { PlaceRecord } from "@/domain/place/place.service";
 import type { TimelineEvent } from "@/domain/event/event.service";
 import { getLocale } from "next-intl/server";
-import { resolveTimelineFacts } from "./timeline-facts";
+import { resolveTimelineFacts, type TimelineFact } from "./timeline-facts";
 
 /**
  * Data-loading helpers for PersonTimeline — split out to keep the
@@ -73,6 +73,7 @@ export async function resolveTimelineExtras({
   places,
   personId,
   familyId,
+  familySlug,
   member,
   withFacts,
 }: {
@@ -81,6 +82,7 @@ export async function resolveTimelineExtras({
   places: PlaceRecord[];
   personId: string;
   familyId: string;
+  familySlug: string;
   member: ActingMember;
   withFacts: boolean;
 }) {
@@ -91,10 +93,11 @@ export async function resolveTimelineExtras({
           timeline,
           personId,
           familyId,
+          familySlug,
           partnerships,
           member,
         })
-      : new Map<string, string[]>(),
+      : new Map<string, TimelineFact[]>(),
   ]);
   return { eventEditDataById, factsById };
 }

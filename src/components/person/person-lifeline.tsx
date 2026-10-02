@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { LIFELINE_INSET } from "@/domain/event/lifeline-scale";
 import { useInViewOnce } from "@/hooks/use-in-view-once";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
@@ -23,6 +23,13 @@ import type { LifelinePointView } from "./lifeline-view";
  * scale stretches with the track in CSS alone: no measuring, no shift.
  * Motion (globals.css § lifeline): the line unfolds from the birth the
  * first time it's on screen.
+ *
+ * Desktop: a long line runs on past the column to both window edges (user
+ * request 2026-10-02) — the scroller bleeds out by the measured gaps to
+ * the edges and is padded back by the same, so the line opens with the
+ * birth at the column's left edge and ends at its right one, while the
+ * dots in between scroll on out to the window's edges. The track still
+ * fills only the column, so a short life looks exactly as before.
  */
 export function PersonLifeline({
   points,
@@ -50,6 +57,32 @@ export function PersonLifeline({
       behavior: reducedMotion ? "auto" : "smooth",
     });
   };
+  // Gaps from the column's edges to the window's (clientWidth, so a
+  // classic scrollbar is never overshot). The observer fires once on
+  // observe, so this measures on mount too.
+  const [bleed, setBleed] = useState({ left: 0, right: 0 });
+  useEffect(() => {
+    const el = revealRef.current;
+    if (!el) return;
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
+      const left = Math.max(0, Math.round(rect.left));
+      const right = Math.max(
+        0,
+        Math.round(document.documentElement.clientWidth - rect.right),
+      );
+      setBleed((prev) =>
+        prev.left === left && prev.right === right ? prev : { left, right },
+      );
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [revealRef]);
   const { ref, moreStart, moreEnd } = useScrollEdges(
     `${minWidth}:${points.map((p) => p.id).join()}`,
   );
@@ -64,8 +97,14 @@ export function PersonLifeline({
           scrollbar — a narrow fade on whichever side the line continues. */}
       <div
         ref={ref}
+        style={
+          {
+            "--bleed-l": `${bleed.left}px`,
+            "--bleed-r": `${bleed.right}px`,
+          } as CSSProperties
+        }
         className={cn(
-          "-mx-1 overflow-x-auto px-1 scrollbar-none max-sm:-mx-4 max-sm:overscroll-x-contain max-sm:px-4 [&::-webkit-scrollbar]:hidden",
+          "-mx-1 overflow-x-auto px-1 scrollbar-none max-sm:-mx-4 max-sm:overscroll-x-contain max-sm:px-4 sm:mr-[calc(-1*var(--bleed-r))] sm:ml-[calc(-1*var(--bleed-l))] sm:scroll-pl-(--bleed-l) sm:pr-(--bleed-r) sm:pl-(--bleed-l) sm:scroll-pr-(--bleed-r) [&::-webkit-scrollbar]:hidden",
           moreStart && "mask-fade-start",
           moreEnd && "mask-fade-end",
         )}

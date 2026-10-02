@@ -4,6 +4,7 @@ import { formatPartialDate } from "@/domain/shared/partial-date";
 import type { TimelineEvent } from "@/domain/event/event.service";
 import type { TimelineRowTarget } from "./timeline-target";
 import type { EventWording } from "./event-wording";
+import type { TimelineFact } from "./timeline-facts";
 
 export interface LifelineEventView {
   id: string;
@@ -11,8 +12,9 @@ export interface LifelineEventView {
   /** «Профессия · 1960 г. — 1975 г. · Пружаны» — type (when the title is
    *  free text), full date or period, and place under the title. */
   details: string;
-  /** Every other known fact, one line each («Причина: …», «Участники: …»). */
-  facts: string[];
+  /** Every other known fact, one line each («Причина: …», or a label
+   *  with the people it names — «Участники», «Родители», «Супруга»). */
+  facts: TimelineFact[];
   text: string | null;
   /** Same edit/open target the old list row had (see timelineRowTargetFor). */
   target: TimelineRowTarget;
@@ -47,7 +49,7 @@ export function lifelineView(
   targetFor: (event: TimelineEvent) => TimelineRowTarget,
   wording: EventWording,
   /** Facts that needed other people's names — see resolveTimelineFacts. */
-  factsById: Map<string, string[]> = new Map(),
+  factsById: Map<string, TimelineFact[]> = new Map(),
 ): {
   points: LifelinePointView[];
   decades: { year: number; position: number }[];
@@ -128,7 +130,12 @@ export function lifelineView(
           .join(" · "),
         facts: [
           ...(event.deathCause
-            ? [wording.t("cause", { cause: event.deathCause })]
+            ? [
+                {
+                  kind: "text" as const,
+                  text: wording.t("cause", { cause: event.deathCause }),
+                },
+              ]
             : []),
           ...(factsById.get(event.id) ?? []),
         ],

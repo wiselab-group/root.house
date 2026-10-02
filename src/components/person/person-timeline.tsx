@@ -78,6 +78,7 @@ export async function PersonTimeline({
     places,
     personId,
     familyId,
+    familySlug,
     member,
     withFacts: Boolean(lifelinePerson),
   });
