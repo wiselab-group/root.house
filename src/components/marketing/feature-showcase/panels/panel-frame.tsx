@@ -15,7 +15,7 @@ export function PanelFrame({
     <div
       aria-hidden="true"
       className={cn(
-        "@container relative size-full overflow-hidden rounded-3xl border border-border bg-card/50 p-[6%]",
+        "@container relative size-full overflow-hidden rounded-3xl border-[1.5px] border-glass-edge bg-card/50 p-[6%]",
         className,
       )}
     >

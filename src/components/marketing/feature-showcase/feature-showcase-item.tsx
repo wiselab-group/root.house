@@ -60,7 +60,15 @@ export function FeatureShowcaseItem({
         }}
         className="group flex w-full scroll-mt-4 items-baseline gap-4 rounded-md py-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <span className="w-5 shrink-0 text-xs text-muted-foreground tabular-nums">
+        {/* The open row's number in terracotta — the selection mark, as
+            the selected card in the tree; the title stays plain so the
+            page's terracotta CTA keeps the loudest voice. */}
+        <span
+          className={cn(
+            "w-5 shrink-0 text-xs tabular-nums transition-colors duration-base ease-(--ease-reveal)",
+            isOpen ? "font-medium text-primary" : "text-muted-foreground",
+          )}
+        >
           {String(index + 1).padStart(2, "0")}
         </span>
         <span
