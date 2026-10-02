@@ -5,6 +5,7 @@ import Link from "next/link";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { BrandMark } from "@/components/brand-mark";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { AdminLink } from "@/components/admin/admin-link";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import {
   MobileHeaderToggle,
@@ -29,8 +30,11 @@ import { useFamilyNav } from "@/components/family-nav-context";
  */
 export function AppHeader({
   userEmail,
+  isAdmin,
 }: {
   userEmail: string | null | undefined;
+  /** Shows the /admin shortcut. UX only — /admin re-checks on the server. */
+  isAdmin: boolean;
 }) {
   const breadcrumbs = useBreadcrumbs();
   const navItems = useFamilyNav();
@@ -78,6 +82,7 @@ export function AppHeader({
           )}
         </div>
         <div className="hidden shrink-0 items-center gap-3 md:flex">
+          {isAdmin && <AdminLink />}
           {userEmail && (
             <span className="text-sm text-muted-foreground">{userEmail}</span>
           )}
@@ -91,6 +96,7 @@ export function AppHeader({
         breadcrumbs={breadcrumbs}
         navItems={navItems}
         userEmail={userEmail}
+        isAdmin={isAdmin}
         onNavigate={() => setMenuOpen(false)}
       />
     </header>

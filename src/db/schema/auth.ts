@@ -27,6 +27,10 @@ export const users = pgTable("users", {
   // across devices — see src/i18n/sync-locale.ts.
   locale: text("locale").$type<Locale>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  // Stamped by Auth.js `events.signIn` (lib/auth.ts) — sessions are JWT, so
+  // the `sessions` table stays empty and can't answer "when did they last
+  // sign in". Shown only on /admin.
+  lastSignInAt: timestamp("last_sign_in_at", { mode: "date" }),
 });
 
 export const accounts = pgTable(

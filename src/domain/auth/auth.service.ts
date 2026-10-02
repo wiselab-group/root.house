@@ -55,3 +55,19 @@ export async function userExists(userId: string): Promise<boolean> {
   });
   return row != null;
 }
+
+/**
+ * Stamps users.last_sign_in_at (shown on /admin). Best effort, like the
+ * locale sync beside it in `events.signIn` — a failure must never block
+ * signing in.
+ */
+export async function recordSignIn(userId: string): Promise<void> {
+  try {
+    await db
+      .update(users)
+      .set({ lastSignInAt: new Date() })
+      .where(eq(users.id, userId));
+  } catch {
+    // Swallowed on purpose: a missing timestamp is harmless.
+  }
+}

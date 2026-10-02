@@ -1308,5 +1308,50 @@
     },
     "footerLink": "Privacy",
     "consent": "By continuing, you agree to the <link>privacy policy</link>."
+  },
+  "admin": {
+    "navLabel": "Admin",
+    "metaTitle": "Admin",
+    "title": "Service overview",
+    "lead": "Service data only: emails, dates, counts and storage. Family archive content is never shown here.",
+    "summary": {
+      "label": "Summary",
+      "users": "Users",
+      "newUsers7d": "New in 7 days",
+      "active7d": "Active in 7 days",
+      "active30d": "Active in 30 days",
+      "families": "Families",
+      "persons": "People in trees",
+      "stories": "Stories",
+      "storage": "Files",
+      "storageHint": "{count, plural, one {# file} other {# files}}"
+    },
+    "users": {
+      "title": "Users",
+      "caption": "Newest first. Activity is the last change in any archive; views don't count.",
+      "email": "Email",
+      "registered": "Signed up",
+      "lastSignIn": "Last sign-in",
+      "lastActivity": "Activity",
+      "methods": "Sign-in",
+      "families": "Families",
+      "password": "password",
+      "google": "Google"
+    },
+    "families": {
+      "title": "Families",
+      "caption": "Heaviest storage first. A family is identified by its owner's email — no name, no content.",
+      "owners": "Owner",
+      "noOwner": "no owner",
+      "created": "Created",
+      "members": "Members",
+      "persons": "People",
+      "stories": "Stories",
+      "files": "Files",
+      "storage": "Storage",
+      "lastActivity": "Activity"
+    },
+    "never": "—",
+    "truncated": "Showing the first {count}."
   }
 }

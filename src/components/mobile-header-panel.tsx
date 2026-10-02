@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/ui/breadcrumbs";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { AdminLink } from "@/components/admin/admin-link";
 import {
   resolveFamilyNavIcon,
   type FamilyNavItem,
@@ -65,6 +66,7 @@ export function MobileHeaderPanel({
   breadcrumbs,
   navItems,
   userEmail,
+  isAdmin,
   onNavigate,
 }: {
   open: boolean;
@@ -72,6 +74,7 @@ export function MobileHeaderPanel({
   /** Current family section's nav destinations (tree/people/places/settings) — see family-nav-context.tsx. Empty outside a family section. */
   navItems: FamilyNavItem[];
   userEmail: string | null | undefined;
+  isAdmin: boolean;
   /** Called when a breadcrumb or nav link inside the panel is clicked, so the
    *  panel doesn't stay open behind the page it just navigated away from. */
   onNavigate: () => void;
@@ -141,6 +144,11 @@ export function MobileHeaderPanel({
               </nav>
               <span aria-hidden className="h-px w-full bg-border" />
             </>
+          )}
+          {isAdmin && (
+            <div className="-ml-2.5">
+              <AdminLink withLabel onNavigate={onNavigate} />
+            </div>
           )}
           <div className="flex items-center justify-between gap-3">
             {userEmail && (

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { userExists } from "@/domain/auth/auth.service";
+import { isAdminEmail } from "@/domain/admin/admin-access";
 import { AppHeader } from "@/components/app-header";
 import { BreadcrumbsProvider } from "@/components/breadcrumbs-context";
 import { FamilyNavProvider } from "@/components/family-nav-context";
@@ -40,7 +41,10 @@ export default async function AppLayout({
     <BreadcrumbsProvider>
       <FamilyNavProvider>
         <div className="min-h-svh">
-          <AppHeader userEmail={session.user.email} />
+          <AppHeader
+            userEmail={session.user.email}
+            isAdmin={isAdminEmail(session.user.email)}
+          />
           {children}
         </div>
       </FamilyNavProvider>
