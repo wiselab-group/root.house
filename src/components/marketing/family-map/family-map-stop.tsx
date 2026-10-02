@@ -15,7 +15,10 @@ export function FamilyMapStop({
   return (
     // Not a live region: autoplay changes it every frame; the slider's
     // aria-valuetext already says the same thing to screen readers.
-    <div aria-hidden="true" className="flex min-h-40 flex-col gap-3">
+    <div
+      aria-hidden="true"
+      className="flex min-h-28 flex-col gap-2 lg:min-h-40 lg:gap-3"
+    >
       <span className="font-heading text-display font-medium tabular-nums">
         {year}
       </span>

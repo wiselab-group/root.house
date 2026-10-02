@@ -21,7 +21,7 @@ import {
 const GRID = [10, 20, 30, 40, 50, 60, 70, 80, 90];
 
 /**
- * The family's places as of `year`: cities appear once someone in the
+ * The family's places as of `year` (fractional, so routes draw smoothly): cities appear once someone in the
  * family has lived there, moves draw in as terracotta arcs over the years
  * leading up to them, and the current place is ringed. Decorative — the
  * section lists the same stops as text.
@@ -92,22 +92,27 @@ export function FamilyMapCanvas({ year }: { year: number }) {
             />
           </g>
         ))}
-        {ROUTE_STOPS.filter((stop) => stop.from).map((stop) => (
-          <path
-            key={stop.id}
-            d={routePath(stop.from as CityId, stop.city)}
-            pathLength={1}
-            fill="none"
-            stroke="var(--primary)"
-            strokeWidth={0.45}
-            strokeLinecap="round"
-            strokeDasharray={1}
-            strokeDashoffset={
-              1 -
-              clamp01((year - stop.year + ROUTE_DRAW_YEARS) / ROUTE_DRAW_YEARS)
-            }
-          />
-        ))}
+        {ROUTE_STOPS.filter((stop) => stop.from).map((stop) => {
+          const drawn = clamp01(
+            (year - stop.year + ROUTE_DRAW_YEARS) / ROUTE_DRAW_YEARS,
+          );
+          // Not drawn yet = not rendered: a round cap on a zero-length dash
+          // would still paint a dot at the route's start.
+          if (drawn === 0) return null;
+          return (
+            <path
+              key={stop.id}
+              d={routePath(stop.from as CityId, stop.city)}
+              pathLength={1}
+              fill="none"
+              stroke="var(--primary)"
+              strokeWidth={0.45}
+              strokeLinecap="round"
+              strokeDasharray={1}
+              strokeDashoffset={1 - drawn}
+            />
+          );
+        })}
       </svg>
       {(Object.keys(CITIES) as CityId[]).map((city) => {
         const { x, y } = project(CITIES[city]);

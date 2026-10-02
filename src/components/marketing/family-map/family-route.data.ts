@@ -55,7 +55,24 @@ export const ROUTE_STOPS: readonly RouteStop[] = [
 export const YEAR_FROM = 1925;
 export const YEAR_TO = 2026;
 /** Years a move takes to draw while scrubbing. */
-export const ROUTE_DRAW_YEARS = 4;
+export const ROUTE_DRAW_YEARS = 6;
+
+/** The map holds its first and last year for a moment at either end of
+ *  the section's scroll, so it neither starts nor ends mid-journey. */
+const HOLD_START = 0.06;
+const HOLD_END = 0.12;
+const SPAN = 1 - HOLD_START - HOLD_END;
+
+/** Scroll progress (0..1) → year on the map, fractional. */
+export function yearAtProgress(progress: number): number {
+  const t = Math.min(Math.max((progress - HOLD_START) / SPAN, 0), 1);
+  return YEAR_FROM + (YEAR_TO - YEAR_FROM) * t;
+}
+
+/** The inverse — where to scroll so the map shows `year`. */
+export function progressForYear(year: number): number {
+  return HOLD_START + ((year - YEAR_FROM) / (YEAR_TO - YEAR_FROM)) * SPAN;
+}
 
 /** A gentle arc from one city to another (quadratic, bowed to the right of
  *  the direction of travel). */
