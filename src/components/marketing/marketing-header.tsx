@@ -7,7 +7,6 @@ import { BrandMark } from "@/components/brand-mark";
 import { LinkButton } from "@/components/ui/link-button";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { MobileHeaderToggle } from "@/components/mobile-header-panel";
-import { cn } from "@/lib/utils";
 import {
   MARKETING_PANEL_ID,
   MarketingMobilePanel,
@@ -42,12 +41,7 @@ export function MarketingHeader() {
   return (
     <header
       ref={headerRef}
-      className={cn(
-        "absolute inset-x-0 top-0 z-20 border-b px-4 py-4 transition-[background-color,border-color,backdrop-filter] duration-slow ease-(--ease-transition) sm:px-6",
-        menuOpen
-          ? "border-glass-edge bg-background/70 backdrop-blur-xl backdrop-saturate-150"
-          : "border-transparent",
-      )}
+      className="marketing-header sticky top-0 z-40 border-b border-glass-edge bg-background/70 px-4 py-3 backdrop-blur-xl backdrop-saturate-150 sm:px-6"
     >
       <div className="mx-auto max-w-6xl">
         <div className="flex items-center justify-between gap-4">

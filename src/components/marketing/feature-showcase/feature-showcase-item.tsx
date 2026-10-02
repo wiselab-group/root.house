@@ -36,7 +36,11 @@ export function FeatureShowcaseItem({
     if (!isOpen || !openedByTapRef.current) return;
     openedByTapRef.current = false;
     const button = buttonRef.current;
-    if (!button || button.getBoundingClientRect().top >= 0) return;
+    // Below the sticky header counts as off-screen too (its scroll padding).
+    const covered =
+      parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) ||
+      0;
+    if (!button || button.getBoundingClientRect().top >= covered) return;
     button.scrollIntoView({
       block: "start",
       behavior: reduced ? "auto" : "smooth",
