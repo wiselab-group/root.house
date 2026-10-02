@@ -300,8 +300,10 @@
 /* ---------------------------------------------------------------------
  * The landing header stays on screen (sticky glass) with the page
  * starting below it — only what scrolls passes under it. Anchor jumps stop below it
- * (the closed bar is 69px: py-3 + the 44px row + the 1px rule).
+ * (--marketing-header-h, the closed bar: py-3 + the 44px row + the 1px
+ * rule). Sticky scroll scenes pin below it and are that much shorter.
  * ------------------------------------------------------------------- */
 html:has(.marketing-header) {
-  scroll-padding-top: calc(69px + 1rem);
+  --marketing-header-h: 69px;
+  scroll-padding-top: calc(var(--marketing-header-h) + 1rem);
 }

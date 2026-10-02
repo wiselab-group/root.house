@@ -76,7 +76,7 @@ export function HeroYears({ children }: { children: ReactNode }) {
     <section
       ref={sectionRef}
       aria-labelledby="hero-title"
-      className="hero-years relative isolate flex min-h-[max(620px,calc(100svh-69px))] flex-col overflow-hidden px-4 pt-14 pb-9 sm:px-6 sm:pt-16"
+      className="hero-years relative isolate flex min-h-[max(620px,calc(100svh-var(--marketing-header-h)))] flex-col overflow-hidden px-4 pt-14 pb-9 sm:px-6 sm:pt-16"
     >
       <HeroPhotos year={shown} />
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6">

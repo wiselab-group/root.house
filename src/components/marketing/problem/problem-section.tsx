@@ -42,7 +42,8 @@ export function ProblemSection() {
       <div
         className={cn(
           "flex flex-col items-center justify-center gap-6 px-4 sm:gap-8 sm:px-6",
-          !prefersReducedMotion && "sticky top-0 h-svh overflow-hidden",
+          !prefersReducedMotion &&
+            "sticky top-(--marketing-header-h) h-[calc(100svh-var(--marketing-header-h))] overflow-hidden",
         )}
       >
         <h2
@@ -53,7 +54,7 @@ export function ProblemSection() {
         </h2>
         <div
           aria-hidden="true"
-          className="gather-stage relative aspect-100/120 w-[min(100%,calc((100svh-19rem)/1.2))] sm:aspect-16/10 sm:w-[min(100%,calc((100svh-17rem)*1.6))] lg:max-w-5xl"
+          className="gather-stage relative aspect-100/120 w-[min(100%,calc((100svh-var(--marketing-header-h)-19rem)/1.2))] sm:aspect-16/10 sm:w-[min(100%,calc((100svh-var(--marketing-header-h)-17rem)*1.6))] lg:max-w-5xl"
         >
           {STORY_FRAGMENTS.map((fragment, index) => (
             <FragmentView

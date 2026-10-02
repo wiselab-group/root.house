@@ -22,7 +22,7 @@ import {
  *  map-geo.ts MAP_ASPECT) may use what the heading, the year card and the
  *  slider leave free — stacked on phones, side by side from lg. */
 const MAP_FIT =
-  "max-w-[calc((100svh-24rem)*1.08)] lg:max-w-[calc((100svh-15rem)*1.08)]";
+  "max-w-[calc((100svh-var(--marketing-header-h)-24rem)*1.08)] lg:max-w-[calc((100svh-var(--marketing-header-h)-15rem)*1.08)]";
 
 /**
  * 05 — What can I discover? The family's path across a century, driven by
@@ -65,7 +65,8 @@ export function FamilyMapSection() {
       <div
         className={cn(
           "flex flex-col justify-center gap-5 px-4 sm:px-6 lg:gap-10",
-          !prefersReducedMotion && "sticky top-0 h-svh overflow-hidden",
+          !prefersReducedMotion &&
+            "sticky top-(--marketing-header-h) h-[calc(100svh-var(--marketing-header-h))] overflow-hidden",
         )}
       >
         <MarketingSectionHeading
