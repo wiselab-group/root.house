@@ -952,7 +952,7 @@
         "body": "Write down a family story and link it to everyone who was there. Listen to it in a relative's recorded voice or your device's voice."
       },
       "lifeline": {
-        "title": "A life on one line",
+        "title": "Lifeline",
         "body": "Births, moves, weddings and everything in between — on one line from the first year to the last."
       },
       "kinship": {
@@ -965,14 +965,8 @@
       "herMother": "her mother",
       "herSon": "her son",
       "uncle": "Paul is your uncle, your mother's brother",
-      "e1931": "Born in Riga",
-      "e1952": "Married Ivan",
       "e1956": "Moved to Tallinn",
-      "e1957": "Margaret was born",
-      "e1986": "Margaret's wedding",
-      "e2014": "Died in Tallinn",
       "moveStory": "Ivan found work at the port; Vera followed with the children's things in two suitcases.",
-      "lifelineStats": "6 events · 3 places",
       "riga": "Riga",
       "annaName": "Anna Ozolina",
       "tallinn": "Tallinn",
