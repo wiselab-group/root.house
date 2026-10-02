@@ -155,24 +155,17 @@ describe("pruneCollapsedDescendants", () => {
     expect(edgeIds.has("pc-c-e")).toBe(false);
   });
 
-  it("collapsing an ANCESTOR of the current focus person never hides the focus person's own card, even though they're a descendant", () => {
+  it("collapsing an ANCESTOR of the current focus person hides the focus person too, like any other descendant", () => {
     // c is a descendant of b, and c is ALSO this graph's own focusPersonId.
     const graph = buildGraph("c");
     const pruned = pruneCollapsedDescendants(graph, new Set(["b"]));
     const remainingIds = new Set(pruned.nodes.map((n) => n.id));
-    expect(remainingIds.has("c")).toBe(true); // rescued despite being b's descendant
-    expect(remainingIds.has("d")).toBe(false); // d (not the focus) still hidden as normal
-    // The focus's own connector back to the (visible) collapsed ancestor b
-    // must survive too, or the rescued card would render disconnected.
+    expect(remainingIds.has("c")).toBe(false);
+    expect(remainingIds.has("d")).toBe(false);
     const edgeIds = new Set(pruned.edges.map((e) => e.id));
-    expect(edgeIds.has("pc-b-c")).toBe(true);
-  });
-
-  it("collapsing the focus person's own ancestor still reports the TRUE full descendant count on the badge, unaffected by the focus-person rescue", () => {
-    const graph = buildGraph("c");
-    const pruned = pruneCollapsedDescendants(graph, new Set(["b"]));
+    expect(edgeIds.has("pc-b-c")).toBe(false);
     const bNode = pruned.nodes.find((n) => n.id === "b")!;
-    expect(bNode.collapsedDescendantCount).toBe(3); // c, d, e — same as the non-rescued case
+    expect(bNode.collapsedDescendantCount).toBe(3); // c, d, e
   });
 
   it("collapsing a person also hides a DESCENDANT's spouse and that spouse's own ancestor branch, not just blood descendants", () => {
@@ -387,8 +380,8 @@ describe("pruneCollapsedDescendants — property sweep over random family graphs
       const pruned = pruneCollapsedDescendants(graph, collapsedIds);
       const remainingIds = new Set(pruned.nodes.map((n) => n.id));
 
-      // 1. The focus person is NEVER hidden, regardless of what got collapsed.
-      expect(remainingIds.has(graph.focusPersonId)).toBe(true);
+      // 1. (The focus person is no special case — hidden like anyone else
+      //    under a collapsed ancestor, see prune-collapsed.ts.)
 
       // 2. Every remaining edge's source AND target are both still present
       //    as nodes — no dangling edge pointing at a hidden person.

@@ -89,9 +89,13 @@ function layoutPersonLabel(person: LayoutPersonNode, locale: Locale): string {
 const FOCUS_SWITCH_ANIMATION_MS = 500;
 
 function FocusViewport({
+  focusId,
   focusNode,
   isInitialLoad,
 }: {
+  /** The focus person's id — what re-centering is keyed on. */
+  focusId: string;
+  /** Their card, or undefined while a collapsed ancestor hides it. */
   focusNode: Node | undefined;
   /** True only for the very first render — an instant jump, not an animated pan, since there's no previous viewport position to animate FROM yet. */
   isInitialLoad: boolean;
@@ -129,11 +133,13 @@ function FocusViewport({
     // Re-centers whenever the focus person itself changes (URL ?focus=...
     // navigation, or TreeCanvas's own client-side setFocus) — NOT on every
     // node reposition (filter/trace highlight), which
-    // would fight the user's own pan/zoom mid-session. focusNode's identity
-    // change (a new id) is what signals "the user asked to jump to someone
-    // else", not a mere prop update.
+    // would fight the user's own pan/zoom mid-session. A new focus id is
+    // what signals "the user asked to jump to someone else", not a mere
+    // prop update. Keyed on the id, not on focusNode: collapsing an
+    // ancestor hides the focus card too (prune-collapsed.ts), and
+    // re-expanding it must not yank the viewport back to them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusNode?.id, setCenter]);
+  }, [focusId, setCenter]);
 
   return null;
 }
@@ -605,6 +611,7 @@ export function TreeCanvas({
             }
           >
             <FocusViewport
+              focusId={effectiveGraph.focusPersonId}
               focusNode={focusNode}
               isInitialLoad={isInitialLoad}
             />

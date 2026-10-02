@@ -35,7 +35,9 @@
 - `use-collapsed-branches.ts` — эфемерный клиентский `Set`, не в БД/URL.
 - `prune-collapsed.ts` (`pruneCollapsedDescendants`) — обрезает готовый
   layout по `parent_child` вниз, layout НЕ пересчитывается. Только потомки.
-  Фокус никогда не скрывается (явный rescue). Бейдж «+N» —
+  Фокус-персона скрывается вместе с веткой, как все (rescue убран
+  2026-10-02 по запросу пользователя); `FocusViewport` центрирует по
+  id фокуса, а не по наличию карточки. Бейдж «+N» —
   `person-node.tsx`/`person-node-parts.tsx`.
 
 ## Смена фокуса и viewport

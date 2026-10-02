@@ -234,16 +234,11 @@ export function pruneCollapsedDescendants(
     for (const id of descendants) collapsingIds.add(id);
   }
 
-  // The current focus person's own card must never disappear as a side
-  // effect of collapsing one of THEIR ancestors — e.g. collapsing Viktor
-  // while the focus is Viktor's own child would otherwise hide the exact
-  // person the whole tree is centered on and being viewed around, with no
-  // obvious way back short of re-navigating. The badge count above still
-  // reflects the TRUE full descendant count (unaffected by this rescue), so
-  // "+N" doesn't silently under-report just because one of the N is exempt
-  // from being hidden.
-  hiddenIds.delete(graph.focusPersonId);
-  collapsingIds.delete(graph.focusPersonId);
+  // The focus person is NOT exempt: collapsing their ancestor hides them
+  // like anyone else. They used to be rescued, but that left the focus card
+  // hanging alone under a "+N" while their own spouse and children folded
+  // away (user screenshot, 2026-10-02: Александр under Виктор+Галина's
+  // "+4"). The "+N" badge on the collapsed ancestor is the way back.
 
   // An anchor nested inside ANOTHER collapsed branch's own hidden subtree
   // has no visible card left to carry a badge on — drop it from the count
