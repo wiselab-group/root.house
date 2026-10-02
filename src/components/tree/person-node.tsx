@@ -127,8 +127,10 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
   // shows a plain "−" affordance while expanded, so there's always a
   // visible way back in either state, not just a badge that vanishes once
   // clicked.
+  // Gone the instant this card starts folding away under a collapsed
+  // ancestor, not after its exit animation.
   const collapseBadge =
-    data.hasChildren && data.onToggleCollapse ? (
+    data.hasChildren && data.onToggleCollapse && !data.isCollapsing ? (
       <CollapseBadge
         personId={data.personId}
         collapsedDescendantCount={data.collapsedDescendantCount}

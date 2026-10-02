@@ -674,15 +674,18 @@ function PartnershipEdgeLine({
   // a control floating at an arbitrary point on the partnership line.
   const midX = (x1 + x2) / 2;
   const midY = (y + yTarget) / 2;
-  const collapseBadge = unionCollapse ? (
-    <UnionCollapseBadge
-      x={midX}
-      y={midY}
-      collapsedDescendantCount={unionCollapse.collapsedDescendantCount}
-      collapseKey={unionCollapse.collapseKey}
-      onToggleCollapse={unionCollapse.onToggleCollapse}
-    />
-  ) : null;
+  // Gone the instant this couple starts folding away under a collapsed
+  // ancestor — the badge has no exit animation of its own to wait for.
+  const collapseBadge =
+    unionCollapse && !isCollapsing ? (
+      <UnionCollapseBadge
+        x={midX}
+        y={midY}
+        collapsedDescendantCount={unionCollapse.collapsedDescendantCount}
+        collapseKey={unionCollapse.collapseKey}
+        onToggleCollapse={unionCollapse.onToggleCollapse}
+      />
+    ) : null;
 
   // A trace path can reach this couple's shared child through only ONE of
   // them (parent → union trunk → child, see union-child-edge.tsx and
