@@ -19,6 +19,7 @@ import { chromium } from "playwright";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { useLightboxFixture } from "./_test-accounts.mjs";
 
 config({ path: ".env.local", quiet: true });
 const sql = neon(process.env.DATABASE_URL);
@@ -26,8 +27,8 @@ const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(__dirname, "..", "screenshots", "story-background");
 
-const [user] = await sql`select id, email from users where email like 'lightbox-strip-%' order by created_at desc limit 1`;
-if (!user) throw new Error("run verify-lightbox-strip.mjs first");
+const fixture = await useLightboxFixture();
+const { user } = fixture;
 const [family] = await sql`select id, slug from families where created_by = ${user.id} order by created_at desc limit 1`;
 const long = Array.from({ length: 14 }, (_, i) => `Это ${i + 1}-е предложение истории.`).join(" ");
 const stamp = Date.now();
@@ -171,4 +172,5 @@ try {
   process.exitCode = 1;
 } finally {
   await browser.close();
+  await fixture.release();
 }

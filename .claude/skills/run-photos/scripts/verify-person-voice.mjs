@@ -9,8 +9,8 @@
 // is a media row of kind "audio" linked only via person_voice, never
 // tagged on people or put in albums.
 //
-// Reuses the newest throwaway family from verify-lightbox-strip.mjs (run
-// that first).
+// Reuses the newest throwaway family from verify-lightbox-strip.mjs (created on
+// demand by useLightboxFixture, deleted afterwards).
 //
 // Usage: node .claude/skills/run-photos/scripts/verify-person-voice.mjs
 
@@ -20,6 +20,7 @@ import { chromium } from "playwright";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { useLightboxFixture } from "./_test-accounts.mjs";
 
 config({ path: ".env.local", quiet: true });
 const sql = neon(process.env.DATABASE_URL);
@@ -27,8 +28,8 @@ const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(__dirname, "..", "screenshots", "person-voice");
 
-const [user] = await sql`select id, email from users where email like 'lightbox-strip-%' order by created_at desc limit 1`;
-if (!user) throw new Error("run verify-lightbox-strip.mjs first");
+const fixture = await useLightboxFixture();
+const { user } = fixture;
 const [family] = await sql`select id, slug from families where created_by = ${user.id} order by created_at desc limit 1`;
 const [person] = await sql`select id, slug from persons where family_id = ${family.id} order by photo_media_id is null, created_at limit 1`;
 // Start clean: earlier runs' voices on this person.
@@ -213,4 +214,5 @@ try {
   process.exitCode = 1;
 } finally {
   await browser.close();
+  await fixture.release();
 }

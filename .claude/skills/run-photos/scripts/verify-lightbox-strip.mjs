@@ -22,6 +22,7 @@ import { mkdir, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { deleteTestAccounts } from "./_test-accounts.mjs";
 
 config({ path: ".env.local", quiet: true });
 const sql = neon(process.env.DATABASE_URL);
@@ -264,6 +265,7 @@ async function main() {
     process.exitCode = 1;
   } finally {
     await browser.close();
+    await deleteTestAccounts(runId);
   }
 }
 

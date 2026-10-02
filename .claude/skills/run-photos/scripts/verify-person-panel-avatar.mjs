@@ -12,6 +12,7 @@ import { chromium } from "playwright";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { deleteTestAccounts } from "./_test-accounts.mjs";
 
 config({ path: ".env.local", quiet: true });
 const sql = neon(process.env.DATABASE_URL);
@@ -94,6 +95,7 @@ async function main() {
     await page.screenshot({ path: path.join(OUT, "03-header-closeup.png"), clip: { x: box.x, y: box.y, width: box.width, height: box.height + 10 } });
   } finally {
     await browser.close();
+    await deleteTestAccounts(runId);
   }
 }
 

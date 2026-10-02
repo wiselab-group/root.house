@@ -14,6 +14,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import zlib from "node:zlib";
+import { deleteTestAccounts } from "./_test-accounts.mjs";
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -196,6 +197,7 @@ async function main() {
     process.exitCode = 1;
   } finally {
     await browser.close();
+    await deleteTestAccounts(runId);
   }
 }
 

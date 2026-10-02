@@ -4,8 +4,8 @@
 // slideshow holds while the mouse is over the film bar and resumes after,
 // and under prefers-reduced-motion there's no ring and no autoplay.
 //
-// Reuses the newest throwaway family from verify-lightbox-strip.mjs (run
-// that first): logs in as its account and adds, with SQL scoped to that
+// Reuses the newest throwaway family from verify-lightbox-strip.mjs (created on
+// demand by useLightboxFixture, deleted afterwards): logs in as its account and adds, with SQL scoped to that
 // family, a story whose photos are the family's uploaded photos.
 //
 // Usage: node .claude/skills/run-photos/scripts/verify-story-slideshow.mjs
@@ -18,6 +18,7 @@ import { chromium } from "playwright";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { useLightboxFixture } from "./_test-accounts.mjs";
 
 config({ path: ".env.local", quiet: true });
 const sql = neon(process.env.DATABASE_URL);
@@ -25,8 +26,8 @@ const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(__dirname, "..", "screenshots", "story-slideshow");
 
-const [user] = await sql`select id, email from users where email like 'lightbox-strip-%' order by created_at desc limit 1`;
-if (!user) throw new Error("run verify-lightbox-strip.mjs first");
+const fixture = await useLightboxFixture();
+const { user } = fixture;
 const [family] = await sql`select id, slug from families where created_by = ${user.id} order by created_at desc limit 1`;
 const media = await sql`select id from media where family_id = ${family.id} and kind = 'photo' order by created_at`;
 const storySlug = `slideshow-${Date.now()}`;
@@ -123,4 +124,5 @@ try {
   process.exitCode = 1;
 } finally {
   await browser.close();
+  await fixture.release();
 }

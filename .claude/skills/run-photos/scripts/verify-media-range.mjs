@@ -5,8 +5,8 @@
 // Content-Range and exactly those bytes; past the end → 416; several
 // ranges at once → the whole file.
 //
-// Reuses the newest throwaway family from verify-lightbox-strip.mjs (run
-// that first) and one of its uploaded photos — ranges work the same for
+// Reuses the newest throwaway family from verify-lightbox-strip.mjs (created on
+// demand by useLightboxFixture, deleted afterwards) and one of its uploaded photos — ranges work the same for
 // any stored file.
 //
 // Usage: node .claude/skills/run-photos/scripts/verify-media-range.mjs
@@ -14,13 +14,14 @@
 import { config } from "dotenv";
 import { neon } from "@neondatabase/serverless";
 import { chromium } from "playwright";
+import { useLightboxFixture } from "./_test-accounts.mjs";
 
 config({ path: ".env.local", quiet: true });
 const sql = neon(process.env.DATABASE_URL);
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 
-const [user] = await sql`select id, email from users where email like 'lightbox-strip-%' order by created_at desc limit 1`;
-if (!user) throw new Error("run verify-lightbox-strip.mjs first");
+const fixture = await useLightboxFixture();
+const { user } = fixture;
 const [family] = await sql`select id from families where created_by = ${user.id} order by created_at desc limit 1`;
 const [media] = await sql`select id, size_bytes from media where family_id = ${family.id} and kind = 'photo' limit 1`;
 
@@ -76,4 +77,5 @@ try {
   if (failures.length) process.exitCode = 1;
 } finally {
   await browser.close();
+  await fixture.release();
 }

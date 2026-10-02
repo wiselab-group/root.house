@@ -61,6 +61,25 @@ The full path from zero to "a photo in a lightbox, ready to interact with":
    "Готово" button (upload finished), click it.
 5. Click the uploaded tile's `<img>` to open `PhotoLightbox`.
 
+## Clean up after every run — required
+
+The dev DB **is** the production DB (one Neon database), and real
+accounts are monitored on `/admin`. A run must leave nothing behind, so
+every script uses `scripts/_test-accounts.mjs`:
+
+- Registers emails as `<name>-${runId}@example.test` (the `@example.test`
+  domain is what cleanup keys on — never use another domain).
+- Ends with `finally { await browser.close(); await deleteTestAccounts(runId); }`
+  — deletes the run's accounts, their test-only families (content
+  cascades) and those families' Blob files. Families with any real member
+  are never touched.
+- Scripts that reuse verify-lightbox-strip.mjs's family call
+  `const fixture = await useLightboxFixture()` (creates one via that script
+  if none is kept) and `await fixture.release()` in `finally`.
+- `KEEP_TEST_ACCOUNT=1 node …` keeps the run's data to inspect by hand —
+  sweep it afterwards with `node .claude/skills/run-photos/scripts/purge-test-accounts.mjs`
+  (also for runs killed with Ctrl+C before their `finally` ran).
+
 ## Drive it
 
 ```bash
