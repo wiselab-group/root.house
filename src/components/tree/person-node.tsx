@@ -20,6 +20,11 @@ import {
 } from "./person-node-parts";
 import { PersonNodePopoverActions } from "./person-node-popover-actions";
 import { useKinshipContext } from "./kinship/kinship-context";
+import {
+  POPOVER_EDGE_GAP,
+  visibleTreeRect,
+  type BoundaryRect,
+} from "./popover-boundary";
 
 /**
  * Custom XYFlow node rendering a person card. States per DESIGN.md § Person
@@ -67,7 +72,9 @@ import { useKinshipContext } from "./kinship/kinship-context";
 export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
   const locale = useLocale();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [boundary, setBoundary] = useState<BoundaryRect>();
   const popupRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const kinship = useKinshipContext();
   const name = personLabel(data, locale);
   const years = yearRange(data);
@@ -148,6 +155,9 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
           kinship.pick(data.personId);
           return;
         }
+        if (open && rootRef.current) {
+          setBoundary(visibleTreeRect(rootRef.current));
+        }
         setIsPopoverOpen(open);
       }}
     >
@@ -169,11 +179,16 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
           over neighbouring cards and lines its edge got lost. Focus lands
           on the first action only when opened from the keyboard — after a
           click it went there too and lit that item's focus ring, reading
-          as a highlighted primary button. */}
+          as a highlighted primary button. Always fully on screen: bounded
+          by the visible tree area (popover-boundary.ts), and `sticky` lets
+          it slide off its card's level rather than run past an edge. */}
       <PopoverContent
         ref={popupRef}
         side="right"
         sideOffset={12}
+        collisionBoundary={boundary}
+        collisionPadding={POPOVER_EDGE_GAP}
+        sticky
         initialFocus={(openType) =>
           openType === "keyboard" ? true : popupRef.current
         }
@@ -185,7 +200,7 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
   );
 
   return (
-    <div className="relative">
+    <div ref={rootRef} className="relative">
       {cardFrame}
       {collapseBadge}
     </div>
