@@ -1,7 +1,8 @@
 import type { CSSProperties } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { PortraitSilhouette } from "@/components/marketing/shared/portrait-silhouette";
+import Image from "next/image";
+import { LANDING_PHOTOS } from "@/components/marketing/shared/landing-photos";
 import type { StoryFragment } from "./fragments.data";
 
 const LABEL =
@@ -11,13 +12,14 @@ const TEXT = "text-[clamp(0.6875rem,0.35rem+1.1cqw,0.9375rem)] leading-snug";
 /**
  * One loose piece of the family's story — a chat message, a print, a note.
  * Position, tilt, shrink and fade come from marketing.css .gather-fragment,
- * driven by one number `t` (0 scattered → 1 gathered).
+ * driven by one number --t (0 scattered → 1 gathered) from the scroll.
  */
 export function FragmentView({
   fragment,
   t,
 }: {
   fragment: StoryFragment;
+  /** 0 scattered → 1 gathered, from the scroll. */
   t: number;
 }) {
   const tl = useTranslations("landing.problem.sources");
@@ -49,8 +51,14 @@ export function FragmentView({
         {tl(`${id}.label`)}
       </span>
       {look === "photo" && (
-        <span className="flex aspect-[4/3] items-end justify-center overflow-hidden rounded-[2px] bg-paper-ink/12">
-          <PortraitSilhouette className="w-[55%] text-paper-ink/50" />
+        <span className="relative aspect-[4/3] overflow-hidden rounded-[2px] bg-paper-ink/12">
+          <Image
+            src={LANDING_PHOTOS.wedding.src}
+            alt=""
+            fill
+            sizes="(min-width: 640px) 200px, 40vw"
+            className="object-cover object-[50%_25%] sepia-35"
+          />
         </span>
       )}
       <span

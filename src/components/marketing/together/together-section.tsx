@@ -1,17 +1,16 @@
 import { useTranslations } from "next-intl";
 import { MarketingSectionHeading } from "@/components/marketing/marketing-section-heading";
 import { Reveal } from "@/components/marketing/shared/reveal";
-import { delay } from "@/components/marketing/shared/delay";
-import { TogetherEventCard } from "./together-event-card";
 import { TogetherFeed } from "./together-feed";
-
-const CLOSING = ["closing1", "closing2", "closing3", "closing4"] as const;
+import { MembersCard } from "./members-card";
+import { PrivacyFacts } from "./privacy-facts";
 
 /**
- * 03 — Why involve my family? One event filling in as four relatives each
- * add what they remember, with the family feed beside it saying who did
- * what (the app's real activity log — not live co-editing). The point is
- * made in words at the end.
+ * 06 — Why involve my family, and who owns it? Relatives each add what
+ * they remember (the family feed — the app's real activity log, not live
+ * co-editing), and the archive stays the family's: members by invitation,
+ * a role each, private by default. Only real, documented capabilities
+ * (docs/architecture.md § Roles, Privacy, Invitations; share links).
  */
 export function TogetherSection() {
   const t = useTranslations("landing.together");
@@ -26,28 +25,11 @@ export function TogetherSection() {
           title={t("title")}
           subcopy={t("lead")}
         />
-        <Reveal className="grid items-start gap-6 md:grid-cols-[1.2fr_1fr] md:gap-8 lg:mx-auto lg:max-w-4xl">
-          <TogetherEventCard />
+        <Reveal className="grid items-start gap-6 md:grid-cols-2 md:gap-8 lg:mx-auto lg:w-full lg:max-w-4xl">
           <TogetherFeed />
+          <MembersCard />
         </Reveal>
-        <Reveal className="mx-auto max-w-3xl text-center">
-          <p className="font-heading text-heading font-medium text-balance">
-            {CLOSING.map((key, index) => (
-              <span
-                key={key}
-                data-reveal=""
-                className={
-                  index === CLOSING.length - 1
-                    ? "mt-2 block text-foreground"
-                    : "block text-muted-foreground"
-                }
-                style={delay(index * 220)}
-              >
-                {t(key)}
-              </span>
-            ))}
-          </p>
-        </Reveal>
+        <PrivacyFacts />
       </div>
     </section>
   );

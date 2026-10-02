@@ -2,12 +2,14 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { LinkButton } from "@/components/ui/link-button";
 import { Reveal } from "@/components/marketing/shared/reveal";
+import { SoonBadge } from "@/components/marketing/shared/soon-badge";
 import { delay } from "@/components/marketing/shared/delay";
 
 const LINES = ["line1", "line2", "line3"] as const;
 
-/** 10 — What do I do now? The smallest possible first step, the same
- *  action as the hero, and the brand's promise to close the page. */
+/** 08 — What do I do now? The smallest possible first step, the same
+ *  action as the hero, the brand's promise — and, in one quiet line, what's
+ *  coming next (the only place the not-yet-built ideas appear). */
 export function FinalCtaSection() {
   const t = useTranslations("landing");
   return (
@@ -45,6 +47,10 @@ export function FinalCtaSection() {
         </div>
         <p className="pt-10 font-heading text-hero font-medium text-balance italic">
           {t("brandStatement")}
+        </p>
+        <p className="flex max-w-2xl flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+          <SoonBadge />
+          {t("final.next")}
         </p>
       </Reveal>
     </section>

@@ -14,31 +14,29 @@ import { FragmentView } from "./fragment-view";
 import { GatheredStoryCard } from "./gathered-story-card";
 
 /**
- * 02 — Why do I need it? The story is scattered across phones, chats,
- * albums and people's memories; scrolling gathers the pieces into one
- * family story, and the caption turns from the problem to the answer.
- * Reduced motion: no tall wrapper, the scattered pieces and both captions.
+ * 02 — Why do I need it? The family's story lives in phones, chats,
+ * albums and people's memories. The screen holds still for about two
+ * viewport heights of scrolling (a tall wrapper with a sticky viewport),
+ * and over exactly that scroll the pieces gather into one family story —
+ * scrolling back scatters them again — while the caption turns from the
+ * problem to the answer. Reduced motion: no tall wrapper, the pieces stay
+ * scattered (the picture of the problem) and both captions are shown.
  */
 export function ProblemSection() {
   const t = useTranslations("landing.problem");
   const wrapperRef = useRef<HTMLElement>(null);
-  const scrollProgress = useScrollProgress(wrapperRef);
+  const scrolled = useScrollProgress(wrapperRef);
   const prefersReducedMotion = useReducedMotion();
-  // Reduced motion keeps the pieces scattered — the picture of the
-  // problem — and states the answer in words only.
-  const progress = prefersReducedMotion ? 0 : scrollProgress;
+  const progress = prefersReducedMotion ? 0 : scrolled;
   const gathered = gatheredProgress(progress);
-  const problem = prefersReducedMotion ? 1 : 1 - gathered;
-  const answer = prefersReducedMotion ? 1 : gathered;
 
   return (
     <section
-      id="how-it-works"
       ref={wrapperRef}
       aria-labelledby="problem-title"
       className={cn(
-        "relative scroll-mt-0",
-        prefersReducedMotion ? "py-section" : "h-[230svh]",
+        "relative",
+        prefersReducedMotion ? "py-section" : "h-[260svh]",
       )}
     >
       <div
@@ -55,7 +53,7 @@ export function ProblemSection() {
         </h2>
         <div
           aria-hidden="true"
-          className="gather-stage relative aspect-[100/120] w-[min(100%,calc((100svh-17rem)/1.2))] sm:aspect-[16/10] sm:w-[min(100%,calc((100svh-16rem)*1.6))] lg:max-w-5xl"
+          className="gather-stage relative aspect-100/120 w-[min(100%,calc((100svh-19rem)/1.2))] sm:aspect-16/10 sm:w-[min(100%,calc((100svh-17rem)*1.6))] lg:max-w-5xl"
         >
           {STORY_FRAGMENTS.map((fragment, index) => (
             <FragmentView
@@ -64,26 +62,23 @@ export function ProblemSection() {
               t={fragmentProgress(progress, index, STORY_FRAGMENTS.length)}
             />
           ))}
-          <GatheredStoryCard shown={gathered} />
+          {!prefersReducedMotion && <GatheredStoryCard shown={gathered} />}
         </div>
         <div
           className={cn(
             "mx-auto max-w-2xl text-center",
-            !prefersReducedMotion && "grid",
+            prefersReducedMotion ? "flex flex-col gap-4" : "grid",
           )}
         >
           <p
             className="col-start-1 row-start-1 text-balance text-muted-foreground sm:text-lg"
-            style={{ opacity: problem }}
+            style={{ opacity: prefersReducedMotion ? 1 : 1 - gathered }}
           >
             {t("body")}
           </p>
           <p
-            className={cn(
-              "col-start-1 row-start-1 self-center font-heading text-heading font-medium text-balance",
-              prefersReducedMotion && "mt-4",
-            )}
-            style={{ opacity: answer }}
+            className="col-start-1 row-start-1 self-center font-heading text-heading font-medium text-balance"
+            style={{ opacity: prefersReducedMotion ? 1 : gathered }}
           >
             {t("answer")}
           </p>

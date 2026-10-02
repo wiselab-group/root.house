@@ -2,6 +2,6 @@
  *  `landing.nav.*`, `href` the section's element id. */
 export const LANDING_ANCHORS = [
   { id: "how", href: "#how-it-works" },
-  { id: "features", href: "#voice" },
-  { id: "family", href: "#privacy" },
+  { id: "features", href: "#features" },
+  { id: "pricing", href: "#pricing" },
 ] as const;

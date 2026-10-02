@@ -4,14 +4,11 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { LandingHero } from "@/components/marketing/hero/landing-hero";
 import { ProblemSection } from "@/components/marketing/problem/problem-section";
-import { TogetherSection } from "@/components/marketing/together/together-section";
-import { VoiceSection } from "@/components/marketing/voice/voice-section";
+import { HowSection } from "@/components/marketing/how/how-section";
+import { FeatureShowcaseSection } from "@/components/marketing/feature-showcase/feature-showcase-section";
 import { FamilyMapSection } from "@/components/marketing/family-map/family-map-section";
-import { GrowthSection } from "@/components/marketing/growth/growth-section";
-import { AskFamilySection } from "@/components/marketing/ask-family/ask-family-section";
-import { ArchiveSection } from "@/components/marketing/archive/archive-section";
-import { PrivacySection } from "@/components/marketing/privacy-section";
-import { PricingSection } from "@/components/marketing/pricing-section";
+import { TogetherSection } from "@/components/marketing/together/together-section";
+import { PricingSection } from "@/components/marketing/pricing/pricing-section";
 import { FinalCtaSection } from "@/components/marketing/final-cta-section";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -34,10 +31,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * The sales landing, told as one family's story (the fictional Sokolovs /
- * Hartleys): what it is → why → with whom → how easy → what you discover →
- * what it becomes → how gaps get filled → where it's kept → who owns it →
- * start. Things Root house doesn't do yet are badged "coming soon".
+ * The sales landing: what it's worth to me → why → how it works → what I
+ * get → the wow (the family's path on a map) → together and private →
+ * plans and doubts → start. One fictional family (the Sokolovs / Hartleys)
+ * in public-domain archival photos throughout; what Root house doesn't do
+ * yet is badged "coming soon", never sold as shipped.
  */
 export default async function MarketingPage() {
   const session = await auth();
@@ -47,13 +45,10 @@ export default async function MarketingPage() {
     <>
       <LandingHero />
       <ProblemSection />
-      <TogetherSection />
-      <VoiceSection />
+      <HowSection />
+      <FeatureShowcaseSection />
       <FamilyMapSection />
-      <GrowthSection />
-      <AskFamilySection />
-      <ArchiveSection />
-      <PrivacySection />
+      <TogetherSection />
       <PricingSection />
       <FinalCtaSection />
     </>
