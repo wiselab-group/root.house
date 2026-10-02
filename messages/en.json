@@ -1237,5 +1237,76 @@
     "dateLegend": "When it was recorded",
     "save": "Save",
     "saving": "Saving… {percent}%"
+  },
+  "privacyPolicy": {
+    "metaTitle": "Privacy policy",
+    "metaDescription": "What data Root house collects, why, who can see it and how to delete it.",
+    "title": "Privacy policy",
+    "updated": "Last updated October 3, 2026",
+    "intro": "Root house is a private family archive. It holds the most personal things: photographs, memories, details about your relatives. So here it is, short and without fine print: what we collect, why, who sees it and how to delete it.",
+    "sections": {
+      "operator": {
+        "title": "Who is responsible for your data",
+        "p1": "The Root house service and its team. For any question about your data, write to <email></email> — we reply within 30 days."
+      },
+      "data": {
+        "title": "What we collect",
+        "account": "<b>Account:</b> name, email, profile photo (when you sign in with Google), interface language. Your password is stored only as a cryptographic hash — not even we can read it.",
+        "archive": "<b>Archive content:</b> people and family relationships, dates, events, places, stories, photos, audio recordings and documents that you and your relatives add.",
+        "photos": "<b>Information inside photos:</b> the original is stored as uploaded, with whatever the camera recorded (date taken, sometimes location). The smaller copies shown in the archive carry none of it.",
+        "technical": "<b>Technical data:</b> your sign-in session, the family activity log (who added or changed what — visible to family members), and server logs, including IP addresses, to protect against outages and abuse.",
+        "analytics": "<b>Visit statistics:</b> anonymous — which pages are opened, on what devices and from which countries, how fast the site loads. No advertising cookies, no cross-site tracking. The secret parts of invitation and share links are removed in your browser before anything is sent."
+      },
+      "purpose": {
+        "title": "Why",
+        "p1": "Only to run the service: store and show your archive, let in the people you invited, send invitations, keep accounts safe and learn what to improve. We don't sell data, don't show ads and don't use your photos, stories or details about your relatives to train AI."
+      },
+      "access": {
+        "title": "Who sees your archive",
+        "family": "<b>Family members</b> — only the people invited, and only within their role: owner, editor, contributor, viewer. Individual entries can be hidden even from them.",
+        "links": "<b>People with a link</b> — only what you shared through a separate link, and only while it is active. A link can be password-protected.",
+        "team": "<b>The Root house team</b> sees only service information: email, sign-up and last sign-in dates, number of families and entries, storage used. We don't look through archive content, and there is no \"sign in as user\" feature. Direct database access is used only to fix outages, at your request or when required by law."
+      },
+      "processors": {
+        "title": "Service providers",
+        "p1": "The service runs on infrastructure from companies that process data only on our behalf and never for their own purposes. Their servers may be located outside your country, including in the US and the EU.",
+        "vercel": "<b>Vercel</b> — hosting, photo and file storage, visit statistics.",
+        "neon": "<b>Neon</b> — database.",
+        "google": "<b>Google</b> — sign-in with a Google account, if you choose it. We receive only your name, email and profile photo.",
+        "resend": "<b>Resend</b> — sending invitation emails: the recipient's email and the inviter's name.",
+        "maptiler": "<b>MapTiler</b> — maps and place search: receives search queries and the map area you are viewing.",
+        "voice": "<b>Your browser</b> — \"Listen\" reads a story without a recording in your device's voice. Some browsers use their vendor's cloud voices for this."
+      },
+      "cookies": {
+        "title": "Cookies and browser storage",
+        "p1": "Only what's necessary: a session cookie to keep you signed in and a cookie for your chosen language. Unsaved story drafts are kept in your browser. No advertising or third-party tracking cookies."
+      },
+      "relatives": {
+        "title": "Information about relatives",
+        "p1": "Archives often include living people who never signed up themselves. When you add them, make sure they don't mind — especially when it comes to photos, health, faith and other sensitive details. If someone finds themselves in another family's archive and wants their details removed, they can write to us: we'll contact the archive's owner and help."
+      },
+      "retention": {
+        "title": "Retention and deletion",
+        "p1": "Data is kept as long as the account or family archive exists. To delete your account, write to <email></email> from the address it is registered with — we'll delete it within 30 days. Archives where you are the only owner are deleted with your account unless you ask us to hand them over to another member. What you added to other families' archives stays with them. Database backups are overwritten automatically within a few weeks."
+      },
+      "rights": {
+        "title": "Your rights",
+        "p1": "At any time you can find out what data we hold about you, correct it, get a copy (original photos can be downloaded right from the archive), delete it or withdraw your consent — just write to us. If you believe we are violating your rights, you may complain to the data protection authority in your country."
+      },
+      "security": {
+        "title": "Security",
+        "p1": "Connections are always encrypted (HTTPS), passwords are stored only as hashes, every archive is isolated from the others, and invitations and share links contain long random keys. No protection is absolute, but if something happens to your data, we will tell you."
+      },
+      "age": {
+        "title": "Age",
+        "p1": "The service is intended for people over 16. Children are added to the archive by adult family members."
+      },
+      "changes": {
+        "title": "Changes",
+        "p1": "We'll announce significant changes to this policy in advance, in the service or by email. The date of the current version is at the top of the page."
+      }
+    },
+    "footerLink": "Privacy",
+    "consent": "By continuing, you agree to the <link>privacy policy</link>."
   }
 }

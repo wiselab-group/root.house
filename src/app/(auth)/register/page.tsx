@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { AuthShell } from "@/components/auth/auth-shell";
+import { PrivacyConsent } from "@/components/auth/privacy-consent";
 import { RegisterForm } from "@/components/forms/register-form";
 import {
   Card,
@@ -59,6 +60,7 @@ export default async function RegisterPage({
               {t("signIn")}
             </Link>
           </p>
+          <PrivacyConsent />
         </CardContent>
       </Card>
     </AuthShell>
