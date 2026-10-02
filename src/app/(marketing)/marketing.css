@@ -298,17 +298,10 @@
 }
 
 /* ---------------------------------------------------------------------
- * The landing header, kept on screen like the app's on its dark pages
- * (globals.css, body:has(.photo-backdrop) .app-header): sticky glass, the
- * hero running up under it through a negative margin of the closed bar's
- * height (py-3 + the 44px row + the 1px rule). Opening the phone menu
- * grows the header while the margin stays, so the page moves down with it
- * — as in the app. Anchor jumps stop below it.
+ * The landing header stays on screen (sticky glass) with the page
+ * starting below it — only what scrolls passes under it. Anchor jumps stop below it
+ * (the closed bar is 69px: py-3 + the 44px row + the 1px rule).
  * ------------------------------------------------------------------- */
-.marketing-header {
-  --marketing-header-h: 69px;
-  margin-bottom: calc(-1 * var(--marketing-header-h));
-}
 html:has(.marketing-header) {
   scroll-padding-top: calc(69px + 1rem);
 }

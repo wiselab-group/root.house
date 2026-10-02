@@ -15,12 +15,11 @@ import { LANDING_ANCHORS } from "./landing-anchors";
 
 /**
  * Top bar for the public landing: brand, three in-page links, log in and
- * the one primary action. Laid over the hero (absolute, not sticky) — the
- * page is a story to read, not an app to navigate. Below lg the links fold
- * into the app's own kind of menu: ☰ / ✕ (MobileHeaderToggle) expands the
- * header in place, which turns into the app's translucent glass bar while
- * open; any tap outside it closes it, as in AppHeader. "Start" stays
- * visible throughout.
+ * the one primary action. Stays on screen as in the app (sticky glass —
+ * the page starts below it, only scrolled content passes under it). Below lg the links
+ * fold into the app's own kind of menu: ☰ / ✕ (MobileHeaderToggle) expands
+ * the header in place and pushes the page down; any tap outside closes it,
+ * as in AppHeader. "Start" stays visible throughout.
  */
 export function MarketingHeader() {
   const t = useTranslations("landing.nav");
