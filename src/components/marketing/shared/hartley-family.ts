@@ -1,11 +1,11 @@
 /**
- * The one fictional family every landing illustration draws from, so the
- * hero, the memory box and the feature panels all tell the same story.
+ * The one fictional family every landing illustration draws from, so every
+ * section of the landing follows the same family.
  * Illustration only — not product data, never persisted. Names and years
  * live in messages (`landing.family.*`) — see use-demo-family.ts.
  */
 export type DemoPersonId =
-  "ivan" | "vera" | "paul" | "margaret" | "david" | "owen" | "lily";
+  "ivan" | "vera" | "paul" | "margaret" | "david" | "owen" | "lily" | "kid";
 
 export type DemoPerson = {
   id: DemoPersonId;
@@ -21,4 +21,5 @@ export const DEMO_PERSON_IDS: readonly DemoPersonId[] = [
   "david",
   "owen",
   "lily",
+  "kid",
 ];

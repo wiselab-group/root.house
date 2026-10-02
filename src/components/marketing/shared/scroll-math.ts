@@ -25,34 +25,11 @@ export function windowProgress(
   return clamp01((progress - start) / span);
 }
 
-/** The hero's first and last keywords hold still for a while at either end
- *  of the scroll, so the page neither starts nor ends mid-roll. */
-const KEYWORD_HOLD_START = 0.08;
-const KEYWORD_HOLD_END = 0.22;
-
-/** Fractional index of the keyword in focus: 0 = first, count - 1 = last. */
-export function keywordPosition(progress: number, count: number): number {
-  const rolling = windowProgress(
-    progress,
-    KEYWORD_HOLD_START,
-    1 - KEYWORD_HOLD_START - KEYWORD_HOLD_END,
-  );
-  return rolling * (count - 1);
-}
-
-/** `distance` = keyword index minus the focus position: negative words
- *  have rolled past (fade out fast), positive ones are still to come (the
- *  next one stays faintly visible). */
-export function keywordOpacity(distance: number): number {
-  if (distance <= 0) return clamp01(1 + distance * 1.6);
-  return clamp01(1 - distance * 0.8);
-}
-
-/** Memory box: fragments start travelling one after another rather than
- *  all at once, and every one has landed by FRAGMENTS_DONE_AT. */
-const FRAGMENTS_START_AT = 0.08;
-const FRAGMENTS_DONE_AT = 0.78;
-const FRAGMENT_SPAN = 0.4;
+/** Scattered fragments (the problem section) start travelling one after
+ *  another rather than all at once, and every one has arrived by DONE_AT. */
+const FRAGMENTS_START_AT = 0.06;
+const FRAGMENTS_DONE_AT = 0.7;
+const FRAGMENT_SPAN = 0.32;
 
 export function fragmentProgress(
   progress: number,
@@ -72,7 +49,39 @@ export function fragmentProgress(
   );
 }
 
-/** Connector lines draw in only once every card has landed. */
-export function connectorOpacity(progress: number): number {
-  return windowProgress(progress, FRAGMENTS_DONE_AT, 0.12);
+/** The gathered story card fades in once the last fragment is nearly in. */
+export function gatheredProgress(progress: number): number {
+  return smoothstep(windowProgress(progress, FRAGMENTS_DONE_AT - 0.06, 0.14));
+}
+
+/** First and last steps hold still for a while at either end of the
+ *  scroll, so a section neither starts nor ends mid-change. */
+const STEP_HOLD_START = 0.06;
+const STEP_HOLD_END = 0.16;
+
+/** Fractional index of the step in focus: 0 = first, count - 1 = last. */
+export function stepPosition(progress: number, count: number): number {
+  const moving = windowProgress(
+    progress,
+    STEP_HOLD_START,
+    1 - STEP_HOLD_START - STEP_HOLD_END,
+  );
+  return moving * (count - 1);
+}
+
+export type Camera = { x: number; y: number; scale: number };
+
+/** Camera between two neighbouring steps, eased so each step settles
+ *  before the next one starts moving. */
+export function cameraAt(cameras: readonly Camera[], position: number): Camera {
+  const last = cameras.length - 1;
+  const from = Math.min(Math.max(Math.floor(position), 0), last);
+  const to = Math.min(from + 1, last);
+  const t = smoothstep(position - from);
+  const mix = (a: number, b: number) => a + (b - a) * t;
+  return {
+    x: mix(cameras[from].x, cameras[to].x),
+    y: mix(cameras[from].y, cameras[to].y),
+    scale: mix(cameras[from].scale, cameras[to].scale),
+  };
 }

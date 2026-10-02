@@ -13,11 +13,14 @@ export function MiniPersonCard({
   name,
   years,
   active = false,
+  labelled = true,
   className,
 }: {
   name: string;
   years?: string;
   active?: boolean;
+  /** false = the frame alone, for when the name is already beside it. */
+  labelled?: boolean;
   className?: string;
 }) {
   const initials = name
@@ -40,10 +43,12 @@ export function MiniPersonCard({
           {initials}
         </div>
       </div>
-      <p className="mt-1.5 line-clamp-2 font-heading text-[clamp(0.625rem,0.45rem+0.75cqw,0.875rem)] leading-tight font-medium text-foreground">
-        {name}
-      </p>
-      {years && (
+      {labelled && (
+        <p className="mt-1.5 line-clamp-2 font-heading text-[clamp(0.625rem,0.45rem+0.75cqw,0.875rem)] leading-tight font-medium text-foreground">
+          {name}
+        </p>
+      )}
+      {labelled && years && (
         <p className="text-[clamp(0.5625rem,0.4rem+0.6cqw,0.75rem)] leading-tight text-muted-foreground">
           {years}
         </p>

@@ -870,66 +870,21 @@
     "editNamed": "Edit “{name}”"
   },
   "landing": {
-    "ctaTitle": "Someone in your family still remembers.",
-    "ctaBody": "Start the living story today — adding the first person takes a minute, and the rest of the family can join you.",
-    "ctaButton": "Start your family story →",
-    "pricingTitle": "Simple pricing, for the whole family.",
-    "free": "Free",
-    "archiveTier": "Family Archive",
-    "archiveTierDescription": "For the whole family.",
-    "perYear": "year",
-    "freeFeatures": "Family tree|People & relationships|Basic memories|Invite family",
-    "archiveFeatures": "Unlimited family members|Unlimited photos & stories|Full timeline|Collaboration & roles|Private family space|Search",
-    "getStarted": "Get started",
-    "logIn": "Log in",
-    "privacyTitle": "Your family's story stays your family's.",
-    "privateTitle": "Private by default",
-    "privateBody": "Every family archive is its own closed space. Nothing is public unless you publish it.",
-    "rolesTitle": "Roles that make sense",
-    "rolesBody": "Owners, editors, contributors and viewers — each gets exactly the access they need.",
-    "inviteTitle": "Invite-only",
-    "inviteBody": "Family joins by a personal invitation or a private link, never an open sign-up.",
-    "startEyebrow": "Ten minutes to begin",
-    "startTitle": "Start with one person.",
-    "startSubcopy": "You don't need the whole tree on day one. Grandparents remember the beginning, parents fill in the middle — you only have to start.",
-    "step1Title": "Add yourself",
-    "step1Body": "Your name and year of birth. That's the whole first step.",
-    "step2Title": "Add your parents",
-    "step2Body": "The tree starts to take shape the moment there's a second generation.",
-    "step3Title": "Keep one memory",
-    "step3Body": "A photo, a date, a sentence someone once told you.",
-    "step4Title": "Invite someone who remembers",
-    "step4Body": "They fill in what you don't know — the tree grows from both ends.",
     "metaTitle": "Root house — Create the living story of your family",
-    "metaDescription": "A private home for your family's people, photos and stories. Build the tree, keep the memories behind it, and invite the relatives who remember.",
-    "eyebrow": "A private family archive",
-    "heroLine1": "Create the living",
-    "heroLine2": "story of",
-    "heroLead": "The people, photos and stories that make your family yours — kept together in one private place, and passed on.",
+    "metaDescription": "Gather your family's story together — people, photos, memories, places and events in one living family archive.",
+    "brandStatement": "Create the living story of your family.",
+    "ctaButton": "Start your family story →",
     "howItWorks": "See how it works",
-    "scroll": "Scroll",
-    "heroFallback": "your family.",
-    "keywords": {
-      "letters": {
-        "text": "grandma's letters",
-        "note": "14 letters · 1952"
-      },
-      "photo": {
-        "text": "the first photo",
-        "note": "Photo · summer 1958"
-      },
-      "move": {
-        "text": "the move in 1956",
-        "note": "Riga → Tallinn · 1956"
-      },
-      "wedding": {
-        "text": "mom's wedding",
-        "note": "Wedding · 12 June 1986"
-      },
-      "family": {
-        "text": "your family",
-        "note": "5 people · 3 generations"
-      }
+    "soon": "Coming soon",
+    "demoNote": "The Hartleys are fictional — this is what a story looks like in Root house.",
+    "nav": {
+      "label": "Sections",
+      "how": "How it works",
+      "features": "Features",
+      "family": "For families",
+      "menu": "Menu",
+      "logIn": "Log in",
+      "start": "Start your story"
     },
     "family": {
       "ivan": {
@@ -959,77 +914,276 @@
       "lily": {
         "name": "Lily Lind",
         "years": "b. 1993"
+      },
+      "kid": {
+        "name": "Max",
+        "years": "b. 2019"
       }
     },
-    "fragments": {
-      "ivan": "Ivan, 1950",
-      "vera": "Grandma Vera — Riga, '52",
-      "paul": "Dear Paul, the lake froze early this year…",
-      "margaret": "Maggie, summer '58",
-      "david": "12 · VI · 1986 — registry office",
-      "owen": "Owen, 1990",
-      "lily": "Lily — first day of school"
+    "hero": {
+      "eyebrow": "Create the living story of your family",
+      "title": "A family's story shouldn't rest on one person's memory.",
+      "lead": "Gather it together — with the people, photos, voices, memories and places that made your family who it is.",
+      "visualLabel": "An example of the Hartley family story: three generations, a 1952 wedding photo, the story of how the grandparents met, a move from Riga to Tallinn, and what relatives added.",
+      "photoCaption": "Riga, May 1952",
+      "storyEyebrow": "Story",
+      "storyTitle": "How Grandpa met Grandma",
+      "storyText": "At a dance by the Daugava. He asked her three times before she said yes…",
+      "storyMeta": "Told by Mom",
+      "place": "Riga → Tallinn",
+      "placeYear": "1956",
+      "activity1": "Mom added a photo",
+      "activity2": "Uncle Paul fixed the year",
+      "activity3": "Lily tagged Grandma in a photo"
     },
-    "memoryProblem": "The photos are there. Who's in them — only grandma remembers.",
-    "memoryAnswer": "Root house gives every memory a person to belong to.",
-    "showcaseEyebrow": "Inside Root house",
-    "showcaseTitle": "A person is more than a name and two dates.",
-    "features": {
-      "tree": {
-        "title": "A family tree that grows with you",
-        "body": "Add people one at a time and the tree lays itself out — couples side by side, children under their parents, every branch where you'd expect it."
+    "problem": {
+      "title": "Everyone holds a piece of the story.",
+      "body": "Photos live on phones. Stories live in relatives' memories. Names hide in old documents. And the important details often survive only in conversation.",
+      "answer": "Root house gathers them into one living story.",
+      "sources": {
+        "chat": {
+          "label": "Family chat",
+          "text": "“Mom, who's this in the photo?”"
+        },
+        "phone": {
+          "label": "Phone",
+          "text": "2,418 photos"
+        },
+        "album": {
+          "label": "Old album",
+          "text": "Riga, 1952"
+        },
+        "document": {
+          "label": "Documents",
+          "text": "Marriage certificate"
+        },
+        "grandma": {
+          "label": "Grandma remembers",
+          "text": "“We met at a dance…”"
+        },
+        "uncle": {
+          "label": "Uncle's stories",
+          "text": "“Dad worked at the port”"
+        },
+        "notes": {
+          "label": "Notes",
+          "text": "Ask where great-grandma was born"
+        }
       },
-      "profile": {
-        "title": "A page for every person",
-        "body": "Where they were born and lived, what they did, the photos they're in and the stories people tell about them — all on one page."
+      "cardEyebrow": "One story",
+      "cardTitle": "The Hartley family",
+      "cardMeta": "8 people · 3 generations · 4 cities",
+      "cardKinds": "Photos · stories · voices · documents"
+    },
+    "together": {
+      "title": "Together you remember more.",
+      "lead": "Invite your relatives — each one adds what they remember. Everyone sees the same story, and the family feed shows who added what.",
+      "eventEyebrow": "Event",
+      "eventTitle": "Ivan and Vera's wedding",
+      "eventPlace": "Riga",
+      "eventYearWrong": "1951",
+      "eventYear": "1952",
+      "quote": "“Mom sewed the dress herself — from parachute silk.”",
+      "photoCaption": "Wedding photo",
+      "tagged": "Ivan, Vera",
+      "feedTitle": "Family feed",
+      "contributions": {
+        "margaret": {
+          "who": "Margaret · Mom",
+          "did": "added a story"
+        },
+        "paul": {
+          "who": "Paul · Uncle",
+          "did": "fixed the year: 1951 → 1952"
+        },
+        "lily": {
+          "who": "Lily · Sister",
+          "did": "added a photo"
+        },
+        "owen": {
+          "who": "You",
+          "did": "tagged people in the photo"
+        }
       },
-      "photos": {
-        "title": "Photos that know who's in them",
-        "body": "Tag the people in an old photo and it appears on each of their pages. Hover a face to see who it is."
+      "closing1": "One person remembers the photo.",
+      "closing2": "Another — the name.",
+      "closing3": "A third — the story.",
+      "closing4": "Together you remember the whole picture."
+    },
+    "voice": {
+      "title": "Just tell it.",
+      "lead": "Memories don't have to be perfect.",
+      "recorderLabel": "Recording",
+      "recorderWho": "You, about Grandpa Ivan",
+      "duration": "0:42",
+      "transcript": "“This is my grandpa Ivan. He was born somewhere near Pskov, in '28 I think. After the war he worked at the port in Riga — that's where he met Grandma Vera…”",
+      "personBorn": "~1928 · Pskov region",
+      "familyLabel": "Family",
+      "spouse": "Vera — wife",
+      "children": "Paul, Margaret — children",
+      "storyLabel": "Story",
+      "storyTitle": "The Riga port, after the war",
+      "missingTitle": "A few details are still missing",
+      "q1": "Where exactly was Ivan born?",
+      "q2": "What were his parents' names?",
+      "q3": "What year did he move to Riga?",
+      "addInfo": "Add details",
+      "closing": "Say it the way you remember it. Root house helps turn a memory into a story.",
+      "nowReal": "You can already record a voice and keep it with a person or a story.",
+      "soonNote": "Turning a recording into dates, places and people is in the works."
+    },
+    "map": {
+      "title": "See where your story has been.",
+      "lead": "Every generation leaves a trace. Follow your family's path across generations.",
+      "yearLabel": "Year on the map",
+      "label": "Map: the Hartley family's path from a village near Pskov through Riga and Tallinn to Helsinki, 1928–2016.",
+      "realNote": "Places from your family's life already gather on a shared map. The year-by-year path is in the works.",
+      "cities": {
+        "pskov": "Pskov",
+        "riga": "Riga",
+        "tallinn": "Tallinn",
+        "helsinki": "Helsinki"
       },
-      "lifeline": {
-        "title": "A life on one line",
-        "body": "Births, moves, weddings and everything in between, laid out on a single line from the first year to the last."
+      "stops": {
+        "s1928": "Ivan is born in a village near Pskov",
+        "s1931": "Vera is born in Riga",
+        "s1950": "Ivan comes to work at the Riga port",
+        "s1956": "The family moves to Tallinn",
+        "s1989": "You are born in Tallinn",
+        "s2016": "Lily moves to Helsinki"
       },
-      "stories": {
-        "title": "Stories from the ones who remember",
-        "body": "Write down what grandma told you about the winter of 1947 and link it to everyone who was there."
+      "before": "Nothing here yet — move the year"
+    },
+    "growth": {
+      "title": "The story starts to come together.",
+      "lead": "You don't start with a giant empty tree. You start with one person — everything else grows around them.",
+      "steps": {
+        "you": {
+          "title": "You",
+          "body": "One person is already a beginning."
+        },
+        "parents": {
+          "title": "Parents",
+          "body": "A second generation — and the first connections."
+        },
+        "grandparents": {
+          "title": "Grandparents",
+          "body": "The tree reaches into the past."
+        },
+        "relatives": {
+          "title": "Sister and uncle",
+          "body": "Branches spread sideways."
+        },
+        "children": {
+          "title": "Children",
+          "body": "And carry on forward."
+        },
+        "memories": {
+          "title": "Stories, photos, places, events",
+          "body": "People gather what's remembered about them. That's how a family takes shape."
+        }
       },
-      "kinship": {
-        "title": "How exactly are we related?",
-        "body": "Pick any two people and see the path between them — and what to call each other."
+      "badges": {
+        "vera": "3 stories",
+        "ivan": "Photo · 1952",
+        "david": "Wedding · 1986",
+        "paul": "Tallinn",
+        "lily": "Helsinki",
+        "kid": "Voice · 0:42"
       }
     },
-    "panel": {
-      "mother": "mother",
-      "herMother": "her mother",
-      "herSon": "her son",
-      "uncle": "Paul is your uncle — your mother's brother",
-      "e1931": "Born in Riga",
-      "e1952": "Married Ivan",
-      "e1956": "Moved to Tallinn",
-      "e1957": "Margaret is born",
-      "e1986": "Margaret's wedding",
-      "e2014": "Died in Tallinn",
-      "moveStory": "Ivan found work at the port; Vera followed with the children's things in two suitcases.",
-      "lifelineStats": "6 events · 3 places",
-      "lakeSummer": "Summer at the lake · 1961",
-      "tagPeople": "Tag people",
-      "back": "Back",
-      "edit": "Edit",
-      "share": "Share",
-      "veraRole": "Teacher · Mother of two",
-      "riga": "Riga, Latvia",
-      "tabOverview": "Overview",
-      "tabLifeline": "Timeline",
-      "tabPhotos": "Photos",
-      "tabStories": "Stories",
-      "story": "Story",
-      "storyTitle": "The winter of 1947",
-      "storyMeta": "Told by Margaret · 3 min read",
-      "storyBody": "Mum always said the lake froze so hard that winter that the whole village walked across it to church. She was sixteen, and it was the first time she saw my father — on the ice, carrying someone else's skates."
+    "ask": {
+      "title": "Some answers aren't there yet.",
+      "lead": "A gap in the story isn't a dead end. Root house shows what's missing and helps you ask the people who might remember.",
+      "personName": "Anna Ozolina",
+      "personRole": "Grandma Vera's mother",
+      "born": "Born",
+      "place": "Place",
+      "father": "Father",
+      "unknown": "?",
+      "askButton": "Ask the family",
+      "to": "To Margaret",
+      "question": "Mom, do you remember where great-grandma Anna was born? Somewhere near Riga, I think?",
+      "answerFrom": "Margaret",
+      "answer": "In Cēsis, in 1907. Grandma used to say their house stood right by the river.",
+      "bornValue": "1907",
+      "placeValue": "Cēsis",
+      "added": "Added to the story"
     },
-    "intro": "Great-grandfather|Grandmother|Father|Mother|You"
+    "archive": {
+      "title": "Keep the whole story.",
+      "lead": "Everything your family gathers is kept together — people and relationships, photos, stories, voices, places and events.",
+      "sheetEyebrow": "Inventory No. 1",
+      "sheetTitle": "The Hartley family archive",
+      "rows": {
+        "people": {
+          "count": "48",
+          "label": "people"
+        },
+        "photos": {
+          "count": "132",
+          "label": "photos"
+        },
+        "stories": {
+          "count": "27",
+          "label": "stories"
+        },
+        "places": {
+          "count": "16",
+          "label": "places"
+        },
+        "events": {
+          "count": "84",
+          "label": "events"
+        },
+        "voices": {
+          "count": "9",
+          "label": "voice recordings"
+        }
+      },
+      "exportTitle": "Export the whole archive",
+      "exportBody": "Original photos, stories, voice recordings, people and relationships — in one archive that stays with you.",
+      "ownership": "It's your story. It should stay yours."
+    },
+    "privacy": {
+      "title": "Your family's story belongs to your family.",
+      "lead": "You decide who takes part in your family's story.",
+      "facts": {
+        "private": {
+          "title": "Private by default",
+          "body": "Every family archive is its own closed space. Nothing becomes public unless you choose it."
+        },
+        "roles": {
+          "title": "Clear roles",
+          "body": "Owner, editor, contributor, viewer — everyone gets exactly the access they need."
+        },
+        "invite": {
+          "title": "Invitation only",
+          "body": "Relatives join by personal invitation. There's no open sign-up into an archive."
+        },
+        "share": {
+          "title": "Share on your terms",
+          "body": "Keep a person, photo or story to yourself, or show it through a separate link — with a password if you like."
+        }
+      },
+      "membersTitle": "Members",
+      "space": "Your family's private space"
+    },
+    "final": {
+      "title": "Start with one story.",
+      "line1": "Add one person.",
+      "line2": "Tell one story.",
+      "line3": "Then your family starts remembering together.",
+      "haveArchive": "Already have an archive?"
+    },
+    "pricingTitle": "Simple pricing, for the whole family.",
+    "free": "Free",
+    "archiveTier": "Family Archive",
+    "archiveTierDescription": "For the whole family.",
+    "perYear": "year",
+    "freeFeatures": "Family tree|People & relationships|Basic memories|Invite family",
+    "archiveFeatures": "Unlimited family members|Unlimited photos & stories|Full timeline|Collaboration & roles|Private family space|Search",
+    "getStarted": "Get started"
   },
   "editPanel": {
     "title": "Editing",

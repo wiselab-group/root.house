@@ -1,161 +1,147 @@
 /*
  * Landing-only motion (src/components/marketing/). Kept out of globals.css:
- * none of it applies inside the app. transform/opacity only, named easing
- * tokens only (CLAUDE.md § Animation rules).
+ * none of it applies inside the app. transform/opacity only (plus SVG
+ * stroke-dashoffset for lines drawing themselves), named easing tokens only
+ * (CLAUDE.md § Animation rules).
  */
 
 /* ---------------------------------------------------------------------
- * First-visit intro (intro-preloader.tsx + intro-script.ts).
- * intro-script.ts sets html[data-intro]:
- *   "play"    — first visit, intro running (overlay shown, scroll locked)
- *   "ended"   — intro finished on its own
- *   "skipped" — visitor clicked / pressed Esc
- * No attribute (return visit, reduced motion, no JS) = no intro at all and
- * a static hero.
+ * Reveal on first view (shared/reveal.tsx sets data-inview). Hidden only
+ * when scripting runs, so without JS the page is simply static. --d is the
+ * per-element delay — how sequences (who added what, the question and the
+ * answer) play in order without a single timer.
  * ------------------------------------------------------------------- */
-.intro-overlay {
-  --intro-step: 260ms;
-  --intro-lift-at: 1500ms;
-  --intro-lift: 700ms;
-  display: none;
+.reveal [data-reveal],
+.reveal [data-reveal-out] {
+  transition:
+    opacity var(--duration-cinematic) var(--ease-reveal),
+    transform var(--duration-cinematic) var(--ease-reveal);
+  transition-delay: var(--d, 0ms);
 }
-html[data-intro="play"] {
-  overflow: hidden;
-}
-html[data-intro="play"] .intro-overlay {
-  display: block;
+@media (scripting: enabled) {
+  .reveal:not([data-inview="true"]) [data-reveal] {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  .reveal:not([data-inview="true"]) [data-reveal="scale"] {
+    transform: scale(0.94);
+  }
+  .reveal:not([data-inview="true"]) [data-reveal="drop"] {
+    transform: translateY(-24px) rotate(-6deg);
+  }
+  /* The opposite: visible until its moment, then gone (a "?" making way
+     for the answer). */
+  .reveal[data-inview="true"] [data-reveal-out] {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
 }
 
-.intro-panel {
-  animation: intro-lift var(--intro-lift) var(--ease-transition) forwards;
-  animation-delay: var(--intro-lift-at);
+/* Lines that draw themselves: give the path pathLength="1". */
+.reveal .draw-line {
+  stroke-dasharray: 1;
+  transition: stroke-dashoffset 1400ms var(--ease-transition);
+  transition-delay: var(--d, 0ms);
 }
-/* The curved lower edge flattens as the panel lifts away. */
-.intro-curve {
-  transform-origin: top;
-  animation: intro-flatten var(--intro-lift) var(--ease-transition) forwards;
-  animation-delay: var(--intro-lift-at);
+@media (scripting: enabled) {
+  .reveal:not([data-inview="true"]) .draw-line {
+    stroke-dashoffset: 1;
+  }
 }
-.intro-word {
+
+/* ---------------------------------------------------------------------
+ * Hero: who's adding what right now — three chips take turns in one spot.
+ * Without JS / with reduced motion only the first one shows, still.
+ * ------------------------------------------------------------------- */
+.hero-activity:not(:first-child) {
   opacity: 0;
-  animation: intro-word var(--intro-step) var(--ease-reveal) both;
-  animation-delay: calc(var(--i) * var(--intro-step));
 }
-/* The last word ("You") stays until the panel lifts. */
-.intro-word:last-child {
-  animation-name: intro-word-hold;
+.reveal[data-inview="true"] .hero-activity {
+  animation: hero-activity 10.5s var(--ease-transition) var(--d, 0ms) infinite
+    both;
 }
-
-@keyframes intro-word {
+@keyframes hero-activity {
   0% {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(8px);
   }
-  30%,
-  70% {
+  4%,
+  29% {
     opacity: 1;
     transform: translateY(0);
   }
+  33%,
   100% {
     opacity: 0;
-    transform: translateY(-12px);
+    transform: translateY(-8px);
   }
 }
-@keyframes intro-word-hold {
+
+/* The recorder's waveform breathing while "recording". */
+.reveal[data-inview="true"] .wave-bar {
+  animation: wave-bar 1.6s var(--ease-transition) var(--d, 0ms) infinite
+    alternate both;
+}
+@keyframes wave-bar {
   from {
-    opacity: 0;
-    transform: translateY(12px);
+    transform: scaleY(0.35);
   }
   to {
-    opacity: 1;
-    transform: translateY(0);
+    transform: scaleY(1);
   }
 }
-@keyframes intro-lift {
-  to {
-    transform: translateY(-100%);
+
+/* A control drawing the eye once, at its moment in a sequence. */
+.reveal[data-inview="true"] .nudge {
+  animation: nudge 900ms var(--ease-spring) var(--d, 0ms) both;
+}
+@keyframes nudge {
+  50% {
+    transform: scale(1.06);
   }
 }
-@keyframes intro-flatten {
-  to {
-    transform: scaleY(0);
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal [data-reveal],
+  .reveal [data-reveal-out],
+  .reveal .draw-line {
+    transition-delay: 0ms !important;
+  }
+  .hero-activity,
+  .wave-bar,
+  .nudge {
+    animation: none !important;
   }
 }
 
 /* ---------------------------------------------------------------------
- * Hero entrance — plays only when the intro played (first visit). Waits
- * for the lifting panel while it runs; a skip drops the wait so the hero
- * rises immediately. Return visits: the class does nothing.
+ * Scattered fragments → one story (problem/fragments-section.tsx). Each
+ * fragment gets its own eased progress --t (0 = scattered, 1 = gathered in
+ * the middle) from JS; the scattered positions are per-breakpoint custom
+ * properties in cqw of the stage, so one --t drives both layouts without
+ * measuring anything. Desktop stage is 100 × 62.5 cqw, mobile 100 × 120.
  * ------------------------------------------------------------------- */
-html[data-intro="play"],
-html[data-intro="ended"] {
-  --intro-offset: 1650ms;
-}
-html[data-intro] .intro-rise {
-  animation: intro-rise 900ms var(--ease-reveal) backwards;
-  animation-delay: calc(var(--intro-offset, 0ms) + var(--rise-delay, 0ms));
-}
-@keyframes intro-rise {
-  from {
-    opacity: 0;
-    transform: translateY(28px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ---------------------------------------------------------------------
- * Memory box → tree (memory-box-section.tsx). Each fragment gets its own
- * eased progress --t (0 = scattered, 1 = in its tree slot) from JS; the
- * from/to coordinates are per-breakpoint custom properties in cqw of the
- * stage, so one --t drives both layouts without measuring anything.
- * ------------------------------------------------------------------- */
-.memory-stage {
+.gather-stage {
   container-type: inline-size;
 }
-.memory-fragment {
+.gather-fragment {
   --fx: var(--fx-m);
   --fy: var(--fy-m);
   --fr: var(--fr-m);
-  --tx: var(--tx-m);
-  --ty: var(--ty-m);
-  --w: 24cqw;
-  width: var(--w);
-  translate: calc((var(--fx) + (var(--tx) - var(--fx)) * var(--t)) * 1cqw - 50%)
-    calc((var(--fy) + (var(--ty) - var(--fy)) * var(--t)) * 1cqw);
+  --ty: 60;
+  width: 40cqw;
+  translate: calc((var(--fx) + (50 - var(--fx)) * var(--t)) * 1cqw - 50%)
+    calc((var(--fy) + (var(--ty) - var(--fy)) * var(--t)) * 1cqw - 50%);
   rotate: calc(var(--fr) * (1 - var(--t)) * 1deg);
+  scale: calc(1 - 0.5 * var(--t));
+  opacity: calc(1 - clamp(0, (var(--t) - 0.55) / 0.4, 1));
 }
 @media (min-width: 640px) {
-  .memory-fragment {
+  .gather-fragment {
     --fx: var(--fx-d);
     --fy: var(--fy-d);
     --fr: var(--fr-d);
-    --tx: var(--tx-d);
-    --ty: var(--ty-d);
-    --w: 11cqw;
-  }
-}
-/* Paper face fades out and the person card fades in over the last part
-   of each fragment's own travel. */
-.memory-fragment-face {
-  opacity: calc(1 - clamp(0, (var(--t) - 0.55) / 0.4, 1));
-}
-.memory-card-face {
-  opacity: clamp(0, (var(--t) - 0.55) / 0.4, 1);
-}
-
-/* Hero "Scroll" hint: a short bright segment runs down its track, over and
-   over. The global reduced-motion rule stops it after one pass. */
-.scroll-hint-runner {
-  animation: scroll-hint-run 1800ms var(--ease-transition) infinite;
-}
-@keyframes scroll-hint-run {
-  from {
-    transform: translateY(-100%);
-  }
-  to {
-    transform: translateY(200%);
+    --ty: 31.25;
+    width: 21cqw;
   }
 }
