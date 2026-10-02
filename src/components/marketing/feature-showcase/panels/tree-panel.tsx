@@ -9,13 +9,14 @@ import {
 import { FRAME_SIZE } from "@/components/tree/card-dimensions";
 import { PanelFrame } from "./panel-frame";
 import { TREE_NODE_HEIGHT, TREE_NODE_WIDTH, TreeCard } from "./tree-card";
+import { TreePopover } from "./tree-popover";
 
 /**
  * Card centres and rows in the tree's own spacing (domain/tree/layout/
  * subtree.ts): partners 208px apart centre to centre (card slot 176 +
  * SPOUSE_GAP 32), siblings 240 (+ SIBLING_GAP 64), generations 240 apart.
  */
-const ROW_TOP = [40, 280, 520];
+const ROW_TOP = [24, 264, 504];
 const PEOPLE: readonly { id: DemoPersonId; x: number; row: number }[] = [
   { id: "ivan", x: 144, row: 0 },
   { id: "vera", x: 352, row: 0 },
@@ -30,7 +31,15 @@ const PHOTOS: Partial<Record<DemoPersonId, string>> = {
   vera: LANDING_PHOTOS.veraPortrait.src,
 };
 const WIDTH = 720;
-const HEIGHT = 726;
+/** Vera's card, clicked open: her popover sits beside it (side="right",
+ *  sideOffset 12), held inside the canvas as the app's `sticky` holds it
+ *  inside the visible tree. */
+const OPEN: DemoPersonId = "vera";
+const POPOVER_LEFT = 352 + TREE_NODE_WIDTH / 2 + 12;
+const POPOVER_TOP = 16;
+/** 4:3, so it fills the panel and reads larger: a tree viewport, the
+ *  grandchildren running off its bottom edge as they would on screen. */
+const HEIGHT = 540;
 
 /** Frame-centre height, the partnership line's y (CONNECTOR_CENTER_Y). */
 const CENTER_Y = FRAME_SIZE / 2;
@@ -72,7 +81,8 @@ const EDGES = [
 
 /** The family tree screen in miniature — its card, its spacing, its
  *  rounded orthogonal connectors in --branch at 1.5px — at real size,
- *  scaled to the panel. */
+ *  scaled to the panel, with one card clicked open: its frame terracotta
+ *  (CompactCardBody's isOpen) and its popover beside it. */
 export function TreePanel() {
   const family = useDemoFamily();
   return (
@@ -102,9 +112,16 @@ export function TreePanel() {
               name={family[id].name}
               years={family[id].years}
               photo={PHOTOS[id]}
+              active={id === OPEN}
             />
           </div>
         ))}
+        <div
+          className="absolute"
+          style={{ left: POPOVER_LEFT, top: POPOVER_TOP }}
+        >
+          <TreePopover name={family[OPEN].name} years={family[OPEN].years} />
+        </div>
       </ScaledCanvas>
     </PanelFrame>
   );

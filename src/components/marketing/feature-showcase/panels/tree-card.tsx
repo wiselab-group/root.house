@@ -22,8 +22,8 @@ export function TreeCard({
   name: string;
   years: string;
   photo?: string;
-  /** On a traced relationship path — the whole frame turns terracotta,
-   *  as CompactCardBody's isTraced. */
+  /** Clicked open or on a traced path — the whole frame turns terracotta,
+   *  as CompactCardBody's isOpen / isTraced. */
   active?: boolean;
 }) {
   const frame = active ? "var(--primary)" : "var(--branch)";
