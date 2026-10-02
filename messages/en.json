@@ -961,10 +961,6 @@
       }
     },
     "panel": {
-      "mother": "mother",
-      "herMother": "her mother",
-      "herSon": "her son",
-      "uncle": "Paul is your uncle, your mother's brother",
       "e1956": "Moved to Tallinn",
       "moveStory": "Ivan found work at the port; Vera followed with the children's things in two suitcases.",
       "riga": "Riga",

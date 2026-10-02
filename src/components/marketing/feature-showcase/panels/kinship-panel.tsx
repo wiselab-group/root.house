@@ -1,40 +1,73 @@
-import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
+import type { DemoPersonId } from "@/components/marketing/shared/hartley-family";
+import { LANDING_PHOTOS } from "@/components/marketing/shared/landing-photos";
 import { useDemoFamily } from "@/components/marketing/shared/use-demo-family";
-import { MiniPersonCard } from "@/components/marketing/shared/mini-person-card";
-import { type DemoPersonId } from "@/components/marketing/shared/hartley-family";
-import { GlassPill, PanelFrame } from "./panel-frame";
+import { ScaledCanvas } from "@/components/marketing/shared/scaled-canvas";
+import { PanelFrame } from "./panel-frame";
+import { demoKinship } from "./kinship-page/kinship-demo";
+import {
+  KinshipTracePanel,
+  type TracePerson,
+} from "./kinship-page/kinship-trace-panel";
+import { KinshipTree } from "./kinship-page/kinship-tree";
+import { KinshipDock } from "./kinship-page/kinship-dock";
 
-/** You → your mother → her parents → her brother, left to right. */
-const PATH: readonly DemoPersonId[] = ["owen", "margaret", "vera", "paul"];
-const STEP_LABELS = ["mother", "herMother", "herSon"] as const;
+/** Narrow enough that, scaled to the panel, the text stays readable. */
+const WIDTH = 840;
+const HEIGHT = 630;
+/** The tree beside the panel, zoomed out as when a trace frames its whole
+ *  path. */
+const TREE_ZOOM = 0.74;
 
-/** Relationship trace between two people (the tree's «Родство» panel):
- *  the path drawn in terracotta through everyone in between, ends
- *  selected, and the answer in words. */
+const PHOTOS: Partial<Record<DemoPersonId, string>> = {
+  ivan: LANDING_PHOTOS.ivanPortrait.src,
+  vera: LANDING_PHOTOS.veraPortrait.src,
+};
+
+/**
+ * The family tree with its «Родство» panel open, as the app draws it: you
+ * and your uncle picked, the answer the app's own Relationship Trace gives
+ * («Племянник и дядя»), the path through your mother and grandfather, the
+ * same path marching in terracotta on the tree beside it, and the tool
+ * dock carrying the answer.
+ */
 export function KinshipPanel() {
-  const t = useTranslations("landing");
+  const locale = useLocale();
   const family = useDemoFamily();
+  const { summary, stops } = demoKinship("owen", "paul", locale);
+  const personOf = (id: string): TracePerson => {
+    const person = family[id as DemoPersonId];
+    return {
+      name: person.name,
+      initials: person.name
+        .split(" ")
+        .map((part) => part[0])
+        .join("")
+        .slice(0, 2),
+      photo: PHOTOS[id as DemoPersonId],
+    };
+  };
   return (
-    <PanelFrame className="flex flex-col items-center justify-center gap-[10%] bg-tree-canvas">
-      <div className="relative flex w-full items-start justify-between">
-        <div className="absolute inset-x-[12%] top-[31%] h-[3px] rounded-full bg-primary" />
-        {PATH.map((id, index) => (
-          <div key={id} className="relative w-[20%]">
-            <MiniPersonCard
-              {...family[id]}
-              active={index === 0 || index === PATH.length - 1}
-            />
-            {index < STEP_LABELS.length && (
-              <span className="absolute top-[12%] left-[116%] -translate-x-1/2 rounded-full bg-tree-canvas px-1 text-[clamp(0.5625rem,0.4rem+0.8cqw,0.75rem)] whitespace-nowrap text-primary">
-                {t(`panel.${STEP_LABELS[index]}`)}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-      <GlassPill className="text-[clamp(0.75rem,0.5rem+1.3cqw,1.0625rem)]">
-        {t("panel.uncle")}
-      </GlassPill>
+    <PanelFrame className="bg-tree-canvas p-0">
+      <ScaledCanvas width={WIDTH} height={HEIGHT}>
+        <div
+          className="absolute top-8 right-4 origin-top-right"
+          style={{ scale: TREE_ZOOM }}
+        >
+          <KinshipTree path={stops.map((s) => s.personId as DemoPersonId)} />
+        </div>
+        <div className="absolute right-0 bottom-4 left-87 flex justify-center">
+          <KinshipDock headline={summary.headline} />
+        </div>
+        <KinshipTracePanel
+          a={personOf("owen")}
+          b={personOf("paul")}
+          headline={summary.headline}
+          roles={summary.roles}
+          stops={stops}
+          personOf={personOf}
+        />
+      </ScaledCanvas>
     </PanelFrame>
   );
 }

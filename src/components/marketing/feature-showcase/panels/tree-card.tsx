@@ -10,18 +10,23 @@ export const TREE_NODE_HEIGHT = 166;
  * the --branch matte frame with a 1.5px outline round a rounded-square
  * photo (or initials), the serif name and the years below. A copy, not
  * the component itself — that one is typed against XYFlow node data, and
- * @xyflow/react stays inside components/tree (CLAUDE.md § Forbidden). At
- * rest, like every card on a tree that isn't being looked at.
+ * @xyflow/react stays inside components/tree (CLAUDE.md § Forbidden).
+ * At rest unless `active`.
  */
 export function TreeCard({
   name,
   years,
   photo,
+  active = false,
 }: {
   name: string;
   years: string;
   photo?: string;
+  /** On a traced relationship path — the whole frame turns terracotta,
+   *  as CompactCardBody's isTraced. */
+  active?: boolean;
 }) {
+  const frame = active ? "var(--primary)" : "var(--branch)";
   const initials = name
     .split(" ")
     .map((part) => part[0])
@@ -35,8 +40,8 @@ export function TreeCard({
       <div
         className="relative shrink-0 rounded-4xl border p-1"
         style={{
-          backgroundColor: "var(--branch)",
-          borderColor: "var(--branch)",
+          backgroundColor: frame,
+          borderColor: frame,
           borderWidth: 1.5,
           width: FRAME_SIZE,
           height: FRAME_SIZE,
