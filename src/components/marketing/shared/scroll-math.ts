@@ -23,11 +23,12 @@ export function windowProgress(
   return clamp01((progress - start) / span);
 }
 
-/** Scattered fragments start travelling one after another, after a moment
- *  of being seen apart, and every one has arrived by FRAGMENTS_DONE_AT. */
-const FRAGMENTS_START_AT = 0.2;
-const FRAGMENTS_DONE_AT = 0.78;
-const FRAGMENT_SPAN = 0.34;
+/** Scattered fragments start travelling one after another almost as soon
+ *  as the screen pins — a long still stretch at the start read as the
+ *  scroll lagging — and every one has arrived by FRAGMENTS_DONE_AT. */
+const FRAGMENTS_START_AT = 0.04;
+const FRAGMENTS_DONE_AT = 0.72;
+const FRAGMENT_SPAN = 0.36;
 
 export function fragmentProgress(
   progress: number,
@@ -48,7 +49,7 @@ export function fragmentProgress(
 }
 
 /** The gathered story card (and the answer) come in as the last
- *  fragments arrive. */
+ *  fragments arrive, leaving only a short hold before the page moves on. */
 export function gatheredProgress(progress: number): number {
-  return smoothstep(windowProgress(progress, FRAGMENTS_DONE_AT - 0.08, 0.18));
+  return smoothstep(windowProgress(progress, FRAGMENTS_DONE_AT - 0.1, 0.18));
 }

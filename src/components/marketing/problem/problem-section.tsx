@@ -15,8 +15,8 @@ import { GatheredStoryCard } from "./gathered-story-card";
 
 /**
  * 02 — Why do I need it? The family's story lives in phones, chats,
- * albums and people's memories. The screen holds still for about two
- * viewport heights of scrolling (a tall wrapper with a sticky viewport),
+ * albums and people's memories. The screen holds still for under one
+ * viewport height of scrolling (a tall wrapper with a sticky viewport),
  * and over exactly that scroll the pieces gather into one family story —
  * scrolling back scatters them again — while the caption turns from the
  * problem to the answer. Reduced motion: no tall wrapper, the pieces stay
@@ -36,7 +36,7 @@ export function ProblemSection() {
       aria-labelledby="problem-title"
       className={cn(
         "relative",
-        prefersReducedMotion ? "py-section" : "h-[260svh]",
+        prefersReducedMotion ? "py-section" : "h-[190svh]",
       )}
     >
       <div

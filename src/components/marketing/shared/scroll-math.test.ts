@@ -30,8 +30,8 @@ describe("clamp01 / smoothstep / windowProgress", () => {
 describe("fragmentProgress / gatheredProgress", () => {
   it("keeps every fragment scattered at first and gathered at the end", () => {
     for (let i = 0; i < 7; i++) {
-      expect(fragmentProgress(0.1, i, 7)).toBe(0);
-      expect(fragmentProgress(0.8, i, 7)).toBe(1);
+      expect(fragmentProgress(0.04, i, 7)).toBe(0);
+      expect(fragmentProgress(0.72, i, 7)).toBe(1);
     }
   });
 

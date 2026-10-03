@@ -17,17 +17,23 @@ export function useScrollProgress(
   const frameRef = useRef<number | null>(null);
 
   useEffect(() => {
-    function measure() {
-      const wrapper = wrapperRef.current;
-      if (!wrapper) return;
-      const rect = wrapper.getBoundingClientRect();
-      // The sticky viewport pins below the landing's header, not at 0.
-      const top =
+    // The sticky viewport pins below the landing's header, not at 0. Read
+    // on mount and resize only — getComputedStyle on every scroll frame
+    // forced a style recalc and made the scroll stutter.
+    let top = 0;
+    function readHeaderHeight() {
+      top =
         parseFloat(
           getComputedStyle(document.documentElement).getPropertyValue(
             "--marketing-header-h",
           ),
         ) || 0;
+    }
+
+    function measure() {
+      const wrapper = wrapperRef.current;
+      if (!wrapper) return;
+      const rect = wrapper.getBoundingClientRect();
       const viewportHeight = window.innerHeight - top;
       const scrollableDistance = rect.height - viewportHeight;
       if (scrollableDistance <= 0) {
@@ -46,12 +52,18 @@ export function useScrollProgress(
       });
     }
 
+    function onResize() {
+      readHeaderHeight();
+      onScroll();
+    }
+
+    readHeaderHeight();
     measure();
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+    window.addEventListener("resize", onResize);
     return () => {
       window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
+      window.removeEventListener("resize", onResize);
       if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     };
   }, [wrapperRef]);
