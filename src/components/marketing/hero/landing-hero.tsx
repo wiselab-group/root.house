@@ -5,9 +5,9 @@ import { HeroYears } from "./hero-years";
 /**
  * 01 — What is it, and what's in it for me? The brand's promise as the
  * headline over a hundred years of one (fictional) family: the era's photo
- * behind it and the year as a small date under it, «1952 · Свадьба в
- * Риге». The copy stays the biggest thing on screen; the years are the
- * backdrop that says "generations", not a second headline.
+ * behind it, the year beside it — large but thin, under the headline's
+ * weight — with the year's event, and the decades along a range at the
+ * foot. The years say "generations"; the headline stays what's read first.
  */
 export function LandingHero() {
   const t = useTranslations("landing");

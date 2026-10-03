@@ -186,12 +186,9 @@
 /* ---------------------------------------------------------------------
  * Hero: a hundred years of one family (hero/hero-years.tsx). The era's
  * photo darkened to sepia, crossfading and settling from a slight zoom;
- * the scrim keeps the copy and the date line readable; the year sits in a
- * dry sand tone; the range input is a 2px line filled up to --p.
+ * the scrim keeps the copy and the year readable; the year is large but
+ * hairline-thin; the range is native, in the action colour.
  * ------------------------------------------------------------------- */
-.hero-years {
-  --hero-sand: oklch(0.83 0.05 82);
-}
 .hero-years-photo {
   filter: sepia(0.45) brightness(0.42);
   opacity: 0;
@@ -218,8 +215,12 @@
       transparent 45%
     );
 }
-.hero-years-year {
-  color: var(--hero-sand);
+.hero-years-mark {
+  font-family: var(--font-sans);
+  font-size: clamp(3.5rem, 1.2rem + 7vw, 7.25rem);
+  font-weight: 200;
+  line-height: 0.85;
+  letter-spacing: -0.04em;
 }
 .hero-years-event {
   animation: hero-years-event 600ms var(--ease-reveal);
@@ -231,12 +232,10 @@
   }
 }
 .hero-years-range {
-  --track: color-mix(in oklch, var(--foreground) 18%, transparent);
-  appearance: none;
   width: 100%;
-  height: 18px;
+  height: 28px;
   margin: 0;
-  background: transparent;
+  accent-color: var(--primary);
   cursor: ew-resize;
 }
 .hero-years-range:focus-visible {
@@ -244,47 +243,10 @@
   outline-offset: 4px;
   border-radius: 4px;
 }
-.hero-years-range::-webkit-slider-runnable-track {
-  height: 2px;
-  border-radius: 2px;
-  background: linear-gradient(
-    90deg,
-    var(--hero-sand) var(--p, 0%),
-    var(--track) var(--p, 0%)
-  );
-}
-.hero-years-range::-moz-range-track {
-  height: 2px;
-  border-radius: 2px;
-  background: linear-gradient(
-    90deg,
-    var(--hero-sand) var(--p, 0%),
-    var(--track) var(--p, 0%)
-  );
-}
-.hero-years-range::-webkit-slider-thumb {
-  appearance: none;
-  width: 12px;
-  height: 12px;
-  margin-top: -5px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--hero-sand);
-  transition: transform var(--duration-slow) var(--ease-reveal);
-}
-.hero-years-range::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--hero-sand);
-  transition: transform var(--duration-slow) var(--ease-reveal);
-}
-.hero-years-range:hover::-webkit-slider-thumb {
-  transform: scale(1.4);
-}
-.hero-years-range:hover::-moz-range-thumb {
-  transform: scale(1.4);
+/* Under the thumb's centre: a native thumb (~16px) travels inset by half
+   its width at each end. */
+.hero-years-tick {
+  left: calc(8px + var(--p) * (100% - 16px));
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-years-photo,

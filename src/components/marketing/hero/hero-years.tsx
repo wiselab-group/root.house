@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { usePageVisible } from "@/hooks/use-page-visible";
 import { HeroPhotos } from "./hero-photos";
-import { HeroDateline } from "./hero-dateline";
+import { HeroYearMark } from "./hero-year-mark";
+import { HeroScrub } from "./hero-scrub";
 import {
   REST_YEAR,
   YEAR_FROM,
@@ -17,7 +18,7 @@ const RESUME_AFTER_MS = 5_000;
 
 /**
  * The hero as a hundred years of one family: the era's photo behind the
- * copy and the year as a date under it, travelling 1928 → 2026 on its own
+ * copy, the year and its event beside it and the range across the foot, travelling 1928 → 2026 on its own
  * while the hero is on screen and the tab is visible. Dragging the line
  * takes over; autoplay picks up from there a few seconds later. Reduced
  * motion: no autoplay, the hero rests on today until moved by hand. The
@@ -82,8 +83,11 @@ export function HeroYears({ children }: { children: ReactNode }) {
     >
       <HeroPhotos year={shown} />
       <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6">
-        <div className="flex flex-1 items-center">{children}</div>
-        <HeroDateline year={shown} onChange={move} />
+        <div className="grid flex-1 content-center gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          {children}
+          <HeroYearMark year={shown} />
+        </div>
+        <HeroScrub year={shown} onChange={move} />
       </div>
     </section>
   );
