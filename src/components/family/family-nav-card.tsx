@@ -30,7 +30,7 @@ export function FamilyTreeLaunchCard({
   return (
     <Link
       href={href}
-      className={`${glassSurface} group flex cursor-pointer items-center gap-4 rounded-3xl px-6 py-7 ring-1 ring-primary/35 transition-[background-color,transform,box-shadow] duration-base ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong hover:ring-primary/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:px-8`}
+      className={`${glassSurface} group flex cursor-pointer items-center gap-4 rounded-3xl px-6 py-7 ring-1 ring-primary/35 transition-[background-color,transform,box-shadow] duration-base ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong hover:ring-primary/60 active:scale-[0.98] active:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:px-8`}
     >
       <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
         <TreeDeciduous
@@ -81,7 +81,7 @@ export function FamilyNavCard({
   return (
     <Link
       href={href}
-      className={`${glassSurface} group flex h-full cursor-pointer items-center gap-4 rounded-2xl px-5 py-4 transition-[background-color,transform] duration-base ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
+      className={`${glassSurface} group flex h-full cursor-pointer items-center gap-4 rounded-2xl px-5 py-4 transition-[background-color,transform] duration-base ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong active:scale-[0.98] active:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
     >
       <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-glass-strong text-foreground/80 transition-colors group-hover:text-primary">
         <Icon className="size-5" strokeWidth={1.75} aria-hidden="true" />

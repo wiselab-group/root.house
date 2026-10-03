@@ -372,6 +372,12 @@ body:has(.photo-backdrop) .app-header {
   body {
     @apply bg-background text-foreground;
   }
+  /* iOS Safari's own tap flash is a square grey box that ignores rounded
+     corners, and over a backdrop-filter (the glass cards) it paints the
+     blur black. Off everywhere; controls show their own active: state. */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
   /* Every page gets Family Home's background, not just the archive pages
      that paint it themselves (.photo-backdrop) — same stops. */
   /* One page background everywhere (user request 2026-09-25): a single
