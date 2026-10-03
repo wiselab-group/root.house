@@ -26,6 +26,7 @@ import { pathOf, timelineRange, type GeoModel } from "./map-snapshot";
 export interface MapPlace {
   id: string;
   name: string;
+  description: string | null;
   region: string | null;
   country: string | null;
   /** Null for a place without a point — listed, never drawn. */
@@ -197,6 +198,7 @@ export async function getFamilyMapData(
     places: allPlaces.map((p) => ({
       id: p.id,
       name: p.name,
+      description: p.description,
       region: p.region,
       country: p.country,
       latitude: p.latitude,

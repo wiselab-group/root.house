@@ -41,3 +41,26 @@ export function readMapPalette(element: Element): MapPalette {
   }
   return palette;
 }
+
+/**
+ * Resolves `token` as theme `id` defines it, independent of when it is
+ * asked: a hidden probe carrying the theme's class is read, not the map's
+ * frame (whose class may still be the previous theme mid-render).
+ * Client-only.
+ */
+export function readThemeColor(
+  id: MapThemeId,
+  token: string,
+  fallback: string,
+): string {
+  if (typeof document === "undefined") return fallback;
+  const probe = document.createElement("span");
+  probe.hidden = true;
+  if (MAP_THEMES[id].className) probe.className = MAP_THEMES[id].className;
+  document.body.append(probe);
+  try {
+    return resolveCssColor(token, fallback, probe);
+  } finally {
+    probe.remove();
+  }
+}

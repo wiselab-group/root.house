@@ -50,6 +50,19 @@ const ROLES: Record<string, Role> = {
   "Continent labels": "label",
 };
 
+/**
+ * Detail that only helps when placing a point by hand (a village, a road
+ * name): painted like the rest but hidden until the map turns it on —
+ * family map's edit mode (setDetailVisible).
+ */
+const DETAIL_ROLES: Record<string, Role> = {
+  "Village labels": "label",
+  "Place labels": "label",
+  "Road labels": "label",
+  Path: "road",
+};
+export const DETAIL_LAYER_IDS = Object.keys(DETAIL_ROLES);
+
 /** Place labels that may name a family place — the map's own pin already does. */
 const PLACE_LABELS = new Set(["Town labels", "City labels"]);
 
@@ -110,6 +123,14 @@ export function applyMapTheme(
   { locale, hideLabelNames = [] }: ApplyOptions,
 ): StyleSpecification {
   const layers = style.layers.map((layer): LayerSpecification => {
+    const detail = DETAIL_ROLES[layer.id];
+    if (detail) {
+      return {
+        ...layer,
+        paint: { ...layer.paint, ...paintFor(layer, palette[detail], palette) },
+        layout: { ...layer.layout, visibility: "none" },
+      } as LayerSpecification;
+    }
     const role = ROLES[layer.id];
     if (!role) {
       return {

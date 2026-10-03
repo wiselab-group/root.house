@@ -56,8 +56,7 @@ export async function resolvePlaceFields<Field extends string>(
   return { ids, createdAny: results.some((result) => result.created) };
 }
 
-/** After a form created a Place implicitly — the Places list and Map show it. */
+/** After a form created a Place implicitly — the family map lists it. */
 export function revalidatePlacePages(familySlug: string | null) {
-  revalidatePath(`/families/${familySlug}/places`);
   revalidatePath(`/families/${familySlug}/map`);
 }

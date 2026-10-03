@@ -846,11 +846,7 @@
   },
   "map": {
     "noKey": "The map is unavailable — the MapTiler key isn't configured.",
-    "pickHint": "Click the map to drop a pin",
-    "title": "Map",
-    "emptyTitle": "The map is empty for now",
-    "emptyBody": "Add a place with a map point — say, the town where someone in the family was born — and it will appear here.",
-    "managePlaces": "Manage places"
+    "title": "Map"
   },
   "familyMap": {
     "title": "Family map",
@@ -917,22 +913,30 @@
     "play": "Play the family's story",
     "pause": "Pause",
     "sliderLabel": "Year on the map",
-    "allTime": "All time"
+    "allTime": "All time",
+    "newPlace": "New place",
+    "pointHint": "Click the map to set a point, or search for an address",
+    "pointSet": "Point: {coords}",
+    "deleteConfirm": "Delete “{name}”? People and events linked to it stay — just without a place.",
+    "emptyTitle": "The map is empty for now",
+    "emptyBody": "Add the first place — a town or village where someone in the family was born or lived.",
+    "themeLabel": "Map style",
+    "themes": {
+      "archive": {
+        "name": "Archive",
+        "hint": "In the app's colours"
+      },
+      "parchment": {
+        "name": "Parchment",
+        "hint": "Like an old paper atlas"
+      }
+    }
   },
   "hero": {
     "actions": "Actions",
     "deletePerson": "Delete person",
     "deleteStory": "Delete story",
     "recordStory": "Read it in your own voice"
-  },
-  "places": {
-    "title": "Places",
-    "lead": "Places of birth, residence and other events.",
-    "add": "Add place",
-    "emptyTitle": "No places yet",
-    "emptyBody": "Add a town or village where someone in the family was born, lived or is buried — then you can pick it right in a person's profile.",
-    "countLead": "{places} — used when filling in profiles and events.",
-    "editNamed": "Edit “{name}”"
   },
   "landing": {
     "metaTitle": "Root house — Create the living story of your family",

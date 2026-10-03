@@ -103,8 +103,14 @@ describe("applyMapTheme", () => {
 
   it("hides what isn't about the family", () => {
     expect(layer("Building").layout).toEqual({ visibility: "none" });
+  });
+
+  it("paints edit-only detail but keeps it hidden until asked for", () => {
     expect(layer("Village labels").layout).toMatchObject({
       visibility: "none",
+    });
+    expect(layer("Village labels").paint).toMatchObject({
+      "text-color": "label",
     });
   });
 

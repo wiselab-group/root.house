@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Layer, Source, useMap } from "react-map-gl/maplibre";
+import { useMemo } from "react";
+import { Layer, Source } from "react-map-gl/maplibre";
 import { arcPoints, partialArc, type LngLat } from "@/domain/place/route-arc";
-import { resolveCssColor } from "@/lib/css-color";
+import { readThemeColor, type MapThemeId } from "@/lib/map-theme/map-theme";
 import type { FamilyMapState } from "./use-family-map";
 
 type Tone = "trace" | "fresh" | "settled" | "old" | "dim";
@@ -14,28 +14,28 @@ interface RouteFeature {
   geometry: { type: "LineString"; coordinates: LngLat[] };
 }
 
-/** MapLibre paints in WebGL — the tokens are resolved to rgba once
- *  (css-color.ts), read off the map's own frame so a map theme's
- *  --map-route applies; the app's theme is fixed per page load. */
-function usePalette() {
-  // Custom properties inherit — the container sees the theme frame's tokens.
-  const frame = useMap().current?.getContainer();
-  const [palette] = useState(() => ({
-    action: resolveCssColor("--primary", "rgb(185, 92, 40)", frame),
-    branch: resolveCssColor("--map-route", "rgb(160, 130, 110)", frame),
-  }));
-  return palette;
-}
-
 /**
  * The family's moves as arcs. Routes draw themselves in during their first
  * years on the timeline (a sliced arc, `progress`), recent moves are solid,
  * older ones settle into a dotted trail; a lit branch/person path is
  * terracotta and everything else fades back.
  */
-export function RouteLayer({ state }: { state: FamilyMapState }) {
+export function RouteLayer({
+  state,
+  theme,
+}: {
+  state: FamilyMapState;
+  theme: MapThemeId;
+}) {
   const { data, snapshot, highlight } = state;
-  const palette = usePalette();
+  // WebGL can't read CSS: the theme's tokens resolved to rgba (css-color.ts).
+  const palette = useMemo(
+    () => ({
+      action: readThemeColor(theme, "--primary", "rgb(185, 92, 40)"),
+      branch: readThemeColor(theme, "--map-route", "rgb(160, 130, 110)"),
+    }),
+    [theme],
+  );
 
   const lngLat = useMemo(() => {
     const byId = new Map<string, LngLat>();

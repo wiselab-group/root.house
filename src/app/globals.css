@@ -1311,7 +1311,7 @@ body:has(.photo-backdrop) .app-header-bar {
   --map-label: oklch(0.38 0.05 50);
   --map-label-halo: oklch(0.9 0.04 80);
   --map-water-label: oklch(0.5 0.04 210);
-  --map-route: oklch(0.45 0.08 45);
+  --map-route: oklch(0.4 0.09 40);
 }
 
 /* A themed map's own chrome (attribution — required by the MapTiler/OSM

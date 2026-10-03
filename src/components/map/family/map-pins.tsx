@@ -22,8 +22,11 @@ export function MapPins({ state }: { state: FamilyMapState }) {
     return first;
   }, [data.model.stops]);
 
+  const editing = focus.kind === "editPlace" ? focus.placeId : undefined;
   const pins = data.places.flatMap((place) => {
     if (place.latitude == null || place.longitude == null) return [];
+    // The place being edited is drawn by its draggable draft pin instead.
+    if (place.id === editing) return [];
     const presence = snapshot.places.get(place.id);
     let tone: PinTone;
     let badge: string | undefined;
@@ -66,7 +69,7 @@ export function MapPins({ state }: { state: FamilyMapState }) {
   return (
     <>
       {pins}
-      {moment === "all" && focus.kind !== "person" && (
+      {moment === "all" && focus.kind !== "person" && editing === undefined && (
         <RootTags state={state} />
       )}
     </>

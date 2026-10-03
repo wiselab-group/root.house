@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronRightIcon, SearchIcon } from "lucide-react";
+import { ChevronRightIcon, PlusIcon, SearchIcon } from "lucide-react";
 import { currentPlaces, snapshotAt } from "@/domain/place/map-snapshot";
 import { BranchCard } from "./branch-card";
 import { Eyebrow } from "./panel-bits";
@@ -53,6 +53,25 @@ export function OverviewPanel({
       </button>
 
       {invite}
+
+      {data.places.length === 0 && (
+        <section className="flex flex-col gap-3 rounded-2xl border border-dashed border-border p-4">
+          <h2 className="font-heading text-lg font-medium">
+            {t("emptyTitle")}
+          </h2>
+          <p className="text-sm text-muted-foreground">{t("emptyBody")}</p>
+          {state.canEdit && (
+            <button
+              type="button"
+              onClick={() => setFocus({ kind: "editPlace", placeId: null })}
+              className="flex h-10 w-fit cursor-pointer items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground transition-transform duration-base ease-(--ease-spring) outline-none hover:scale-[1.02] focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <PlusIcon className="size-4" aria-hidden />
+              {t("addPlace")}
+            </button>
+          )}
+        </section>
+      )}
 
       {data.branches.length > 0 && (
         <section className="flex flex-col gap-2.5">

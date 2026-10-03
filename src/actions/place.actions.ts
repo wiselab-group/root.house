@@ -12,6 +12,8 @@ import { addPlace, editPlace, removePlace } from "@/domain/place/place.service";
 export interface PlaceFormState {
   error?: string;
   fieldErrors?: Record<string, string>;
+  /** The saved place — set on success, so the map can open it. */
+  placeId?: string;
 }
 
 export async function createPlaceAction(
@@ -43,7 +45,7 @@ export async function createPlaceAction(
     return { fieldErrors };
   }
 
-  await addPlace({
+  const { id } = await addPlace({
     familyId,
     name: parsed.data.name,
     description: parsed.data.description || undefined,
@@ -59,10 +61,8 @@ export async function createPlaceAction(
         : undefined,
   });
 
-  const slug = await getFamilySlugById(familyId);
-  revalidatePath(`/families/${slug}/places`);
-  revalidatePath(`/families/${slug}/map`);
-  return {};
+  revalidatePath(`/families/${await getFamilySlugById(familyId)}/map`);
+  return { placeId: id };
 }
 
 export async function updatePlaceAction(
@@ -110,10 +110,8 @@ export async function updatePlaceAction(
 
   if (!updated) return { error: (await getErrorMessage())("placeNotFound") };
 
-  const slug = await getFamilySlugById(familyId);
-  revalidatePath(`/families/${slug}/places`);
-  revalidatePath(`/families/${slug}/map`);
-  return {};
+  revalidatePath(`/families/${await getFamilySlugById(familyId)}/map`);
+  return { placeId };
 }
 
 export async function deletePlaceAction(
@@ -125,6 +123,5 @@ export async function deletePlaceAction(
 
   await requireFamilyAccess(familyId, session.user.id, "editor");
   await removePlace(placeId, familyId);
-  const slug = await getFamilySlugById(familyId);
-  revalidatePath(`/families/${slug}/places`);
+  revalidatePath(`/families/${await getFamilySlugById(familyId)}/map`);
 }

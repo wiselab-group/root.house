@@ -4,16 +4,19 @@ import { useCallback, useMemo, useRef } from "react";
 import type { MapRef } from "react-map-gl/maplibre";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { snapshotAt } from "@/domain/place/map-snapshot";
-import { DEFAULT_MAP_THEME } from "@/lib/map-theme/map-theme";
 import type { FamilyMapData } from "@/domain/place/place-map.service";
 import { MapView } from "../map-view";
 import { MapPins } from "./map-pins";
+import { LocationPin } from "../location-pin";
 import { RouteLayer } from "./route-layer";
 import { MapPanel } from "./panel/map-panel";
 import { InviteButton } from "./timeline/invite-button";
-import { TimelineDock } from "./timeline/timeline-dock";
+import { MapBottomBar } from "./timeline/map-bottom-bar";
 import { useFamilyMap, type MapFocus } from "./use-family-map";
 import { useMapCamera } from "./use-map-camera";
+import { useDetailLayers } from "./use-detail-layers";
+import { useMapTheme } from "./use-map-theme";
+import { ThemeSwitcher } from "./theme-switcher";
 import { usePlayback } from "./use-playback";
 
 /** Before the first fit — roughly Eastern Europe, where the archives are. */
@@ -46,7 +49,11 @@ export function FamilyMap({
   const reducedMotion = useReducedMotion();
   const mapRef = useRef<MapRef>(null);
   const { onLoad, fitAll } = useMapCamera(mapRef, state, reducedMotion);
-  const { range, moment, setMoment, setFocus, playing, setPlaying } = state;
+  const { range, moment, setMoment, setFocus, playing, setPlaying, draft } =
+    state;
+  const editing = state.focus.kind === "editPlace";
+  useDetailLayers(mapRef, editing);
+  const [themeId, setThemeId] = useMapTheme();
   const { play, pause } = usePlayback(
     range,
     moment,
@@ -79,10 +86,10 @@ export function FamilyMap({
   // Our pins already name every family place — the basemap stays quiet there.
   const theme = useMemo(
     () => ({
-      id: DEFAULT_MAP_THEME,
+      id: themeId,
       hideLabelNames: data.places.map((p) => p.name),
     }),
-    [data.places],
+    [themeId, data.places],
   );
   const invite = (className: string) =>
     range ? (
@@ -104,10 +111,18 @@ export function FamilyMap({
         onLoad={onLoad}
         theme={theme}
         showZoom={false}
+        // Editing a place: the family map itself is the point picker.
+        onMapClick={editing ? draft.pickOnMap : undefined}
+        cursor={editing ? "crosshair" : undefined}
       >
-        <RouteLayer state={state} />
+        <RouteLayer state={state} theme={themeId} />
         <MapPins state={state} />
+        {editing && draft.point && (
+          <LocationPin {...draft.point} onMove={draft.pickOnMap} />
+        )}
       </MapView>
+
+      <ThemeSwitcher value={themeId} onChange={setThemeId} />
 
       <MapPanel
         state={state}
@@ -116,29 +131,18 @@ export function FamilyMap({
       />
 
       {range && (
-        <div
-          data-bottom-bar
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex justify-center px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pointer-fine:left-[24.5rem] md:pointer-fine:px-6 md:pointer-fine:pb-6"
-        >
-          {typeof moment === "number" ? (
-            <div className="pointer-events-auto w-full md:pointer-fine:w-auto">
-              <TimelineDock
-                state={state}
-                range={range}
-                year={moment}
-                playing={playing}
-                onPlay={play}
-                onPause={pause}
-                onScrub={jump}
-                onAllTime={allTime}
-              />
-            </div>
-          ) : (
-            invite(
-              "pointer-events-auto hidden border border-glass-edge bg-background/75 py-2 pr-6 pl-2 shadow-xl shadow-black/40 backdrop-blur-xl md:pointer-fine:flex",
-            )
+        <MapBottomBar
+          state={state}
+          range={range}
+          invite={invite(
+            "pointer-events-auto hidden border border-glass-edge bg-background/75 py-2 pr-6 pl-2 shadow-xl shadow-black/40 backdrop-blur-xl md:pointer-fine:flex",
           )}
-        </div>
+          playing={playing}
+          onPlay={play}
+          onPause={pause}
+          onScrub={jump}
+          onAllTime={allTime}
+        />
       )}
     </div>
   );

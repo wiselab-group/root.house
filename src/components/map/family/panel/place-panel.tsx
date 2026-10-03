@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { PencilIcon } from "lucide-react";
 import { placeStory } from "@/domain/place/place-story";
@@ -97,13 +96,14 @@ export function PlacePanel({
       />
 
       {state.canEdit && (
-        <Link
-          href={`/families/${state.familySlug}/places`}
-          className="mt-auto flex h-10 w-fit items-center gap-2 rounded-full border border-border px-4 text-sm font-medium transition-colors duration-base ease-(--ease-reveal) outline-none hover:bg-foreground/6 focus-visible:ring-2 focus-visible:ring-ring"
+        <button
+          type="button"
+          onClick={() => setFocus({ kind: "editPlace", placeId })}
+          className="mt-auto flex h-10 w-fit cursor-pointer items-center gap-2 rounded-full border border-border px-4 text-sm font-medium transition-colors duration-base ease-(--ease-reveal) outline-none hover:bg-foreground/6 focus-visible:ring-2 focus-visible:ring-ring"
         >
           <PencilIcon className="size-3.5" aria-hidden />
           {t("editPlace")}
-        </Link>
+        </button>
       )}
     </>
   );

@@ -1,37 +1,32 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
-import { MapPin } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
 import { getFamilyMapData } from "@/domain/place/place-map.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { getFamilySummary } from "@/domain/family/family.service";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
-import { LinkButton } from "@/components/ui/link-button";
 import { FamilyMapLoader } from "@/components/map/family/family-map-loader";
 import type { MapFocus } from "@/components/map/family/use-family-map";
 import type { FamilyMapData } from "@/domain/place/place-map.service";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("map");
   return { title: t("title") };
 }
 
-/** ?place= / ?branch= / ?person=<slug> open the map on that view — the
- *  profile's «show on the map» and shared links land here. Unknown ids
- *  (or ones this member can't see) fall back to the overview. */
+/** ?place= / ?branch= / ?person=<slug> / ?panel=places open the map on
+ *  that view — the profile's «show on the map», shared links and the old
+ *  /places page land here. Unknown ids (or ones this member can't see)
+ *  fall back to the overview. An empty map still opens: its overview
+ *  invites the first place. */
 function initialFocus(
   data: FamilyMapData,
   params: Record<string, string | string[] | undefined>,
 ): MapFocus {
-  const { place, branch, person } = params;
+  const { place, branch, person, panel } = params;
+  // The old /places page lands here with the place list open.
+  if (panel === "places") return { kind: "search" };
   if (typeof person === "string") {
     const found = Object.values(data.people).find((p) => p.slug === person);
     if (found) return { kind: "person", personId: found.id };
@@ -76,32 +71,6 @@ export default async function FamilyMapPage({
     { label: family?.name ?? slug, href: `/families/${slug}` },
     { label: t("title") },
   ];
-
-  if (!data.places.some((p) => p.latitude != null && p.longitude != null)) {
-    return (
-      <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
-        <SetBreadcrumbs items={breadcrumbItems} />
-        <Card>
-          <CardHeader>
-            <span className="flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <MapPin
-                className="size-6"
-                strokeWidth={1.75}
-                aria-hidden="true"
-              />
-            </span>
-            <CardTitle className="mt-4">{t("emptyTitle")}</CardTitle>
-            <CardDescription>{t("emptyBody")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <LinkButton href={`/families/${slug}/places`}>
-              {t("managePlaces")}
-            </LinkButton>
-          </CardContent>
-        </Card>
-      </main>
-    );
-  }
 
   return (
     // Full-bleed like the tree: the map is the page, the breadcrumb trail

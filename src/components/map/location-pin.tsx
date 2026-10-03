@@ -4,9 +4,9 @@ import { Marker } from "react-map-gl/maplibre";
 import { MapPinIcon } from "lucide-react";
 
 /**
- * The location picker's own pin (see location-picker-map.tsx) — the same
- * terracotta badge as the family map's MapMarker, but draggable: dropping
- * it somewhere else moves the place's point. Anchored at the bottom so the
+ * The pin of a place being edited on the family map (family/family-map.tsx)
+ * — a terracotta badge, draggable: dropping it somewhere else moves the
+ * place's point. Anchored at the bottom so the
  * point sits at the pin's tip, where the user aimed.
  */
 export function LocationPin({

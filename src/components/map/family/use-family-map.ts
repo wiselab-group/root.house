@@ -9,13 +9,16 @@ import {
   type MapMoment,
 } from "@/domain/place/map-snapshot";
 import type { FamilyMapData } from "@/domain/place/place-map.service";
+import { usePlaceDraft } from "./use-place-draft";
 
 export type MapFocus =
   | { kind: "overview" }
   | { kind: "search" }
   | { kind: "place"; placeId: string }
   | { kind: "branch"; rootId: string }
-  | { kind: "person"; personId: string };
+  | { kind: "person"; personId: string }
+  /** Editing a place on the map itself — null: a new one. Editors only. */
+  | { kind: "editPlace"; placeId: string | null };
 
 /** A path lit on the map — a branch's or one person's. */
 export interface MapHighlight {
@@ -54,14 +57,25 @@ export function useFamilyMap(
   const [moment, setMoment] = useState<MapMoment>("all");
   const [hoveredBranch, setHoveredBranch] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
+  const draft = usePlaceDraft();
+  const resetDraft = draft.reset;
 
   const setFocus = useCallback(
     (next: MapFocus) => {
+      if (next.kind === "editPlace" && !family.canEdit) return;
+      if (next.kind === "editPlace") {
+        const place = data.places.find((p) => p.id === next.placeId);
+        resetDraft(
+          place?.latitude != null && place.longitude != null
+            ? { latitude: place.latitude, longitude: place.longitude }
+            : null,
+        );
+      }
       setFocusState(next);
       setHoveredBranch(null);
       writeUrl(next, data);
     },
-    [data],
+    [data, family.canEdit, resetDraft],
   );
 
   const snapshot = useMemo(
@@ -95,10 +109,12 @@ export function useFamilyMap(
   }, [focus, hoveredBranch, branchById, data.model]);
 
   // Escape steps back: a detail → the overview, a year → «Всё время».
+  // Never out of an edit — the form has its own «Отмена», nothing is lost.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.target instanceof HTMLInputElement)
         return;
+      if (focus.kind === "editPlace") return;
       if (focus.kind !== "overview") setFocus({ kind: "overview" });
       else if (moment !== "all") setMoment("all");
     };
@@ -122,6 +138,7 @@ export function useFamilyMap(
     highlight,
     hoveredBranch,
     setHoveredBranch,
+    draft,
   };
 }
 

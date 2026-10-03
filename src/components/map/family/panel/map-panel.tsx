@@ -7,6 +7,7 @@ import { BranchPanel } from "./branch-panel";
 import { OverviewPanel } from "./overview-panel";
 import { PersonPanel } from "./person-panel";
 import { PlacePanel } from "./place-panel";
+import { PlaceEditPanel } from "./place-edit-panel";
 import { SearchPanel } from "./search-panel";
 import { TimeFeedPanel } from "./time-feed-panel";
 import type { FamilyMapState } from "../use-family-map";
@@ -35,6 +36,14 @@ export function MapPanel({
 
   let content: React.ReactNode;
   if (focus.kind === "search") content = <SearchPanel state={state} />;
+  else if (focus.kind === "editPlace")
+    content = (
+      <PlaceEditPanel
+        key={focus.placeId ?? "new"}
+        state={state}
+        placeId={focus.placeId}
+      />
+    );
   else if (focus.kind === "place")
     content = (
       <PlacePanel key={focus.placeId} state={state} placeId={focus.placeId} />

@@ -40,10 +40,9 @@ export function useMapCamera(
     [data.places],
   );
 
-  const fit = useCallback(
-    (placeIds: string[], animate: boolean, story = false) => {
+  const fitPoints = useCallback(
+    (points: [number, number][], animate: boolean, story = false) => {
       const map = mapRef.current;
-      const points = placeIds.map(lngLat).filter((p) => p !== null);
       if (!map || points.length === 0) return;
       const lngs = points.map((p) => p[0]);
       const lats = points.map((p) => p[1]);
@@ -62,7 +61,16 @@ export function useMapCamera(
         },
       );
     },
-    [lngLat, mapRef],
+    [mapRef],
+  );
+  const fit = useCallback(
+    (placeIds: string[], animate: boolean, story = false) =>
+      fitPoints(
+        placeIds.map(lngLat).filter((p) => p !== null),
+        animate,
+        story,
+      ),
+    [fitPoints, lngLat],
   );
 
   /** The whole family — on load, and before the story plays. */
@@ -84,7 +92,9 @@ export function useMapCamera(
         ? `b:${focus.rootId}`
         : focus.kind === "person"
           ? `h:${focus.personId}`
-          : null;
+          : focus.kind === "editPlace"
+            ? `e:${focus.placeId ?? "new"}`
+            : null;
   const lastKey = useRef<string | null>(null);
   const loaded = useRef(false);
 
@@ -92,6 +102,8 @@ export function useMapCamera(
     if (!loaded.current || !focusKey || focusKey === lastKey.current) return;
     lastKey.current = focusKey;
     if (focus.kind === "place") fit([focus.placeId], !reducedMotion);
+    else if (focus.kind === "editPlace" && focus.placeId)
+      fit([focus.placeId], !reducedMotion);
     else if (highlight) fit(highlight.placeIds, !reducedMotion);
   }, [focusKey, focus, highlight, fit, reducedMotion]);
 
@@ -99,6 +111,16 @@ export function useMapCamera(
     if (!focusKey) lastKey.current = null;
     follow();
   }, [focusKey, follow]);
+
+  // A search result picked while editing a place: go there. A click on the
+  // map doesn't bump `fly` — the view stays under the user's cursor.
+  const { point, fly } = state.draft;
+  const flown = useRef(0);
+  useEffect(() => {
+    if (fly === flown.current || !point) return;
+    flown.current = fly;
+    fitPoints([[point.longitude, point.latitude]], !reducedMotion);
+  }, [fly, point, fitPoints, reducedMotion]);
 
   const onLoad = useCallback(() => {
     loaded.current = true;

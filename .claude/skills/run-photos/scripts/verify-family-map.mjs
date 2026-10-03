@@ -150,6 +150,45 @@ async function main() {
     await page.waitForTimeout(400);
     check(await page.getByText("Не на карте · 1").isVisible(), "search lists the place without a point");
     await shoot(page, "06-search");
+
+    // Phase 4 — places managed on the map itself.
+    await page.getByRole("button", { name: /Хутор Ракитное/ }).click();
+    await page.getByText("Нажмите на карту, чтобы поставить точку").waitFor();
+    check(true, "a place without a point opens its edit on the map");
+    await page.mouse.click(1000, 450);
+    await page.waitForTimeout(400);
+    check(await page.getByText(/^Точка: /).isVisible(), "a click on the map sets the point");
+    await shoot(page, "06b-set-point");
+    await page.getByRole("button", { name: "Сохранить" }).click();
+    await page.getByRole("heading", { name: "Хутор Ракитное" }).waitFor({ timeout: 20000 });
+    check(
+      await page.getByRole("button", { name: /^Хутор Ракитное/ }).first().isVisible(),
+      "saved: the place's sheet opens and its pin is on the map",
+    );
+    await shoot(page, "06c-point-saved");
+
+    await page.getByRole("button", { name: "Обзор" }).click();
+    await page.getByRole("button", { name: "Найти человека или место" }).click();
+    await page.getByRole("button", { name: "Добавить место" }).click();
+    await page.mouse.click(1100, 300);
+    await page.fill("#place-name", "Проверочное место");
+    await page.getByRole("button", { name: "Добавить место" }).click();
+    await page.getByRole("heading", { name: "Проверочное место" }).waitFor({ timeout: 20000 });
+    check(true, "a new place added by a click on the map opens its sheet");
+    await page.getByRole("button", { name: "Изменить место" }).click();
+    await page.getByRole("button", { name: "Удалить" }).click();
+    await page.getByRole("button", { name: "Удалить" }).last().click();
+    await page.getByText("Откуда мы · 2 ветви").waitFor({ timeout: 20000 });
+    const gone = await page
+      .getByRole("button", { name: /^Проверочное место/ })
+      .waitFor({ state: "detached", timeout: 10000 })
+      .then(() => true, () => false);
+    check(gone, "deleting the place removes its pin");
+
+    await page.goto(`${BASE_URL}/families/${familySlug}/places`, { waitUntil: "networkidle" });
+    check(page.url().includes("/map?panel=places"), "/places redirects to the map's place list");
+    await openMap(page, mapUrl);
+    await page.getByRole("button", { name: "Найти человека или место" }).click();
     await page.getByRole("button", { name: "Отмена" }).click();
 
     await page.getByRole("button", { name: /Как семья сюда пришла/ }).click();
@@ -160,6 +199,23 @@ async function main() {
     await page.waitForTimeout(1200);
     check(await page.getByText("Род к 1967 году").isVisible(), "feed follows the slider");
     await shoot(page, "08-year-1967");
+
+    await page.getByRole("button", { name: "Всё время" }).click();
+    await page.getByRole("button", { name: "Вид карты" }).click();
+    await page.waitForTimeout(600);
+    await shoot(page, "09-theme-menu");
+    await page.getByRole("button", { name: /Пергамент/ }).click();
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(2500);
+    await shoot(page, "09b-parchment");
+    await openMap(page, mapUrl);
+    await page.getByRole("button", { name: "Вид карты" }).click();
+    check(
+      (await page.getByRole("button", { name: /Пергамент/ }).getAttribute("aria-pressed")) === "true",
+      "the chosen map style survives a reload",
+    );
+    await page.getByRole("button", { name: /Архив/ }).click();
+    await page.keyboard.press("Escape");
     const session = await context.storageState();
     await context.close();
 

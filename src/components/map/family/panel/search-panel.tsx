@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { PlusIcon } from "lucide-react";
 import type { MapPlace } from "@/domain/place/place-map.service";
@@ -16,7 +15,7 @@ const PEOPLE_SHOWN = 8;
  *  list on demand, not on the overview), and people once something is typed. */
 export function SearchPanel({ state }: { state: FamilyMapState }) {
   const t = useTranslations("familyMap");
-  const { data, familyId, familySlug, canEdit, setFocus } = state;
+  const { data, familyId, canEdit, setFocus } = state;
   const [query, setQuery] = useState("");
   const q = query.trim().toLocaleLowerCase();
 
@@ -55,8 +54,8 @@ export function SearchPanel({ state }: { state: FamilyMapState }) {
       place={place}
       peopleCount={peopleAt.get(place.id)?.size ?? 0}
       canEdit={canEdit}
-      familySlug={familySlug}
       onSelect={() => setFocus({ kind: "place", placeId: place.id })}
+      onEdit={() => setFocus({ kind: "editPlace", placeId: place.id })}
     />
   );
 
@@ -109,13 +108,14 @@ export function SearchPanel({ state }: { state: FamilyMapState }) {
       )}
 
       {canEdit && (
-        <Link
-          href={`/families/${familySlug}/places`}
-          className="mt-auto flex h-10 w-fit items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground transition-transform duration-base ease-(--ease-spring) outline-none hover:scale-[1.02] focus-visible:ring-3 focus-visible:ring-ring/50"
+        <button
+          type="button"
+          onClick={() => setFocus({ kind: "editPlace", placeId: null })}
+          className="mt-auto flex h-10 w-fit cursor-pointer items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground transition-transform duration-base ease-(--ease-spring) outline-none hover:scale-[1.02] focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <PlusIcon className="size-4" aria-hidden />
           {t("addPlace")}
-        </Link>
+        </button>
       )}
     </>
   );
