@@ -101,7 +101,7 @@ export async function getEventsForPerson(
 }
 
 /** All of a family's events that have a Place attached — the raw material
- *  for map-marker.service.ts's marker assembly. Unlike getEventsForPerson,
+ *  for place-map.service.ts's family map. Unlike getEventsForPerson,
  *  this isn't participant-scoped (an event can appear with zero
  *  participants attached) since a map pin cares about the event's place,
  *  not who's in it. */
@@ -112,6 +112,19 @@ export async function getEventsWithPlace(
     where: and(eq(events.familyId, familyId), isNotNull(events.placeId)),
   });
   return rows.map(toRecord);
+}
+
+/** Every participant of a family's placed events, in one query — the
+ *  family map links all of them at once (place-map.service.ts). */
+export async function getParticipantsOfPlacedEvents(
+  familyId: string,
+): Promise<EventParticipantRecord[]> {
+  const rows = await db
+    .select({ participant: eventParticipants })
+    .from(eventParticipants)
+    .innerJoin(events, eq(eventParticipants.eventId, events.id))
+    .where(and(eq(events.familyId, familyId), isNotNull(events.placeId)));
+  return rows.map((r) => r.participant);
 }
 
 export async function getParticipantsOf(

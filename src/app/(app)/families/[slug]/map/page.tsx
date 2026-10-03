@@ -3,12 +3,14 @@ import type { Metadata } from "next";
 import { MapPin } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
-import { getFamilyMapMarkers } from "@/domain/place/place-marker.service";
+import { getFamilyMapData } from "@/domain/place/place-map.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { getFamilySummary } from "@/domain/family/family.service";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { LinkButton } from "@/components/ui/link-button";
-import { FamilyMapCanvasLoader } from "@/components/map/family-map-canvas-loader";
+import { FamilyMapLoader } from "@/components/map/family/family-map-loader";
+import type { MapFocus } from "@/components/map/family/use-family-map";
+import type { FamilyMapData } from "@/domain/place/place-map.service";
 import {
   Card,
   CardContent,
@@ -22,8 +24,33 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("title") };
 }
 
+/** ?place= / ?branch= / ?person=<slug> open the map on that view — the
+ *  profile's «show on the map» and shared links land here. Unknown ids
+ *  (or ones this member can't see) fall back to the overview. */
+function initialFocus(
+  data: FamilyMapData,
+  params: Record<string, string | string[] | undefined>,
+): MapFocus {
+  const { place, branch, person } = params;
+  if (typeof person === "string") {
+    const found = Object.values(data.people).find((p) => p.slug === person);
+    if (found) return { kind: "person", personId: found.id };
+  }
+  if (
+    typeof branch === "string" &&
+    data.branches.some((b) => b.rootId === branch)
+  ) {
+    return { kind: "branch", rootId: branch };
+  }
+  if (typeof place === "string" && data.places.some((p) => p.id === place)) {
+    return { kind: "place", placeId: place };
+  }
+  return { kind: "overview" };
+}
+
 export default async function FamilyMapPage({
   params,
+  searchParams,
 }: PageProps<"/families/[slug]/map">) {
   const t = await getTranslations("map");
   const tn = await getTranslations("familyNav");
@@ -33,14 +60,13 @@ export default async function FamilyMapPage({
 
   const familyId = await resolveFamilyIdBySlug(slug);
   const member = await requireFamilyAccess(familyId, session.user.id, "viewer");
-  const [markers, family] = await Promise.all([
-    getFamilyMapMarkers(
+  const canEdit = member.role === "owner" || member.role === "editor";
+  const [data, family] = await Promise.all([
+    getFamilyMapData(
       familyId,
-      {
-        userId: session.user.id,
-        role: member.role,
-      },
+      { userId: session.user.id, role: member.role },
       await getLocale(),
+      canEdit,
     ),
     getFamilySummary(familyId),
   ]);
@@ -51,7 +77,7 @@ export default async function FamilyMapPage({
     { label: t("title") },
   ];
 
-  if (markers.length === 0) {
+  if (!data.places.some((p) => p.latitude != null && p.longitude != null)) {
     return (
       <main className="mx-auto flex max-w-2xl flex-col gap-6 p-6">
         <SetBreadcrumbs items={breadcrumbItems} />
@@ -78,26 +104,17 @@ export default async function FamilyMapPage({
   }
 
   return (
-    <main className="mx-auto flex h-[calc(100dvh-var(--header-height,64px))] w-full max-w-6xl flex-col gap-4 px-6 py-6">
+    // Full-bleed like the tree: the map is the page, the breadcrumb trail
+    // already names it — no heading above it to push it off-screen.
+    <main className="relative">
       <SetBreadcrumbs items={breadcrumbItems} />
-      <div className="flex flex-col gap-2">
-        <h1 className="font-heading text-title font-medium tracking-tight text-balance">
-          {t("title")}
-        </h1>
-        <p className="text-muted-foreground">
-          {t("lead")}{" "}
-          <LinkButton
-            href={`/families/${slug}/places`}
-            variant="link"
-            className="h-auto p-0"
-          >
-            {t("managePlacesList")}
-          </LinkButton>
-        </p>
-      </div>
-      <div className="min-h-0 flex-1">
-        <FamilyMapCanvasLoader markers={markers} familySlug={slug} />
-      </div>
+      <FamilyMapLoader
+        data={data}
+        familyId={familyId}
+        familySlug={slug}
+        canEdit={canEdit}
+        initialFocus={initialFocus(data, await searchParams)}
+      />
     </main>
   );
 }

@@ -212,6 +212,10 @@
      input, converging on the user's real intent rather than an
      accessibility default). */
   --branch: oklch(0.82 0.026 64);
+  /* Family map: the moves between places (components/map/family/
+     route-layer.tsx). Darker than --branch — a route crosses a busy
+     basemap, not a calm canvas. Resolved to rgba for WebGL at runtime. */
+  --map-route: oklch(0.55 0.05 55);
   /* Tree-card-only ring/identity color — the photo frame's isOpen/isTraced/
      isSelected fill (compact-card-body.tsx). Went through 3 iterations the
      same day (2026-09-18): the exact reference hex #B95C28 read as harsh/
@@ -343,6 +347,9 @@ body:has(.photo-backdrop) .app-header {
      that nearly disappear into the canvas). oklch(0.35 0.03 55) reproduces
      that same ~1.5:1 ratio against dark's own --tree-canvas. */
   --branch: oklch(0.35 0.03 55);
+  /* See :root's --map-route. Mid-tone until the map gets its own dark
+     basemap (map themes) — it still sits on a light street map today. */
+  --map-route: oklch(0.6 0.06 55);
   /* See :root's own comment on --tree-card-ring — aliased to --accent, same
      as light. */
   --tree-card-ring: var(--accent);

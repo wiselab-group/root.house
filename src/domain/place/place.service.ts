@@ -60,7 +60,7 @@ export interface PlaceChoice {
  * Deliberately not gated on the "editor" role that the Places page itself
  * requires: a contributor adding an event must be able to say where it
  * happened, and a Place carries nothing private of its own (see
- * place-marker.service.ts). Callers authorize the surrounding write.
+ * place-map.service.ts). Callers authorize the surrounding write.
  */
 export async function resolvePlaceChoice(
   familyId: string,

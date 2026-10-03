@@ -18,6 +18,7 @@ import {
   getEventsForPerson,
   getEventsWithPlace,
   getParticipantsOf,
+  getParticipantsOfPlacedEvents,
   replaceParticipants,
   updateEvent,
   type CreateEventData,
@@ -162,12 +163,18 @@ export async function editEvent(
 }
 
 /** All of a family's events with a Place attached — see
- *  event.repository.ts::getEventsWithPlace. Used by map-marker.service.ts,
+ *  event.repository.ts::getEventsWithPlace. Used by place-map.service.ts,
  *  privacy-filtered downstream via filterVisibleEvents. */
 export async function listEventsWithPlace(
   familyId: string,
 ): Promise<EventRecord[]> {
   return getEventsWithPlace(familyId);
+}
+
+/** Every participant of the family's placed events — see
+ *  event.repository.ts::getParticipantsOfPlacedEvents. */
+export async function listPlacedEventParticipants(familyId: string) {
+  return getParticipantsOfPlacedEvents(familyId);
 }
 
 /** Filters a list of Events down to what `member` may see per the PRIVATE

@@ -12,7 +12,7 @@ import { MapLoading } from "./map-loading";
  * The ONLY module in the codebase allowed to import maplibre-gl/react-map-gl
  * — mirrors components/tree/adapters/xyflow-adapter.ts's own boundary rule
  * for @xyflow/react. If the map library is ever swapped, this file (plus
- * map-marker.tsx/map-popup.tsx) is the only place that changes.
+ * the map's own components under components/map/) is the only place that changes.
  *
  * Style is MapTiler's hosted vector style (see docs/PRODUCT-REFACTOR.md §M
  * for the MapLibre-vs-Leaflet decision and MapTiler-vs-Stadia provider
@@ -50,6 +50,8 @@ export const MapView = forwardRef<
     onMapClick?: (point: { latitude: number; longitude: number }) => void;
     /** CSS cursor over the map canvas — "crosshair" when clicks place a pin. */
     cursor?: string;
+    /** The style and first tiles are in — safe to fit/fly the camera. */
+    onLoad?: () => void;
   }
 >(function MapView(
   {
@@ -60,6 +62,7 @@ export const MapView = forwardRef<
     className,
     onMapClick,
     cursor,
+    onLoad,
   },
   ref,
 ) {
@@ -115,6 +118,7 @@ export const MapView = forwardRef<
         }}
         style={{ width: "100%", height: "100%" }}
         cursor={cursor}
+        onLoad={onLoad}
         onClick={
           onMapClick
             ? (e) =>
