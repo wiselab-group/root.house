@@ -137,9 +137,9 @@ async function main() {
     await page.goto(`${BASE_URL}/families/${familySlug}/places`, {
       waitUntil: "networkidle",
     });
-    // The empty state's «+ Добавить место» opens the form first.
+    // Places live on the family map: «Добавить место» opens its edit panel.
     await page.getByRole("button", { name: "Добавить место" }).first().click();
-    await page.fill("#name", "Пружаны");
+    await page.fill("#place-name", "Пружаны");
     await page.locator('form button[type="submit"]').first().click();
     await page.getByText("Пружаны").first().waitFor({ timeout: 10000 });
 

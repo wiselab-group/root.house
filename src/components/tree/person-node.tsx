@@ -1,12 +1,13 @@
 "use client";
 
 import { useLocale } from "next-intl";
-import { useRef, useState } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import {
   Popover,
   PopoverTrigger,
   PopoverContent,
+  PopoverArrow,
 } from "@/components/ui/popover";
 import { personInitials } from "@/domain/person/display-name";
 import type { PersonFlowNode } from "./adapters/xyflow-adapter";
@@ -22,8 +23,11 @@ import { PersonNodePopoverActions } from "./person-node-popover-actions";
 import { useKinshipContext } from "./kinship/kinship-context";
 import {
   POPOVER_EDGE_GAP,
+  POPOVER_SIDE_OFFSET,
+  popoverPlacement,
   visibleTreeRect,
   type BoundaryRect,
+  type PopoverPlacement,
 } from "./popover-boundary";
 
 /**
@@ -73,6 +77,9 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
   const locale = useLocale();
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [boundary, setBoundary] = useState<BoundaryRect>();
+  const [placement, setPlacement] = useState<PopoverPlacement>({
+    side: "right",
+  });
   const popupRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const kinship = useKinshipContext();
@@ -158,7 +165,13 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
           return;
         }
         if (open && rootRef.current) {
-          setBoundary(visibleTreeRect(rootRef.current));
+          const area = visibleTreeRect(rootRef.current);
+          setBoundary(area);
+          setPlacement(
+            area
+              ? popoverPlacement(rootRef.current.getBoundingClientRect(), area)
+              : { side: "right" },
+          );
         }
         setIsPopoverOpen(open);
       }}
@@ -172,10 +185,12 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
       {/* PopoverContent's own fixed w-64: one width for everyone, so a
           person with a photo and a birth place doesn't get a wider popover
           than one without. p-1 is the thin matte around the photo, echoing
-          the card's own framed photo. Beside the card, not under it: with a
-          photo the popover is taller than the gap to the next generation,
-          so below/above it flipped over the page header — to the side it
-          sits level with the card (and flips left near the right edge).
+          the card's own framed photo. Beside the card when it fits, so it
+          sits level with the card; on a phone, above or below it
+          (popoverPlacement in popover-boundary.ts). The side is decided
+          once on open and held (collision side "none"), only sliding
+          along it; above/below, `room` overrides --available-height, which
+          both the popover's max height and its photo strip read.
           Raised a step above the canvas (bg-muted, a firmer ring, a deep
           shadow): at --popover it was nearly the canvas's own tone, and
           over neighbouring cards and lines its edge got lost. Focus lands
@@ -183,20 +198,35 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
           click it went there too and lit that item's focus ring, reading
           as a highlighted primary button. Always fully on screen: bounded
           by the visible tree area (popover-boundary.ts), and `sticky` lets
-          it slide off its card's level rather than run past an edge. */}
+          it slide off its card's level rather than run past an edge.
+          The tail points at the card the popover belongs to — beside a
+          spouse or a sibling, a bare panel beside the card read as
+          anyone's. It needs the popup itself unclipped, so the scrolling (a
+          tall photo on a short screen) happens one level in. */}
       <PopoverContent
         ref={popupRef}
-        side="right"
-        sideOffset={12}
+        side={placement.side}
+        sideOffset={POPOVER_SIDE_OFFSET}
+        collisionAvoidance={{ side: "none", align: "shift" }}
         collisionBoundary={boundary}
         collisionPadding={POPOVER_EDGE_GAP}
         sticky
         initialFocus={(openType) =>
           openType === "keyboard" ? true : popupRef.current
         }
-        className="max-h-(--available-height) overflow-y-auto bg-muted p-1 shadow-2xl ring-foreground/20 shadow-black/50"
+        style={
+          placement.room === undefined
+            ? undefined
+            : ({
+                "--available-height": `${placement.room}px`,
+              } as CSSProperties)
+        }
+        className="max-h-(--available-height) bg-muted p-1 shadow-2xl ring-foreground/20 shadow-black/50"
       >
-        <PersonNodePopoverActions data={data} />
+        <PopoverArrow fill="fill-muted" stroke="stroke-foreground/20" />
+        <div className="max-h-[calc(var(--available-height)-0.5rem)] overflow-y-auto">
+          <PersonNodePopoverActions data={data} />
+        </div>
       </PopoverContent>
     </Popover>
   );

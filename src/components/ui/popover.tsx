@@ -20,6 +20,7 @@ function PopoverContent({
   sideOffset = 8,
   collisionBoundary,
   collisionPadding,
+  collisionAvoidance,
   sticky,
   className,
   ...props
@@ -32,6 +33,7 @@ function PopoverContent({
     | "sideOffset"
     | "collisionBoundary"
     | "collisionPadding"
+    | "collisionAvoidance"
     | "sticky"
   >) {
   return (
@@ -44,6 +46,7 @@ function PopoverContent({
         sideOffset={sideOffset}
         collisionBoundary={collisionBoundary}
         collisionPadding={collisionPadding}
+        collisionAvoidance={collisionAvoidance}
         sticky={sticky}
       >
         <PopoverPrimitive.Popup
@@ -59,8 +62,55 @@ function PopoverContent({
   );
 }
 
+/**
+ * A tail from the popup's edge to its anchor, filled with the popup's own
+ * surface (`fill`) and outlined with its ring (`stroke`), so popup and tail
+ * read as one shape. Drawn pointing up; rotated per side. Its box overlaps
+ * the popup by 2px: the outline starts on the ring's line (y 11.5) and the
+ * fill below it covers the ring between, so the seam disappears. Hidden
+ * when the popup slid along the edge (`sticky`) too far to point at its
+ * anchor. Must sit outside any scroll container inside the popup, or it
+ * gets clipped.
+ */
+function PopoverArrow({
+  className,
+  fill = "fill-popover",
+  stroke = "stroke-foreground/10",
+  ...props
+}: PopoverPrimitive.Arrow.Props & { fill?: string; stroke?: string }) {
+  return (
+    <PopoverPrimitive.Arrow
+      data-slot="popover-arrow"
+      className={cn(
+        "flex data-uncentered:opacity-0 data-[side=bottom]:-top-3 data-[side=left]:-right-[19px] data-[side=left]:rotate-90 data-[side=right]:-left-[19px] data-[side=right]:-rotate-90 data-[side=top]:-bottom-3 data-[side=top]:rotate-180",
+        className,
+      )}
+      {...props}
+    >
+      <svg
+        width="28"
+        height="14"
+        viewBox="0 0 28 14"
+        aria-hidden="true"
+        className="overflow-visible"
+      >
+        <path
+          d="M0 11.5C3.5 11.5 5.6 10.6 7.6 8.6L12.4 2.6Q14 0.8 15.6 2.6L20.4 8.6C22.4 10.6 24.5 11.5 28 11.5V14H0Z"
+          className={fill}
+        />
+        <path
+          d="M0 11.5C3.5 11.5 5.6 10.6 7.6 8.6L12.4 2.6Q14 0.8 15.6 2.6L20.4 8.6C22.4 10.6 24.5 11.5 28 11.5"
+          fill="none"
+          strokeWidth="1"
+          className={stroke}
+        />
+      </svg>
+    </PopoverPrimitive.Arrow>
+  );
+}
+
 function PopoverClose({ ...props }: PopoverPrimitive.Close.Props) {
   return <PopoverPrimitive.Close data-slot="popover-close" {...props} />;
 }
 
-export { Popover, PopoverTrigger, PopoverContent, PopoverClose };
+export { Popover, PopoverTrigger, PopoverContent, PopoverArrow, PopoverClose };
