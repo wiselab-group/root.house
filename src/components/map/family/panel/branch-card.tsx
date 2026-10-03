@@ -12,11 +12,14 @@ import type { MapBranch, MapPlace } from "@/domain/place/place-map.service";
  */
 export function BranchCard({
   branch,
+  joins,
   placeById,
   onSelect,
   onPreview,
 }: {
   branch: MapBranch;
+  /** The family name of the branch this line flowed into. */
+  joins: string | null;
   placeById: Map<string, MapPlace>;
   onSelect: () => void;
   onPreview: (on: boolean) => void;
@@ -48,15 +51,20 @@ export function BranchCard({
                 : origin}
             </span>
           </span>
-          {route.length > 1 && (
+          {(route.length > 1 || joins) && (
             <span className="text-xs leading-relaxed text-muted-foreground transition-colors duration-base group-hover:text-foreground">
-              {route.join(" › ")}
+              {[
+                route.length > 1 ? route.join(" › ") : null,
+                joins ? t("branchJoins", { surname: joins }) : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </span>
           )}
           <span className="text-xs text-muted-foreground">
             {t("branchMeta", {
               generations: branch.generations,
-              people: branch.memberIds.length,
+              people: branch.lineIds.length,
             })}
           </span>
         </span>

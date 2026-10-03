@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ChronoEvent, ChronoPerson } from "./geo-chronology";
-import { findBranches, type BranchPerson } from "./family-branches";
+import {
+  computeGenerations,
+  findBranches,
+  type BranchPerson,
+} from "./family-branches";
 import { buildGeoModel } from "./geo-model";
 import {
   buildFeed,
@@ -268,17 +272,80 @@ describe("branches", () => {
     new Map(Object.entries(model.generations)),
   );
 
-  it("finds one branch per founding couple, named by the shared birth surname", () => {
+  it("finds one branch per founding couple, named by the founders' surname", () => {
     expect(
       branches.map((b) => [
         b.rootId,
         b.surname,
+        b.lineIds.length,
         b.memberIds.length,
         b.generations,
+        b.joinsRootId,
       ]),
     ).toEqual([
-      ["ivan", "Купчик", 6, 4],
-      ["petr", "Ушкар", 3, 4],
+      ["ivan", "Купчик", 5, 6, 3, "petr"],
+      ["petr", "Ушкар", 3, 3, 4, null],
+    ]);
+  });
+
+  it("tells converging lines apart instead of repeating the biggest one", () => {
+    // Two in-married lines (Колесникович, Струневский) feed the Козловский
+    // line: all three reach the same grandchildren, yet each keeps its name.
+    const people = [
+      person("petr", { lastName: "Козловский" }),
+      person("vasily", { lastName: "Козловский" }),
+      person("filip", { lastName: "Струневский" }),
+      person("agrafena", {
+        lastName: "Колесникович",
+        maidenName: "Струневская",
+      }),
+      person("iosif", { lastName: "Колесникович" }),
+      person("grigory", { lastName: "Колесникович" }),
+      person("nadezhda", {
+        lastName: "Козловская",
+        maidenName: "Колесникович",
+      }),
+      person("galina", { lastName: "Купчик", maidenName: "Козловская" }),
+      person("nina", { lastName: "Козловская" }),
+      person("yustin", { lastName: "Купчик" }),
+      person("vladimir", { lastName: "Купчик" }),
+      person("viktor", { lastName: "Купчик" }),
+      person("sasha", { lastName: "Купчик" }),
+    ];
+    const edges = [
+      ["petr", "vasily"],
+      ["filip", "agrafena"],
+      ["iosif", "grigory"],
+      ["grigory", "nadezhda"],
+      ["agrafena", "nadezhda"],
+      ["vasily", "galina"],
+      ["nadezhda", "galina"],
+      ["vasily", "nina"],
+      ["nadezhda", "nina"],
+      ["yustin", "vladimir"],
+      ["vladimir", "viktor"],
+      ["viktor", "sasha"],
+      ["galina", "sasha"],
+    ].map(([parentId, childId]) => ({ parentId, childId }));
+    const couples = [
+      { person1Id: "grigory", person2Id: "agrafena" },
+      { person1Id: "vasily", person2Id: "nadezhda" },
+      { person1Id: "viktor", person2Id: "galina" },
+    ];
+    const ids = people.map((p) => p.id);
+    const found = findBranches(
+      people,
+      edges,
+      couples,
+      computeGenerations(ids, edges, couples),
+    );
+    expect(
+      found.map((b) => [b.surname, b.lineIds.length, b.joinsRootId]),
+    ).toEqual([
+      ["Козловский", 4, "yustin"],
+      ["Купчик", 4, null],
+      ["Колесникович", 3, "petr"],
+      ["Струневский", 2, "iosif"],
     ]);
   });
 

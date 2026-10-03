@@ -94,9 +94,14 @@ export function useFamilyMap(
       focus.kind === "branch" ? focus.rootId : (hoveredBranch ?? null);
     const branch = branchId ? branchById.get(branchId) : undefined;
     if (branch) {
+      // The whole path to today: the line's own places first, then where
+      // the family it flowed into went on.
       const path = pathOf(data.model, new Set(branch.memberIds));
       return {
-        placeIds: branch.placeIds,
+        placeIds: [
+          ...branch.placeIds,
+          ...path.placeIds.filter((id) => !branch.placeIds.includes(id)),
+        ],
         routeIds: path.routeIds,
         numbered: false,
       };

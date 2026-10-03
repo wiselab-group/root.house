@@ -31,7 +31,9 @@ export function PersonPanel({
       .map((id) => placeById.get(id)?.country?.trim().toLowerCase())
       .filter(Boolean),
   );
-  const branch = data.branches.find((b) => b.memberIds.includes(personId));
+  const branch =
+    data.branches.find((b) => b.lineIds.includes(personId)) ??
+    data.branches.find((b) => b.memberIds.includes(personId));
   const meta = [
     personYears(person, t),
     placeIds.length > 0

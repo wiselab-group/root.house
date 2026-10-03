@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { ArrowRightIcon } from "lucide-react";
 import { BackButton, Eyebrow, PersonRow } from "./panel-bits";
 import { personYears } from "./person-years";
 import type { FamilyMapState } from "../use-family-map";
@@ -23,10 +24,12 @@ export function BranchPanel({
   const placeName = (id: string) => data.places.find((p) => p.id === id)?.name;
   const origin = placeName(branch.originPlaceId) ?? "";
   const base = Math.min(
-    ...branch.memberIds.map((id) => data.model.generations[id] ?? 0),
+    ...branch.lineIds.map((id) => data.model.generations[id] ?? 0),
   );
 
-  const members = branch.memberIds
+  // The line itself; where it flows into another branch, that one goes on.
+  const joins = data.branches.find((b) => b.rootId === branch.joinsRootId);
+  const members = branch.lineIds
     .map((id) => data.people[id])
     .filter((p) => p !== undefined)
     .sort(
@@ -58,7 +61,7 @@ export function BranchPanel({
           {" · "}
           {t("branchMeta", {
             generations: branch.generations,
-            people: branch.memberIds.length,
+            people: branch.lineIds.length,
           })}
         </p>
       </header>
@@ -86,6 +89,19 @@ export function BranchPanel({
           );
         })}
       </ol>
+      {joins?.surname && (
+        <button
+          type="button"
+          onClick={() => setFocus({ kind: "branch", rootId: joins.rootId })}
+          className="group flex cursor-pointer items-center gap-2 self-start rounded-full border border-border px-3.5 py-2 text-sm text-muted-foreground transition-[border-color,color] duration-base ease-(--ease-reveal) outline-none hover:border-primary hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40"
+        >
+          {t("branchNext", { surname: joins.surname })}
+          <ArrowRightIcon
+            className="size-3.5 transition-transform duration-base ease-(--ease-spring) group-hover:translate-x-0.5"
+            aria-hidden
+          />
+        </button>
+      )}
     </>
   );
 }

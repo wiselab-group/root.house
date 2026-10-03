@@ -55,13 +55,18 @@ export interface MapEvent {
 export interface MapBranch {
   rootId: string;
   surname: string | null;
+  /** The branch's own line — the founders' name carried by birth. */
+  lineIds: string[];
+  /** Everyone the branch led to — its whole path to today. */
   memberIds: string[];
   generations: number;
   /** Where the branch starts — the founders' birthplace, else their first stop. */
   originPlaceId: string;
   since: number | null;
-  /** Places in the order the branch first reached them. */
+  /** The line's own places, in the order it first reached them. */
   placeIds: string[];
+  /** The branch this line flowed into, when it did. */
+  joinsRootId: string | null;
 }
 
 /** What a map editor still has to fill in — never shown to viewers. */
@@ -159,7 +164,7 @@ export async function getFamilyMapData(
     new Map(Object.entries(model.generations)),
   );
   for (const branch of found) {
-    const path = pathOf(model, new Set(branch.memberIds));
+    const path = pathOf(model, new Set(branch.lineIds));
     const founders = branch.rootIds.map((id) =>
       chronoPeople.find((p) => p.id === id),
     );
@@ -174,7 +179,7 @@ export async function getFamilyMapData(
       .map((p) => p?.birthYear)
       .filter((y): y is number => y != null);
     const firstStay = model.stays
-      .filter((s) => branch.memberIds.includes(s.personId))
+      .filter((s) => branch.lineIds.includes(s.personId))
       .reduce<number | null>(
         (min, s) => (min === null || s.from < min ? s.from : min),
         null,
@@ -182,6 +187,7 @@ export async function getFamilyMapData(
     branches.push({
       rootId: branch.rootId,
       surname: branch.surname,
+      lineIds: branch.lineIds,
       memberIds: branch.memberIds,
       generations: branch.generations,
       originPlaceId,
@@ -190,6 +196,7 @@ export async function getFamilyMapData(
         originPlaceId,
         ...path.placeIds.filter((id) => id !== originPlaceId),
       ],
+      joinsRootId: branch.joinsRootId,
     });
   }
 

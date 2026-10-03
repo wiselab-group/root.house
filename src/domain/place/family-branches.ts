@@ -1,3 +1,5 @@
+import { surnameKey } from "@/domain/person/surname-key";
+
 /**
  * Generations and root branches of a family, for the map's «Откуда мы».
  * Pure graph code over parent→child and partnership edges — the same
@@ -84,18 +86,28 @@ export interface FamilyBranch {
   rootId: string;
   /** Every root of the branch — a founding couple shares one branch. */
   rootIds: string[];
-  /** The family name most of the branch carries; null when nobody has one. */
+  /** The founders' family name; null when they have none. */
   surname: string | null;
-  /** Roots + every descendant, by id. */
+  /**
+   * The branch's own line: the founders and the descendants born with their
+   * family name. Where the name stops, the line has flowed into another one.
+   */
+  lineIds: string[];
+  /** Roots + every descendant, by id — the branch's whole path to today. */
   memberIds: string[];
+  /** Generations along the branch's own line. */
   generations: number;
+  /** The branch whose line the children of this line were born into. */
+  joinsRootId: string | null;
 }
 
 /**
- * The family's root branches: each parentless rank-0 person (a founding
- * couple counts once) with all their descendants. Named by the surname most
- * members share — never by gender — and ordered biggest first, so the map
- * can show the 2–3 branches that carry the most of the family.
+ * The family's root branches: each parentless rank-0 person with all their
+ * descendants. A founding couple counts once, and so do founders who share a
+ * family name. Branches converge — an in-married line's grandchildren are the
+ * main line's too — so a branch is named and ranked by its own line (the
+ * founders' family name, carried by birth), not by all its descendants:
+ * otherwise every line feeding into the biggest one looks like a copy of it.
  */
 export function findBranches(
   persons: readonly BranchPerson[],
@@ -104,6 +116,7 @@ export function findBranches(
   generations: ReadonlyMap<string, number>,
 ): FamilyBranch[] {
   const byId = new Map(persons.map((p) => [p.id, p]));
+  const keyOf = (id: string) => surnameKey(familyName(byId.get(id)));
   const hasParent = new Set<string>();
   const childrenOf = new Map<string, string[]>();
   for (const e of parentChild) {
@@ -114,20 +127,29 @@ export function findBranches(
       e.childId,
     ]);
   }
-  const isRoot = (id: string) =>
-    !hasParent.has(id) && (generations.get(id) ?? 0) === 0;
-  const roots = persons.filter((p) => isRoot(p.id)).map((p) => p.id);
+  const roots = persons
+    .map((p) => p.id)
+    .filter((id) => !hasParent.has(id) && (generations.get(id) ?? 0) === 0);
 
-  // Founding couples: roots joined by a partnership share one branch.
+  // Founding couples, and founders of one family name, share a branch.
   const groupOf = new Map<string, string>(roots.map((id) => [id, id]));
   const find = (id: string): string => {
     let cur = id;
     while (groupOf.get(cur) !== cur) cur = groupOf.get(cur) as string;
     return cur;
   };
+  const join = (a: string, b: string) => groupOf.set(find(b), find(a));
   for (const e of partners) {
-    if (!groupOf.has(e.person1Id) || !groupOf.has(e.person2Id)) continue;
-    groupOf.set(find(e.person2Id), find(e.person1Id));
+    if (groupOf.has(e.person1Id) && groupOf.has(e.person2Id))
+      join(e.person1Id, e.person2Id);
+  }
+  const rootByKey = new Map<string, string>();
+  for (const id of roots) {
+    const key = keyOf(id);
+    if (!key) continue;
+    const seen = rootByKey.get(key);
+    if (seen) join(seen, id);
+    else rootByKey.set(key, id);
   }
   const groups = new Map<string, string[]>();
   for (const id of roots) {
@@ -135,69 +157,98 @@ export function findBranches(
     groups.set(g, [...(groups.get(g) ?? []), id]);
   }
 
-  const branches: FamilyBranch[] = [];
-  for (const rootIds of groups.values()) {
-    const members = new Set(rootIds);
-    const queue = [...rootIds];
+  const descend = (from: string[], keep: (id: string) => boolean) => {
+    const found = new Set(from);
+    const queue = [...from];
     while (queue.length > 0) {
       const id = queue.shift() as string;
       for (const child of childrenOf.get(id) ?? []) {
-        if (members.has(child)) continue;
-        members.add(child);
+        if (found.has(child) || !keep(child)) continue;
+        found.add(child);
         queue.push(child);
       }
     }
-    // A lone root with nobody below is not a branch, just a person.
-    if (members.size === rootIds.length && rootIds.length === 1) continue;
+    return found;
+  };
 
-    const surname = commonSurname([...members].map((id) => byId.get(id)));
-    const rootId =
-      rootIds.find((id) => familyName(byId.get(id)) === surname) ??
-      oldest(rootIds.map((id) => byId.get(id)));
-    const ranks = [...members].map((id) => generations.get(id) ?? 0);
+  const branches: FamilyBranch[] = [];
+  for (const rootIds of groups.values()) {
+    const members = descend(rootIds, () => true);
+    // Founders with nobody below are not a branch, just people.
+    if (members.size === rootIds.length) continue;
+
+    const rootId = founderOf(rootIds, members, byId, keyOf);
+    const key = keyOf(rootId);
+    const line = key ? descend(rootIds, (id) => keyOf(id) === key) : members;
+    const ranks = [...line].map((id) => generations.get(id) ?? 0);
     branches.push({
       rootId,
       rootIds,
-      surname,
+      surname: familyName(byId.get(rootId)),
+      lineIds: [...line],
       memberIds: [...members],
       generations: Math.max(...ranks) - Math.min(...ranks) + 1,
+      joinsRootId: null,
     });
   }
-  return branches.sort(
-    (a, b) =>
-      b.memberIds.length - a.memberIds.length ||
-      a.rootId.localeCompare(b.rootId),
+
+  // Where each line flows on: the biggest other line its children are in.
+  const lineOf = new Map<string, FamilyBranch>();
+  for (const b of branches) for (const id of b.lineIds) lineOf.set(id, b);
+  for (const b of branches) {
+    const lines = new Set(b.lineIds);
+    let target: FamilyBranch | null = null;
+    for (const id of b.lineIds) {
+      for (const child of childrenOf.get(id) ?? []) {
+        const other = lines.has(child) ? undefined : lineOf.get(child);
+        if (other && other !== b && (!target || bigger(other, target)))
+          target = other;
+      }
+    }
+    b.joinsRootId = target?.rootId ?? null;
+  }
+
+  return branches.sort((a, b) =>
+    bigger(a, b) ? -1 : bigger(b, a) ? 1 : a.rootId.localeCompare(b.rootId),
   );
+}
+
+/** Ranked by its own line first, then by everyone it led to. */
+function bigger(a: FamilyBranch, b: FamilyBranch): boolean {
+  return (
+    a.lineIds.length > b.lineIds.length ||
+    (a.lineIds.length === b.lineIds.length &&
+      a.memberIds.length > b.memberIds.length)
+  );
+}
+
+/** The founder whose family name the most of the branch was born with;
+ *  the oldest founder on a tie or when nobody has a name. */
+function founderOf(
+  rootIds: string[],
+  members: Set<string>,
+  byId: Map<string, BranchPerson>,
+  keyOf: (id: string) => string | null,
+): string {
+  const counts = new Map<string, number>();
+  for (const id of members) {
+    const key = keyOf(id);
+    if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const ordered = rootIds
+    .map((id) => byId.get(id))
+    .filter((p): p is BranchPerson => Boolean(p))
+    .sort(
+      (a, b) =>
+        (counts.get(keyOf(b.id) ?? "") ?? 0) -
+          (counts.get(keyOf(a.id) ?? "") ?? 0) ||
+        (a.birthYear ?? Infinity) - (b.birthYear ?? Infinity) ||
+        a.id.localeCompare(b.id),
+    );
+  return ordered[0].id;
 }
 
 /** Birth family name: a maiden name when known, else the current one. */
 function familyName(p: BranchPerson | undefined): string | null {
   return p?.maidenName?.trim() || p?.lastName?.trim() || null;
-}
-
-function commonSurname(members: (BranchPerson | undefined)[]): string | null {
-  const counts = new Map<string, number>();
-  for (const m of members) {
-    const name = familyName(m);
-    if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
-  }
-  let best: string | null = null;
-  let bestCount = 0;
-  for (const [name, count] of counts) {
-    if (count > bestCount || (count === bestCount && best && name < best)) {
-      best = name;
-      bestCount = count;
-    }
-  }
-  return best;
-}
-
-function oldest(people: (BranchPerson | undefined)[]): string {
-  const known = people.filter((p): p is BranchPerson => Boolean(p));
-  known.sort(
-    (a, b) =>
-      (a.birthYear ?? Infinity) - (b.birthYear ?? Infinity) ||
-      a.id.localeCompare(b.id),
-  );
-  return known[0].id;
 }

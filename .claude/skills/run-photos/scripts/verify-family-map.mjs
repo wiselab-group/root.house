@@ -126,6 +126,10 @@ async function main() {
     await shoot(page, "01-overview");
 
     const kupchik = page.getByRole("button", { name: /^Купчик/ });
+    check(
+      await kupchik.getByText("дальше — ветвь Ушкар").isVisible(),
+      "a line that flows into another branch says so, not repeats it",
+    );
     await kupchik.hover();
     await page.waitForTimeout(600);
     await shoot(page, "02-branch-hover");
@@ -133,6 +137,10 @@ async function main() {
     await page.waitForTimeout(1600);
     check(await page.getByRole("heading", { name: "Купчик" }).isVisible(), "branch panel opens");
     check(page.url().includes("branch="), "branch is in the URL");
+    check(
+      await page.getByRole("button", { name: "Дальше — ветвь Ушкар" }).isVisible(),
+      "branch panel leads on to the branch it flowed into",
+    );
     await shoot(page, "03-branch");
 
     await page.getByRole("button", { name: /Галина Купчик/ }).first().click();

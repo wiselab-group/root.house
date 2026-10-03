@@ -86,6 +86,10 @@ export function OverviewPanel({
               <BranchCard
                 key={branch.rootId}
                 branch={branch}
+                joins={
+                  data.branches.find((b) => b.rootId === branch.joinsRootId)
+                    ?.surname ?? null
+                }
                 placeById={placeById}
                 onSelect={() =>
                   setFocus({ kind: "branch", rootId: branch.rootId })

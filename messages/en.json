@@ -872,6 +872,8 @@
     "branchOrigin": "{place}, since {year}",
     "branchMeta": "{generations, plural, one {# generation} other {# generations}} · {people, plural, one {# person} other {# people}}",
     "branchLink": "{surname} branch",
+    "branchJoins": "then the {surname} branch",
+    "branchNext": "Then the {surname} branch",
     "generationN": "Generation {n}",
     "rootTag": "roots · {surname}",
     "rootTagPlain": "roots",

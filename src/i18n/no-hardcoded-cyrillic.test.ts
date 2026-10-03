@@ -13,6 +13,7 @@ const ALLOWED = new Set([
   "src/domain/shared/slugify.ts",
   "src/domain/person/relation-label.ts",
   "src/domain/person/display-name.ts",
+  "src/domain/person/surname-key.ts",
   "src/domain/person/person.service.ts",
   "src/domain/relationship/relationship.service.ts",
   "src/domain/event/event.service.ts",

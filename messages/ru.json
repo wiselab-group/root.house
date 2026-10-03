@@ -872,6 +872,8 @@
     "branchOrigin": "{place}, с {year}",
     "branchMeta": "{generations, plural, one {# поколение} few {# поколения} many {# поколений} other {# поколения}} · {people, plural, one {# человек} few {# человека} many {# человек} other {# человека}}",
     "branchLink": "Ветвь {surname}",
+    "branchJoins": "дальше — ветвь {surname}",
+    "branchNext": "Дальше — ветвь {surname}",
     "generationN": "Поколение {n}",
     "rootTag": "корни · {surname}",
     "rootTagPlain": "корни",
