@@ -1,20 +1,20 @@
 import { resolveCssColor } from "@/lib/css-color";
+import { DEFAULT_MAP_THEME, type MapThemeId } from "@/domain/shared/map-theme";
 import type { MapPalette } from "./apply-map-theme";
+
+export { DEFAULT_MAP_THEME, type MapThemeId };
 
 /**
  * Map themes are CSS: each is a class on the map's wrapper that may redefine
  * the --map-* tokens (globals.css). «archive» adds no class and so follows
  * the app's own light/dark palette; another theme is one block of
- * variables there plus one entry here — nothing else changes.
+ * variables there plus one entry here (and its id in domain/shared/
+ * map-theme.ts) — nothing else changes.
  */
-export const MAP_THEMES = {
+export const MAP_THEMES: Record<MapThemeId, { className: string }> = {
   archive: { className: "" },
   parchment: { className: "map-theme-parchment" },
-} as const;
-
-export type MapThemeId = keyof typeof MAP_THEMES;
-
-export const DEFAULT_MAP_THEME: MapThemeId = "archive";
+};
 
 const TOKENS: Record<keyof MapPalette, string> = {
   land: "--map-land",

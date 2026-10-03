@@ -5,6 +5,7 @@ import { requireFamilyAccess } from "@/domain/family/access";
 import { getFamilyMapData } from "@/domain/place/place-map.service";
 import { resolveFamilyIdBySlug } from "@/lib/resolve-family-slug";
 import { getFamilySummary } from "@/domain/family/family.service";
+import { getUserMapTheme } from "@/domain/auth/auth.service";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { FamilyMapLoader } from "@/components/map/family/family-map-loader";
 import type { MapFocus } from "@/components/map/family/use-family-map";
@@ -56,7 +57,7 @@ export default async function FamilyMapPage({
   const familyId = await resolveFamilyIdBySlug(slug);
   const member = await requireFamilyAccess(familyId, session.user.id, "viewer");
   const canEdit = member.role === "owner" || member.role === "editor";
-  const [data, family] = await Promise.all([
+  const [data, family, mapTheme] = await Promise.all([
     getFamilyMapData(
       familyId,
       { userId: session.user.id, role: member.role },
@@ -64,6 +65,7 @@ export default async function FamilyMapPage({
       canEdit,
     ),
     getFamilySummary(familyId),
+    getUserMapTheme(session.user.id),
   ]);
 
   const breadcrumbItems = [
@@ -83,6 +85,7 @@ export default async function FamilyMapPage({
         familySlug={slug}
         canEdit={canEdit}
         initialFocus={initialFocus(data, await searchParams)}
+        initialTheme={mapTheme}
       />
     </main>
   );

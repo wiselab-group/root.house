@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useRef } from "react";
 import type { MapRef } from "react-map-gl/maplibre";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { snapshotAt } from "@/domain/place/map-snapshot";
@@ -16,6 +16,7 @@ import { useFamilyMap, type MapFocus } from "./use-family-map";
 import { useMapCamera } from "./use-map-camera";
 import { useDetailLayers } from "./use-detail-layers";
 import { useMapTheme } from "./use-map-theme";
+import type { MapThemeId } from "@/lib/map-theme/map-theme";
 import { ThemeSwitcher } from "./theme-switcher";
 import { usePlayback } from "./use-playback";
 
@@ -34,12 +35,14 @@ export function FamilyMap({
   familySlug,
   canEdit,
   initialFocus,
+  initialTheme,
 }: {
   data: FamilyMapData;
   familyId: string;
   familySlug: string;
   canEdit: boolean;
   initialFocus: MapFocus;
+  initialTheme: MapThemeId;
 }) {
   const state = useFamilyMap(data, initialFocus, {
     familyId,
@@ -53,7 +56,7 @@ export function FamilyMap({
     state;
   const editing = state.focus.kind === "editPlace";
   useDetailLayers(mapRef, editing);
-  const [themeId, setThemeId] = useMapTheme();
+  const { themeId, setThemeId, theme } = useMapTheme(initialTheme, data.places);
   const { play, pause } = usePlayback(
     range,
     moment,
@@ -83,14 +86,6 @@ export function FamilyMap({
   }, [pause, setMoment]);
 
   const allStats = snapshotAt(data.model, "all").stats;
-  // Our pins already name every family place — the basemap stays quiet there.
-  const theme = useMemo(
-    () => ({
-      id: themeId,
-      hideLabelNames: data.places.map((p) => p.name),
-    }),
-    [themeId, data.places],
-  );
   const invite = (className: string) =>
     range ? (
       <InviteButton

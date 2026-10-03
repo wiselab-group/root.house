@@ -3,6 +3,11 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
 import type { RegisterInput } from "@/lib/validation/auth";
+import {
+  DEFAULT_MAP_THEME,
+  isMapThemeId,
+  type MapThemeId,
+} from "@/domain/shared/map-theme";
 
 const BCRYPT_SALT_ROUNDS = 12;
 
@@ -78,4 +83,20 @@ export async function getUserEmail(userId: string): Promise<string | null> {
     columns: { email: true },
   });
   return row?.email ?? null;
+}
+
+/** The user's family-map look; the default when never chosen (or unknown). */
+export async function getUserMapTheme(userId: string): Promise<MapThemeId> {
+  const row = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+    columns: { mapTheme: true },
+  });
+  return isMapThemeId(row?.mapTheme) ? row.mapTheme : DEFAULT_MAP_THEME;
+}
+
+export async function setUserMapTheme(
+  userId: string,
+  mapTheme: MapThemeId,
+): Promise<void> {
+  await db.update(users).set({ mapTheme }).where(eq(users.id, userId));
 }

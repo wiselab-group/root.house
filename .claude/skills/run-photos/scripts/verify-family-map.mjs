@@ -214,7 +214,6 @@ async function main() {
       (await page.getByRole("button", { name: /Пергамент/ }).getAttribute("aria-pressed")) === "true",
       "the chosen map style survives a reload",
     );
-    await page.getByRole("button", { name: /Архив/ }).click();
     await page.keyboard.press("Escape");
     const session = await context.storageState();
     await context.close();
@@ -229,6 +228,17 @@ async function main() {
     const p2 = await phone.newPage();
     p2.on("pageerror", (e) => errors.push(e.message));
     await openMap(p2, mapUrl);
+    // A fresh browser context shares no localStorage — the look comes from
+    // the profile (users.map_theme), as it would on another device.
+    await p2.getByRole("button", { name: "Вид карты" }).tap();
+    check(
+      (await p2.getByRole("button", { name: /Пергамент/ }).getAttribute("aria-pressed")) === "true",
+      "the map style follows the user to another device",
+    );
+    await shoot(p2, "10-phone-parchment");
+    await p2.getByRole("button", { name: /Архив/ }).tap();
+    await p2.keyboard.press("Escape");
+    await p2.waitForTimeout(2000);
     await shoot(p2, "11-phone-overview");
     await p2.getByRole("button", { name: /^Киев/ }).first().tap();
     await p2.waitForTimeout(1600);

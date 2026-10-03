@@ -1,4 +1,5 @@
 import type { Locale } from "@/domain/shared/locale";
+import type { MapThemeId } from "@/domain/shared/map-theme";
 import {
   pgTable,
   text,
@@ -26,6 +27,9 @@ export const users = pgTable("users", {
   // Copied into the NEXT_LOCALE cookie at sign-in so it follows the user
   // across devices — see src/i18n/sync-locale.ts.
   locale: text("locale").$type<Locale>(),
+  // The family map's look ("archive" | "parchment"); null = the default.
+  // Follows the user across devices like `locale` — see map-theme.actions.ts.
+  mapTheme: text("map_theme").$type<MapThemeId>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   // Stamped by Auth.js `events.signIn` (lib/auth.ts) — sessions are JWT, so
   // the `sessions` table stays empty and can't answer "when did they last
