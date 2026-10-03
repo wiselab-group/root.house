@@ -4,10 +4,15 @@
  * oklch(), and getComputedStyle hands the token back verbatim, so the
  * browser paints one pixel with it and we read the pixel back — the one
  * conversion every engine agrees on. Client-only (needs a canvas).
+ * `element` scopes the lookup (a map theme class redefines tokens there).
  */
-export function resolveCssColor(token: string, fallback: string): string {
+export function resolveCssColor(
+  token: string,
+  fallback: string,
+  element?: Element,
+): string {
   if (typeof document === "undefined") return fallback;
-  const value = getComputedStyle(document.documentElement)
+  const value = getComputedStyle(element ?? document.documentElement)
     .getPropertyValue(token)
     .trim();
   if (!value) return fallback;

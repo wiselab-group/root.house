@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import type { MapRef } from "react-map-gl/maplibre";
 import { useReducedMotion } from "@/hooks/use-reduced-motion";
 import { snapshotAt } from "@/domain/place/map-snapshot";
+import { DEFAULT_MAP_THEME } from "@/lib/map-theme/map-theme";
 import type { FamilyMapData } from "@/domain/place/place-map.service";
 import { MapView } from "../map-view";
 import { MapPins } from "./map-pins";
@@ -75,6 +76,14 @@ export function FamilyMap({
   }, [pause, setMoment]);
 
   const allStats = snapshotAt(data.model, "all").stats;
+  // Our pins already name every family place — the basemap stays quiet there.
+  const theme = useMemo(
+    () => ({
+      id: DEFAULT_MAP_THEME,
+      hideLabelNames: data.places.map((p) => p.name),
+    }),
+    [data.places],
+  );
   const invite = (className: string) =>
     range ? (
       <InviteButton
@@ -93,6 +102,8 @@ export function FamilyMap({
         initialLatitude={START_VIEW.latitude}
         initialZoom={START_VIEW.zoom}
         onLoad={onLoad}
+        theme={theme}
+        showZoom={false}
       >
         <RouteLayer state={state} />
         <MapPins state={state} />

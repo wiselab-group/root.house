@@ -216,6 +216,18 @@
      route-layer.tsx). Darker than --branch — a route crosses a busy
      basemap, not a calm canvas. Resolved to rgba for WebGL at runtime. */
   --map-route: oklch(0.55 0.05 55);
+  /* The family map's basemap, by role (lib/map-theme/) — land matches
+     --tree-canvas so the map and the tree read as one place. */
+  --map-land: oklch(0.955 0.012 55);
+  --map-forest: oklch(0.88 0.03 120 / 0.3);
+  --map-water: oklch(0.87 0.025 225);
+  --map-water-shadow: oklch(0.82 0.03 225);
+  --map-road: oklch(0.985 0.006 60);
+  --map-border: oklch(0.91 0.012 55);
+  --map-country-border: oklch(0.72 0.04 50);
+  --map-label: oklch(0.48 0.02 55);
+  --map-label-halo: oklch(0.97 0.01 60);
+  --map-water-label: oklch(0.6 0.03 225);
   /* Tree-card-only ring/identity color — the photo frame's isOpen/isTraced/
      isSelected fill (compact-card-body.tsx). Went through 3 iterations the
      same day (2026-09-18): the exact reference hex #B95C28 read as harsh/
@@ -347,9 +359,18 @@ body:has(.photo-backdrop) .app-header {
      that nearly disappear into the canvas). oklch(0.35 0.03 55) reproduces
      that same ~1.5:1 ratio against dark's own --tree-canvas. */
   --branch: oklch(0.35 0.03 55);
-  /* See :root's --map-route. Mid-tone until the map gets its own dark
-     basemap (map themes) — it still sits on a light street map today. */
-  --map-route: oklch(0.6 0.06 55);
+  /* See :root's --map-route and --map-* basemap roles. */
+  --map-route: oklch(0.72 0.05 60);
+  --map-land: oklch(0.225 0.016 60);
+  --map-forest: oklch(0.27 0.025 120 / 0.22);
+  --map-water: oklch(0.17 0.02 235);
+  --map-water-shadow: oklch(0.14 0.02 235);
+  --map-road: oklch(0.28 0.016 60);
+  --map-border: oklch(0.27 0.016 60);
+  --map-country-border: oklch(0.42 0.03 55);
+  --map-label: oklch(0.66 0.02 60);
+  --map-label-halo: oklch(0.2 0.016 60);
+  --map-water-label: oklch(0.45 0.025 235);
   /* See :root's own comment on --tree-card-ring — aliased to --accent, same
      as light. */
   --tree-card-ring: var(--accent);
@@ -1275,4 +1296,33 @@ body:has(.photo-backdrop) .app-header-bar {
 }
 .story-editor .ProseMirror-selectednode {
   outline: none;
+}
+
+/* Family map theme «Пергамент» — an old paper atlas, whatever the app's
+   own theme (lib/map-theme/map-theme.ts registers it). */
+.map-theme-parchment {
+  --map-land: oklch(0.9 0.04 80);
+  --map-forest: oklch(0.82 0.05 110 / 0.45);
+  --map-water: oklch(0.8 0.03 200);
+  --map-water-shadow: oklch(0.74 0.035 200);
+  --map-road: oklch(0.86 0.04 75);
+  --map-border: oklch(0.7 0.05 60);
+  --map-country-border: oklch(0.55 0.07 45);
+  --map-label: oklch(0.38 0.05 50);
+  --map-label-halo: oklch(0.9 0.04 80);
+  --map-water-label: oklch(0.5 0.04 210);
+  --map-route: oklch(0.45 0.08 45);
+}
+
+/* A themed map's own chrome (attribution — required by the MapTiler/OSM
+   licence, so restyled, never hidden) in the app's palette, not white. */
+.map-themed .maplibregl-ctrl.maplibregl-ctrl-attrib {
+  background: color-mix(in oklch, var(--card) 80%, transparent);
+  color: var(--muted-foreground);
+}
+.map-themed .maplibregl-ctrl-attrib a {
+  color: var(--muted-foreground);
+}
+.map-themed .maplibregl-ctrl-attrib-button {
+  filter: invert(1) opacity(0.6);
 }

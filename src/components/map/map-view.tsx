@@ -1,29 +1,23 @@
 "use client";
 
 import "maplibre-gl/dist/maplibre-gl.css";
-import { setWorkerUrl, type StyleSpecification } from "maplibre-gl";
+import { setWorkerUrl } from "maplibre-gl";
 import Map, { NavigationControl, type MapRef } from "react-map-gl/maplibre";
-import { forwardRef, useEffect, useState } from "react";
+import { forwardRef, useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { localizeStyleLabels } from "@/lib/maptiler-style-language";
+import { MAP_THEMES, type MapThemeId } from "@/lib/map-theme/map-theme";
+import type { Locale } from "@/domain/shared/locale";
+import { cn } from "@/lib/utils";
 import { MapLoading } from "./map-loading";
+import { useMapStyle } from "./use-map-style";
 
 /**
  * The ONLY module in the codebase allowed to import maplibre-gl/react-map-gl
  * — mirrors components/tree/adapters/xyflow-adapter.ts's own boundary rule
  * for @xyflow/react. If the map library is ever swapped, this file (plus
  * the map's own components under components/map/) is the only place that changes.
- *
- * Style is MapTiler's hosted vector style (see docs/PRODUCT-REFACTOR.md §M
- * for the MapLibre-vs-Leaflet decision and MapTiler-vs-Stadia provider
- * choice) — "streets-v2" chosen over MapTiler's more saturated default for
- * closer alignment with the app's warm/muted palette; can be swapped for a
- * hand-tuned custom style later without touching any caller of MapView.
+ * Which basemap style it shows, and how it is themed: use-map-style.ts.
  */
-const MAPTILER_STYLE_URL = (() => {
-  const key = process.env.NEXT_PUBLIC_MAPTILER_API_KEY;
-  return `https://api.maptiler.com/maps/streets-v2/style.json?key=${key}`;
-})();
 
 // maplibre-gl v6 resolves its tile-parsing worker via
 // `new URL('./maplibre-gl-worker.mjs', import.meta.url)` — Turbopack's dev
@@ -52,6 +46,11 @@ export const MapView = forwardRef<
     cursor?: string;
     /** The style and first tiles are in — safe to fit/fly the camera. */
     onLoad?: () => void;
+    /** Paint the basemap in a map theme; `hideLabelNames` — places the
+     *  caller labels itself, so the basemap doesn't print them twice. */
+    theme?: { id: MapThemeId; hideLabelNames?: readonly string[] };
+    /** Zoom +/- buttons — off where pinch/scroll is enough (family map). */
+    showZoom?: boolean;
   }
 >(function MapView(
   {
@@ -63,32 +62,17 @@ export const MapView = forwardRef<
     onMapClick,
     cursor,
     onLoad,
+    theme,
+    showZoom = true,
   },
   ref,
 ) {
   const t = useTranslations("map");
   const locale = useLocale();
   const hasKey = Boolean(process.env.NEXT_PUBLIC_MAPTILER_API_KEY);
-  const [style, setStyle] = useState<StyleSpecification | string | null>(null);
-
-  useEffect(() => {
-    if (!hasKey) return;
-    let cancelled = false;
-    fetch(MAPTILER_STYLE_URL)
-      .then((res) => res.json())
-      .then((raw: StyleSpecification) => {
-        if (!cancelled) setStyle(localizeStyleLabels(raw, locale));
-      })
-      .catch(() => {
-        // Falls back to letting maplibre fetch+parse the style URL itself
-        // if our own client-side fetch fails (e.g. offline) — no Russian
-        // label rewrite in that case, but the map still renders.
-        if (!cancelled) setStyle(MAPTILER_STYLE_URL);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [hasKey, locale]);
+  const frameRef = useRef<HTMLDivElement>(null);
+  const themeId = theme?.id;
+  const style = useMapStyle(frameRef, locale as Locale, hasKey, theme);
 
   if (!hasKey) {
     return (
@@ -98,16 +82,23 @@ export const MapView = forwardRef<
     );
   }
 
+  // The frame carries the theme class: its --map-* tokens are what the
+  // theme is painted from, so it exists before the style is built.
+  const frameClass = cn(
+    "size-full",
+    themeId && ["map-themed", MAP_THEMES[themeId].className],
+    className,
+  );
   if (!style) {
     return (
-      <div className={className} style={{ width: "100%", height: "100%" }}>
+      <div ref={frameRef} className={frameClass}>
         <MapLoading />
       </div>
     );
   }
 
   return (
-    <div className={className} style={{ width: "100%", height: "100%" }}>
+    <div ref={frameRef} className={frameClass}>
       <Map
         ref={ref}
         mapStyle={style}
@@ -126,7 +117,9 @@ export const MapView = forwardRef<
             : undefined
         }
       >
-        <NavigationControl position="bottom-right" showCompass={false} />
+        {showZoom && (
+          <NavigationControl position="bottom-right" showCompass={false} />
+        )}
         {children}
       </Map>
     </div>

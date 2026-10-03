@@ -14,7 +14,8 @@ function padding(story = false) {
   if (window.matchMedia(DESKTOP).matches) {
     return { top: 64, bottom: story ? 200 : 140, left: 420, right: 64 };
   }
-  return { top: 48, bottom: story ? 200 : 300, left: 32, right: 32 };
+  // Labels sit right of their pins, root tags centred under them.
+  return { top: 48, bottom: story ? 200 : 300, left: 64, right: 80 };
 }
 
 /**

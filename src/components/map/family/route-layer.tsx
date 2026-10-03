@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Layer, Source } from "react-map-gl/maplibre";
+import { Layer, Source, useMap } from "react-map-gl/maplibre";
 import { arcPoints, partialArc, type LngLat } from "@/domain/place/route-arc";
 import { resolveCssColor } from "@/lib/css-color";
 import type { FamilyMapState } from "./use-family-map";
@@ -14,12 +14,15 @@ interface RouteFeature {
   geometry: { type: "LineString"; coordinates: LngLat[] };
 }
 
-/** MapLibre paints in WebGL — the palette's tokens are resolved to rgba
- *  once (css-color.ts); the app's theme is fixed per page load. */
+/** MapLibre paints in WebGL — the tokens are resolved to rgba once
+ *  (css-color.ts), read off the map's own frame so a map theme's
+ *  --map-route applies; the app's theme is fixed per page load. */
 function usePalette() {
+  // Custom properties inherit — the container sees the theme frame's tokens.
+  const frame = useMap().current?.getContainer();
   const [palette] = useState(() => ({
-    action: resolveCssColor("--primary", "rgb(185, 92, 40)"),
-    branch: resolveCssColor("--map-route", "rgb(160, 130, 110)"),
+    action: resolveCssColor("--primary", "rgb(185, 92, 40)", frame),
+    branch: resolveCssColor("--map-route", "rgb(160, 130, 110)", frame),
   }));
   return palette;
 }
