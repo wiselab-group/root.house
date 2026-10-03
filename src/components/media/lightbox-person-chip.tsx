@@ -14,7 +14,13 @@ type TaggedPerson = GalleryPhotoView["people"][number];
  *  request 2026-09-29). Shared with the hidden measuring copy in
  *  LightboxPeopleFit, so both must stay the same size. */
 export const personChipClass =
-  "inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-glass-edge bg-glass pr-1.5 pl-3 text-sm font-medium whitespace-nowrap text-foreground backdrop-blur-xl transition-colors duration-fast ease-(--ease-reveal) outline-none hover:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none";
+  "inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-glass-edge bg-glass pr-1.5 pl-3 text-sm font-medium whitespace-nowrap text-foreground backdrop-blur-xl transition-[background-color,border-color,color] duration-fast ease-(--ease-reveal) outline-none hover:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none";
+
+/** The person lit on the photo (hovered, focused, or tapped on touch):
+ *  terracotta, the "what you're looking at" colour the tree's open card
+ *  and trace use — on the outline and the ↗ only, so the chip stays a
+ *  name, not a button, and doesn't outshout the photo. */
+export const personChipLitClass = "border-primary/70 bg-glass-strong";
 
 /** «+N» and the phone's count chip — same pill, no arrow. */
 export const moreChipClass = cn(
@@ -30,7 +36,7 @@ export function ChipArrow({ lit }: { lit: boolean }) {
       aria-hidden="true"
       className={cn(
         "flex size-5 items-center justify-center rounded-full transition-[opacity,background-color] duration-fast ease-(--ease-reveal) motion-reduce:transition-none",
-        lit ? "bg-glass-strong opacity-100" : "opacity-45",
+        lit ? "bg-primary/20 text-primary opacity-100" : "opacity-45",
       )}
     >
       <ArrowUpRightIcon className="size-3.5" />
@@ -61,7 +67,7 @@ export function LightboxPersonChip({
   const locale = useLocale();
   const name = personDisplayName(person, locale);
   const href = `/families/${familySlug}/people/${person.slug}`;
-  const lit = highlighted && "bg-glass-strong";
+  const lit = highlighted && personChipLitClass;
 
   if (touch) {
     return (
@@ -81,7 +87,7 @@ export function LightboxPersonChip({
           <Link
             href={href}
             aria-label={t("openProfileOf", { name })}
-            className="mr-1 flex size-6 items-center justify-center rounded-full bg-glass-strong transition-colors active:bg-foreground/30"
+            className="mr-1 flex size-6 items-center justify-center rounded-full bg-primary/20 text-primary transition-colors active:bg-primary/35"
           >
             <ArrowUpRightIcon className="size-3.5" />
           </Link>

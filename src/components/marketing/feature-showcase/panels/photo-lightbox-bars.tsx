@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { glassIconButton, glassPill } from "@/components/hero/glass";
 import {
   ChipArrow,
+  personChipLitClass,
   moreChipClass,
   personChipClass,
 } from "@/components/media/lightbox-person-chip";
@@ -83,7 +84,7 @@ export function PhotoLightboxStrip({
         {names.map((name, index) => (
           <span
             key={name}
-            className={cn(personChipClass, index === lit && "bg-glass-strong")}
+            className={cn(personChipClass, index === lit && personChipLitClass)}
           >
             {name}
             <ChipArrow lit={index === lit} />
