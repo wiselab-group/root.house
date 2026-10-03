@@ -2,7 +2,12 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { ArrowRight, TreeDeciduous } from "lucide-react";
-import { glassSurface } from "@/components/hero/glass";
+
+/** The glass tint without the blur: these cards sit on the page's plain
+ *  gradient, where blurring changes nothing — and iOS Safari, pressing a
+ *  link that has backdrop-filter, paints the blur black (a black card
+ *  with a grey box over its content). */
+const cardSurface = "border border-glass-edge bg-glass";
 
 /**
  * The dashboard's single lead action — the family tree. Visually the
@@ -30,7 +35,7 @@ export function FamilyTreeLaunchCard({
   return (
     <Link
       href={href}
-      className={`${glassSurface} group flex cursor-pointer items-center gap-4 rounded-3xl px-6 py-7 ring-1 ring-primary/35 transition-[background-color,transform,box-shadow] duration-base ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong hover:ring-primary/60 active:scale-[0.98] active:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:px-8`}
+      className={`${cardSurface} group flex cursor-pointer items-center gap-4 rounded-3xl px-6 py-7 ring-1 ring-primary/35 transition-[background-color,translate,scale,box-shadow] duration-base ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong hover:ring-primary/60 active:scale-[0.98] active:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:px-8`}
     >
       <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
         <TreeDeciduous
@@ -81,7 +86,7 @@ export function FamilyNavCard({
   return (
     <Link
       href={href}
-      className={`${glassSurface} group flex h-full cursor-pointer items-center gap-4 rounded-2xl px-5 py-4 transition-[background-color,transform] duration-base ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong active:scale-[0.98] active:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
+      className={`${cardSurface} group flex h-full cursor-pointer items-center gap-4 rounded-2xl px-5 py-4 transition-[background-color,translate,scale] duration-base ease-(--ease-tree-focus) hover:-translate-y-0.5 hover:bg-glass-strong active:scale-[0.98] active:bg-glass-strong focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`}
     >
       <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-glass-strong text-foreground/80 transition-colors group-hover:text-primary">
         <Icon className="size-5" strokeWidth={1.75} aria-hidden="true" />
