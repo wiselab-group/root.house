@@ -98,7 +98,7 @@ export function LightboxPeopleList({
             />
           </label>
         )}
-        <ul className="grid min-h-0 grid-cols-1 gap-0.5 overflow-y-auto sm:grid-cols-2">
+        <ul className="scroll-fade grid min-h-0 grid-cols-1 gap-0.5 overflow-y-auto sm:grid-cols-2">
           {rows.map(({ person, number, name }) => (
             <li key={person.id} className="min-w-0">
               <PeopleListRow

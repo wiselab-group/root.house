@@ -1123,6 +1123,60 @@ body:has(.photo-backdrop) .app-header-bar {
   --xy-controls-button-border-color: var(--border);
 }
 
+/* A scrolling list inside a panel or sheet: content dissolves into the
+   panel at an edge instead of being cut by it — the top edge once the list
+   is scrolled, the bottom edge while more is below. Scroll-driven, so it costs no script; without scroll timelines
+   (older Firefox) the list just clips as before. Put it on the scroll
+   container itself, never on a panel with its own border/background —
+   the mask would fade those too. */
+@property --scroll-fade-top {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --scroll-fade-bottom {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+.scroll-fade {
+  --scroll-fade-size: 2rem;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--scroll-fade-top),
+    #000 calc(100% - var(--scroll-fade-bottom)),
+    transparent 100%
+  );
+}
+@supports (animation-timeline: scroll()) {
+  .scroll-fade {
+    animation:
+      scroll-fade-top var(--ease-reveal) both,
+      scroll-fade-bottom var(--ease-reveal) both;
+    animation-timeline: scroll(self), scroll(self);
+    animation-range:
+      0 var(--scroll-fade-size),
+      calc(100% - var(--scroll-fade-size)) 100%;
+  }
+}
+@keyframes scroll-fade-top {
+  from {
+    --scroll-fade-top: 0px;
+  }
+  to {
+    --scroll-fade-top: var(--scroll-fade-size);
+  }
+}
+@keyframes scroll-fade-bottom {
+  from {
+    --scroll-fade-bottom: var(--scroll-fade-size);
+  }
+  to {
+    --scroll-fade-bottom: 0px;
+  }
+}
+
 /* Lightbox tag spotlight (PhotoTagSpotlight): the dim layer is masked out in
    a soft circle around the hovered person's tag. --spot-x/--spot-y are
    registered so a transition can glide the light between two people rather

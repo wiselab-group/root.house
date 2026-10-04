@@ -867,6 +867,7 @@
     "panelLabel": "Панель карты",
     "expandPanel": "Развернуть панель",
     "collapsePanel": "Свернуть панель",
+    "closePanel": "Закрыть панель",
     "branchEyebrow": "Ветвь",
     "branchUnnamed": "Ветвь без фамилии",
     "branchOrigin": "{place}, с {year}",

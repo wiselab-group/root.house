@@ -43,7 +43,7 @@ export function RecorderScript({
   return (
     <div
       ref={listRef}
-      className="relative min-h-0 flex-1 overflow-y-auto px-5 py-10 sm:px-10"
+      className="scroll-fade relative min-h-0 flex-1 overflow-y-auto px-5 py-10 sm:px-10"
     >
       <div className="mx-auto flex max-w-2xl flex-col gap-5">
         {blocks.map((item, index) => (

@@ -74,9 +74,9 @@ export function KinshipPanel({
   return (
     <section
       aria-label={t("title")}
-      className="absolute inset-x-0 bottom-0 z-20 flex max-h-[80%] animate-in flex-col gap-4 overflow-y-auto rounded-t-2xl border-t border-border bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-card-foreground shadow-lg duration-slow ease-(--ease-reveal) fade-in-0 slide-in-from-bottom-6 motion-reduce:animate-none md:pointer-fine:inset-x-auto md:pointer-fine:top-3 md:pointer-fine:bottom-auto md:pointer-fine:left-3 md:pointer-fine:max-h-[calc(100%-5.5rem)] md:pointer-fine:w-84 md:pointer-fine:rounded-2xl md:pointer-fine:border md:pointer-fine:pb-4 md:pointer-fine:slide-in-from-bottom-0 md:pointer-fine:slide-in-from-left-3"
+      className="absolute inset-x-0 bottom-0 z-20 flex max-h-[80%] animate-in flex-col overflow-hidden rounded-t-2xl border-t border-border bg-card text-card-foreground shadow-lg duration-slow ease-(--ease-reveal) fade-in-0 slide-in-from-bottom-6 motion-reduce:animate-none md:pointer-fine:inset-x-auto md:pointer-fine:top-3 md:pointer-fine:bottom-auto md:pointer-fine:left-3 md:pointer-fine:max-h-[calc(100%-5.5rem)] md:pointer-fine:w-84 md:pointer-fine:rounded-2xl md:pointer-fine:border md:pointer-fine:slide-in-from-bottom-0 md:pointer-fine:slide-in-from-left-3"
     >
-      <header className="flex items-center justify-between gap-2">
+      <header className="flex shrink-0 items-center justify-between gap-2 px-4 pt-4">
         <h2 className="flex items-center gap-2 font-heading text-lg font-medium">
           <RouteIcon className="size-4.5 fill-none! text-primary" />
           {t("title")}
@@ -92,37 +92,40 @@ export function KinshipPanel({
         </Button>
       </header>
 
-      <KinshipSlots
-        familyId={familyId}
-        personA={personA}
-        personB={personB}
-        pickSlot={trace.pickSlot}
-        onSelect={trace.setSlot}
-        onSwap={trace.swap}
-      />
-
-      {trace.summary && personA && personB && (
-        <KinshipResult
-          summary={trace.summary}
-          stops={stops}
+      {/* The header stays; the rest scrolls and dissolves at its edges. */}
+      <div className="scroll-fade flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:pointer-fine:pb-4">
+        <KinshipSlots
+          familyId={familyId}
           personA={personA}
           personB={personB}
-          personsById={trace.personsById}
-          familyId={familyId}
-          onPanTo={panTo}
+          pickSlot={trace.pickSlot}
+          onSelect={trace.setSlot}
+          onSwap={trace.swap}
         />
-      )}
 
-      {(personA || personB) && (
-        <footer className="flex items-center justify-between gap-2 border-t border-border pt-3">
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {summaryLine}
-          </span>
-          <Button variant="ghost" size="sm" onClick={trace.reset}>
-            {t("reset")}
-          </Button>
-        </footer>
-      )}
+        {trace.summary && personA && personB && (
+          <KinshipResult
+            summary={trace.summary}
+            stops={stops}
+            personA={personA}
+            personB={personB}
+            personsById={trace.personsById}
+            familyId={familyId}
+            onPanTo={panTo}
+          />
+        )}
+
+        {(personA || personB) && (
+          <footer className="flex items-center justify-between gap-2 border-t border-border pt-3">
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {summaryLine}
+            </span>
+            <Button variant="ghost" size="sm" onClick={trace.reset}>
+              {t("reset")}
+            </Button>
+          </footer>
+        )}
+      </div>
     </section>
   );
 }

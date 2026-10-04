@@ -93,7 +93,7 @@ export function StoryPhotoPicker({
           <DialogTitle>{t("pickerTitle")}</DialogTitle>
           <DialogDescription>{t("pickerHint")}</DialogDescription>
         </DialogHeader>
-        <div className="-mx-4 min-h-0 flex-1 overflow-y-auto px-4">
+        <div className="scroll-fade -mx-4 min-h-0 flex-1 overflow-y-auto px-4">
           <StoryPhotoChoiceGrid
             familyId={familyId}
             choices={choices}

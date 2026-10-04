@@ -42,7 +42,7 @@ export function CarouselGrid({
       <h2 className="font-heading text-xl font-normal">
         {tCount("photos", { count: slides.length })}
       </h2>
-      <div className="grid w-full max-w-3xl grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-4">
+      <div className="scroll-fade grid w-full max-w-3xl grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-4">
         {slides.map((slide, index) => (
           <button
             key={slide.id}

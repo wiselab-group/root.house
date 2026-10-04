@@ -225,6 +225,16 @@ async function main() {
       "the chosen map style survives a reload",
     );
     await page.keyboard.press("Escape");
+    // The tree's «Родство» panel scrolls under a pinned header with the
+    // same dissolving edges (scroll-fade, DESIGN.md § Component States).
+    await page.goto(`${BASE_URL}/families/${familySlug}/tree`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: /^Родство/ }).first().click();
+    await page.waitForTimeout(800);
+    const kinship = page.getByRole("region", { name: "Родство" });
+    check(await kinship.getByRole("heading", { name: "Родство" }).isVisible(), "kinship panel opens with its header");
+    check((await kinship.locator(".scroll-fade").count()) === 1, "kinship panel scrolls in an inner, fading list");
+    await shoot(page, "14-tree-kinship");
+
     const session = await context.storageState();
     await context.close();
 
@@ -259,16 +269,33 @@ async function main() {
       (await p2.getByRole("button", { name: "Свернуть панель" }).getAttribute("aria-expanded")) === "true",
       "a tap on the strip opens the sheet",
     );
-    await p2.getByRole("button", { name: "Свернуть панель" }).tap();
+    const isOpen = async () =>
+      (await p2.locator("aside button[aria-expanded]").getAttribute("aria-expanded")) === "true";
+    // The strip of map above an open sheet closes it on a tap.
+    await p2.getByRole("button", { name: "Закрыть панель" }).tap({ position: { x: 200, y: 40 } });
     await p2.waitForTimeout(900);
-    // A swipe through the peeking sheet opens it, and its last row can be
-    // scrolled into view (the peek used to hide the bottom off-screen).
-    await p2.evaluate(() => {
-      const list = document.querySelector("[data-panel-scroll]");
-      const touch = new Touch({ identifier: 1, target: list, clientX: 200, clientY: 700 });
-      list.dispatchEvent(new TouchEvent("touchmove", { bubbles: true, touches: [touch] }));
-    });
+    check(!(await isOpen()), "a tap on the map above the open sheet closes it");
+    // Swipes like a native sheet: up opens, down (list at its top) closes.
+    const swipe = (fromY, toY) =>
+      p2.evaluate(([a, b]) => {
+        const list = document.querySelector("[data-panel-scroll]");
+        const at = (y) => new Touch({ identifier: 1, target: list, clientX: 200, clientY: y });
+        list.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, touches: [at(a)] }));
+        list.dispatchEvent(new TouchEvent("touchmove", { bubbles: true, touches: [at(b)] }));
+        list.dispatchEvent(new TouchEvent("touchend", { bubbles: true, changedTouches: [at(b)] }));
+      }, [fromY, toY]);
+    await swipe(800, 820);
+    await p2.waitForTimeout(600);
+    check(!(await isOpen()), "a swipe down on the strip does not open it");
+    check(
+      (await p2.evaluate(() => getComputedStyle(document.querySelector("[data-panel-scroll]")).overflowY)) === "hidden",
+      "a closed sheet's content does not scroll",
+    );
+    await swipe(800, 700);
     await p2.waitForTimeout(900);
+    check(await isOpen(), "a swipe up opens the sheet");
+    // ...and its last row can be scrolled into view (the peek used to hide
+    // the bottom off-screen).
     const lastRow = await p2.evaluate(() => {
       const list = document.querySelector("[data-panel-scroll]");
       list.scrollTop = list.scrollHeight;
@@ -278,13 +305,26 @@ async function main() {
     await p2.waitForTimeout(300);
     check(lastRow.bottom <= lastRow.viewport, `the sheet's last row scrolls into view (${Math.round(lastRow.bottom)} ≤ ${lastRow.viewport})`);
     await shoot(p2, "11b-phone-sheet-open");
-    await p2.getByRole("button", { name: "Свернуть панель" }).tap();
+    // Scrolled content dissolves into the sheet at its top edge instead of
+    // being cut under the handle.
+    await p2.evaluate(() => (document.querySelector("[data-panel-scroll]").scrollTop = 60));
+    await p2.waitForTimeout(300);
+    const fadeTop = await p2.evaluate(() =>
+      getComputedStyle(document.querySelector("[data-panel-scroll]")).getPropertyValue("--scroll-fade-top"),
+    );
+    check(parseFloat(fadeTop) > 0, `scrolled content fades out at the top edge (${fadeTop})`);
+    await shoot(p2, "11c-phone-sheet-scrolled");
+    await p2.evaluate(() => (document.querySelector("[data-panel-scroll]").scrollTop = 0));
+    await swipe(300, 500);
     await p2.waitForTimeout(900);
+    check(!(await isOpen()), "a swipe down closes the open sheet");
     await p2.getByRole("button", { name: /^Киев/ }).first().tap();
     await p2.waitForTimeout(1600);
     await shoot(p2, "12-phone-place");
-    await p2.getByRole("button", { name: "Обзор" }).tap();
-    await p2.waitForTimeout(600);
+    check(p2.url().includes("place="), "a place from the list opens its sheet");
+    await swipe(500, 650);
+    await p2.waitForTimeout(900);
+    check(!p2.url().includes("place="), "a swipe down on a place's sheet goes back to the overview");
     await p2.getByRole("button", { name: /Как семья сюда пришла/ }).first().tap();
     await p2.waitForTimeout(7000);
     const sheet = await p2.locator("aside").first().evaluate((el) => ({

@@ -867,6 +867,7 @@
     "panelLabel": "Map panel",
     "expandPanel": "Expand panel",
     "collapsePanel": "Collapse panel",
+    "closePanel": "Close the panel",
     "branchEyebrow": "Branch",
     "branchUnnamed": "Branch without a surname",
     "branchOrigin": "{place}, since {year}",

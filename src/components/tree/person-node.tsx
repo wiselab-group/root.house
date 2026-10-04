@@ -224,7 +224,7 @@ export function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
         className="max-h-(--available-height) bg-muted p-1 shadow-2xl ring-foreground/20 shadow-black/50"
       >
         <PopoverArrow fill="fill-muted" stroke="stroke-foreground/20" />
-        <div className="max-h-[calc(var(--available-height)-0.5rem)] overflow-y-auto">
+        <div className="scroll-fade [--scroll-fade-size:1rem] max-h-[calc(var(--available-height)-0.5rem)] overflow-y-auto">
           <PersonNodePopoverActions data={data} />
         </div>
       </PopoverContent>

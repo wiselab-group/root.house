@@ -30,7 +30,7 @@ export function PersonPickerPopup({
           )}
           aria-busy={isPending || undefined}
         >
-          <div className="max-h-72 overflow-y-auto overscroll-contain p-1 scroll-pt-1 scroll-pb-1">
+          <div className="scroll-fade [--scroll-fade-size:1rem] max-h-72 overflow-y-auto overscroll-contain p-1 scroll-pt-1 scroll-pb-1">
             <Combobox.Status className="px-2 py-2 text-sm text-muted-foreground empty:hidden">
               {isPending ? tc("searching") : null}
             </Combobox.Status>
