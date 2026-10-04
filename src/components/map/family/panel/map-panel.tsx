@@ -110,10 +110,12 @@ export function MapPanel({
         // A peeking sheet hides its lower part off-screen, so scrolling it
         // there could never reach the last rows: a swipe through the
         // content opens the sheet first, like a native bottom sheet.
+        // Its rows keep their height (*:shrink-0) — a column that overflows
+        // would otherwise squash them to their text.
         onTouchMove={() => {
           if (!expanded) setExpanded(true);
         }}
-        className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain px-5 pt-1 pb-[max(1.25rem,env(safe-area-inset-bottom))] md:pointer-fine:pt-5"
+        className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto *:shrink-0 overscroll-contain px-5 pt-1 pb-[max(1.25rem,env(safe-area-inset-bottom))] md:pointer-fine:pt-5"
       >
         {content}
       </div>

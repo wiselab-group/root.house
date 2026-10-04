@@ -123,6 +123,8 @@ async function main() {
     check(page.workers().length > 0, "maplibre tile worker started");
     check(await page.getByText("Откуда мы · 2 ветви").isVisible(), "overview lists 2 root branches");
     check(await page.getByText("Где семья сейчас").isVisible(), "overview shows where the family is now");
+    const searchBox = await page.getByRole("button", { name: /Найти человека или место/ }).boundingBox();
+    check(searchBox.height >= 44, `the search field keeps its height in a full panel (${searchBox.height}px)`);
     await shoot(page, "01-overview");
 
     const kupchik = page.getByRole("button", { name: /^Купчик/ });
