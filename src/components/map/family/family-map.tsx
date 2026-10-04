@@ -59,6 +59,7 @@ export function FamilyMap({
   const { themeId, setThemeId, theme } = useMapTheme(initialTheme, data.places);
   const { play, pause } = usePlayback(
     range,
+    state.holds,
     moment,
     setMoment,
     playing,

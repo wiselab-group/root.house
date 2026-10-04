@@ -231,6 +231,63 @@ export function feedItemAt(
   return feed.findLast((item) => item.year <= year);
 }
 
+/** A beat captions the story this long after its year — past the draw-in
+ *  of its move, then the caption goes back to where the family is. */
+export const BEAT_FRESH_YEARS = ROUTE_DRAW_YEARS + 2;
+
+/**
+ * What the timeline's caption says at `year`:
+ * - `beat` — something just happened (a birth, a move, an event);
+ * - `settled` — nothing new: where the family lives that year;
+ * - `today` — the story has reached today: where the family is now.
+ * A beat never lingers into years it no longer describes, and the story
+ * ends on today — not on whatever happened last (that read like the
+ * family's outcome when the last beat was a death).
+ */
+export type StoryCaption =
+  | { kind: "beat"; item: FeedItem }
+  | { kind: "settled" | "today"; placeIds: string[] };
+
+export function storyCaptionAt(
+  model: GeoModel,
+  feed: readonly FeedItem[],
+  range: TimelineRange,
+  year: number,
+): StoryCaption | null {
+  if (year >= range.to) {
+    return {
+      kind: "today",
+      placeIds: currentPlaces(model).map((p) => p.placeId),
+    };
+  }
+  const item = feedItemAt(feed, year);
+  if (item && year - item.year < BEAT_FRESH_YEARS)
+    return { kind: "beat", item };
+  const present = [...snapshotAt(model, Math.floor(year)).places.entries()]
+    .filter(([, p]) => p.state === "present")
+    .sort((a, b) => b[1].personIds.length - a[1].personIds.length)
+    .map(([placeId]) => placeId);
+  return present.length > 0 ? { kind: "settled", placeIds: present } : null;
+}
+
+/** Years the playing story holds on, so a beat can be read: a move once
+ *  its route has drawn in, anything else on its year. A beat just before
+ *  today holds just short of it — today itself is the story's end. */
+export function storyHoldYears(
+  feed: readonly FeedItem[],
+  range: TimelineRange,
+): number[] {
+  const years = feed
+    .filter((item) => item.year < range.to)
+    .map((item) =>
+      Math.min(
+        item.kind === "move" ? item.year + ROUTE_DRAW_YEARS : item.year,
+        Math.max(item.year, range.to - 0.5),
+      ),
+    );
+  return [...new Set(years)].sort((a, b) => a - b);
+}
+
 /** Where the living members of the family are now, most people first. */
 export function currentPlaces(
   model: GeoModel,

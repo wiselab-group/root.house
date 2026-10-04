@@ -7,10 +7,13 @@ import {
 } from "./family-branches";
 import { buildGeoModel } from "./geo-model";
 import {
+  ROUTE_DRAW_YEARS,
   buildFeed,
   currentPlaces,
   pathOf,
   snapshotAt,
+  storyCaptionAt,
+  storyHoldYears,
   timelineRange,
 } from "./map-snapshot";
 import { placeStory } from "./place-story";
@@ -261,6 +264,57 @@ describe("timeline and feed", () => {
     expect(feed.map((f) => f.year)).toEqual(
       [...feed.map((f) => f.year)].sort((a, b) => a - b),
     );
+  });
+
+  it("captions a fresh beat, then where the family is, and ends on today", () => {
+    const feed = buildFeed(model);
+    const range = timelineRange(model) as NonNullable<
+      ReturnType<typeof timelineRange>
+    >;
+    const at = (year: number) => storyCaptionAt(model, feed, range, year);
+
+    expect(at(1931)).toMatchObject({
+      kind: "beat",
+      item: { kind: "birth", personIds: ["petr"] },
+    });
+    // 1988 is long past by 1999: no beat lingers, the family's places do.
+    expect(at(1999)).toEqual({
+      kind: "settled",
+      placeIds: ["kyiv", "minsk"],
+    });
+    // Galina died in 2026, the last beat — the story still ends on today.
+    expect(at(2026)).toEqual({
+      kind: "today",
+      placeIds: currentPlaces(model).map((p) => p.placeId),
+    });
+  });
+
+  it("holds on each beat before today, a move once it has drawn in", () => {
+    const holds = storyHoldYears(buildFeed(model), {
+      from: 1898,
+      to: 2026,
+      density: {},
+      undated: 0,
+    });
+    expect(holds).toContain(1898);
+    expect(holds).toContain(1967 + ROUTE_DRAW_YEARS);
+    expect(holds).not.toContain(2026);
+    // A move just before today holds before the story's end, not on it.
+    const late = storyHoldYears(
+      [
+        {
+          key: "m",
+          year: 2024,
+          kind: "move",
+          placeId: "x",
+          fromPlaceId: null,
+          personIds: [],
+        },
+      ],
+      { from: 2000, to: 2026, density: {}, undated: 0 },
+    );
+    expect(late).toEqual([2025.5]);
+    expect(holds).toEqual([...holds].sort((a, b) => a - b));
   });
 });
 

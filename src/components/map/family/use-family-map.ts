@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   buildFeed,
+  storyHoldYears,
   pathOf,
   snapshotAt,
   timelineRange,
@@ -84,6 +85,10 @@ export function useFamilyMap(
   );
   const range = useMemo(() => timelineRange(data.model), [data.model]);
   const feed = useMemo(() => buildFeed(data.model), [data.model]);
+  const holds = useMemo(
+    () => (range ? storyHoldYears(feed, range) : []),
+    [range, feed],
+  );
   const branchById = useMemo(
     () => new Map(data.branches.map((b) => [b.rootId, b])),
     [data.branches],
@@ -139,6 +144,7 @@ export function useFamilyMap(
     snapshot,
     range,
     feed,
+    holds,
     branchById,
     highlight,
     hoveredBranch,

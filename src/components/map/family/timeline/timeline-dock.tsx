@@ -1,9 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { PauseIcon, PlayIcon } from "lucide-react";
-import { feedItemAt, type TimelineRange } from "@/domain/place/map-snapshot";
-import { useFeedWording } from "../panel/use-feed-wording";
+import { PauseIcon, PlayIcon, RotateCcwIcon } from "lucide-react";
+import type { TimelineRange } from "@/domain/place/map-snapshot";
+import { useStoryCaption } from "./use-story-caption";
 import { DensityBars } from "./density-bars";
 import type { FamilyMapState } from "../use-family-map";
 
@@ -36,26 +36,28 @@ export function TimelineDock({
   onAllTime: () => void;
 }) {
   const t = useTranslations("familyMap");
-  const word = useFeedWording(state);
   const shown = Math.floor(year);
-  const beat = feedItemAt(state.feed, year);
-  const caption = beat ? word(beat) : null;
-  const captionText = caption
-    ? [caption.title, caption.detail].filter(Boolean).join(" · ")
-    : "";
+  const caption = useStoryCaption(state, range, year);
+  const captionText = caption?.text ?? "";
 
   return (
     <div className="flex w-full flex-col gap-2.5 rounded-[1.75rem] border border-glass-edge bg-background/75 p-3 shadow-xl shadow-black/40 backdrop-blur-xl md:pointer-fine:w-[46rem]">
-      {beat && (
-        <p className="truncate px-1 text-sm" aria-live="polite">
-          <span className="font-semibold text-primary tabular-nums">
-            {beat.year}
-          </span>
-          {" · "}
+      {caption && (
+        <p className="line-clamp-2 px-1 text-sm" aria-live="polite">
+          {caption.lead && (
+            <>
+              <span className="font-semibold text-primary tabular-nums">
+                {caption.lead}
+              </span>
+              {" · "}
+            </>
+          )}
           {captionText}
         </p>
       )}
-      <div className="flex items-center gap-3.5">
+      {/* Phone: ▶ · year · «Всё время» over a full-width slider. Desktop
+          (a wider dock): all in one row. */}
+      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3.5 gap-y-2 md:pointer-fine:grid-cols-[auto_auto_1fr_auto]">
         <button
           type="button"
           onClick={playing ? onPause : onPlay}
@@ -74,7 +76,7 @@ export function TimelineDock({
         <span className="w-16 shrink-0 font-heading text-[1.75rem] leading-none tabular-nums">
           {shown}
         </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="order-last col-span-3 flex min-w-0 flex-col gap-1 px-1 md:pointer-fine:order-none md:pointer-fine:col-span-1 md:pointer-fine:px-0">
           <DensityBars range={range} year={year} />
           <input
             type="range"
@@ -100,8 +102,12 @@ export function TimelineDock({
         <button
           type="button"
           onClick={onAllTime}
-          className="h-10 shrink-0 cursor-pointer rounded-full border border-border px-3.5 text-sm font-medium transition-colors duration-base ease-(--ease-reveal) outline-none hover:bg-foreground/8 focus-visible:ring-2 focus-visible:ring-ring"
+          className="group/all flex h-10 shrink-0 cursor-pointer items-center gap-1.5 justify-self-end rounded-full border border-border px-3.5 text-sm font-medium transition-colors duration-base ease-(--ease-reveal) outline-none hover:bg-foreground/8 focus-visible:ring-2 focus-visible:ring-ring"
         >
+          <RotateCcwIcon
+            className="size-4 transition-transform duration-base ease-(--ease-spring) group-hover/all:-rotate-45 motion-reduce:transition-none"
+            aria-hidden
+          />
           {t("allTime")}
         </button>
       </div>
