@@ -248,6 +248,36 @@ async function main() {
     await p2.keyboard.press("Escape");
     await p2.waitForTimeout(2000);
     await shoot(p2, "11-phone-overview");
+    // The overview rests as a thin strip; a tap on it opens the sheet.
+    const strip = await p2.getByRole("heading", { name: "Карта рода" }).boundingBox();
+    check(strip.y > 844 - 140, `the overview rests as a thin strip (title at ${Math.round(strip.y)})`);
+    await p2.getByRole("heading", { name: "Карта рода" }).tap();
+    await p2.waitForTimeout(900);
+    check(
+      (await p2.getByRole("button", { name: "Свернуть панель" }).getAttribute("aria-expanded")) === "true",
+      "a tap on the strip opens the sheet",
+    );
+    await p2.getByRole("button", { name: "Свернуть панель" }).tap();
+    await p2.waitForTimeout(900);
+    // A swipe through the peeking sheet opens it, and its last row can be
+    // scrolled into view (the peek used to hide the bottom off-screen).
+    await p2.evaluate(() => {
+      const list = document.querySelector("[data-panel-scroll]");
+      const touch = new Touch({ identifier: 1, target: list, clientX: 200, clientY: 700 });
+      list.dispatchEvent(new TouchEvent("touchmove", { bubbles: true, touches: [touch] }));
+    });
+    await p2.waitForTimeout(900);
+    const lastRow = await p2.evaluate(() => {
+      const list = document.querySelector("[data-panel-scroll]");
+      list.scrollTop = list.scrollHeight;
+      const last = list.lastElementChild.getBoundingClientRect();
+      return { bottom: last.bottom, viewport: window.innerHeight };
+    });
+    await p2.waitForTimeout(300);
+    check(lastRow.bottom <= lastRow.viewport, `the sheet's last row scrolls into view (${Math.round(lastRow.bottom)} ≤ ${lastRow.viewport})`);
+    await shoot(p2, "11b-phone-sheet-open");
+    await p2.getByRole("button", { name: "Свернуть панель" }).tap();
+    await p2.waitForTimeout(900);
     await p2.getByRole("button", { name: /^Киев/ }).first().tap();
     await p2.waitForTimeout(1600);
     await shoot(p2, "12-phone-place");

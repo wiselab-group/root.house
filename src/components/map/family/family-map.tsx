@@ -121,7 +121,7 @@ export function FamilyMap({
 
       <MapPanel
         state={state}
-        invite={invite("md:pointer-fine:hidden")}
+        onPlay={range ? startStory : null}
         onJump={jump}
       />
 

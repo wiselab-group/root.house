@@ -22,16 +22,22 @@ import type { FamilyMapState } from "../use-family-map";
  */
 export function MapPanel({
   state,
-  invite,
+  onPlay,
   onJump,
 }: {
   state: FamilyMapState;
-  invite: React.ReactNode;
+  onPlay: (() => void) | null;
   onJump: (year: number) => void;
 }) {
   const t = useTranslations("familyMap");
   const [expanded, setExpanded] = useState(false);
   const { focus, moment } = state;
+  // A new focus starts from its own resting height, not the last one.
+  const [shownFocus, setShownFocus] = useState(focus);
+  if (shownFocus !== focus) {
+    setShownFocus(focus);
+    setExpanded(false);
+  }
   const inTime = typeof moment === "number";
 
   let content: React.ReactNode;
@@ -62,21 +68,29 @@ export function MapPanel({
     );
   else if (inTime)
     content = <TimeFeedPanel state={state} year={moment} onJump={onJump} />;
-  else content = <OverviewPanel state={state} invite={invite} />;
+  else content = <OverviewPanel state={state} onPlay={onPlay} />;
 
+  // The overview rests as a thin strip — title, counts, ▶ — so the map
+  // has the screen; a tap on the strip opens the sheet.
+  const peeking = focus.kind === "overview" && !inTime && !expanded;
   const touchPosition =
     focus.kind === "overview" && inTime
       ? "translate-y-full"
       : expanded || focus.kind === "search"
         ? "translate-y-0"
-        : focus.kind === "overview"
-          ? "translate-y-[calc(100%-17.5rem)]"
+        : peeking
+          ? "translate-y-[calc(100%-6.25rem-env(safe-area-inset-bottom))]"
           : "translate-y-[35%]";
 
   return (
     <aside
       aria-label={t("panelLabel")}
+      onClick={(event) => {
+        const target = event.target as HTMLElement;
+        if (peeking && !target.closest("button")) setExpanded(true);
+      }}
       className={cn(
+        peeking && "cursor-pointer md:pointer-fine:cursor-auto",
         "absolute inset-x-0 bottom-0 z-20 flex h-[88%] flex-col rounded-t-3xl border-t border-border bg-card text-card-foreground shadow-2xl shadow-black/40 transition-transform duration-slow ease-(--ease-reveal) motion-reduce:transition-none",
         touchPosition,
         "md:pointer-fine:inset-x-auto md:pointer-fine:top-3 md:pointer-fine:bottom-3 md:pointer-fine:left-3 md:pointer-fine:h-auto md:pointer-fine:w-[23rem] md:pointer-fine:translate-y-0 md:pointer-fine:rounded-3xl md:pointer-fine:border",
@@ -93,6 +107,12 @@ export function MapPanel({
       </button>
       <div
         data-panel-scroll
+        // A peeking sheet hides its lower part off-screen, so scrolling it
+        // there could never reach the last rows: a swipe through the
+        // content opens the sheet first, like a native bottom sheet.
+        onTouchMove={() => {
+          if (!expanded) setExpanded(true);
+        }}
         className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain px-5 pt-1 pb-[max(1.25rem,env(safe-area-inset-bottom))] md:pointer-fine:pt-5"
       >
         {content}

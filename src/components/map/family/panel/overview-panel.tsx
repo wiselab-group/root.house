@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronRightIcon, PlusIcon, SearchIcon } from "lucide-react";
-import { currentPlaces, snapshotAt } from "@/domain/place/map-snapshot";
+import { PlayIcon, PlusIcon, SearchIcon } from "lucide-react";
+import { snapshotAt } from "@/domain/place/map-snapshot";
 import { BranchCard } from "./branch-card";
 import { Eyebrow } from "./panel-bits";
 import { StatsLine } from "./stats-line";
 import { GapsBox } from "./gaps-box";
+import { NowPlaces } from "./now-places";
 import type { FamilyMapState } from "../use-family-map";
 
 const SHOWN_BRANCHES = 3;
@@ -16,18 +17,18 @@ const SHOWN_BRANCHES = 3;
  *  and — for editors — what the map is still missing. */
 export function OverviewPanel({
   state,
-  invite,
+  onPlay,
 }: {
   state: FamilyMapState;
-  /** The «▶ how we got here» call, placed here on touch screens. */
-  invite: React.ReactNode;
+  /** «▶ how we got here» — on touch screens it lives in the sheet's strip;
+   *  null when nothing has a year to play. */
+  onPlay: (() => void) | null;
 }) {
   const t = useTranslations("familyMap");
   const tc = useTranslations("counts");
   const { data, setFocus, setHoveredBranch } = state;
   const [allBranches, setAllBranches] = useState(false);
   const placeById = new Map(data.places.map((p) => [p.id, p]));
-  const now = currentPlaces(data.model);
   const branches = allBranches
     ? data.branches
     : data.branches.slice(0, SHOWN_BRANCHES);
@@ -35,9 +36,24 @@ export function OverviewPanel({
 
   return (
     <>
-      <header className="flex flex-col gap-1">
-        <h1 className="font-heading text-2xl font-medium">{t("title")}</h1>
-        <StatsLine stats={snapshotAt(data.model, "all").stats} />
+      <header className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <h1 className="font-heading text-2xl font-medium">{t("title")}</h1>
+          <StatsLine stats={snapshotAt(data.model, "all").stats} />
+        </div>
+        {onPlay && (
+          <button
+            type="button"
+            aria-label={t("invite")}
+            onClick={onPlay}
+            className="flex size-12 shrink-0 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-transform duration-base ease-(--ease-spring) outline-none active:scale-95 focus-visible:ring-3 focus-visible:ring-ring/50 md:pointer-fine:hidden"
+          >
+            <PlayIcon
+              className="size-5 translate-x-px fill-current"
+              aria-hidden
+            />
+          </button>
+        )}
       </header>
 
       <button
@@ -51,8 +67,6 @@ export function OverviewPanel({
           {tc("places", { count: data.places.length })}
         </span>
       </button>
-
-      {invite}
 
       {data.places.length === 0 && (
         <section className="flex flex-col gap-3 rounded-2xl border border-dashed border-border p-4">
@@ -110,37 +124,7 @@ export function OverviewPanel({
         </section>
       )}
 
-      {now.length > 0 && (
-        <section className="flex flex-col gap-1">
-          <Eyebrow className="mb-1">{t("nowTitle")}</Eyebrow>
-          <ul>
-            {now.map(({ placeId, personIds }) => (
-              <li key={placeId}>
-                <button
-                  type="button"
-                  onClick={() => setFocus({ kind: "place", placeId })}
-                  className="-mx-2 flex min-h-11 w-[calc(100%+1rem)] cursor-pointer items-center gap-3 rounded-xl px-2 text-left transition-colors duration-base ease-(--ease-reveal) outline-none hover:bg-foreground/6 focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <span
-                    aria-hidden
-                    className="size-3 shrink-0 rounded-full bg-tree-accent"
-                  />
-                  <span className="flex-1 text-sm font-medium">
-                    {placeById.get(placeId)?.name}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {tc("people", { count: personIds.length })}
-                  </span>
-                  <ChevronRightIcon
-                    className="size-4 text-muted-foreground"
-                    aria-hidden
-                  />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <NowPlaces state={state} />
 
       {data.gaps && <GapsBox gaps={data.gaps} state={state} />}
     </>

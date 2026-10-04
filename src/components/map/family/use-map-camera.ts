@@ -8,14 +8,24 @@ const DESKTOP = "(min-width: 768px) and (pointer: fine)";
 const PLACE_ZOOM = 6;
 const MAX_FIT_ZOOM = 7;
 
+/** How much of a phone's screen the sheet takes: a thin strip on the
+ *  overview, half on a detail, the dock alone while the story plays. */
+type Room = "peek" | "half" | "story";
+const PHONE_BOTTOM: Record<Room, number> = { peek: 150, half: 300, story: 200 };
+
 /** Room the panel/sheet and the dock take — fitted views stay clear of
- *  them. While the story plays a phone's sheet steps aside for the dock. */
-function padding(story = false) {
+ *  them. */
+function padding(room: Room) {
   if (window.matchMedia(DESKTOP).matches) {
-    return { top: 64, bottom: story ? 200 : 140, left: 420, right: 64 };
+    return {
+      top: 64,
+      bottom: room === "story" ? 200 : 140,
+      left: 420,
+      right: 64,
+    };
   }
   // Labels sit right of their pins, root tags centred under them.
-  return { top: 48, bottom: story ? 200 : 300, left: 64, right: 80 };
+  return { top: 48, bottom: PHONE_BOTTOM[room], left: 64, right: 80 };
 }
 
 /**
@@ -41,7 +51,7 @@ export function useMapCamera(
   );
 
   const fitPoints = useCallback(
-    (points: [number, number][], animate: boolean, story = false) => {
+    (points: [number, number][], animate: boolean, room: Room = "half") => {
       const map = mapRef.current;
       if (!map || points.length === 0) return;
       const lngs = points.map((p) => p[0]);
@@ -55,7 +65,7 @@ export function useMapCamera(
         // padding on the map for good, and every later fit adds its own on
         // top — on a phone that overflowed the screen and flew to Africa.
         {
-          padding: padding(story),
+          padding: padding(room),
           maxZoom: points.length === 1 ? PLACE_ZOOM : MAX_FIT_ZOOM,
           duration: animate ? 1100 : 0,
         },
@@ -64,11 +74,11 @@ export function useMapCamera(
     [mapRef],
   );
   const fit = useCallback(
-    (placeIds: string[], animate: boolean, story = false) =>
+    (placeIds: string[], animate: boolean, room: Room = "half") =>
       fitPoints(
         placeIds.map(lngLat).filter((p) => p !== null),
         animate,
-        story,
+        room,
       ),
     [fitPoints, lngLat],
   );
@@ -80,7 +90,7 @@ export function useMapCamera(
       const ids = data.places
         .filter((p) => used.size === 0 || used.has(p.id))
         .map((p) => p.id);
-      fit(ids, animate, story);
+      fit(ids, animate, story ? "story" : "peek");
     },
     [data, fit],
   );
