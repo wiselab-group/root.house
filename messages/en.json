@@ -218,7 +218,18 @@
     "activityEmpty": "No activity yet — changes made by family members will appear here.",
     "activityCreate": "added",
     "activityUpdate": "edited",
-    "activityDelete": "deleted"
+    "activityDelete": "deleted",
+    "gapsTitle": "Gaps in the story",
+    "gapsDescription": "What you could still ask your relatives",
+    "gapsMore": "{count, plural, one {# more question} other {# more questions}}",
+    "gapAnswer": "Fill in",
+    "gapUnknown": "We don't know",
+    "gapDismissed": "We won't ask again",
+    "gapUndo": "Undo",
+    "gapParents": "{gender, select, female {Who were her parents?} male {Who were his parents?} other {Who were their parents?}}",
+    "gapBirthDate": "{gender, select, female {When was she born?} male {When was he born?} other {When were they born?}}",
+    "gapBirthPlace": "{gender, select, female {Where was she born?} male {Where was he born?} other {Where were they born?}}",
+    "gapPhoto": "No photos yet"
   },
   "settings": {
     "title": "Settings",

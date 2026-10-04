@@ -218,7 +218,18 @@
     "activityEmpty": "Пока нет действий — здесь появятся изменения, которые вносят участники семьи.",
     "activityCreate": "добавил(а)",
     "activityUpdate": "изменил(а)",
-    "activityDelete": "удалил(а)"
+    "activityDelete": "удалил(а)",
+    "gapsTitle": "Пробелы в истории",
+    "gapsDescription": "То, что ещё можно узнать у родных",
+    "gapsMore": "Ещё {count, plural, one {# вопрос} few {# вопроса} many {# вопросов} other {# вопроса}}",
+    "gapAnswer": "Дополнить",
+    "gapUnknown": "Мы не знаем",
+    "gapDismissed": "Больше не спрашиваем",
+    "gapUndo": "Отменить",
+    "gapParents": "{gender, select, female {Кто её родители?} male {Кто его родители?} other {Кто родители?}}",
+    "gapBirthDate": "{gender, select, female {Когда родилась?} male {Когда родился?} other {Когда родился(-ась)?}}",
+    "gapBirthPlace": "{gender, select, female {Где родилась?} male {Где родился?} other {Где родился(-ась)?}}",
+    "gapPhoto": "Нет ни одной фотографии"
   },
   "settings": {
     "title": "Настройки",

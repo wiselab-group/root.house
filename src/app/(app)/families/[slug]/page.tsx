@@ -5,6 +5,8 @@ import { FamilySectionLinks } from "@/components/family/family-section-links";
 import { FamilyHomeTop } from "@/components/family/family-home-top";
 import { RecentMemories } from "@/components/family/recent-memories";
 import { FamilyHomeActivity } from "@/components/family/family-home-activity";
+import { FamilyHistoryGaps } from "@/components/family/family-history-gaps";
+import { buildHistoryGapItems } from "@/components/family/history-gap-items";
 import { SetBreadcrumbs } from "@/components/breadcrumbs-context";
 import { auth } from "@/lib/auth";
 import { requireFamilyAccess } from "@/domain/family/access";
@@ -14,6 +16,8 @@ import {
   filterVisiblePersons,
 } from "@/domain/person/person.service";
 import { listPlaces } from "@/domain/place/place.service";
+import { listParentChildEdges } from "@/domain/relationship/relationship.service";
+import { listDismissedGapKeys } from "@/domain/family/history-gaps.service";
 import {
   listStories,
   filterVisibleStories,
@@ -48,23 +52,34 @@ export default async function FamilyDashboardPage({
   const member = await requireFamilyAccess(familyId, session.user.id, "viewer");
   const viewer = { userId: session.user.id, role: member.role };
 
-  const [family, allPeople, places, allPhotos, allStories, activityEntries] =
-    await Promise.all([
-      getFamilySummary(familyId),
-      listPeople(familyId),
-      listPlaces(familyId),
-      getFamilyGallery(familyId),
-      listStories(familyId),
-      // Same rule as Settings' own Активность семьи section — entityLabel
-      // is an unfiltered snapshot string (e.g. a Person's name), so surfacing
-      // it to non-owners here would bypass privacy filtering that every
-      // other view on this page respects. See activity-log.repository.ts.
-      // Fetches one extra row (limit+1) purely to know whether "Ещё" should
-      // render — never rendered/counted itself, sliced off below.
-      member.role === "owner"
-        ? listActivityLog(familyId, { limit: RECENT_ACTIVITY_LIMIT + 1 })
-        : [],
-    ]);
+  const canEdit = member.role === "owner" || member.role === "editor";
+  const [
+    family,
+    allPeople,
+    places,
+    allPhotos,
+    allStories,
+    activityEntries,
+    parentChildEdges,
+    dismissedGaps,
+  ] = await Promise.all([
+    getFamilySummary(familyId),
+    listPeople(familyId),
+    listPlaces(familyId),
+    getFamilyGallery(familyId),
+    listStories(familyId),
+    // Same rule as Settings' own Активность семьи section — entityLabel
+    // is an unfiltered snapshot string (e.g. a Person's name), so surfacing
+    // it to non-owners here would bypass privacy filtering that every
+    // other view on this page respects. See activity-log.repository.ts.
+    // Fetches one extra row (limit+1) purely to know whether "Ещё" should
+    // render — never rendered/counted itself, sliced off below.
+    member.role === "owner"
+      ? listActivityLog(familyId, { limit: RECENT_ACTIVITY_LIMIT + 1 })
+      : [],
+    canEdit ? listParentChildEdges(familyId) : [],
+    canEdit ? listDismissedGapKeys(familyId) : new Set<string>(),
+  ]);
 
   const people = filterVisiblePersons(allPeople, viewer);
   const visiblePhotos = filterVisibleGalleryPhotos(allPhotos, viewer);
@@ -72,6 +87,14 @@ export default async function FamilyDashboardPage({
   const photos = visiblePhotos.slice(0, RECENT_MEMORIES_LIMIT);
   const hasMoreActivity = activityEntries.length > RECENT_ACTIVITY_LIMIT;
   const recentActivity = activityEntries.slice(0, RECENT_ACTIVITY_LIMIT);
+  const historyGaps = canEdit
+    ? buildHistoryGapItems(
+        people,
+        visiblePhotos,
+        parentChildEdges,
+        dismissedGaps,
+      )
+    : [];
   const t = await getTranslations();
 
   return (
@@ -111,7 +134,20 @@ export default async function FamilyDashboardPage({
               photos={photos}
               familyId={familyId}
               familySlug={slug}
-              canTag={member.role === "owner" || member.role === "editor"}
+              canTag={canEdit}
+            />
+          </div>
+        )}
+
+        {historyGaps.length > 0 && (
+          <div
+            className="animate-content-enter"
+            style={{ animationDelay: "100ms" }}
+          >
+            <FamilyHistoryGaps
+              gaps={historyGaps}
+              familyId={familyId}
+              familySlug={slug}
             />
           </div>
         )}

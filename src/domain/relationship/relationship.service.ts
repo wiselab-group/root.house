@@ -343,6 +343,14 @@ export async function getFamilyOf(
   return { parents, children, partnerships, siblings };
 }
 
+/** Every parent→child edge in the family — Family Home's «Пробелы в
+ *  истории» (history-gaps.ts) needs only who has parents and children. */
+export async function listParentChildEdges(
+  familyId: string,
+): Promise<ParentChildRecord[]> {
+  return getAllParentChildEdges(familyId);
+}
+
 /**
  * "How are personA and personB related?" — not exposed in any MVP UI yet,
  * but the domain layer supports it: fetches both people's ancestor-depth
